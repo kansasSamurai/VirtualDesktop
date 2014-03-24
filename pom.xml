@@ -1,0 +1,119 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.jwellman</groupId>
+  <artifactId>VirtualDesktop</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>VirtualDesktop</name>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <repositories>
+    <repository>
+        <id>jline</id>
+        <name>JLine Project Repository</name>
+        <url>http://jline.sourceforge.net/m2repo</url>
+    </repository>
+  </repositories>
+
+  <dependencies>
+<!--
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+
+-->
+
+    <dependency>
+            <groupId>org.swinglabs</groupId>
+            <artifactId>swingx-core</artifactId>
+            <version>1.6.2-2</version>
+    </dependency>
+
+    <dependency>
+            <groupId>org.swinglabs</groupId>
+            <artifactId>swingx</artifactId>
+            <version>1.6.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.swinglabs</groupId>
+      <artifactId>swing-layout</artifactId>
+      <version>1.0.3</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.swinglabs</groupId>
+      <artifactId>jxlayer</artifactId>
+      <version>3.0.4</version>
+    </dependency>
+
+
+
+    <dependency>
+        <groupId>org.beanshell</groupId>
+        <artifactId>bsh</artifactId>
+        <version>2.0b5</version>
+    </dependency>
+
+    <dependency>
+	<groupId>jfree</groupId>
+	<artifactId>jfreechart</artifactId>
+	<version>1.0.13</version>
+    </dependency>
+
+    <dependency>
+        <groupId>org.jdesktop</groupId>
+        <artifactId>beansbinding</artifactId>
+        <version>1.2.1</version>
+    </dependency>
+
+    <dependency>
+        <groupId>com.xeiam.xchart</groupId>
+        <artifactId>xchart</artifactId>
+        <version>2.2.1</version>
+    </dependency>
+
+    <dependency>
+        <groupId>com.xeiam.xchart</groupId>
+        <artifactId>xchart-demo</artifactId>
+        <version>2.2.1</version>
+    </dependency>
+
+    <dependency>
+        <groupId>hsqldb</groupId>
+        <artifactId>hsqldb</artifactId>
+        <version>2.3.0</version>
+    </dependency>
+
+    <dependency>
+        <groupId>log4j</groupId>
+        <artifactId>log4j</artifactId>
+        <version>1.2.16</version>
+    </dependency>
+
+    <dependency>
+        <groupId>net.sf.opencsv</groupId>
+        <artifactId>opencsv</artifactId>
+        <version>2.1</version>
+    </dependency>
+
+    <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.11</version>
+        <!--<scope>test</scope> do not limit scope to test as the lib embbed Replay, i.e. tools to ease non regression tests for interactive features-->
+    </dependency>
+
+  </dependencies>
+
+</project>

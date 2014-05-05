@@ -7,8 +7,7 @@ import java.io.*;
  * class to let users execute system commands from Java applications.
  *
  * This class is based on work that was shared in a JavaWorld article
- * named "When System.exec() won't". That article is available at this
- * url:
+ * named "When System.exec() won't" available at this URL:
  *
  * http://www.javaworld.com/javaworld/jw-12-2000/jw-1229-traps.html
  *
@@ -46,9 +45,10 @@ class ThreadedStreamHandler extends Thread {
     private boolean sudoIsRequested = false;
 
     /**
-     * A simple constructor for when the sudo command is not necessary. This
-     * constructor will just run the command you provide, without running sudo
-     * before the command, and without expecting a password.
+     * A simple constructor for when the sudo command is not necessary.
+     * This constructor will just run the command you provide,
+     * without running sudo before the command,
+     * and without expecting a password.
      *
      * @param inputStream
      * @param streamType

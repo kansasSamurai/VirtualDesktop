@@ -15,6 +15,9 @@ import java.util.logging.Logger;
 public class SpecBeanShell extends VirtualAppSpec {
 
     public SpecBeanShell() {
+        this.height = 450;
+        this.width = 750;
+
         final JConsole c = new JConsole();
         final Interpreter i = new Interpreter(c);
         new Thread( i, "BeanShell Interpreter" ).start(); // start a thread to call the run() method

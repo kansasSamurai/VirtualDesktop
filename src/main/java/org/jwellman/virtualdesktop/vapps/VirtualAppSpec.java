@@ -13,16 +13,18 @@ abstract public class VirtualAppSpec {
     private String title;
     private Class clazz;
     private JPanel content;
-    
+    protected int height = 200;
+    protected int width = 300;
+
     protected VirtualAppSpec() {}
 
     protected JPanel createDefaultContent(Component o) {
         final JPanel content = new JPanel(new BorderLayout());
         content.add(o, BorderLayout.CENTER);
-        
+
         return content;
     }
-    
+
     /**
      * @return the title
      */
@@ -64,5 +66,21 @@ abstract public class VirtualAppSpec {
     public void setContent(JPanel content) {
         this.content = content;
     }
-    
+
+    public int getHeight() {
+        return height;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
 }

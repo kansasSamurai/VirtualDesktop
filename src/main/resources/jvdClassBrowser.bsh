@@ -41,7 +41,7 @@ jvdClassBrowser()
             }
 	} else {
 		this.frame = new javax.swing.JFrame("BeanShell Class Browser");
-		frame.iconImage=bsh.system.icons.eye.image;
+		frame.iconImage=bsh.system.icons.eye;
 	}
 
 	// Ignore unhandled method invocations from listeners.

@@ -88,6 +88,9 @@ public class App extends JFrame implements ActionListener {
         menuItem.addActionListener(this);
         menu.add(menuItem);
 
+        menu = new JMenu("VApps");
+        menu.setMnemonic(KeyEvent.VK_V);
+        menuBar.add(menu);
         for (Class clazz : registeredApps) {
             menuItem = new JMenuItem(clazz.getSimpleName());
             menuItem.setActionCommand(clazz.getCanonicalName());
@@ -127,7 +130,12 @@ public class App extends JFrame implements ActionListener {
         this.createVApp((VirtualAppSpec)newInstance);
     }
 
-    //Create a new application.
+    /**
+     * Create a new application.
+     * [This is the definitive method of the overloaded versions.]
+     *
+     * @param spec
+     */
     protected void createVApp(final VirtualAppSpec spec) {
 
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
@@ -135,6 +143,7 @@ public class App extends JFrame implements ActionListener {
                 try {
                     final VirtualAppFrame frame = new VirtualAppFrame(spec.getTitle());
                     frame.setContentPane(spec.getContent());
+                    frame.setSize(spec.getWidth(), spec.getHeight());
                     frame.setVisible(true); //necessary as of 1.3
                     desktop.add(frame);
                     frame.setSelected(true);
@@ -148,6 +157,13 @@ public class App extends JFrame implements ActionListener {
 
     }
 
+    /**
+     * This public method allows internal apps to create internal apps/windows.
+     * i.e. via beanshell or others
+     *
+     * @param c
+     * @param title
+     */
     public void createVApp(final Container c, final String title) {
         this.createVApp(c, title, null);
     }
@@ -166,6 +182,7 @@ public class App extends JFrame implements ActionListener {
                 try {
                     final VirtualAppFrame frame = new VirtualAppFrame(title);
                     frame.setContentPane(c);
+                    if ((c.getWidth() * c.getHeight()) != 0) frame.setSize(c.getWidth(), c.getHeight());
                     if (icon != null) frame.setFrameIcon(icon);
                     frame.setVisible(true); //necessary as of 1.3
                     desktop.add(frame);

@@ -34,6 +34,7 @@ package ext.hsqldb.util;
 import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.Toolkit;
+import java.net.URL;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -82,6 +83,8 @@ class CommonSwing {
             return (new ImageIcon(
                 CommonSwing.class.getResource("GreenCircle.gif")).getImage());
         } else if (target.equalsIgnoreCase("Clear")) {
+URL url = CommonSwing.class.getResource("Clear.png");
+System.out.println("rlw: " + url);
             return (new ImageIcon(
                 CommonSwing.class.getResource("Clear.png")).getImage());
         } else if (target.equalsIgnoreCase("Problem")) {
@@ -211,7 +214,7 @@ class CommonSwing {
         // rlw temp; do not allow themes to be set because they interfere
         // with Java Virtual Desktop; I probably need to handle this in the Security Manager
         targetTheme = "bb";
-        
+
         try {
             if (targetTheme.equalsIgnoreCase(Native)) {
                 UIManager.setLookAndFeel(

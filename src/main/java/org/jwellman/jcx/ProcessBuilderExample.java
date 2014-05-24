@@ -19,7 +19,7 @@ public class ProcessBuilderExample {
     }
 
     public ProcessBuilderExample() {}
-    
+
     public void exec(String cmdline) {
         try {
             this.guts(2, cmdline);
@@ -46,7 +46,7 @@ public class ProcessBuilderExample {
                 commands.add("ls -l /var/tmp | grep tmp");
 
                 // execute the command
-                commandExecutor = new SystemCommandExecutor(commands);
+                commandExecutor = new SystemCommandExecutor(commands, null, null, null);
                 result = commandExecutor.executeCommand();
 
                 // get the stdout and stderr from the command that was run
@@ -68,7 +68,7 @@ public class ProcessBuilderExample {
                 commands.add(cmdline);
 
                 // execute the command
-                commandExecutor = new SystemCommandExecutor(commands);
+                commandExecutor = new SystemCommandExecutor(commands, null, null, null);
                 result = commandExecutor.executeCommand();
 
                 // get the stdout and stderr from the command that was run

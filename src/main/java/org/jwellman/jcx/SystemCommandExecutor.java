@@ -2,11 +2,11 @@ package org.jwellman.jcx;
 
 import java.io.*;
 import java.util.List;
+import javax.swing.JTextArea;
 
 /**
  * This class can be used to execute a system command from a Java application.
- * See the documentation for the public methods of this class for more
- * information.
+ * See the documentation for the public methods of this class for more information.
  *
  * Documentation for this class is available at this URL:
  *
@@ -32,12 +32,16 @@ import java.util.List;
  * http://www.gnu.org/licenses/lgpl.txt
  *
  */
-public class SystemCommandExecutor
-{
+public class SystemCommandExecutor {
+
   private List<String> commandInformation;
   private String adminPassword;
   private ThreadedStreamHandler inputStreamHandler;
   private ThreadedStreamHandler errorStreamHandler;
+
+  private JTextArea stderr;
+  private JTextArea stdout;
+  private File directory;
 
   /**
    * Pass in the system command you want to run as a List of Strings, as shown here:
@@ -57,21 +61,23 @@ public class SystemCommandExecutor
    *
    * @param commandInformation The command you want to run.
    */
-  public SystemCommandExecutor(final List<String> commandInformation)
-  {
+  public SystemCommandExecutor(final List<String> commandInformation, JTextArea stdout, JTextArea stderr, File directory) {
     if (commandInformation==null) throw new NullPointerException("The commandInformation is required.");
     this.commandInformation = commandInformation;
     this.adminPassword = null;
+    this.stdout = stdout;
+    this.stderr = stderr;
+    this.directory = directory;
   }
 
-  public int executeCommand()
-  throws IOException, InterruptedException
-  {
+  public int executeCommand() throws IOException, InterruptedException {
+
     int exitValue = -99;
 
     try
     {
       ProcessBuilder pb = new ProcessBuilder(commandInformation);
+      pb.directory(this.directory); // this handles null
       Process process = pb.start();
 
       // you need this if you're going to write something to the command's input stream
@@ -87,8 +93,8 @@ public class SystemCommandExecutor
       // these need to run as java threads to get the standard output and error from the command.
       // the inputstream handler gets a reference to our stdOutput in case we need to write
       // something to it, such as with the sudo command
-      errorStreamHandler = new ThreadedStreamHandler(errorStream);
-      inputStreamHandler = new ThreadedStreamHandler(inputStream, stdOutput);
+      errorStreamHandler = this.getErrorHandler(errorStream); // new ThreadedStreamHandler(errorStream);
+      inputStreamHandler = this.getInputHandler(inputStream); // new ThreadedStreamHandler(inputStream, stdOutput);
 
       // TODO the inputStreamHandler has a nasty side-effect of hanging if the given password is wrong; fix it
       errorStreamHandler.start();
@@ -118,6 +124,16 @@ public class SystemCommandExecutor
     {
       return exitValue;
     }
+  }
+
+  private ThreadedStreamHandler getErrorHandler(InputStream is) {
+      if (stderr == null) return new ThreadedStreamHandler(is);
+      else return new ThreadedSwingHandler(is, stderr);
+  }
+
+  private ThreadedStreamHandler getInputHandler(InputStream is) {
+      if (stdout == null) return new ThreadedStreamHandler(is);
+      else return new ThreadedSwingHandler(is, stdout);
   }
 
   /**

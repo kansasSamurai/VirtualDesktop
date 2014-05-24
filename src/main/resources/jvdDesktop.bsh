@@ -1,8 +1,11 @@
 /**
  * Start the BeanShell GUI desktop in a JFrame.
  * A starter workspace is created and added to the desktop.
+ *
  * This script is based on the desktop.bsh file but has been made
- * aware of the Java Virtual Desktop.
+ * aware of the Java Virtual Desktop. Deltas from the original
+ * script are marked with braces within a comment; i.e.
+ * // [*] or [1], etc.
  *
  * @method void jvdDesktop()
  *
@@ -18,8 +21,10 @@ import bsh.util.Util;
 import bsh.Interpreter;
 import java.awt.Component;
 import bsh.Capabilities;
+import org.jwellman.virtualdesktop.App; // [*]
 
-jvdDesktop()
+
+jvdDesktop( externalJframe )
 {
 	// need a way to set things to void again
 	if ( bsh.system.desktop != void ) {
@@ -27,6 +32,7 @@ jvdDesktop()
 		return;
 	} else bsh.system.desktop = this;   // race condition (hah!)
 
+        if (bsh.system.icons == void) { // [*] Only create these objects if necessary
 	bsh.system.icons=object();
 	bsh.system.icons.bean=
 		new ImageIcon(getResource("/bsh/util/lib/icon.gif"));
@@ -36,6 +42,7 @@ jvdDesktop()
 		new ImageIcon(getResource("/bsh/util/lib/script.gif"));
 	bsh.system.icons.eye=
 		new ImageIcon(getResource("/bsh/util/lib/eye.jpg"));
+        }
 
 	// Disallowed by applet security
 	try {
@@ -144,7 +151,7 @@ jvdDesktop()
 				exit();
 		*/
 		frame.dispose();
-		exit();
+		// exit(); // [*]
 	}
 
 	actionPerformed( e )
@@ -160,7 +167,8 @@ jvdDesktop()
 			shutdown();
 	}
 
-	this.pane=new JDesktopPane();
+        // [*] Need access to the jvd desktop
+	this.pane= (externalJframe == void) ? new JDesktopPane() : App.getVSystem().getDesktop();
 
 	this.popup=new JPopupMenu("Root Menu");
 	this.mi=new JMenuItem("New Bsh Workspace");
@@ -178,20 +186,29 @@ jvdDesktop()
 
 	pane.addMouseListener( this );
 
-	this.frame=new JFrame("BeanShell Desktop 1.1");
+        // [*] No jframe needed if supplied
+        if (externalJframe == void) {
+	this.frame = new JFrame("BeanShell Desktop 1.1");
 
 	stage.add(pane);
 	stage.add(taskBar, BorderLayout.SOUTH);
 
 	frame.getContentPane().add(stage);
+	frame.iconImage=bsh.system.icons.bean.image;
+
+        } else {
+            this.frame = App.getVSystem();
+            frame.createVApp(taskBar, "BeanShell TaskBar", null);
+        }
 
 	windowClosing( e ) {
 		bsh.system.desktop = null;
 		shutdown();
 	}
 
-	frame.iconImage=bsh.system.icons.bean.image;
-	frame.addWindowListener( this );
+// [*] TODO need a way to shutdown the desktop
+// 	frame.iconImage=bsh.system.icons.bean.image; // [*]
+//	frame.addWindowListener( this );
 
 	/*
 		If available, add a listener for classpath mapping
@@ -212,13 +229,17 @@ jvdDesktop()
 	*/
 
 	// start one terminal
-	workSpace=makeWorkspace( ""+windowCount++	);
+	workSpace=makeWorkspace( ""+windowCount++ );
 
+        // [*]
+        if (externalJframe == void) {
 	frame.setSize(800,600);
 	frame.show();
 
 	Util.endSplashScreen();
 
 	frame.toFront();
+        }
+
 	workSpace.frame.selected=true;
 }

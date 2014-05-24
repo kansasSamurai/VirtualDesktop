@@ -7,6 +7,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.*;
 import javax.swing.UIManager.LookAndFeelInfo;
+import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
 import org.jwellman.virtualdesktop.vapps.*;
 
 /**
@@ -27,6 +28,7 @@ public class App extends JFrame implements ActionListener {
 
     static Class[] registeredApps = {
         SpecBeanShell.class
+        ,SpecJCXConsole.class
         ,SpecHyperSQL.class
         ,SpecJFreeChart.class
         ,SpecXChartDemo.class
@@ -221,51 +223,21 @@ public class App extends JFrame implements ActionListener {
         frame.setVisible(true);
     }
 
-    protected static class ExitException extends SecurityException
-    {
-        public final int status;
-        public ExitException(int status) {
-            super("There is no escape!");
-            this.status = status;
-        }
-    }
+// TODO move this out of this class and into its own package
+//    public static class ExitException extends SecurityException
 
-    private static class NoExitSecurityManager extends SecurityManager
-    {
-        @Override
-        public void checkPermission(Permission perm) {
-            // allow anything.
-        }
+// TODO move this out of this class and into its own package
+//    private static class NoExitSecurityManager extends SecurityManager
 
-        @Override
-        public void checkPermission(Permission perm, Object context) {
-            // allow anything.
-        }
-
-        @Override
-        public void checkExit(int status) {
-            int dothis = 1;
-            switch (dothis) {
-                case 1:
-                    super.checkExit(status);
-                    break;
-                case 2:
-                    break; // do nothing; i.e. default behavior
-                case 3:
-                    Class classes[] = this.getClassContext();
-                    final int howmany = classes.length;
-                    for (int i=0; i < howmany; i++) {
-                       System.out.println(classes[i]);
-                    }
-                    break;
-                case 99:
-                    throw new ExitException(status);
-            }
-        }
-
+    public JDesktopPane getDesktop() {
+        return this.desktop;
     }
 
     public static void main(String[] args) {
+
+        // Improve visual look; may affect performance... we'll see
+        // Initial testing does seem to slow initial display of content so disabling for now
+        // System.setProperty("swing.aatext", "true");
 
         // Install a custom security manager to prevent guests from shutting down the desktop.
         System.setSecurityManager(new NoExitSecurityManager());

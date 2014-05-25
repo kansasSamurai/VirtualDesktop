@@ -2,6 +2,7 @@ package org.jwellman.virtualdesktop.vapps;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Dimension;
 import javax.swing.JPanel;
 
 /**
@@ -19,10 +20,11 @@ abstract public class VirtualAppSpec {
     protected VirtualAppSpec() {}
 
     protected JPanel createDefaultContent(Component o) {
-        final JPanel content = new JPanel(new BorderLayout());
-        content.add(o, BorderLayout.CENTER);
+        final JPanel pnl = new JPanel(new BorderLayout());
+        pnl.setPreferredSize(new Dimension(width, height));
+        pnl.add(o, BorderLayout.CENTER);
 
-        return content;
+        return pnl;
     }
 
     /**

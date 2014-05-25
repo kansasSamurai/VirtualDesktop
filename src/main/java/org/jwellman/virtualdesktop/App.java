@@ -140,22 +140,24 @@ public class App extends JFrame implements ActionListener {
      */
     protected void createVApp(final VirtualAppSpec spec) {
 
-        javax.swing.SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    final VirtualAppFrame frame = new VirtualAppFrame(spec.getTitle());
-                    frame.setContentPane(spec.getContent());
-                    frame.setSize(spec.getWidth(), spec.getHeight());
-                    frame.setVisible(true); //necessary as of 1.3
-                    desktop.add(frame);
-                    frame.setSelected(true);
-                } catch (java.beans.PropertyVetoException e) {
-                    e.printStackTrace(); // for now, simply swallow the exception
-                } catch (Exception e) {
-                    e.printStackTrace(); // for now, simply swallow the exception
-                }
-            }
-        });
+        this.createVApp(spec.getContent(), spec.getTitle(), null);
+
+//        javax.swing.SwingUtilities.invokeLater(new Runnable() {
+//            public void run() {
+//                try {
+//                    final VirtualAppFrame frame = new VirtualAppFrame(spec.getTitle());
+//                    frame.setContentPane(spec.getContent());
+//                    frame.setSize(spec.getWidth(), spec.getHeight());
+//                    frame.setVisible(true); //necessary as of 1.3
+//                    desktop.add(frame);
+//                    frame.setSelected(true);
+//                } catch (java.beans.PropertyVetoException e) {
+//                    e.printStackTrace(); // for now, simply swallow the exception
+//                } catch (Exception e) {
+//                    e.printStackTrace(); // for now, simply swallow the exception
+//                }
+//            }
+//        });
 
     }
 
@@ -166,8 +168,8 @@ public class App extends JFrame implements ActionListener {
      * @param c
      * @param title
      */
-    public void createVApp(final Container c, final String title) {
-        this.createVApp(c, title, null);
+    public VirtualAppFrame createVApp(final Container c, final String title) {
+        return this.createVApp(c, title, null);
     }
 
     /**
@@ -177,15 +179,17 @@ public class App extends JFrame implements ActionListener {
      * @param c
      * @param title
      */
-    public void createVApp(final Container c, final String title, final Icon icon) {
+    public VirtualAppFrame createVApp(final Container c, final String title, final Icon icon) {
+
+        final VirtualAppFrame frame = new VirtualAppFrame(title);
 
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             public void run() {
                 try {
-                    final VirtualAppFrame frame = new VirtualAppFrame(title);
                     frame.setContentPane(c);
                     if ((c.getWidth() * c.getHeight()) != 0) frame.setSize(c.getWidth(), c.getHeight());
                     if (icon != null) frame.setFrameIcon(icon);
+                    frame.pack(); // see Note [1] below
                     frame.setVisible(true); //necessary as of 1.3
                     desktop.add(frame);
                     frame.setSelected(true);
@@ -197,6 +201,11 @@ public class App extends JFrame implements ActionListener {
             }
         });
 
+        return frame;
+
+        // Note [1]: For now I am removing this via comment as it has undesired
+        // side effects.  However, I have a feeling that I should be using
+        // pack() and the side effects are due to a design error elsewhere.
     }
 
     /**

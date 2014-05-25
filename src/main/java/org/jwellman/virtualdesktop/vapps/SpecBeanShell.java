@@ -22,7 +22,7 @@ public class SpecBeanShell extends VirtualAppSpec {
         final Interpreter i = new Interpreter(c);
         new Thread( i, "BeanShell Interpreter" ).start(); // start a thread to call the run() method
         try {
-            i.source("nofile.bsh"); //("/src/main/resources/jvdClassBrowser.bsh");
+            i.source("/src/main/resources/jvdClassBrowser.bsh");
         } catch (FileNotFoundException ex) {
             Logger.getLogger(SpecBeanShell.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {

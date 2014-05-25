@@ -1,7 +1,6 @@
 package org.jwellman.virtualdesktop.security;
 
 import java.security.Permission;
-import org.jwellman.virtualdesktop.App;
 
 /**
  *

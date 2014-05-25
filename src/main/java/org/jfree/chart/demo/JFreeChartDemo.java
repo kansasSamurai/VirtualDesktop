@@ -60,19 +60,19 @@ public class JFreeChartDemo extends JFrame {
     public JFreeChartDemo(String title) {
         super(title);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.setContentPane(this.createMainUI());
+        this.setContentPane(createMainUI());
     }
 
     /**
      * This is really where the app is created;
      * this method allows this class to be used stand-alone or
      * injected into any application that supports JPanels.
-     * 
-     * @return 
+     *
+     * @return
      */
-    public JPanel createMainUI() {
+    public static JPanel createMainUI() {
         JPanel appUI = new JPanel(new BorderLayout());
-        
+
         final DefaultXYDataset dataset = new DefaultXYDataset();
         dataset.addSeries("Series0", createSeries(0));
         dataset.addSeries("Series1", createSeries(1));
@@ -82,7 +82,7 @@ public class JFreeChartDemo extends JFrame {
         ChartPanel chartPanel = new ChartPanel(chart, false);
         chartPanel.setPreferredSize(new Dimension(640, 480));
         appUI.add(chartPanel, BorderLayout.CENTER);
-        
+
         chart.setBackgroundPaint(chartPanel.getBackground());
 
         JPanel buttonPanel = new JPanel();
@@ -104,7 +104,7 @@ public class JFreeChartDemo extends JFrame {
         });
 
         appUI.add(buttonPanel, BorderLayout.SOUTH);
-        
+
         return appUI;
     }
 
@@ -113,7 +113,7 @@ public class JFreeChartDemo extends JFrame {
      *
      * @ return the series
      */
-    private double[][] createSeries(int mean) {
+    private static double[][] createSeries(int mean) {
         double[][] series = new double[2][MAX];
         for (int i = 0; i < MAX; i++) {
             series[0][i] = (double) i;
@@ -128,7 +128,7 @@ public class JFreeChartDemo extends JFrame {
      * @param dataset the dataset
      * @return the chart
      */
-    private JFreeChart createChart(XYDataset dataset) {
+    private static JFreeChart createChart(XYDataset dataset) {
 
         // create the chart...
         JFreeChart chart = ChartFactory.createXYLineChart(
@@ -165,7 +165,7 @@ public class JFreeChartDemo extends JFrame {
         // render shapes and lines
         XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer(true, true);
         renderer.setBaseShapesVisible(true);
-        renderer.setBaseShapesFilled(true);        
+        renderer.setBaseShapesFilled(true);
         renderer.setBaseOutlineStroke(stroke); // set the renderer's stroke
 
         // label the points
@@ -196,5 +196,5 @@ public class JFreeChartDemo extends JFrame {
             }
         });
     }
-    
+
 }

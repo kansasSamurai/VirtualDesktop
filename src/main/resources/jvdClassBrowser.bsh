@@ -5,17 +5,8 @@
 import bsh.util.ClassBrowser;
 import org.jwellman.virtualdesktop.App;
 
-makeInternalFrame( String name )
-{
-	// Closable by default
-	this.frame = new JInternalFrame( name, true, true, true, true );
-	frame.frameIcon=bsh.system.icons.bean;
-	frame.visible=true;
-	return frame;
-}
+jvdClassBrowser() {
 
-jvdClassBrowser()
-{
     bsh.system.icons=object();
 	bsh.system.icons.bean=
 		new ImageIcon(getResource("/bsh/util/lib/icon.gif"));
@@ -26,23 +17,46 @@ jvdClassBrowser()
 	bsh.system.icons.eye=
 		new ImageIcon(getResource("/bsh/util/lib/eye.jpg"));
 
-	this.browser = new ClassBrowser( this.interpreter.getClassManager() );
-	browser.init();
+    this.browser = new ClassBrowser( this.interpreter.getClassManager() );
+    browser.init();
+
+    makeInternalFrame( String name ) {
+        // Closable by default
+        this.frame = new JInternalFrame( name, true, true, true, true );
+        frame.frameIcon=bsh.system.icons.bean;
+        frame.visible=true;
+        return frame;
+    }
+
+    browse( Object o ) {
+	String classname;
+	if ( o instanceof String)
+		classname = o;
+	else if ( o instanceof ClassIdentifier )
+		classname = this.namespace.identifierToClass(o).getName();
+	else if ( o instanceof Class )
+		classname = o.getName();
+	else
+		classname = o.getClass().getName();
+
+        this.browser.driveToClass(classname);
+    }
 
         this.javaVirtualDesktop = true;
 	this.inDesktop = true; // ( bsh.system.desktop != void );
 	if ( inDesktop ) {
             if ( javaVirtualDesktop ) {
-                // do nothing here
+                this.frame = App.getVSystem().createVApp(browser, "BeanShell Class Browser", bsh.system.icons.eye);
             } else {
 		this.frame = makeInternalFrame("BeanShell Class Browser");
-		frame.frameIcon = bsh.system.icons.eye;
+		// frame.frameIcon = bsh.system.icons.eye;
 		// bsh.system.desktop.classbrowser = browser;
             }
 	} else {
 		this.frame = new javax.swing.JFrame("BeanShell Class Browser");
-		frame.iconImage=bsh.system.icons.eye;
+		// frame.iconImage=bsh.system.icons.eye;
 	}
+	frame.frameIcon = bsh.system.icons.eye;
 
 	// Ignore unhandled method invocations from listeners.
 	invoke( name, args ) {
@@ -61,17 +75,25 @@ jvdClassBrowser()
             frame.pack();
             frame.show();
             frame.selected=true;
+        } else {
+            if (inDesktop) { frame.addInternalFrameListener(this); }
+//            browser.setFrame( frame );
+//            frame.getContentPane().add("Center", browser);
+            frame.pack();
+//            frame.show();
+//            frame.selected=true;
         }
 
         if ( inDesktop ) {
             if ( javaVirtualDesktop ) {
-                App.getVSystem().createVApp(browser, "BeanShell Class Browser", bsh.system.icons.eye);
+//                App.getVSystem().createVApp(browser, "BeanShell Class Browser", bsh.system.icons.eye);
             } else {
                 bsh.system.desktop.addInternalFrame(frame);
             }
         }
 
-	return browser;
+	return this; // browser;
 }
 
-browser = jvdClassBrowser();
+jvd = object();
+jvd.browser = jvdClassBrowser();

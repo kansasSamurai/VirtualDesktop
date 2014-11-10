@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.lang.SystemUtils;
 
 /**
  * A simple UI/Panel for the JCXEngine.
@@ -58,7 +59,7 @@ public class JCXConsole extends javax.swing.JPanel {
         stdout.setEditable(false);
         stdout.setBackground(new java.awt.Color(0, 0, 0));
         stdout.setColumns(60);
-        stdout.setFont(new java.awt.Font("Courier New", 0, 12)); // NOI18N
+        stdout.setFont(new java.awt.Font("Monospaced", 0, 12));
         stdout.setForeground(new java.awt.Color(51, 255, 0));
         stdout.setRows(20);
         stdout.setText("stdout");
@@ -77,6 +78,7 @@ public class JCXConsole extends javax.swing.JPanel {
         stderr.setEditable(false);
         stderr.setBackground(new java.awt.Color(0, 0, 0));
         stderr.setColumns(60);
+        stderr.setFont(new java.awt.Font("Monospaced", 0, 12)); // NOI18N
         stderr.setForeground(new java.awt.Color(255, 0, 51));
         stderr.setRows(5);
         stderr.setText("stderr");
@@ -115,8 +117,13 @@ public class JCXConsole extends javax.swing.JPanel {
         this.stdout.setText("");
 
         commands.clear();
-        commands.add("cmd.exe"); // need /windows/system32/ ?
-        commands.add("/C");
+        if (SystemUtils.IS_OS_WINDOWS) { 
+            commands.add("cmd.exe"); // need /windows/system32/ ?
+            commands.add("/C");
+        } else { // For now, assume Linux
+            commands.add("/bin/bash"); // alias expansion requires export BASH_ENV=~/.bashrc *and* shopt -s expand_aliases
+            commands.add("-c");
+        }
         commands.add(commandline.getText());
 
         // execute the command

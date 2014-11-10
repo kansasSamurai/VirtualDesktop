@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.lang.SystemUtils;
 
 public class ProcessBuilderExample {
 
@@ -63,8 +64,13 @@ public class ProcessBuilderExample {
             case 2:
                 // build the system command we want to run
 //                List<String> commands = new ArrayList<String>();
-                commands.add("cmd.exe"); // need /windows/system32/ ?
-                commands.add("/C");
+                if (SystemUtils.IS_OS_WINDOWS) { 
+                    commands.add("cmd.exe"); // need /windows/system32/ ?
+                    commands.add("/C");
+                } else { // For now, assume Linux
+                    commands.add("/bin/sh");
+                    commands.add("-c");
+                }
                 commands.add(cmdline);
 
                 // execute the command

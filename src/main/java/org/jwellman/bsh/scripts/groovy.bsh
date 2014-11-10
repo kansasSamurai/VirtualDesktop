@@ -1,0 +1,37 @@
+
+// === This runs a groovy script from the beanshell console ===
+shell = new groovy.lang.GroovyShell();
+result = shell.run( new File("src/main/java/org/jwellman/groovy/scripts/jvdConsole.groovy"), new String[]{} );
+
+// === This opens the groovy console
+console = new groovy.ui.Console();
+console.run();
+
+// === Programatically load a file into the console
+console.loadScriptFile("C:/My documents/MyScript.groovy");
+
+def iframeDelegates = [
+        rootContainerDelegate:{
+            internalFrame(
+                title: 'GroovyConsole',
+                //location: [100,100], // in groovy 2.0 use platform default location
+                //frameIcon: imageIcon("/groovy/ui/ConsoleIcon.png").image                
+            ) {
+//                try {
+////                    current.locationByPlatform = true
+//                    current.location = [100, 100] // for 1.4 compatibility
+//                } catch (Exception e) {
+//                    current.location = [100, 100] // for 1.4 compatibility
+//                }
+                containingWindows += current
+            }
+        },
+        menuBarDelegate: {arg->
+            current.JMenuBar = build(arg)}
+    ];
+
+console = new groovy.ui.Console();
+console.run(iframeDelegates);
+// console.swing.consoleFrame.pack();
+// console.swing.consoleFrame.show();
+

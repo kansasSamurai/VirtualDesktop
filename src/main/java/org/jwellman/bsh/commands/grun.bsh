@@ -1,0 +1,9 @@
+
+// === This runs a groovy script from the beanshell console ===
+// TODO add args
+grun( filename ) {
+
+    shell = new groovy.lang.GroovyShell();
+    result = shell.run( new File("src/main/java/org/jwellman/groovy/scripts/" + filename), new String[]{} );
+
+}

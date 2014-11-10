@@ -22,3 +22,19 @@ has the drawback that one misbehaving tool can
 crash the entire JVM.  Therefore, if you use this
 environment to edit files, be sure that you save
 often.
+
+
+mvn install:install-file -Dfile=graphicsbuilder-0.6.1.jar -DgroupId=org.codehaus.groovy-contrib -DartifactId=graphicsbuilder -Dversion=0.6.1 -Dpackaging=jar
+mvn install:install-file -Dfile=jsilhouette-geom-0.2.jar -DgroupId=org.kordamp -DartifactId=jsilhouette -Dversion=0.2 -Dpackaging=jar
+
+<dependency>
+    <groupId>org.codehaus.groovy-contrib</groupId>
+    <artifactId>graphicsbuilder</artifactId>
+    <version>0.6.1</version>
+</dependency>
+
+<dependency>
+    <groupId>org.kordamp</groupId>
+    <artifactId>jsilhouette</artifactId>
+    <version>0.2</version>
+</dependency>

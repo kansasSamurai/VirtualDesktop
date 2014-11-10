@@ -2,7 +2,6 @@ package org.jwellman.virtualdesktop;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.security.Permission;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.*;
@@ -29,6 +28,8 @@ public class App extends JFrame implements ActionListener {
     static Class[] registeredApps = {
         SpecBeanShell.class
         ,SpecJCXConsole.class
+        ,SpecGroovyConsole.class
+        ,SpecGroovyGraphics.class
         ,SpecHyperSQL.class
         ,SpecJFreeChart.class
         ,SpecXChartDemo.class
@@ -140,24 +141,12 @@ public class App extends JFrame implements ActionListener {
      */
     protected void createVApp(final VirtualAppSpec spec) {
 
-        this.createVApp(spec.getContent(), spec.getTitle(), null);
-
-//        javax.swing.SwingUtilities.invokeLater(new Runnable() {
-//            public void run() {
-//                try {
-//                    final VirtualAppFrame frame = new VirtualAppFrame(spec.getTitle());
-//                    frame.setContentPane(spec.getContent());
-//                    frame.setSize(spec.getWidth(), spec.getHeight());
-//                    frame.setVisible(true); //necessary as of 1.3
-//                    desktop.add(frame);
-//                    frame.setSelected(true);
-//                } catch (java.beans.PropertyVetoException e) {
-//                    e.printStackTrace(); // for now, simply swallow the exception
-//                } catch (Exception e) {
-//                    e.printStackTrace(); // for now, simply swallow the exception
-//                }
-//            }
-//        });
+        if (spec.isInternalFrameProvider()) {
+            final VirtualAppFrame frame = new VirtualAppFrame(spec.getTitle());
+            spec.populateInternalFrame(frame);
+        } else {
+            this.createVApp(spec.getContent(), spec.getTitle(), null);            
+        }
 
     }
 
@@ -187,9 +176,12 @@ public class App extends JFrame implements ActionListener {
             public void run() {
                 try {
                     frame.setContentPane(c);
-                    if ((c.getWidth() * c.getHeight()) != 0) frame.setSize(c.getWidth(), c.getHeight());
                     if (icon != null) frame.setFrameIcon(icon);
-                    frame.pack(); // see Note [1] below
+                    if ((c.getWidth() * c.getHeight()) != 0) {
+                        frame.setSize(c.getWidth(), c.getHeight());
+                    } else {
+                        frame.pack(); // see Note [1] below                        
+                    }
                     frame.setVisible(true); //necessary as of 1.3
                     desktop.add(frame);
                     frame.setSelected(true);

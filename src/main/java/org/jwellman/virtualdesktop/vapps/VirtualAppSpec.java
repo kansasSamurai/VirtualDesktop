@@ -3,6 +3,7 @@ package org.jwellman.virtualdesktop.vapps;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import javax.swing.JInternalFrame;
 import javax.swing.JPanel;
 
 /**
@@ -14,8 +15,9 @@ abstract public class VirtualAppSpec {
     private String title;
     private Class clazz;
     private JPanel content;
-    protected int height = 200;
-    protected int width = 300;
+    protected int height = 0;
+    protected int width = 0;
+    protected boolean internalFrameProvider = false;
 
     protected VirtualAppSpec() {}
 
@@ -25,6 +27,10 @@ abstract public class VirtualAppSpec {
         pnl.add(o, BorderLayout.CENTER);
 
         return pnl;
+    }
+    
+    public void populateInternalFrame(JInternalFrame frame) {
+        // empty default impl
     }
 
     /**
@@ -83,6 +89,10 @@ abstract public class VirtualAppSpec {
 
     public void setWidth(int width) {
         this.width = width;
+    }
+    
+    public boolean isInternalFrameProvider() {
+        return this.internalFrameProvider;
     }
 
 }

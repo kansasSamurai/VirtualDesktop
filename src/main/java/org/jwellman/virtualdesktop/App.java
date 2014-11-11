@@ -8,6 +8,7 @@ import javax.swing.*;
 import javax.swing.UIManager.LookAndFeelInfo;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
 import org.jwellman.virtualdesktop.vapps.*;
+import org.jwellman.virtualdesktop.vswing.VDesktopPane;
 
 /**
  * A Virtual Desktop.
@@ -55,7 +56,7 @@ public class App extends JFrame implements ActionListener {
         setBounds(inset, inset, screenSize.width  - inset*10, screenSize.height - inset*2);
 
         //Set up the GUI.
-        desktop = new JDesktopPane(); //a specialized layered pane
+        desktop = new VDesktopPane(); // new JDesktopPane(); //a specialized layered pane
         dsp = new DesktopScrollPane(desktop);
         setContentPane(dsp); //(desktop);
         setJMenuBar(createMenuBar());

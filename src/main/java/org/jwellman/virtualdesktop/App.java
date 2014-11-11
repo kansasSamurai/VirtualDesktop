@@ -1,12 +1,15 @@
 package org.jwellman.virtualdesktop;
 
+import com.alee.laf.WebLookAndFeel;
 import java.awt.*;
 import java.awt.event.*;
+import java.security.Permission;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.*;
 import javax.swing.UIManager.LookAndFeelInfo;
-import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
+import static org.jwellman.virtualdesktop.App.registeredApps;
+import org.jwellman.virtualdesktop.desktop.VActionLNF;
 import org.jwellman.virtualdesktop.vapps.*;
 import org.jwellman.virtualdesktop.vswing.VDesktopPane;
 
@@ -28,9 +31,6 @@ public class App extends JFrame implements ActionListener {
 
     static Class[] registeredApps = {
         SpecBeanShell.class
-        ,SpecJCXConsole.class
-        ,SpecGroovyConsole.class
-        ,SpecGroovyGraphics.class
         ,SpecHyperSQL.class
         ,SpecJFreeChart.class
         ,SpecXChartDemo.class
@@ -53,15 +53,65 @@ public class App extends JFrame implements ActionListener {
         //Make the big window be indented 50 pixels from each edge of the screen.
         int inset = 50;
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        setBounds(inset, inset, screenSize.width  - inset*10, screenSize.height - inset*2);
+        setBounds(inset, inset, screenSize.width  - inset*2, screenSize.height - inset*2);
 
-        //Set up the GUI.
-        desktop = new VDesktopPane(); // new JDesktopPane(); //a specialized layered pane
-        dsp = new DesktopScrollPane(desktop);
-        setContentPane(dsp); //(desktop);
         setJMenuBar(createMenuBar());
+        
+        //Set up the GUI.
+        JPanel p = new JPanel(new BorderLayout());
+        JTextArea species = new JTextArea("Species");
+        JTextArea locations = new JTextArea("Locations");
+        JTextArea travelPaths = new JTextArea("TravelPaths");
 
-        createVApp(new SpecEmpty()); //create first "window"
+        JPanel controls = null;
+        
+        desktop = new VDesktopPane(); // new JDesktopPane(); //a specialized layered pane
+        int version = 4;
+        switch (version) {
+            case 1:
+                dsp = new DesktopScrollPane(desktop);
+                setContentPane(dsp); //(desktop);
+                break;
+            case 2:
+                controls = new JPanel(new GridLayout(3, 0));
+                controls.add(new JScrollPane(species));
+                controls.add(new JScrollPane(locations));
+                controls.add(new JScrollPane(travelPaths));
+        
+                p.add(controls, BorderLayout.WEST);
+                p.add(desktop);
+                this.setContentPane(p);
+                break;
+            case 3:
+                controls = new JPanel(new GridLayout(3, 0));
+                controls.add(new JScrollPane(species));
+                controls.add(new JScrollPane(locations));
+                controls.add(new JScrollPane(travelPaths));
+        
+                dsp = new DesktopScrollPane(desktop);
+                p.add(controls, BorderLayout.WEST);
+                p.add(dsp);
+                this.setContentPane(p);
+                break;
+            case 4:
+                controls = new JPanel(new GridLayout(3, 0));
+                controls.add(new JScrollPane(species));
+                controls.add(new JScrollPane(locations));
+                controls.add(new JScrollPane(travelPaths));
+        
+                dsp = new DesktopScrollPane(desktop);
+
+                //Create a split pane with the two scroll panes in it.
+                JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, controls, dsp);
+                splitPane.setOneTouchExpandable(true);
+                splitPane.setDividerLocation(150);
+                p.add(splitPane);
+                this.setContentPane(p);
+                break;
+                
+        }
+
+        createVApp(new SpecBeanShell()); //(new SpecEmpty()); //create first "window"
 
         //Make dragging a little faster but perhaps uglier.
         desktop.setDragMode(JDesktopPane.OUTLINE_DRAG_MODE);
@@ -75,7 +125,7 @@ public class App extends JFrame implements ActionListener {
         JMenu menu = new JMenu("System");
         menu.setMnemonic(KeyEvent.VK_S);
         menuBar.add(menu);
-
+        
         //Set up the first menu item.
         JMenuItem menuItem = new JMenuItem("New");
         menuItem.setMnemonic(KeyEvent.VK_N);
@@ -92,15 +142,22 @@ public class App extends JFrame implements ActionListener {
         menuItem.addActionListener(this);
         menu.add(menuItem);
 
-        menu = new JMenu("VApps");
-        menu.setMnemonic(KeyEvent.VK_V);
-        menuBar.add(menu);
         for (Class clazz : registeredApps) {
             menuItem = new JMenuItem(clazz.getSimpleName());
             menuItem.setActionCommand(clazz.getCanonicalName());
             menuItem.addActionListener(this);
             menu.add(menuItem);
         }
+
+        menu = new JMenu("Skin");
+        menu.setMnemonic(KeyEvent.VK_K);
+        menuBar.add(menu);
+        
+        menuItem = new JMenuItem(new VActionLNF("Nimbus",null,"javax.swing.plaf.nimbus.NimbusLookAndFeel", this));
+        menu.add(menuItem);
+
+        menuItem = new JMenuItem(new VActionLNF("Web",null,"com.alee.laf.WebLookAndFeel", this));
+        menu.add(menuItem);
 
         return menuBar;
     }
@@ -134,55 +191,14 @@ public class App extends JFrame implements ActionListener {
         this.createVApp((VirtualAppSpec)newInstance);
     }
 
-    /**
-     * Create a new application.
-     * [This is the definitive method of the overloaded versions.]
-     *
-     * @param spec
-     */
+    //Create a new application.
     protected void createVApp(final VirtualAppSpec spec) {
-
-        if (spec.isInternalFrameProvider()) {
-            final VirtualAppFrame frame = new VirtualAppFrame(spec.getTitle());
-            spec.populateInternalFrame(frame);
-        } else {
-            this.createVApp(spec.getContent(), spec.getTitle(), null);            
-        }
-
-    }
-
-    /**
-     * This public method allows internal apps to create internal apps/windows.
-     * i.e. via beanshell or others
-     *
-     * @param c
-     * @param title
-     */
-    public VirtualAppFrame createVApp(final Container c, final String title) {
-        return this.createVApp(c, title, null);
-    }
-
-    /**
-     * This public method allows internal apps to create internal apps/windows.
-     * i.e. via beanshell or others
-     *
-     * @param c
-     * @param title
-     */
-    public VirtualAppFrame createVApp(final Container c, final String title, final Icon icon) {
-
-        final VirtualAppFrame frame = new VirtualAppFrame(title);
 
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             public void run() {
                 try {
-                    frame.setContentPane(c);
-                    if (icon != null) frame.setFrameIcon(icon);
-                    if ((c.getWidth() * c.getHeight()) != 0) {
-                        frame.setSize(c.getWidth(), c.getHeight());
-                    } else {
-                        frame.pack(); // see Note [1] below                        
-                    }
+                    final VirtualAppFrame frame = new VirtualAppFrame(spec.getTitle());
+                    frame.setContentPane(spec.getContent());
                     frame.setVisible(true); //necessary as of 1.3
                     desktop.add(frame);
                     frame.setSelected(true);
@@ -194,11 +210,38 @@ public class App extends JFrame implements ActionListener {
             }
         });
 
-        return frame;
+    }
 
-        // Note [1]: For now I am removing this via comment as it has undesired
-        // side effects.  However, I have a feeling that I should be using
-        // pack() and the side effects are due to a design error elsewhere.
+    public void createVApp(final Container c, final String title) {
+        this.createVApp(c, title, null);
+    }
+
+    /**
+     * This public method allows internal apps to create internal apps/windows.
+     * i.e. via beanshell or others
+     *
+     * @param c
+     * @param title
+     */
+    public void createVApp(final Container c, final String title, final Icon icon) {
+
+        javax.swing.SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                try {
+                    final VirtualAppFrame frame = new VirtualAppFrame(title);
+                    frame.setContentPane(c);
+                    if (icon != null) frame.setFrameIcon(icon);
+                    frame.setVisible(true); //necessary as of 1.3
+                    desktop.add(frame);
+                    frame.setSelected(true);
+                } catch (java.beans.PropertyVetoException e) {
+                    e.printStackTrace(); // for now, simply swallow the exception
+                } catch (Exception e) {
+                    e.printStackTrace(); // for now, simply swallow the exception
+                }
+            }
+        });
+
     }
 
     /**
@@ -225,35 +268,87 @@ public class App extends JFrame implements ActionListener {
         frame.setVisible(true);
     }
 
-// TODO move this out of this class and into its own package
-//    public static class ExitException extends SecurityException
+    protected static class ExitException extends SecurityException
+    {
+        public final int status;
+        public ExitException(int status) {
+            super("There is no escape!");
+            this.status = status;
+        }
+    }
 
-// TODO move this out of this class and into its own package
-//    private static class NoExitSecurityManager extends SecurityManager
+    private static class NoExitSecurityManager extends SecurityManager
+    {
+        @Override
+        public void checkPermission(Permission perm) {
+            // allow anything.
+        }
 
-    public JDesktopPane getDesktop() {
-        return this.desktop;
+        @Override
+        public void checkPermission(Permission perm, Object context) {
+            // allow anything.
+        }
+
+        @Override
+        public void checkExit(int status) {
+            boolean experimentMode = false;
+            
+            if (experimentMode) {
+                int dothis = 1;
+                switch (dothis) {
+                    case 1:
+                        super.checkExit(status);
+                        break;
+                    case 2:
+                        break; // do nothing; i.e. default behavior
+                    case 3:
+                        Class classes[] = this.getClassContext();
+                        final int howmany = classes.length;
+                        for (int i=0; i < howmany; i++) {
+                           System.out.println(classes[i]);
+                        }
+                        break;
+                    case 99:
+                        throw new App.ExitException(status);
+                    default:
+                        break;
+                }
+            } else {
+                boolean allow = false;
+                final Class classes[] = this.getClassContext();
+                final int howmany = classes.length;
+                for (int i=0; i < howmany; i++) {
+                    System.out.println(classes[i]);
+                    if (classes[i].toString().startsWith("class org.jwellman.virtualdesktop")) {                        
+                        allow = true;
+                        break;
+                    }
+                }
+                if (!allow) throw new App.ExitException(status); 
+            }
+        }
     }
 
     public static void main(String[] args) {
 
-        // Improve visual look; may affect performance... we'll see
-        // Initial testing does seem to slow initial display of content so disabling for now
-        // System.setProperty("swing.aatext", "true");
-
         // Install a custom security manager to prevent guests from shutting down the desktop.
-        System.setSecurityManager(new NoExitSecurityManager());
+        System.setSecurityManager(new App.NoExitSecurityManager());
 
         //Schedule a job for the event-dispatching thread:
         //creating and showing this application's GUI.
         javax.swing.SwingUtilities.invokeLater(
             new Runnable() { public void run() {
                 try {
+                    UIManager.installLookAndFeel("Web", "com.alee.laf.WebLookAndFeel");
+//                    WebLookAndFeel.install();
                     for (LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+                        System.out.println(info.getName() + " : " + info.getClassName());
                         if ("Nimbus".equals(info.getName())) {
-                            UIManager.setLookAndFeel(info.getClassName());
-                            break;
+                            UIManager.setLookAndFeel(info.getClassName()); break;
                         }
+//                        if ("Web".equals(info.getName())) {
+//                            UIManager.setLookAndFeel(info.getClassName()); break;
+//                        }
                     }
                 } catch (Exception e) {
                     // If Nimbus is not available, you can set the GUI to another look and feel.
@@ -264,3 +359,4 @@ public class App extends JFrame implements ActionListener {
     }
 
 }
+    

@@ -17,10 +17,14 @@ public class VDesktopPane extends JDesktopPane {
     
     private Image image;
     
+    private static final String path = "org/jwellman/virtualdesktop/images/";
+    private static final String[] images = { "blankWall.jpg", "railroadTracks.jpg", 
+        "javaBeans.jpg"};
+    
     public VDesktopPane() {
         super();
         try {        
-            final URL url = this.getClass().getClassLoader().getResource("org/jwellman/virtualdesktop/images/blankWall.jpg");
+            final URL url = this.getClass().getClassLoader().getResource(path + images[1]);
             this.image = ImageIO.read(url);
         } catch (IOException ex) {
             Logger.getLogger(VDesktopPane.class.getName()).log(Level.SEVERE, null, ex);

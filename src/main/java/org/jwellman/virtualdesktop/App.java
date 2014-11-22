@@ -10,6 +10,7 @@ import javax.swing.*;
 import javax.swing.UIManager.LookAndFeelInfo;
 import static org.jwellman.virtualdesktop.App.registeredApps;
 import org.jwellman.virtualdesktop.desktop.VActionLNF;
+import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
 import org.jwellman.virtualdesktop.vapps.*;
 import org.jwellman.virtualdesktop.vswing.VDesktopPane;
 
@@ -31,6 +32,7 @@ public class App extends JFrame implements ActionListener {
 
     static Class[] registeredApps = {
         SpecBeanShell.class
+        ,SpecJCXConsole.class
         ,SpecHyperSQL.class
         ,SpecJFreeChart.class
         ,SpecXChartDemo.class
@@ -142,6 +144,9 @@ public class App extends JFrame implements ActionListener {
         menuItem.addActionListener(this);
         menu.add(menuItem);
 
+        menu = new JMenu("VApps");
+        menu.setMnemonic(KeyEvent.VK_V);
+        menuBar.add(menu);
         for (Class clazz : registeredApps) {
             menuItem = new JMenuItem(clazz.getSimpleName());
             menuItem.setActionCommand(clazz.getCanonicalName());
@@ -191,29 +196,25 @@ public class App extends JFrame implements ActionListener {
         this.createVApp((VirtualAppSpec)newInstance);
     }
 
-    //Create a new application.
+    /**
+     * Create a new application.
+     * [This is the definitive method of the overloaded versions.]
+     *
+     * @param spec
+     */
     protected void createVApp(final VirtualAppSpec spec) {
 
-        javax.swing.SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    final VirtualAppFrame frame = new VirtualAppFrame(spec.getTitle());
-                    frame.setContentPane(spec.getContent());
-                    frame.setVisible(true); //necessary as of 1.3
-                    desktop.add(frame);
-                    frame.setSelected(true);
-                } catch (java.beans.PropertyVetoException e) {
-                    e.printStackTrace(); // for now, simply swallow the exception
-                } catch (Exception e) {
-                    e.printStackTrace(); // for now, simply swallow the exception
-                }
-            }
-        });
+        if (spec.isInternalFrameProvider()) {
+            final VirtualAppFrame frame = new VirtualAppFrame(spec.getTitle());
+            spec.populateInternalFrame(frame);
+        } else {
+            this.createVApp(spec.getContent(), spec.getTitle(), null);            
+        }
 
     }
 
-    public void createVApp(final Container c, final String title) {
-        this.createVApp(c, title, null);
+    public VirtualAppFrame createVApp(final Container c, final String title) {
+        return this.createVApp(c, title, null);
     }
 
     /**
@@ -223,14 +224,21 @@ public class App extends JFrame implements ActionListener {
      * @param c
      * @param title
      */
-    public void createVApp(final Container c, final String title, final Icon icon) {
+    public VirtualAppFrame createVApp(final Container c, final String title, final Icon icon) {
 
+        final VirtualAppFrame frame = new VirtualAppFrame(title);
+        
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             public void run() {
                 try {
                     final VirtualAppFrame frame = new VirtualAppFrame(title);
                     frame.setContentPane(c);
                     if (icon != null) frame.setFrameIcon(icon);
+                    if ((c.getWidth() * c.getHeight()) != 0) {
+                        frame.setSize(c.getWidth(), c.getHeight());
+                    } else {
+                        frame.pack(); // see Note [1] below                        
+                    }
                     frame.setVisible(true); //necessary as of 1.3
                     desktop.add(frame);
                     frame.setSelected(true);
@@ -242,6 +250,11 @@ public class App extends JFrame implements ActionListener {
             }
         });
 
+        return frame;
+
+        // Note [1]: For now I am removing this via comment as it has undesired
+        // side effects.  However, I have a feeling that I should be using
+        // pack() and the side effects are due to a design error elsewhere.
     }
 
     /**
@@ -268,71 +281,10 @@ public class App extends JFrame implements ActionListener {
         frame.setVisible(true);
     }
 
-    protected static class ExitException extends SecurityException
-    {
-        public final int status;
-        public ExitException(int status) {
-            super("There is no escape!");
-            this.status = status;
-        }
-    }
-
-    private static class NoExitSecurityManager extends SecurityManager
-    {
-        @Override
-        public void checkPermission(Permission perm) {
-            // allow anything.
-        }
-
-        @Override
-        public void checkPermission(Permission perm, Object context) {
-            // allow anything.
-        }
-
-        @Override
-        public void checkExit(int status) {
-            boolean experimentMode = false;
-            
-            if (experimentMode) {
-                int dothis = 1;
-                switch (dothis) {
-                    case 1:
-                        super.checkExit(status);
-                        break;
-                    case 2:
-                        break; // do nothing; i.e. default behavior
-                    case 3:
-                        Class classes[] = this.getClassContext();
-                        final int howmany = classes.length;
-                        for (int i=0; i < howmany; i++) {
-                           System.out.println(classes[i]);
-                        }
-                        break;
-                    case 99:
-                        throw new App.ExitException(status);
-                    default:
-                        break;
-                }
-            } else {
-                boolean allow = false;
-                final Class classes[] = this.getClassContext();
-                final int howmany = classes.length;
-                for (int i=0; i < howmany; i++) {
-                    System.out.println(classes[i]);
-                    if (classes[i].toString().startsWith("class org.jwellman.virtualdesktop")) {                        
-                        allow = true;
-                        break;
-                    }
-                }
-                if (!allow) throw new App.ExitException(status); 
-            }
-        }
-    }
-
     public static void main(String[] args) {
 
         // Install a custom security manager to prevent guests from shutting down the desktop.
-        System.setSecurityManager(new App.NoExitSecurityManager());
+        System.setSecurityManager(new NoExitSecurityManager());
 
         //Schedule a job for the event-dispatching thread:
         //creating and showing this application's GUI.

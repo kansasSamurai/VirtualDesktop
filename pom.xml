@@ -15,13 +15,6 @@
   </properties>
 
 <!-- jline seemed problematic and difficult to integrate; break into a separate jar -->
-  <repositories>
-    <repository>
-        <id>jline</id>
-        <name>JLine Project Repository</name>
-        <url>http://jline.sourceforge.net/m2repo</url>
-    </repository>
-  </repositories>
 
   <dependencies>
 <!--
@@ -85,7 +78,31 @@
     <dependency>
       <groupId>com.jidesoft</groupId>
       <artifactId>jide-oss</artifactId>
-      <version>3.5.15</version>
+      <version>3.6.4</version>
+    </dependency>
+
+    <dependency>
+        <groupId>xml-apis</groupId>
+        <artifactId>xml-apis</artifactId>
+        <version>1.3.04</version>
+    </dependency>
+    
+    <dependency>
+        <groupId>xml-apis</groupId>
+        <artifactId>xml-apis-ext</artifactId>
+        <version>1.3.04</version>
+    </dependency>
+    
+    <dependency>
+        <groupId>org.apache.xmlgraphics</groupId>
+        <artifactId>batik-rasterizer</artifactId>
+        <version>1.7</version>
+    </dependency>
+    
+    <dependency>
+        <groupId>org.apache.xmlgraphics</groupId>
+        <artifactId>batik-swing</artifactId>
+        <version>1.7</version>
     </dependency>
 
     <dependency>

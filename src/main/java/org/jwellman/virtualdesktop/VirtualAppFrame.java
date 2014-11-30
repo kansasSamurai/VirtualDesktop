@@ -1,6 +1,9 @@
 package org.jwellman.virtualdesktop;
 
+import com.alee.laf.WebLookAndFeel;
 import javax.swing.JInternalFrame;
+import javax.swing.LookAndFeel;
+import javax.swing.border.EmptyBorder;
 
 /**
  *
@@ -35,6 +38,10 @@ public class VirtualAppFrame extends JInternalFrame {
 
         //Set the window's location.
         setLocation(xOffset*openFrameCount, yOffset*openFrameCount);
+        
+        // This is a workaround for weblaf
+        setBorder(new EmptyBorder(2, 2, 3, 3)); // this is a workaround for weblaf
+        //LookAndFeel.installProperty(this, WebLookAndFeel.PROPERTY_HONOR_USER_BORDER, Boolean.TRUE);
         
     }
     

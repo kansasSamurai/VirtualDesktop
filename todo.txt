@@ -1,7 +1,19 @@
 todo: JInternalFrame with menu
-todo: create a class and/or framework jar as demo for how to write a simple app
-      i.e. do not extend JFrame 
 tood: create a tree of opened vapps;
       possibly override minimized apps to not display and
       rely on the tree to restore
 todo: integrate desktop icons (from proof of concept)
+
+todo: create a class and/or framework jar as demo for how to write a simple app
+      i.e. do not extend JFrame 
+To write "portable" java apps:
+* Do not use a look and feel
+* Do not use your own container; i.e. JFrame
+* Do not call System.exit()!!!
+* Do not use modal dialogs directly;
+  use a portable interface.
+* If your app is somehow specific to an OS, then
+  all such behavior must check for that OS before
+  trying to run.  Either throw an exception or
+  call to the abstract dialog interface.
+

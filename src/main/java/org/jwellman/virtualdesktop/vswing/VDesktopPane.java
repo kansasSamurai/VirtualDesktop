@@ -24,7 +24,7 @@ public class VDesktopPane extends JDesktopPane {
     public VDesktopPane() {
         super();
         try {        
-            final URL url = this.getClass().getClassLoader().getResource(path + images[1]);
+            final URL url = this.getClass().getClassLoader().getResource(path + images[2]);
             this.image = ImageIO.read(url);
         } catch (IOException ex) {
             Logger.getLogger(VDesktopPane.class.getName()).log(Level.SEVERE, null, ex);

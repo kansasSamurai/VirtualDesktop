@@ -29,6 +29,7 @@ of the project files then I will):
 
 mvn install:install-file -Dfile=graphicsbuilder-0.6.1.jar -DgroupId=org.codehaus.groovy-contrib -DartifactId=graphicsbuilder -Dversion=0.6.1 -Dpackaging=jar
 mvn install:install-file -Dfile=jsilhouette-0.2.jar -DgroupId=org.kordamp -DartifactId=jsilhouette -Dversion=0.2 -Dpackaging=jar
+mvn install:install-file -Dfile=weblaf-1.27.jar -DgroupId=com.mgarin -DartifactId=weblaf -Dversion=1.27 -Dpackaging=jar
 
 <dependency>
     <groupId>org.codehaus.groovy-contrib</groupId>
@@ -40,4 +41,10 @@ mvn install:install-file -Dfile=jsilhouette-0.2.jar -DgroupId=org.kordamp -Darti
     <groupId>org.kordamp</groupId>
     <artifactId>jsilhouette</artifactId>
     <version>0.2</version>
+</dependency>
+
+<dependency>
+    <groupId>com.mgarin</groupId>
+    <artifactId>weblaf</artifactId>
+    <version>1.27</version>
 </dependency>

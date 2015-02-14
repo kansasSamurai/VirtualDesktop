@@ -12,6 +12,8 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>1.7</maven.compiler.source>
+    <maven.compiler.target>1.7</maven.compiler.target>
   </properties>
 
 <!-- jline seemed problematic and difficult to integrate; break into a separate jar -->
@@ -126,7 +128,14 @@
     <dependency>
         <groupId>com.mgarin</groupId>
         <artifactId>weblaf</artifactId>
-        <version>1.27</version>
+        <version>1.29</version>
+    </dependency>
+
+    <!-- This is currently only necessary for weblaf (though I may keep) -->
+    <dependency>
+        <groupId>com.thoughtworks.xstream</groupId>
+        <artifactId>xstream</artifactId>
+        <version>1.4.7</version>
     </dependency>
 
     <dependency>

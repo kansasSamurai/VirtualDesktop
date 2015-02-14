@@ -29,23 +29,23 @@ public class VShortcut extends JLabel {
     
     
     
+    public VShortcut(String label, Icon icon, int yPos, int xPos) {
+        super();        
+        this.init(label, icon, xPos, yPos);
+    }
+
     public VShortcut( String label, int xPos, int yPos ) {
-        this(null, label, null, xPos, yPos);
+        super();
+        this.init(label, (Icon)null, xPos, yPos);
     }
 
     public VShortcut( String label, String iconPath, int xPos, int yPos ) {
-        this(null, label, iconPath, xPos, yPos);
-    }
-
-    /**
-     * Creates a DeskItem that is on a JLayeredPane with the passed String identifier.
-     * 
-     * @param pane The JLayeredPane that the item will be placed on.
-     * @param label The Label string to use.
-     */
-    public VShortcut( JLayeredPane pane, String label, String iconPath, int xPos, int yPos ) {
         super();
-        
+        final Icon icon = this.genIcon(iconPath);
+        this.init(label, icon, xPos, yPos);
+    }
+    
+    private void init(String label, Icon icon, int yPos, int xPos) {
         this.setText(label);
         this.setHorizontalAlignment(JLabel.CENTER);
         
@@ -63,7 +63,6 @@ public class VShortcut extends JLabel {
         
         this.setSize(this.getPreferredSize());
                         
-        final Icon icon = this.genIcon(iconPath);
         this.setIcon(icon);
 
         final Dimension d = this.getSize();
@@ -72,6 +71,16 @@ public class VShortcut extends JLabel {
         this.setVisible(true);
         
         initMouseListeners();
+
+    }
+
+    /**
+     * Creates a DeskItem that is on a JLayeredPane with the passed String identifier.
+     * 
+     * @param pane The JLayeredPane that the item will be placed on.
+     * @param label The Label string to use.
+     */
+    public VShortcut( JLayeredPane pane, String label, String iconPath, int xPos, int yPos ) {
     }
 
     private Icon genIcon(String iconPath) {

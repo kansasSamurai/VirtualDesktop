@@ -40,3 +40,23 @@ test.setChartTextColor(Color.lightGray);
 
 import org.jfree.chart.renderer.xy.*;
 plot.setRenderer( new XYSplineRenderer(20, XYSplineRenderer$FillType.TO_ZERO) );
+
+
+-------------------
+
+import org.jwellman.virtualdesktop.*;
+import org.jwellman.jfreechart.*;
+import org.jfree.chart.*;
+import org.jfree.chart.renderer.xy.*;
+import org.jfree.chart.plot.*;
+
+import org.jfree.chart.demo.*;
+import org.jwellman.jpreechart.*;
+
+JFreeChartDemo demo = JFreeChartDemo.createMainUI(null);
+
+App app = org.jwellman.virtualdesktop.App.getVSystem();
+app.createVApp(demo.getPanel(), "any title u want");
+
+JPreeChart pre = new JPreeChart();
+pre.decorate(demo.getChart());

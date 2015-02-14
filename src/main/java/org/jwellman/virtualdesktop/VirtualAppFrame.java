@@ -1,8 +1,6 @@
 package org.jwellman.virtualdesktop;
 
-import com.alee.laf.WebLookAndFeel;
 import javax.swing.JInternalFrame;
-import javax.swing.LookAndFeel;
 import javax.swing.border.EmptyBorder;
 
 /**

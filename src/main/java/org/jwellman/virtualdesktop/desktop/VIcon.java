@@ -20,6 +20,7 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.geom.Dimension2D;
 import java.awt.image.BufferedImage;
+import java.net.URL;
 
 import javax.swing.Icon;
 
@@ -88,6 +89,19 @@ public class VIcon extends UserAgentAdapter implements Icon {
      */
     public VIcon(Document doc, int w, int h) throws TranscoderException {
         generateBufferedImage(new TranscoderInput(doc), w, h);
+    }
+    
+    /**
+     * A convenience method for creating Icons from their path.
+     * 
+     * @param path
+     * @return
+     * @throws TranscoderException 
+     */
+    public static VIcon createSVGIcon(String path) throws TranscoderException {
+        final URL url = VIcon.class.getClassLoader().getResource(path + ".svg");
+        final VIcon v = new VIcon(url.toString());
+        return v;
     }
 
     /**

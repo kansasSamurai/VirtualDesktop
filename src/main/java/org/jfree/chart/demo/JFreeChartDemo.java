@@ -45,12 +45,21 @@ import org.jfree.data.xy.DefaultXYDataset;
 import org.jfree.data.xy.XYDataset;
 
 /**
+ * JFreeChartDemo
+ * Modified very slightly to expose the JPanel 
+ * and JFreeChart objects as properties.
+ * Also, it no longer extends JFrame.
+ * 
  * @author John B. Matthews
  */
-public class JFreeChartDemo extends JFrame {
+public class JFreeChartDemo {
 
     private static final int MAX = 8;
     private static final Random random = new Random();
+    
+    private JFrame frame;
+    private JPanel panel;
+    private JFreeChart chart;
 
     /**
      * Construct a new frame
@@ -58,9 +67,19 @@ public class JFreeChartDemo extends JFrame {
      * @param title the frame title
      */
     public JFreeChartDemo(String title) {
-        super(title);
-        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.setContentPane(createMainUI());
+        this.frame = new JFrame(title);
+        this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        
+        // This is a bit unconventional but it works
+        createMainUI(this);
+        this.frame.setContentPane(this.panel);
+    }
+    
+    /**
+     * This constructor is used when the panel is being injected
+     * into any application that supports JPanels.
+     */
+    public JFreeChartDemo() {
     }
 
     /**
@@ -70,20 +89,23 @@ public class JFreeChartDemo extends JFrame {
      *
      * @return
      */
-    public static JPanel createMainUI() {
-        JPanel appUI = new JPanel(new BorderLayout());
+    public static JFreeChartDemo createMainUI(JFreeChartDemo demo) {
+        if (demo == null) demo = new JFreeChartDemo();
+        
+        demo.panel = new JPanel(new BorderLayout());
 
         final DefaultXYDataset dataset = new DefaultXYDataset();
         dataset.addSeries("Series0", createSeries(0));
         dataset.addSeries("Series1", createSeries(1));
 
-        JFreeChart chart = createChart(dataset);
+        demo.chart = createChart(dataset);
 
-        ChartPanel chartPanel = new ChartPanel(chart, false);
+        ChartPanel chartPanel = new ChartPanel(demo.chart, false);
         chartPanel.setPreferredSize(new Dimension(640, 480));
-        appUI.add(chartPanel, BorderLayout.CENTER);
+        chartPanel.setBackground(Color.white);
+        demo.panel.add(chartPanel, BorderLayout.CENTER);
 
-        chart.setBackgroundPaint(chartPanel.getBackground());
+        demo.chart.setBackgroundPaint(chartPanel.getBackground());
 
         JPanel buttonPanel = new JPanel();
         JButton addButton = new JButton("Add Series");
@@ -103,9 +125,9 @@ public class JFreeChartDemo extends JFrame {
             }
         });
 
-        appUI.add(buttonPanel, BorderLayout.SOUTH);
+        demo.panel.add(buttonPanel, BorderLayout.SOUTH);
 
-        return appUI;
+        return demo;
     }
 
     /**
@@ -166,7 +188,7 @@ public class JFreeChartDemo extends JFrame {
         XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer(true, true);
         renderer.setBaseShapesVisible(true);
         renderer.setBaseShapesFilled(true);
-        renderer.setBaseOutlineStroke(stroke); // set the renderer's stroke
+        renderer.setBaseOutlineStroke(stroke); // set the renderer's stroke        
 
         // label the points
         NumberFormat format = NumberFormat.getNumberInstance();
@@ -190,11 +212,39 @@ public class JFreeChartDemo extends JFrame {
         EventQueue.invokeLater(new Runnable() {
             public void run() {
                 JFreeChartDemo demo = new JFreeChartDemo("JFreeChartDemo");
-                demo.pack();
-                demo.setLocationRelativeTo(null);
-                demo.setVisible(true);
+                demo.frame.pack();
+                demo.frame.setLocationRelativeTo(null);
+                demo.frame.setVisible(true);
             }
         });
+    }
+
+    /**
+     * @return the panel
+     */
+    public JPanel getPanel() {
+        return panel;
+    }
+
+    /**
+     * @param panel the panel to set
+     */
+    public void setPanel(JPanel panel) {
+        this.panel = panel;
+    }
+
+    /**
+     * @return the chart
+     */
+    public JFreeChart getChart() {
+        return chart;
+    }
+
+    /**
+     * @param chart the chart to set
+     */
+    public void setChart(JFreeChart chart) {
+        this.chart = chart;
     }
 
 }

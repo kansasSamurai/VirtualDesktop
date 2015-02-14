@@ -40,14 +40,17 @@ public class JCXConsole extends javax.swing.JPanel {
         jSplitPane1 = new javax.swing.JSplitPane();
         jPanel1 = new javax.swing.JPanel();
         jPanel3 = new javax.swing.JPanel();
-        jScrollPane2 = new javax.swing.JScrollPane();
-        stdout = new javax.swing.JTextArea();
+        jPanel6 = new javax.swing.JPanel();
         jScrollPane3 = new javax.swing.JScrollPane();
         commandline = new javax.swing.JTextArea();
+        cmdExecute = new javax.swing.JButton();
+        jPanel4 = new javax.swing.JPanel();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        stdout = new javax.swing.JTextArea();
+        jPanel5 = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
         stderr = new javax.swing.JTextArea();
         jPanel2 = new javax.swing.JPanel();
-        cmdExecute = new javax.swing.JButton();
         folderChooser = new com.jidesoft.swing.FolderChooser();
 
         setLayout(new java.awt.BorderLayout());
@@ -55,6 +58,28 @@ public class JCXConsole extends javax.swing.JPanel {
         jPanel1.setLayout(new java.awt.BorderLayout());
 
         jPanel3.setLayout(new java.awt.BorderLayout());
+
+        jPanel6.setLayout(new java.awt.BorderLayout());
+
+        commandline.setColumns(60);
+        commandline.setRows(3);
+        commandline.setTabSize(4);
+        commandline.setText("command-line >");
+        jScrollPane3.setViewportView(commandline);
+
+        jPanel6.add(jScrollPane3, java.awt.BorderLayout.CENTER);
+
+        cmdExecute.setText("Execute");
+        cmdExecute.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cmdExecuteActionPerformed(evt);
+            }
+        });
+        jPanel6.add(cmdExecute, java.awt.BorderLayout.LINE_END);
+
+        jPanel3.add(jPanel6, java.awt.BorderLayout.NORTH);
+
+        jPanel4.setLayout(new java.awt.BorderLayout());
 
         stdout.setEditable(false);
         stdout.setBackground(new java.awt.Color(0, 0, 0));
@@ -65,15 +90,11 @@ public class JCXConsole extends javax.swing.JPanel {
         stdout.setText("stdout");
         jScrollPane2.setViewportView(stdout);
 
-        jPanel3.add(jScrollPane2, java.awt.BorderLayout.CENTER);
+        jPanel4.add(jScrollPane2, java.awt.BorderLayout.CENTER);
 
-        commandline.setColumns(60);
-        commandline.setRows(3);
-        commandline.setTabSize(4);
-        commandline.setText("command-line >");
-        jScrollPane3.setViewportView(commandline);
+        jPanel3.add(jPanel4, java.awt.BorderLayout.CENTER);
 
-        jPanel3.add(jScrollPane3, java.awt.BorderLayout.PAGE_END);
+        jPanel5.setLayout(new java.awt.BorderLayout());
 
         stderr.setEditable(false);
         stderr.setBackground(new java.awt.Color(0, 0, 0));
@@ -84,7 +105,9 @@ public class JCXConsole extends javax.swing.JPanel {
         stderr.setText("stderr");
         jScrollPane1.setViewportView(stderr);
 
-        jPanel3.add(jScrollPane1, java.awt.BorderLayout.PAGE_START);
+        jPanel5.add(jScrollPane1, java.awt.BorderLayout.CENTER);
+
+        jPanel3.add(jPanel5, java.awt.BorderLayout.SOUTH);
 
         jPanel1.add(jPanel3, java.awt.BorderLayout.CENTER);
 
@@ -92,14 +115,6 @@ public class JCXConsole extends javax.swing.JPanel {
 
         jPanel2.setMinimumSize(new java.awt.Dimension(250, 121));
         jPanel2.setLayout(new java.awt.BorderLayout());
-
-        cmdExecute.setText("Execute");
-        cmdExecute.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                cmdExecuteActionPerformed(evt);
-            }
-        });
-        jPanel2.add(cmdExecute, java.awt.BorderLayout.NORTH);
 
         folderChooser.setControlButtonsAreShown(false);
         folderChooser.setNavigationFieldVisible(true);
@@ -144,6 +159,9 @@ public class JCXConsole extends javax.swing.JPanel {
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
+    private javax.swing.JPanel jPanel4;
+    private javax.swing.JPanel jPanel5;
+    private javax.swing.JPanel jPanel6;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;

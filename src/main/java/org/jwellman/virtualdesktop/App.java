@@ -10,6 +10,7 @@ import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 import static org.jwellman.virtualdesktop.App.registeredApps;
 import org.jwellman.virtualdesktop.desktop.VActionLNF;
+import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.VShortcut;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
 import org.jwellman.virtualdesktop.vapps.*;
@@ -27,6 +28,8 @@ public class App extends JFrame implements ActionListener {
 
     /** the desktop */
     private JDesktopPane desktop;
+    
+    private JMenu appMenu;
 
     /** a custom scrollpane for a scrollable desktop */
     private DesktopScrollPane dsp;
@@ -114,19 +117,25 @@ public class App extends JFrame implements ActionListener {
                 
         }
         
-        final VShortcut home = new VShortcut("Home", "org/jwellman/virtualdesktop/images/global_ui/home156", 10, 10);
-        desktop.add(home);
-        
-        final VShortcut calendar = new VShortcut("", "org/jwellman/virtualdesktop/images/global_ui/calendar168", 10, 50);
-        desktop.add(calendar);
-
-        final VShortcut trashcan = new VShortcut("", "org/jwellman/virtualdesktop/images/global_ui/rubbish1", 10, 400);
-        desktop.add(trashcan);
-
-        createVApp(new SpecBeanShell()); //(new SpecEmpty()); //create first "window"
+        // createVApp(new SpecBeanShell()); //(new SpecEmpty()); //create first "window"
 
         //Make dragging a little faster but perhaps uglier.
         desktop.setDragMode(JDesktopPane.OUTLINE_DRAG_MODE);
+        
+        DesktopAction.setDesktop(this);
+        ActionFactory.initDesktop();
+        JMenuItem m = null;
+        for (DesktopAction a : ActionFactory.getListOfActions()) {
+            if (a.isDesktopOnly()) { 
+                final Icon icon = (Icon) a.getValue(Action.LARGE_ICON_KEY);
+                final String label = (String) a.getValue(Action.NAME);
+                final VShortcut vs = new VShortcut(label, icon, 10, 10);
+                desktop.add(vs);
+            } else {
+                m = new JMenuItem(a);
+                appMenu.add(m);                
+            }
+        }
 
     }
 
@@ -154,15 +163,9 @@ public class App extends JFrame implements ActionListener {
         menuItem.addActionListener(this);
         menu.add(menuItem);
 
-        menu = new JMenu("VApps");
-        menu.setMnemonic(KeyEvent.VK_V);
-        menuBar.add(menu);
-        for (Class clazz : registeredApps) {
-            menuItem = new JMenuItem(clazz.getSimpleName());
-            menuItem.setActionCommand(clazz.getCanonicalName());
-            menuItem.addActionListener(this);
-            menu.add(menuItem);
-        }
+        appMenu = new JMenu("VApps");
+        appMenu.setMnemonic(KeyEvent.VK_V);
+        menuBar.add(appMenu);
 
         menu = new JMenu("Skin");
         menu.setMnemonic(KeyEvent.VK_K);
@@ -173,7 +176,7 @@ public class App extends JFrame implements ActionListener {
 
         menuItem = new JMenuItem(new VActionLNF("Web",null,"com.alee.laf.WebLookAndFeel", this));
         menu.add(menuItem);
-
+               
         return menuBar;
     }
 
@@ -190,19 +193,11 @@ public class App extends JFrame implements ActionListener {
         } else if ("exit".equals(e.getActionCommand())) {
             quit();
         } else {
-            try {
-                createVApp( Class.forName(e.getActionCommand()).newInstance() );
-            } catch (InstantiationException ex) {
-                Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (IllegalAccessException ex) {
-                Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (ClassNotFoundException ex) {
-                Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            throw new VException("Unknown Action", null);
         }
     }
 
-    protected void createVApp(Object newInstance) {
+    public void createVApp(Object newInstance) {
         this.createVApp((VirtualAppSpec)newInstance);
     }
 
@@ -212,7 +207,7 @@ public class App extends JFrame implements ActionListener {
      *
      * @param spec
      */
-    protected void createVApp(final VirtualAppSpec spec) {
+    public void createVApp(final VirtualAppSpec spec) {
 
         if (spec.isInternalFrameProvider()) {
             final VirtualAppFrame frame = new VirtualAppFrame(spec.getTitle());

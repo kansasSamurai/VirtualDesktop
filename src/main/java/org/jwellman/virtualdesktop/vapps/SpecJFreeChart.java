@@ -11,7 +11,9 @@ public class SpecJFreeChart extends VirtualAppSpec {
     public SpecJFreeChart() {
         super();
         this.setTitle("JFreeChart");
-        this.setContent( JFreeChartDemo.createMainUI() );
+        
+        JFreeChartDemo app = JFreeChartDemo.createMainUI(null);
+        this.setContent( app.getPanel() );
     }
 
 }

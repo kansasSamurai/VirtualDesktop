@@ -45,8 +45,9 @@ public class SpecHyperSQL extends VirtualAppSpec {
                 Class.forName("org.hsqldb.jdbc.JDBCDriver");
                 server = new Server();
                 server.setAddress("localhost");
-                server.setDatabaseName(0, "sandbox");
-                server.setDatabasePath(0, "file:C:/data/hsqldb/sandbox");
+// I think that 'server.properties' will provide these values
+//                server.setDatabaseName(0, "sandbox");
+//                server.setDatabasePath(0, "file:C:/data/hsqldb/sandbox");
                 server.setPort(1234);
                 server.setTrace(true);
                 server.setLogWriter(new PrintWriter(System.out));

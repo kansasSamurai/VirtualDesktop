@@ -59,7 +59,7 @@ public class App extends JFrame implements ActionListener {
         setBounds(inset, inset, screenSize.width  - inset*2, screenSize.height - inset*2);
 
         setJMenuBar(createMenuBar());
-        
+
         //Set up the GUI.
         JPanel p = new JPanel(new BorderLayout());
         JTextArea species = new JTextArea("Species");
@@ -67,7 +67,7 @@ public class App extends JFrame implements ActionListener {
         JTextArea travelPaths = new JTextArea("TravelPaths");
 
         JPanel controls = null;
-        
+
         desktop = new VDesktopPane(); // new JDesktopPane(); //a specialized layered pane
         int version = 4;
         switch (version) {
@@ -80,7 +80,7 @@ public class App extends JFrame implements ActionListener {
                 controls.add(new JScrollPane(species));
                 controls.add(new JScrollPane(locations));
                 controls.add(new JScrollPane(travelPaths));
-        
+
                 p.add(controls, BorderLayout.WEST);
                 p.add(desktop);
                 this.setContentPane(p);
@@ -90,7 +90,7 @@ public class App extends JFrame implements ActionListener {
                 controls.add(new JScrollPane(species));
                 controls.add(new JScrollPane(locations));
                 controls.add(new JScrollPane(travelPaths));
-        
+
                 dsp = new DesktopScrollPane(desktop);
                 p.add(controls, BorderLayout.WEST);
                 p.add(dsp);
@@ -101,7 +101,7 @@ public class App extends JFrame implements ActionListener {
                 controls.add(new JScrollPane(species));
                 controls.add(new JScrollPane(locations));
                 controls.add(new JScrollPane(travelPaths));
-        
+
                 dsp = new DesktopScrollPane(desktop);
 
                 //Create a split pane with the two scroll panes in it.
@@ -111,12 +111,12 @@ public class App extends JFrame implements ActionListener {
                 p.add(splitPane);
                 this.setContentPane(p);
                 break;
-                
+
         }
-        
+
         final VShortcut home = new VShortcut("Home", "org/jwellman/virtualdesktop/images/global_ui/home156", 10, 10);
         desktop.add(home);
-        
+
         final VShortcut calendar = new VShortcut("", "org/jwellman/virtualdesktop/images/global_ui/calendar168", 10, 50);
         desktop.add(calendar);
 
@@ -137,7 +137,7 @@ public class App extends JFrame implements ActionListener {
         JMenu menu = new JMenu("System");
         menu.setMnemonic(KeyEvent.VK_S);
         menuBar.add(menu);
-        
+
         //Set up the first menu item.
         JMenuItem menuItem = new JMenuItem("New");
         menuItem.setMnemonic(KeyEvent.VK_N);
@@ -167,7 +167,7 @@ public class App extends JFrame implements ActionListener {
         menu = new JMenu("Skin");
         menu.setMnemonic(KeyEvent.VK_K);
         menuBar.add(menu);
-        
+
         menuItem = new JMenuItem(new VActionLNF("Nimbus",null,"javax.swing.plaf.nimbus.NimbusLookAndFeel", this));
         menu.add(menuItem);
 
@@ -218,7 +218,7 @@ public class App extends JFrame implements ActionListener {
             final VirtualAppFrame frame = new VirtualAppFrame(spec.getTitle());
             spec.populateInternalFrame(frame);
         } else {
-            this.createVApp(spec.getContent(), spec.getTitle(), null);            
+            this.createVApp(spec.getContent(), spec.getTitle(), null);
         }
 
     }
@@ -237,7 +237,7 @@ public class App extends JFrame implements ActionListener {
     public VirtualAppFrame createVApp(final Container c, final String title, final Icon icon) {
 
         final VirtualAppFrame frame = new VirtualAppFrame(title);
-        
+
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             public void run() {
                 try {
@@ -247,7 +247,7 @@ public class App extends JFrame implements ActionListener {
                     if ((c.getWidth() * c.getHeight()) != 0) {
                         frame.setSize(c.getWidth(), c.getHeight());
                     } else {
-                        frame.pack(); // see Note [1] below                        
+                        frame.pack(); // see Note [1] below
                     }
                     frame.setVisible(true); //necessary as of 1.3
                     desktop.add(frame);
@@ -293,6 +293,13 @@ public class App extends JFrame implements ActionListener {
 
     public static void main(String[] args) {
 
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        Font[] fonts = ge.getAllFonts();
+        for (Font font : fonts) {
+            System.out.print(font.getFontName() + " : ");
+            System.out.println(font.getFamily());
+        }
+
         // Install a custom security manager to prevent guests from shutting down the desktop.
         System.setSecurityManager(new NoExitSecurityManager());
 
@@ -300,11 +307,11 @@ public class App extends JFrame implements ActionListener {
         //creating and showing this application's GUI.
         javax.swing.SwingUtilities.invokeLater(
             new Runnable() { public void run() {
-                try {             
-                    
+                try {
+
                     // This does not appear to be working as expected?
                     System.setProperty(WebLookAndFeel.PROPERTY_HONOR_USER_BORDERS, "true");
-                    
+
                     int choice = 3;
                     switch (choice) {
                         case 1:
@@ -316,7 +323,7 @@ public class App extends JFrame implements ActionListener {
                         case 3:
                             UIManager.setLookAndFeel ( NimbusLookAndFeel.class.getCanonicalName () );
                             WebLookAndFeel.initializeManagers ();
-                            break;                            
+                            break;
                         case 99:
                             // This is my original code; don't use it.
                             UIManager.installLookAndFeel("Web", "com.alee.laf.WebLookAndFeel");
@@ -331,7 +338,7 @@ public class App extends JFrame implements ActionListener {
                                     // }
                                 }
                             break;
-                    }                    
+                    }
                 } catch (Exception e) {
                     // If Nimbus is not available, you can set the GUI to another look and feel.
                 }
@@ -341,4 +348,3 @@ public class App extends JFrame implements ActionListener {
     }
 
 }
-    

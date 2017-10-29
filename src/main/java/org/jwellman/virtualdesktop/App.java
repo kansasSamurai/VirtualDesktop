@@ -275,9 +275,6 @@ public class App extends JFrame implements ActionListener {
      * from the event-dispatching thread.
      */
     private static void createAndShowGUI() {
-        //Make sure we have nice window decorations.
-        JFrame.setDefaultLookAndFeelDecorated(true);
-
         //Create and set up the window.
         App frame = new App();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -297,6 +294,9 @@ public class App extends JFrame implements ActionListener {
             new Runnable() { public void run() {
                 try {             
                     
+                    //Make sure we have nice window decorations.
+                    JFrame.setDefaultLookAndFeelDecorated(true);
+
                     // This does not appear to be working as expected?
                     System.setProperty(WebLookAndFeel.PROPERTY_HONOR_USER_BORDERS, "true");
                     

@@ -67,6 +67,9 @@ class CommonSwing {
     // (ulrivo): An actual Image.
     static Image getIcon(String target) {
 
+        // If not being run from a .jar, such as running from your Maven enabled IDE,
+        // you must copy images from src/main/java/ext/hsqldb/util
+        // to src/main/resources/ext/hsqldb/util
         if (target.equalsIgnoreCase("SystemCursor")) {
             return (new ImageIcon(
                 CommonSwing.class.getResource("Hourglass.gif")).getImage());
@@ -83,8 +86,6 @@ class CommonSwing {
             return (new ImageIcon(
                 CommonSwing.class.getResource("GreenCircle.gif")).getImage());
         } else if (target.equalsIgnoreCase("Clear")) {
-URL url = CommonSwing.class.getResource("Clear.png");
-System.out.println("rlw: " + url);
             return (new ImageIcon(
                 CommonSwing.class.getResource("Clear.png")).getImage());
         } else if (target.equalsIgnoreCase("Problem")) {

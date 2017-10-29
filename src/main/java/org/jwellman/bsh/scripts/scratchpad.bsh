@@ -1,69 +1,55 @@
-Idea: Generic command execution
-Given a starting directory, execute a command (which may have "parameters")
-on a subset of the files "underneath" that directory.  One artifact of
-this action is to create a plain text file that details each file acted upon.
-(1) option: Recurse directories or not
-(2) some sort of "parameter" object inside a "command" object
-(2a) parameter object has "help" per parameter
-(*) maybe also a list of "command examples"
+-------------------
+Best Practices:
+* Enclose scripts in closures to avoid clutter of the global namespace.
+  - use a naming convention to help distinguish scripts and their purpose/category.
 
-<dependencies>
-    <dependency>
-        <groupId>com.seaglasslookandfeel</groupId>
-        <artifactId>seaglasslookandfeel</artifactId>
-        <version>0.2</version>
-    </dependency>
-</dependencies>
-
-https://www.java.net/node/690816
-If anyone is interested I tweaked the background using this technique. Basically I didn't want the hit of drawing the fancy vector based background as it was killing the processor on a low spec atom based pc. A simple fill is fine.
-Enjoy
-
-
-public class MyDesktopPane extends JDesktopPane {
-
-    @Override
-    public void updateUI() {
-    if ("Nimbus".equals(UIManager.getLookAndFeel().getName())) {
-    UIDefaults map = new UIDefaults();
-    Painter painter = new Painter() {
-
-    Color color = null;
-
-    @Override
-    public void paint(Graphics2D g, JComponent c, int w, int h) {
-    g.setColor(color == null ? UIManager.getDefaults().getColor("desktop") : color);
-    g.fillRect(0, 0, w, h);
-    }
-    };
-    map.put("DesktopPane[Enabled].backgroundPainter", painter);
-    putClientProperty("Nimbus.Overrides", map);
-    }
-    super.updateUI();
-    }
-
-}
+Useful snippets:
+> print(this.namespace.getVariableNames());
+> print(this.namespace.getMethodNames());
+> print(this.namespace.getMethods());
+> clear();  <<< use this with caution!! clears/unsets all current variables!!
 
 -------- type or cut/paste the following into beanshell ------------------
+
+import java.util.Arrays;
+
+testscript() {
+    print("\nDefining testscript() ...");
+
+    displayGlobals() {
+        sorted = global.namespace.getVariableNames();
+        Arrays.sort(sorted);
+        for ( currentvar : sorted ) {
+          print(currentvar);
+        }
+    }
+
+    print("... testscript() defined");
+    return this;
+}
+mytestscript = testscript();
+
+-------- type or cut/paste the following into beanshell ------------------
+
 import org.jwellman.virtualdesktop.*;
 import com.xeiam.xchart.*;
 
-double[] xData = new double[] { 0.0, 1.0, 2.0 };
-double[] yData = new double[] { 2.0, 1.0, 0.0 };
+xchart() {
+    double[] xData = new double[] { 0.0, 1.0, 2.0 };
+    double[] yData = new double[] { 2.0, 1.0, 0.0 };
 
-// Create Chart
-Chart chart = QuickChart.getChart("Sample Chart", "X", "Y", "y(x)", xData, yData);
+    // Create Chart
+    Chart chart = QuickChart.getChart("Sample Chart", "X", "Y", "y(x)", xData, yData);
 
-// Show it
-JPanel p = new XChartPanel(chart);
+    // Show it
+    JPanel p = new XChartPanel(chart);
 
-App app = org.jwellman.virtualdesktop.App.getVSystem();
-app.createVApp(p, "any title u want");
+    App app = org.jwellman.virtualdesktop.App.getVSystem();
+    app.createVApp(p, "any title u want");
 
-SwingWrapper chartframe = new SwingWrapper(chart).displayChart();
-
-// Attempt to dispose(instead of system exit)
-chartframe.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+    return this;
+}
+myx2 = xchart();
 
 -------------------------------
 
@@ -73,33 +59,202 @@ App app = org.jwellman.virtualdesktop.App.getVSystem();
 
 -------------------------------
 
-clear();
-
+import javax.swing.*;
+import com.xeiam.xchart.*;
 import com.xeiam.xchart.BitmapEncoder;
 import com.xeiam.xchart.Chart;
 import com.xeiam.xchart.QuickChart;
 import com.xeiam.xchart.SwingWrapper;
+import com.xeiam.xchart.StyleManager.ChartType;
+import com.xeiam.xchart.StyleManager.LegendPosition;
 
-// Create Chart
-Chart chart = new ChartBuilder().chartType(ChartType.Area).width(800).height(600).title("AreaChart01").xAxisTitle("X").yAxisTitle("Y").build();
-chart.addSeries("a", new double[] { 0, 3, 5, 7, 9 }, new double[] { -3, 5, 9, 6, 5 });
-chart.addSeries("b", new double[] { 0, 2, 4, 6, 9 }, new double[] { -1, 6, 4, 0, 4 });
-chart.addSeries("c", new double[] { 0, 1, 3, 8, 9 }, new double[] { -2, -1, 1, 0, 1 });
+xchart() {
 
-// Customize Chart
-chart.getStyleManager().setLegendPosition(LegendPosition.InsideNW);
-chart.getStyleManager().setAxisTitlesVisible(false);
+    print("\nDefining xchart() ...");
 
-new SwingWrapper(chart).displayChart();
+    // Create Chart
+    Chart chart = new ChartBuilder().chartType(ChartType.Area).width(800).height(600).title("AreaChart01").xAxisTitle("X").yAxisTitle("Y").build();
+    chart.addSeries("a", new double[] { 0, 3, 5, 7, 9 }, new double[] { -3, 5, 9, 6, 5 });
+    chart.addSeries("b", new double[] { 0, 2, 4, 6, 9 }, new double[] { -1, 6, 4, 0, 4 });
+    chart.addSeries("c", new double[] { 0, 1, 3, 8, 9 }, new double[] { -2, -1, 1, 0, 1 });
+
+    // Customize Chart
+    chart.getStyleManager().setLegendPosition(LegendPosition.InsideNW);
+    chart.getStyleManager().setAxisTitlesVisible(false);
+
+    // new SwingWrapper(chart).displayChart();
+    XChartPanel panel = new XChartPanel(chart);
+    displayframe = frame(panel);
+
+    print("... xchart() defined");
+    return this;
+}
+myxchart = xchart();
 
 ----------------use editor() from the beanshell command line, then click 'eval'------------------------------
 http://www.beanshell.org/manual/bshcommands.html
 source("/src/main/resources/jvdDesktop.bsh");
 source("/src/main/resources/jvdClassBrowser.bsh");
 browser.driveToClass("org.jwellman.virtualdesktop.DesktopScrollPane");
-jvd.browser.driveToClass("org.jwellman.virtualdesktop.DesktopScrollPane");
+jvd.browser.browse("org.jwellman.virtualdesktop.DesktopScrollPane");
+
+ftp://ftp.oreilly.com/examples/jswing2/code/index_old.html
+
+Other Useful beanshell sites:
+https://github.com/beanshell/
+http://imagej.net/BeanShell_Scripting
+http://jedit.org/users-guide/macro-tips-BeanShell.html
+https://www.blazemeter.com/blog/using-beanshell-beginners-no-java-knowledge-required  <<< their beanshell might be open source
+https://www.javaworld.com/article/2073767/java-app-dev/discover-new-dimensions-of-scripted-java.html
+http://commons.apache.org/proper/commons-bsf/
+http://www.philippeadjiman.com/blog/2009/10/17/beanshell-tutorial-quick-start-on-invoking-your-own-or-external-java-code-from-the-shell/
+
+https://micro-manager.org/wiki/Script_Panel_GUI
+http://www2.sys-con.com/itsg/virtualcd/java/archives/0507/hightower/index.html
+
+
+===== https://forums.fedoraforum.org/showthread.php?t=282039&page=4
+import javax.swing.*;
+JFrame f = new JFrame("BeanShell Window Example");
+// f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+f.setLayout(new BorderLayout());
+JLabel msg = new JLabel("Welcome!", JLabel.CENTER);
+msg.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 32));
+msg.setOpaque(true);
+msg.setBackground(new Color(72,61,139));
+msg.setForeground(Color.WHITE);
+f.add(msg, BorderLayout.CENTER);
+JPanel bottom = new JPanel();
+bottom.setBackground(new Color(72,61,139));
+JButton ok = new JButton("OK");
+ok.addActionListener(new ActionListener() {
+   public void actionPerformed(ActionEvent event) {
+//      System.exit(0);
+      msg.setText(new Date().toString());
+   }
+});
+bottom.add(ok);
+f.add(bottom, BorderLayout.SOUTH);
+f.getContentPane().setPreferredSize(new Dimension(400,150));
+f.pack();
+f.setVisible(true);
 
 =================================
+http://www2.sys-con.com/itsg/virtualcd/java/archives/0507/hightower/index.html
+=================================
+
+Employee (){ 
+String firstName, lastName; 
+int id, dept; 
+manager = null; 
+__init(){ 
+print("This far"); 
+super.firstName = "John"; 
+super.lastName = "Doe"; 
+super.id = 1; 
+super.manager=null; 
+super.dept=1; 
+} 
+init(String fname, String lname, int id, manager, int dept){ 
+super.firstName = fname; 
+super.lastName = lname; 
+super.id = id; 
+super.manager = manager; 
+super.dept = dept; 
+} 
+getManager(){ 
+return this.manager; 
+} 
+String toString(){ 
+StringBuffer buf = new StringBuffer(); 
+buf.append(super.lastName+','); 
+buf.append(super.firstName+','); 
+buf.append(""+super.id); 
+return buf.toString(); 
+} 
+__init(); 
+return this; 
+} 
+
+Listing 3: BeanShell EmployeeForm: 
+
+import javax.swing.*; 
+import java.awt.GridBagLayout; 
+import java.awt.GridBagConstraints; 
+import java.awt.event.ActionListener; 
+import java.awt.event.ActionEvent; 
+import employee.Employee; 
+
+EmployeeForm(){ 
+    JFrame frame; 
+    JTextField name; 
+    JTextField id; 
+
+    void init() { 
+        super.frame = new JFrame("Employee Form"); 
+        pane = new JPanel(); 
+        super.frame.getContentPane().add(pane); 
+        pane.setLayout(new GridBagLayout()); 
+        // Create a name, and id text field. 
+        super.name = new JTextField(25); 
+        super.id = new JTextField(10); 
+        // Create and add a "Name" and "ID" label. 
+        JLabel nameLabel = new JLabel("Name"); 
+        nameLabel.setLabelFor(name); 
+        nameLabel.setDisplayedMnemonic('N'); 
+        GridBagConstraints constraint = new GridBagConstraints(); 
+        pane.add(nameLabel, constraint); 
+        JLabel idLabel = new JLabel("ID"); 
+        idLabel.setLabelFor(id); 
+        idLabel.setDisplayedMnemonic('I'); 
+        constraint.gridy=1; 
+        pane.add(idLabel, constraint); 
+        // Add the name and ID text field to the form. 
+        constraint.gridy=0; constraint.gridx=1; 
+        constraint.weightx=80.00; 
+        constraint.anchor=GridBagConstraints.WEST; 
+        pane.add(name, constraint); 
+        constraint.gridy=1; 
+        pane.add(id, constraint); 
+        // Create an okay button, add it, and set up its event handler. 
+        JButton okay = new JButton("Okay"); 
+        okay.setMnemonic('O'); 
+        constraint.gridx=1; constraint.gridy=2; 
+        constraint.anchor=GridBagConstraints.EAST; 
+        pane.add(okay, constraint); 
+        okay.addActionListener(this); 
+        frame.setVisible(true); 
+        frame.pack(); 
+    }
+ 
+    void actionPerformed(ActionEvent event){ 
+        handleOkay(); 
+    }
+ 
+    void handleOkay(){ 
+        String name, fname, lname; 
+        int index=0; 
+        int id =0; 
+        name = super.name.getText(); 
+        index = name.indexOf(" "); 
+        fname = name.substring(0, index); 
+        lname = name.substring(index+1, name.length()); 
+        id = Integer.parseInt(super.id.getText()); 
+        //Employee employee = new Employee(fname, lname, id, null, 100); 
+        employee = global.Employee(); employee.init(fname, lname, id, null, 100);
+        //System.out.println(""+employee); // this prints to the java console
+        print(employee); // this prints the reference
+        print(employee.toString()); // this prints the useful toString()
+    } 
+
+    init(); 
+    return this; 
+} 
+ef = EmployeeForm();
+
+=================================
+
+
 "jar:file:C:\dev\workspaces\git\VirtualDesktop\target\icons\Default.jar!"
 "jar:file:\\dev\workspaces\git\VirtualDesktop\target\icons\Default.jar!\theme"
 
@@ -208,4 +363,49 @@ var jcx = new org.jwellman.jcx.ProcessBuilderExample(); jcx.exec("git");
 ---------------------------------------------------
 
 
-print ( this.namespace.getMethods() );
+Idea: Generic command execution
+Given a starting directory, execute a command (which may have "parameters")
+on a subset of the files "underneath" that directory.  One artifact of
+this action is to create a plain text file that details each file acted upon.
+(1) option: Recurse directories or not
+(2) some sort of "parameter" object inside a "command" object
+(2a) parameter object has "help" per parameter
+(*) maybe also a list of "command examples"
+
+<dependencies>
+    <dependency>
+        <groupId>com.seaglasslookandfeel</groupId>
+        <artifactId>seaglasslookandfeel</artifactId>
+        <version>0.2</version>
+    </dependency>
+</dependencies>
+
+https://www.java.net/node/690816
+If anyone is interested I tweaked the background using this technique. Basically I didn't want the hit of drawing the fancy vector based background as it was killing the processor on a low spec atom based pc. A simple fill is fine.
+Enjoy
+
+
+public class MyDesktopPane extends JDesktopPane {
+
+    @Override
+    public void updateUI() {
+    if ("Nimbus".equals(UIManager.getLookAndFeel().getName())) {
+    UIDefaults map = new UIDefaults();
+    Painter painter = new Painter() {
+
+    Color color = null;
+
+    @Override
+    public void paint(Graphics2D g, JComponent c, int w, int h) {
+    g.setColor(color == null ? UIManager.getDefaults().getColor("desktop") : color);
+    g.fillRect(0, 0, w, h);
+    }
+    };
+    map.put("DesktopPane[Enabled].backgroundPainter", painter);
+    putClientProperty("Nimbus.Overrides", map);
+    }
+    super.updateUI();
+    }
+
+}
+

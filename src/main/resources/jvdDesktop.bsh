@@ -46,9 +46,9 @@ jvdDesktop( externalJframe )
 
 	// Disallowed by applet security
 	try {
-		bsh.system.fonts = GraphicsEnvironment.getLocalGraphicsEnvironment().
-			getAvailableFontFamilyNames();
-	} catch ( SecurityException se ) { }
+            bsh.system.fonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
+	} catch ( SecurityException se ) { 
+        }
 
 	JPanel stage=new JPanel(new BorderLayout());
 	JPanel taskBar=new JPanel(new FlowLayout(FlowLayout.LEFT, 1, 1));
@@ -57,8 +57,9 @@ jvdDesktop( externalJframe )
 	// is protected on the Mac
 	borderColor = taskBar.background;
 	try {
-		borderColor = taskBar.background.darker();
-	} catch ( SecurityException e ) { }
+            borderColor = taskBar.background.darker();
+	} catch ( SecurityException e ) { 
+        }
 	taskBar.setBorder( new MatteBorder(1,0,0,0, borderColor) );
 
 	ButtonGroup taskBarButtonGroup = new ButtonGroup();

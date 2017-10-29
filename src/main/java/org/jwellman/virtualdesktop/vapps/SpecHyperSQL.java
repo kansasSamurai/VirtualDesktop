@@ -35,6 +35,17 @@ public class SpecHyperSQL extends VirtualAppSpec {
 
     private static Server server;
 
+    private static final String CONNECTION_URL = "jdbc:hsqldb:hsql://localhost:1234/sandbox";
+    
+    private static final String CONNECTION_USER = "SA";
+    
+    private static final String CONNECTION_DRIVER = "org.hsqldb.jdbc.JDBCDriver";
+    
+    private static final String CONNECTION_PASSWORD = "";
+
+    /**
+     * 
+     */
     public SpecHyperSQL() {
 
         this.setTitle("HyperSQL Manager");
@@ -42,7 +53,7 @@ public class SpecHyperSQL extends VirtualAppSpec {
 
         if (server == null) {
             try {
-                Class.forName("org.hsqldb.jdbc.JDBCDriver");
+                Class.forName(CONNECTION_DRIVER);
                 server = new Server();
                 server.setAddress("localhost");
                 server.setDatabaseName(0, "sandbox");
@@ -58,7 +69,7 @@ public class SpecHyperSQL extends VirtualAppSpec {
         }
 
         try {
-            Connection con = DriverManager.getConnection( "jdbc:hsqldb:hsql://localhost:1234/sandbox", "SA", "");
+            Connection con = DriverManager.getConnection( CONNECTION_URL, CONNECTION_USER, CONNECTION_PASSWORD);
             con.createStatement().executeUpdate(
                 "create table contacts (name varchar(45),email varchar(45),phone varchar(45))"
             );
@@ -68,15 +79,22 @@ public class SpecHyperSQL extends VirtualAppSpec {
 
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             public void run() {
+                DatabaseManagerSwing dbm = null;
                 try {
-                    int version = 2;
+                    int version = 3;
                     switch (version) {
                         case 1:
                             DatabaseManagerSwing.main(new String[]{"--noexit"});
                             break;
                         case 2:
-                            DatabaseManagerSwing dbm = new DatabaseManagerSwing(new JFrame("Custom DBM"));
+                            // 20171007; this works but trying something new
+                            dbm = new DatabaseManagerSwing(new JFrame("Custom DBM"));
                             dbm.main();
+                            break;
+                        case 3:
+                            dbm = new DatabaseManagerSwing(new JFrame("Custom DBM"));
+                            dbm.main();
+                            dbm.postmain(dbm);
                             break;
                     }
                 } catch (Exception e) {

@@ -46,7 +46,7 @@ jvdClassBrowser() {
 	this.inDesktop = true; // ( bsh.system.desktop != void );
 	if ( inDesktop ) {
             if ( javaVirtualDesktop ) {
-                this.frame = App.getVSystem().createVApp(browser, "BeanShell Class Browser", bsh.system.icons.eye);
+                this.frame = App.getVSystem().createVApp(browser, "BeanShell Class Browser - jvd", bsh.system.icons.eye);
             } else {
 		this.frame = makeInternalFrame("BeanShell Class Browser");
 		// frame.frameIcon = bsh.system.icons.eye;
@@ -63,6 +63,7 @@ jvdClassBrowser() {
 		if ( !name.startsWith("internalFrame") )
 			throw new Error("method: "+name);
 	}
+
 	internalFrameClosing( e ) {
 		// really need foo=void;...
 		// bsh.system.desktop.classbrowser = null;

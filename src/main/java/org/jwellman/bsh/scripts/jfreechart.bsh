@@ -1,47 +1,81 @@
+-------------------
+JFreeChart
+... tbd
+-------------------
+
+import java.util.Arrays;
+
+testscript() {
+    print("\nDefining testscript() ...");
+
+    displayGlobals() {
+        sorted = global.namespace.getVariableNames();
+        Arrays.sort(sorted);
+        for ( currentvar : sorted ) {
+          print(currentvar);
+        }
+    }
+
+    print("... testscript() defined");
+    return this;
+}
+mytestscript = testscript();
+
+-------------------
 import org.jwellman.virtualdesktop.*;
 import org.jwellman.jfreechart.*;
+import org.jwellman.jpreechart.*;
 import org.jfree.chart.*;
 import org.jfree.chart.renderer.xy.*;
 import org.jfree.chart.plot.*;
 
-Color transparent = new Color(255, 255, 255, 0);
-GradientPaint grpCyan = new GradientPaint( 0.0f, 0.0f, Color.cyan, 10.0f, 10.0f, Color.darkGray );
+demoTimeSeriesChart()  {
+    Color transparent = new Color(255, 255, 255, 0);
+    GradientPaint grpCyan = new GradientPaint( 0.0f, 0.0f, Color.cyan, 10.0f, 10.0f, Color.darkGray );
 
-TimeSeriesTest test = new TimeSeriesTest();
-ChartPanel panel = new ChartPanel(test.chart);
-App app = org.jwellman.virtualdesktop.App.getVSystem();
-app.createVApp(panel, "any title u want");
-XYPlot plot = test.chart.plot;
-plot.setBackgroundPaint( Color.black );
-plot.setBackgroundPaint( transparent );
+    TimeSeriesTest test = new TimeSeriesTest();
+    ChartPanel panel = new ChartPanel(test.chart);
+    App app = org.jwellman.virtualdesktop.App.getVSystem();
+    app.createVApp(panel, "any title u want");
+    XYPlot plot = test.chart.plot;
+    plot.setBackgroundPaint( Color.black );
+    plot.setBackgroundPaint( transparent );
 
-test.chart.getLegend().setBorder(0, 0, 0, 0);
-test.chart.getLegend().setBackgroundPaint(transparent);
-plot.setDomainGridlinesVisible(false);
-// ---------------------------------
-plot.setBackgroundPaint( Color.darkGray );
-test.chart.setBackgroundPaint( Color.darkGray );
-plot.getRangeAxis().setVisible(true);
-plot.getRangeAxis().setTickMarksVisible(true);
-plot.getRangeAxis().setTickMarksVisible(false);
-plot.getRangeAxis().setAxisLineVisible(true);
-plot.getRangeAxis().setAxisLineVisible(false);
-plot.setOutlineVisible(false);
-plot.getRangeAxis().setTickMarksVisible(false);
-plot.getDomainAxis().setAxisLineVisible(false);
-plot.getDomainAxis().setAxisLineVisible(false);
-plot.getDomainAxis().setTickMarkPaint(Color.lightGray);
-plot.getDomainAxis().setTickLabelPaint(Color.lightGray);
-plot.getDomainAxis().setLabelPaint(Color.lightGray);
-test.chart.getTitle().setPaint(Color.lightGray);
-test.chart.getLegend().setItemPaint(Color.lightGray);
+    test.chart.getLegend().setBorder(0, 0, 0, 0);
+    test.chart.getLegend().setBackgroundPaint(transparent);
+    plot.setDomainGridlinesVisible(false);
+    // ---------------------------------
+    plot.setBackgroundPaint( Color.darkGray );
+    test.chart.setBackgroundPaint( Color.darkGray );
+    plot.getRangeAxis().setVisible(true);
+    plot.getRangeAxis().setTickMarksVisible(true);
+    plot.getRangeAxis().setTickMarksVisible(false);
+    plot.getRangeAxis().setAxisLineVisible(true);
+    plot.getRangeAxis().setAxisLineVisible(false);
+    plot.setOutlineVisible(false);
+    plot.getRangeAxis().setTickMarksVisible(false);
+    plot.getDomainAxis().setAxisLineVisible(false);
+    plot.getDomainAxis().setAxisLineVisible(false);
+    plot.getDomainAxis().setTickMarkPaint(Color.lightGray);
+    plot.getDomainAxis().setTickLabelPaint(Color.lightGray);
+    plot.getDomainAxis().setLabelPaint(Color.lightGray);
+    test.chart.getTitle().setPaint(Color.lightGray);
+    test.chart.getLegend().setItemPaint(Color.lightGray);
 
-test.setChartTextColor(Color.lightGray);
+    test.setChartTextColor(Color.lightGray);
 
-import org.jfree.chart.renderer.xy.*;
-plot.setRenderer( new XYSplineRenderer(20, XYSplineRenderer$FillType.TO_ZERO) );
+    import org.jfree.chart.renderer.xy.*;
+    plot.setRenderer( new XYSplineRenderer(20, XYSplineRenderer$FillType.TO_ZERO) );
 
+    // The flowing two lines are optional - just decorates with JPreeChart
+    JPreeChart pre = new JPreeChart();
+    pre.decorate(panel.getChart());
 
+    print("demoTimeSeriesChart has been defined");
+    return this;
+}
+
+mypreechart = demoTimeSeriesChart();
 -------------------
 
 import org.jwellman.virtualdesktop.*;
@@ -53,10 +87,17 @@ import org.jfree.chart.plot.*;
 import org.jfree.chart.demo.*;
 import org.jwellman.jpreechart.*;
 
-JFreeChartDemo demo = JFreeChartDemo.createMainUI(null);
+demoJFreeChart() {
+    JFreeChartDemo demo = JFreeChartDemo.createMainUI(null);
 
-App app = org.jwellman.virtualdesktop.App.getVSystem();
-app.createVApp(demo.getPanel(), "any title u want");
+    App app = org.jwellman.virtualdesktop.App.getVSystem();
+    app.createVApp(demo.getPanel(), "any title u want");
 
-JPreeChart pre = new JPreeChart();
-pre.decorate(demo.getChart());
+    JPreeChart pre = new JPreeChart();
+    pre.decorate(demo.getChart());
+
+    print("demoJFreeChart has been defined");
+    return this;
+}
+
+myjfreechart = demoJFreeChart();

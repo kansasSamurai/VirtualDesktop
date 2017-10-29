@@ -19,9 +19,14 @@ public class SpecBeanShell extends VirtualAppSpec {
         this.width = 750;
 
         final JConsole c = new JConsole();
+
         final Interpreter i = new Interpreter(c);
         new Thread( i, "BeanShell Interpreter" ).start(); // start a thread to call the run() method
+        
         try {
+            // give namespace access to the interpreter for advanced features/methods which require interpreter as a parameter
+            i.set("_interpreter", i); 
+
             // Note: using "/src/..." works on Windows but not Linux
             i.source("src/main/resources/jvdClassBrowser.bsh");
         } catch (FileNotFoundException ex) {

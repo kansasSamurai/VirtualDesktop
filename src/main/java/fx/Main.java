@@ -44,6 +44,9 @@ public class Main {
     // configuration database
     public ConfigDb conf;
     
+    // Reference to the UI
+    private RootFrame root;
+    
     /**
      * Init app
      * 
@@ -60,9 +63,19 @@ public class Main {
                 }
             }
 
-            final String cp = "C:\\dev\\workspaces\\git\\VirtualDesktop\\target\\classes"; // System.getProperty("java.class.path");            
-            File path = new File(cp); // full install (app) path = class path
-            path = path.getCanonicalFile();
+            // Windows
+            final String wcp = "C:\\dev\\workspaces\\git\\VirtualDesktop\\target\\classes"; // System.getProperty("java.class.path");            
+            File wpath = new File(wcp); // full install (app) path = class path
+            wpath = wpath.getCanonicalFile();
+            
+            // Linux
+            final String lxcp = "//home/rwellman/workspaces/NetBeansProjects/VirtualDesktop/src/main/resources/fx/native"; // System.getProperty("java.class.path");            
+            File lxpath = new File(lxcp); // full install (app) path = class path
+            lxpath = new File(lxcp); // full install (app) path = class path
+            lxpath = lxpath.getCanonicalFile();
+            
+            // TODO this whole platform/path mechanism is currently hardcoded; needs flexibility
+            final File path = wpath.exists() ? wpath : lxpath;
             if (path.exists()) // check path
             {
                 // extract install (app) path
@@ -73,6 +86,7 @@ public class Main {
                     fx.Main.killApp("main", "invalid application path");
                 }
             } else {
+                System.out.println("invalid path to application file: " + path.toString());
                 fx.Main.killApp("main", "invalid path to application file");
             }
         } catch (Exception ex) {
@@ -126,7 +140,13 @@ public class Main {
     public Main() {
         try {
             conf = new ConfigDb(); // create configuration database
-            RootFrame root = new RootFrame(this); // create root frame
+            
+            final Main mainref = this;
+            javax.swing.SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                root = new RootFrame(mainref); // create root frame
+            }});
+            
         } catch (Exception ex) {
             fx.Main.killApp("main", "cannot initialize gui");
         }
@@ -162,13 +182,21 @@ public class Main {
     }
     
     // safely exit app and save settings
-
     public static void exitApp(Main main) {
-        main.conf.saveConfig();
-        System.exit(0);
+        int exitcode = 0;
+        try {
+            main.conf.saveConfig();
+        } catch (Exception e) {
+            exitcode = -1;
+        } finally {
+            // System.exit(exitcode);            
+            main.root.dispose();
+            main.root = null;
+            System.out.println("XionDE.fm exit: " + exitcode);
+        }
     }
+    
     // config database class
-
     public class ConfigDb {
         // config keys
 
@@ -187,13 +215,16 @@ public class Main {
                 COMP_WIDTH = ".width", COMP_HEIGHT = ".height", COMP_COUNT = ".count",
                 COMP_ACTION = ".action", COMP_TEXT = ".text", COMP_SHORTCUT = ".shortcut";
         // configuration databases
-        private Properties globDbDef = new Properties(), fxDbDef = new Properties(),
-                globDb = new Properties(), fxDb = new Properties();
+        private Properties 
+                globDbDef = new Properties(), 
+                fxDbDef = new Properties(),
+                globDb = new Properties(), 
+                fxDb = new Properties();
         // dirs
         private final String CONFIG_DIR = ".xionde", ICONS_DIR = "icons";
         public String iconThemeDir;
+        
         // construct configuration database
-
         public ConfigDb() {
             // check dirs
             try {

@@ -25,8 +25,10 @@ public class ThreadedSwingHandler extends ThreadedStreamHandler {
                 // redirects data to the text area
                 textarea.append(line);
                 textarea.append("\n");
-                // scrolls the text area to the end of data
-                textarea.setCaretPosition(textarea.getDocument().getLength());
+                // scrolls the text area to the end of data // TODO make this a user option
+                boolean scroll = false;
+                int position = scroll ? textarea.getDocument().getLength() : 0;
+                textarea.setCaretPosition(position);
               }
         });
     }

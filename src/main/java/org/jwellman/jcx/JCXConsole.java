@@ -139,11 +139,11 @@ public class JCXConsole extends javax.swing.JPanel {
             commands.add("/bin/bash"); // alias expansion requires export BASH_ENV=~/.bashrc *and* shopt -s expand_aliases
             commands.add("-c");
         }
-        commands.add(commandline.getText());
+        commands.add("pwd; " + commandline.getText());
 
         // execute the command
-        SystemCommandExecutor ce = new SystemCommandExecutor(commands, stdout, stderr, folderChooser.getSelectedFolder());
         try {
+            final SystemCommandExecutor ce = new SystemCommandExecutor(commands, stdout, stderr, folderChooser.getSelectedFolder());
             ce.executeCommand();
         } catch (IOException ex) {
             Logger.getLogger(JCXConsole.class.getName()).log(Level.SEVERE, null, ex);

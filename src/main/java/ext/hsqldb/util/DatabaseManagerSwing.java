@@ -590,6 +590,64 @@ implements ActionListener, WindowListener, KeyListener, MouseListener {
     }
 
     /**
+     * This was extracted from static main() method to be used
+     * by Virtual Desktop which calls non-static main() method.
+     * 
+     * @param m 
+     */
+    public void postmain(DatabaseManagerSwing m) {
+        String  urlid        = null;
+        String  rcFile       = null;
+        boolean autoConnect  = false;
+        boolean urlidConnect = false;
+
+        m.setWaiting("Initializing");
+
+        Connection c = null;
+        try {
+            if (autoConnect && urlidConnect) {
+                throw new IllegalArgumentException(
+                    "You may not specify both (urlid) AND (url/user/password).");
+            }
+
+            if (autoConnect) {
+                c = ConnectionDialogSwing.createConnection(defDriver, defURL,
+                        defUser, defPassword);
+            } else if (urlidConnect) {
+                if (urlid == null) {
+                    throw new IllegalArgumentException(
+                        "You must specify an 'urlid' to use an RC file");
+                }
+
+                autoConnect = true;
+
+                String rcfilepath = (rcFile == null) ? DEFAULT_RCFILE
+                                                     : rcFile;
+                RCData rcdata     = new RCData(new File(rcfilepath), urlid);
+
+                c = rcdata.getConnection(null, System.getProperty("javax.net.ssl.trustStore"));
+            } else {
+                c = ConnectionDialogSwing.createConnection(m.jframe, "Connect");
+            }
+        } catch (Exception e) {
+            //  Added: (weconsultants@users)
+            CommonSwing.errorMessage(e);
+        } finally {
+            m.setWaiting(null);
+        }
+
+        if (c != null) {
+            m.connect(c);
+        }
+
+        refForFontDialogSwing = m;
+        // Added: (weconsultants@users): For preloadng FontDialogSwing
+        FontDialogSwing.creatFontDialog(refForFontDialogSwing);
+                
+        m.start();
+    }
+    
+    /**
      * This stuff is all quick, except for the refreshTree().
      * This unit can be kicked off in main Gui thread.  The refreshTree
      * will be backgrounded and this method will return.

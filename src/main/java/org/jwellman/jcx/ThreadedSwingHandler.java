@@ -11,7 +11,7 @@ import javax.swing.SwingUtilities;
  */
 public class ThreadedSwingHandler extends ThreadedStreamHandler {
 
-    private JTextArea textarea;
+    private final JTextArea textarea;
 
     public ThreadedSwingHandler(InputStream is, JTextArea ta) {
         super(is);

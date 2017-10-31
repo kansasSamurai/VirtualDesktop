@@ -11,7 +11,7 @@ import org.jwellman.virtualdesktop.desktop.VIcon;
 /**
  * This class is responsible for creating all desktop actions
  * and their corresponding action components.
- * 
+ *
  * @author rwellman
  */
 public class ActionFactory {
@@ -29,46 +29,47 @@ public class ActionFactory {
     };
 
     private static List<DesktopAction> listOfActions = new ArrayList<>();
-    
+
     public static void initDesktop() {
-        
+
         DesktopAction a = null;
         for (Class clazz : registeredApps) {
             a = new DesktopAction(clazz.getSimpleName());
             getListOfActions().add(a);
-            
+
             try {
                 a.putValue(Action.SMALL_ICON, VIcon.createSVGIcon("org/jwellman/virtualdesktop/images/global_ui/home156"));
                 a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName());
-//            a.putValue(Action.SHORT_DESCRIPTION, "");            
+//            a.putValue(Action.SHORT_DESCRIPTION, "");
 //            a.putValue(Action.MNEMONIC_KEY, "");
             } catch (TranscoderException ex) {
-                throw new VException("", ex);                        
+                throw new VException("", ex);
             }
 
         }
-        
+
         String[] labels = {"Home", "Calendar", "Office Writer", "Trash"};
         String[] icons = {"home156", "calendar168", "document176", "rubbish1"};
         String iconpath = "org/jwellman/virtualdesktop/images/global_ui/";
-        
-        for (int i=0; i < labels.length; i++) { 
+
+        for (int i=0; i < labels.length; i++) {
             try {
-                Icon icon = VIcon.createSVGIcon(iconpath + icons[i]);
+                final Icon icon = VIcon.createSVGIcon(iconpath + icons[i]);
 
                 a = new DesktopAction(labels[i]);
-                getListOfActions().add(a);
-
                 a.setDesktopOnly(true);
                 a.putValue(Action.LARGE_ICON_KEY, icon);
                 // a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName());
-                // a.putValue(Action.SHORT_DESCRIPTION, "");            
+                // a.putValue(Action.SHORT_DESCRIPTION, "");
                 // a.putValue(Action.MNEMONIC_KEY, "");
+
+                getListOfActions().add(a);
+
             } catch (TranscoderException ex) {
-                throw new VException("", ex);                        
+                throw new VException("", ex);
             }
         }
-        
+
     }
 
     /**
@@ -77,5 +78,5 @@ public class ActionFactory {
     public static List<DesktopAction> getListOfActions() {
         return listOfActions;
     }
-    
+
 }

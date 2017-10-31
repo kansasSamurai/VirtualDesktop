@@ -1,31 +1,42 @@
 package org.jwellman.jcx;
 
 import com.jidesoft.swing.FolderChooser;
+import java.awt.Font;
+import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.SwingUtilities;
 import org.apache.commons.lang.SystemUtils;
+import org.apache.commons.lang.text.StrBuilder;
 
 /**
  * A simple UI/Panel for the JCXEngine.
  *
  * @author Rick Wellman
  */
-public class JCXConsole extends javax.swing.JPanel {
+public class JCXConsole extends javax.swing.JPanel implements Runnable {
 
-    private List<String> commands = new ArrayList<String>();
+    private final List<String> commands = new ArrayList<>();
+
+    private static final Font FONT = new java.awt.Font("Monospaced", 0, 12);
 
     /**
      * Creates new form JCXConsole
      */
     public JCXConsole() {
         initComponents();
+
         folderChooser.setAvailableButtons(
                 FolderChooser.BUTTON_DESKTOP
               + FolderChooser.BUTTON_MY_DOCUMENTS
               + FolderChooser.BUTTON_REFRESH
               + FolderChooser.BUTTON_NEW);
+
+        stdout.setFont(FONT);
+        stderr.setFont(FONT);
+        commandline.setFont(FONT);
     }
 
     /**
@@ -44,6 +55,8 @@ public class JCXConsole extends javax.swing.JPanel {
         jScrollPane3 = new javax.swing.JScrollPane();
         commandline = new javax.swing.JTextArea();
         cmdExecute = new javax.swing.JButton();
+        jPanel7 = new javax.swing.JPanel();
+        jProgressBar1 = new javax.swing.JProgressBar();
         jPanel4 = new javax.swing.JPanel();
         jScrollPane2 = new javax.swing.JScrollPane();
         stdout = new javax.swing.JTextArea();
@@ -77,6 +90,16 @@ public class JCXConsole extends javax.swing.JPanel {
         });
         jPanel6.add(cmdExecute, java.awt.BorderLayout.LINE_END);
 
+        jPanel7.setLayout(new java.awt.BorderLayout());
+
+        jProgressBar1.setBorderPainted(false);
+        jProgressBar1.setEnabled(false);
+        jProgressBar1.setFocusable(false);
+        jProgressBar1.setRequestFocusEnabled(false);
+        jPanel7.add(jProgressBar1, java.awt.BorderLayout.CENTER);
+
+        jPanel6.add(jPanel7, java.awt.BorderLayout.SOUTH);
+
         jPanel3.add(jPanel6, java.awt.BorderLayout.NORTH);
 
         jPanel4.setLayout(new java.awt.BorderLayout());
@@ -84,7 +107,6 @@ public class JCXConsole extends javax.swing.JPanel {
         stdout.setEditable(false);
         stdout.setBackground(new java.awt.Color(0, 0, 0));
         stdout.setColumns(60);
-        stdout.setFont(new java.awt.Font("Monospaced", 0, 12));
         stdout.setForeground(new java.awt.Color(51, 255, 0));
         stdout.setRows(20);
         stdout.setText("stdout");
@@ -119,7 +141,6 @@ public class JCXConsole extends javax.swing.JPanel {
         folderChooser.setControlButtonsAreShown(false);
         folderChooser.setNavigationFieldVisible(true);
         folderChooser.setRecentListVisible(false);
-        folderChooser.setSelectedFolder(null);
         jPanel2.add(folderChooser, java.awt.BorderLayout.CENTER);
 
         jSplitPane1.setLeftComponent(jPanel2);
@@ -130,26 +151,13 @@ public class JCXConsole extends javax.swing.JPanel {
     private void cmdExecuteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cmdExecuteActionPerformed
         this.stderr.setText("");
         this.stdout.setText("");
+        this.jProgressBar1.setIndeterminate(true);
+        this.folderChooser.setEnabled(false);
+        this.commandline.setEnabled(false);
+        this.cmdExecute.setEnabled(false);
 
-        commands.clear();
-        if (SystemUtils.IS_OS_WINDOWS) { 
-            commands.add("cmd.exe"); // need /windows/system32/ ?
-            commands.add("/C");
-        } else { // For now, assume Linux
-            commands.add("/bin/bash"); // alias expansion requires export BASH_ENV=~/.bashrc *and* shopt -s expand_aliases
-            commands.add("-c");
-        }
-        commands.add("pwd; " + commandline.getText());
+        new Thread(this).start();
 
-        // execute the command
-        try {
-            final SystemCommandExecutor ce = new SystemCommandExecutor(commands, stdout, stderr, folderChooser.getSelectedFolder());
-            ce.executeCommand();
-        } catch (IOException ex) {
-            Logger.getLogger(JCXConsole.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(JCXConsole.class.getName()).log(Level.SEVERE, null, ex);
-        }
     }//GEN-LAST:event_cmdExecuteActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -162,6 +170,8 @@ public class JCXConsole extends javax.swing.JPanel {
     private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel5;
     private javax.swing.JPanel jPanel6;
+    private javax.swing.JPanel jPanel7;
+    private javax.swing.JProgressBar jProgressBar1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
@@ -169,4 +179,45 @@ public class JCXConsole extends javax.swing.JPanel {
     private javax.swing.JTextArea stderr;
     private javax.swing.JTextArea stdout;
     // End of variables declaration//GEN-END:variables
+
+    @Override
+    public void run() {
+        commands.clear();
+
+        if (SystemUtils.IS_OS_WINDOWS) {
+            commands.add("cmd.exe"); // need /windows/system32/ ?
+            commands.add("/C");
+        } else { // For now, assume Linux
+            commands.add("/bin/bash"); // alias expansion requires export BASH_ENV=~/.bashrc *and* shopt -s expand_aliases
+            commands.add("-c");
+        }
+        final StrBuilder b = new StrBuilder()
+        .append(SystemUtils.IS_OS_WINDOWS ? "cd && " : null)
+        .append(SystemUtils.IS_OS_LINUX ? "pwd; " : null)
+        .append(commandline.getText());
+
+        commands.add(b.toString());
+
+        // execute the command
+        try {
+            File s = folderChooser.getSelectedFolder();
+            if (s != null) System.out.println(s.getCanonicalFile());
+            final SystemCommandExecutor ce = new SystemCommandExecutor(commands, stdout, stderr, folderChooser.getSelectedFolder());
+            ce.executeCommand();
+        } catch (IOException ex) {
+            Logger.getLogger(JCXConsole.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(JCXConsole.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override public void run() {
+                    jProgressBar1.setIndeterminate(false);
+                    folderChooser.setEnabled(true);
+                    commandline.setEnabled(true);
+                    cmdExecute.setEnabled(true);
+                }
+            });
+        }
+    }
+
 }

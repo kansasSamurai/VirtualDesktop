@@ -11,9 +11,9 @@ public class SpecJCXConsole extends VirtualAppSpec {
     public SpecJCXConsole() {
         super();
 
-        this.setTitle("JCX Console");
+        final JCXConsole app = new JCXConsole();
 
-        JCXConsole app = new JCXConsole();
+        this.setTitle("JCX Console");
         this.setContent( app );
 
     }

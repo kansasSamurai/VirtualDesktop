@@ -8,7 +8,8 @@ import java.util.logging.Logger;
 import javax.swing.*;
 import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
-import static org.jwellman.virtualdesktop.App.registeredApps;
+import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
+//import static org.jwellman.virtualdesktop.App.registeredApps;
 import org.jwellman.virtualdesktop.desktop.VActionLNF;
 import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.VShortcut;
@@ -34,6 +35,7 @@ public class App extends JFrame implements ActionListener {
     /** a custom scrollpane for a scrollable desktop */
     private DesktopScrollPane dsp;
 
+    /** This is only nececessary for a temp dev menu item; can eventually be removed */
     static Class[] registeredApps = {
         SpecBeanShell.class
         ,SpecJCXConsole.class
@@ -310,9 +312,9 @@ public class App extends JFrame implements ActionListener {
                     JFrame.setDefaultLookAndFeelDecorated(true);
 
                     // This does not appear to be working as expected?
-                    System.setProperty(WebLookAndFeel.PROPERTY_HONOR_USER_BORDERS, "true");
+                    // System.setProperty(WebLookAndFeel.PROPERTY_HONOR_USER_BORDERS, "true");
 
-                    int choice = 1;
+                    int choice = 2;
                     switch (choice) {
                         case 1:
                             final String sys = UIManager.getSystemLookAndFeelClassName();

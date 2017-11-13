@@ -19,7 +19,9 @@ abstract public class VirtualAppSpec {
     protected int width = 0;
     protected boolean internalFrameProvider = false;
 
-    protected VirtualAppSpec() {}
+    protected VirtualAppSpec() {
+        // Intentionally Empty
+    }
 
     protected JPanel createDefaultContent(Component o) {
         final JPanel pnl = new JPanel(new BorderLayout());
@@ -28,7 +30,7 @@ abstract public class VirtualAppSpec {
 
         return pnl;
     }
-    
+
     public void populateInternalFrame(JInternalFrame frame) {
         // empty default impl
     }
@@ -90,7 +92,7 @@ abstract public class VirtualAppSpec {
     public void setWidth(int width) {
         this.width = width;
     }
-    
+
     public boolean isInternalFrameProvider() {
         return this.internalFrameProvider;
     }

@@ -31,20 +31,20 @@ import org.hsqldb.Server;
  *
  * @author Rick Wellman
  */
-public class SpecHyperSQL extends VirtualAppSpec {
+public class SpecHyperSQL extends VirtualAppSpec implements Runnable {
 
     private static Server server;
 
     private static final String CONNECTION_URL = "jdbc:hsqldb:hsql://localhost:1234/sandbox";
-    
+
     private static final String CONNECTION_USER = "SA";
-    
+
     private static final String CONNECTION_DRIVER = "org.hsqldb.jdbc.JDBCDriver";
-    
+
     private static final String CONNECTION_PASSWORD = "";
 
     /**
-     * 
+     *
      */
     public SpecHyperSQL() {
 
@@ -77,32 +77,33 @@ public class SpecHyperSQL extends VirtualAppSpec {
             e.printStackTrace(System.out);
         }
 
-        javax.swing.SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                DatabaseManagerSwing dbm = null;
-                try {
-                    int version = 3;
-                    switch (version) {
-                        case 1:
-                            DatabaseManagerSwing.main(new String[]{"--noexit"});
-                            break;
-                        case 2:
-                            // 20171007; this works but trying something new
-                            dbm = new DatabaseManagerSwing(new JFrame("Custom DBM"));
-                            dbm.main();
-                            break;
-                        case 3:
-                            dbm = new DatabaseManagerSwing(new JFrame("Custom DBM"));
-                            dbm.main();
-                            dbm.postmain(dbm);
-                            break;
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace(); // for now, simply swallow the exception
-                }
-            }
-        });
+        javax.swing.SwingUtilities.invokeLater(this);
 
+    }
+
+    @Override
+    public void run() {
+        DatabaseManagerSwing dbm = null;
+        try {
+            int version = 3;
+            switch (version) {
+                case 1:
+                    DatabaseManagerSwing.main(new String[]{"--noexit"});
+                    break;
+                case 2:
+                    // 20171007; this works but trying something new
+                    dbm = new DatabaseManagerSwing(new JFrame("Custom DBM"));
+                    dbm.main();
+                    break;
+                case 3:
+                    dbm = new DatabaseManagerSwing(new JFrame("Custom DBM"));
+                    dbm.main();
+                    dbm.postmain(dbm);
+                    break;
+            }
+        } catch (Exception e) {
+            e.printStackTrace(); // for now, simply swallow the exception
+        }
     }
 
 }

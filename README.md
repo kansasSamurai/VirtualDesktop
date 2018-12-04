@@ -1,6 +1,27 @@
 # VirtualDesktop
-==============
-A raw but functional virtual desktop.
+A raw but functional virtual desktop - to be clear, this is not a "remote desktop".
+This is an application like any other... it just provides features that your desktop provides.
+So why create an app that duplicates features I already have?... One simple answer... control! :)
+
+Though I do have bigger plans for this application, this idea started because:
+
+1) I am tired of Winblows arbitrarily reorganizing my desktop space.  I do keep many shortcuts
+on my desktop (98% of them are to applications with the occasional link to a document).
+Windows likes to randumbly reorganize my icon placements and I spend another 20-30 minutes
+of my life that I will never get back putting them back.  I finally thought to myself "hey...
+I'm a programmer... I'll just create my own desktop!"
+
+2) Building on #1, ... I also use other operating systems both personally and at work.
+This application is another step for me having a consistent heterogenous desktop metaphor
+and I am no longer burdened with learning someone else's preferred desktop paradigm.
+[Though I prefer Linux to Winblows, I *am* talking about linux here and its cornucopia of desktop options.
+Some of them are pretty good but they also change based on linux distro and even at the whim of the 
+development staff.  I *just* need to open apps and docs people! :) ]
+
+3) Finally, having a multi-platform Java based desktop provides me the opportunity to integrate some often
+used development packages.  This is/was the original list... it will probably be pruned/altered soon but
+thought I would share the original idea:
+
 + HyperSQL
 + BeanShell
 + JFreeChart

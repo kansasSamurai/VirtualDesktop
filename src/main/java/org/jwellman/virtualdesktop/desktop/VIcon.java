@@ -1,8 +1,7 @@
 /*
  * This class is heavily based on:
  * -------------------------------------------
- * SVGIcon.java
- * package au.id.mcc.adapted.swing;
+ * SVGIcon.java (package au.id.mcc.adapted.swing;)
  *
  * A Swing Icon that draws an SVG image.
  *

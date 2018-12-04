@@ -17,7 +17,7 @@ import org.jwellman.virtualdesktop.desktop.VIcon;
  */
 public class ActionFactory {
 
-    static Class[] registeredApps = {
+    public static Class[] registeredApps = {
         SpecBeanShell.class
         ,SpecJCXConsole.class
         ,SpecVfsFileChooser2.class
@@ -30,7 +30,7 @@ public class ActionFactory {
 //        ,SpecJzy3D.class // this app sucks
     };
 
-    private static List<DesktopAction> listOfActions = new ArrayList<>();
+    private static final List<DesktopAction> listOfActions = new ArrayList<>();
 
     public static void initDesktop() {
 

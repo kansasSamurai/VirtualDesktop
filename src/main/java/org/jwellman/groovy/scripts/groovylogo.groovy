@@ -1,3 +1,4 @@
+// https://uberconf.com/blog/andres_almiray/2007/12/draw_the_groovy_logo_with_graphicsbuilder
 
 // This script requires GraphicsBuilder (not yet JVD integrated)
 // available at: http://docs.codehaus.org/display/GROOVY/GraphicsBuilder

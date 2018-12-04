@@ -1,0 +1,20 @@
+/* === This runs a groovy script from the beanshell console ===
+   TODO add args
+
+   20180819 : I thought this didn't work but it does ...
+   I can't remember why I didn't pursue this further... maybe I was obsessed
+   with trying to pull it into the desktop.  Or maybe it doesn't work as expected
+   when run in the JVD environment... stay tuned.
+
+*/
+
+// === This runs a groovy script from the beanshell console ===
+// TODO add args
+grun( filename ) {
+    if ( ! filename.endsWith(".groovy") ) filename += ".groovy";
+
+    if (void == shell) shell = new groovy.lang.GroovyShell();
+
+    result = shell.run( new File("src/main/java/org/jwellman/groovy/scripts/" + filename), new String[]{} );
+
+}

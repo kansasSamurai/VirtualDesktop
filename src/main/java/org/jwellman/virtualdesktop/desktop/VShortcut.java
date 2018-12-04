@@ -8,6 +8,7 @@ import java.util.logging.Logger;
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
 import org.apache.batik.transcoder.TranscoderException;
+import org.jwellman.virtualdesktop.vapps.DesktopAction;
 
 /**
  * A desktop shortcut
@@ -25,58 +26,63 @@ public class VShortcut extends JLabel {
     /** Logger for this class */
     private static final Logger log = Logger.getLogger(VShortcut.class.getName() );
 
+    /** ... */
+    private Action action;
 
-    
-    
-    
     public VShortcut(String label, Icon icon, int yPos, int xPos) {
-        super();        
-        this.init(label, icon, xPos, yPos);
-    }
-
-    public VShortcut( String label, int xPos, int yPos ) {
         super();
-        this.init(label, (Icon)null, xPos, yPos);
+        this.init(null, label, icon, xPos, yPos);
     }
 
-    public VShortcut( String label, String iconPath, int xPos, int yPos ) {
+    public VShortcut(String label, int xPos, int yPos ) {
+        super();
+        this.init(null, label, (Icon)null, xPos, yPos);
+    }
+
+    public VShortcut(String label, String iconPath, int xPos, int yPos ) {
         super();
         final Icon icon = this.genIcon(iconPath);
-        this.init(label, icon, xPos, yPos);
+        this.init(null, label, icon, xPos, yPos);
     }
-    
-    private void init(String label, Icon icon, int yPos, int xPos) {
+
+    public VShortcut(DesktopAction a, String label, Icon icon, int x, int y) {
+        this.init(a, label, icon, x, y);
+    }
+
+    private void init(Action a, String label, Icon icon, int yPos, int xPos) {
+        this.action = a;
+
         this.setText(label);
         this.setHorizontalAlignment(JLabel.CENTER);
-        
+
         this.setOpaque(false);
         this.setVerticalTextPosition(JLabel.BOTTOM);
         this.setHorizontalTextPosition(JLabel.CENTER);
-        
+
         oldUI = getUI();
         if ( transparentBg ) { setUI( myui ); }
 
         this.setBorder();
         this.setLocation(xPos, yPos);
-        
+
         this.pane = pane;
-        
+
         this.setSize(this.getPreferredSize());
-                        
+
         this.setIcon(icon);
 
         final Dimension d = this.getSize();
         this.setSize(icon.getIconWidth() + 10, icon.getIconHeight() + d.height);
 
         this.setVisible(true);
-        
+
         initMouseListeners();
 
     }
 
     /**
      * Creates a DeskItem that is on a JLayeredPane with the passed String identifier.
-     * 
+     *
      * @param pane The JLayeredPane that the item will be placed on.
      * @param label The Label string to use.
      */
@@ -85,12 +91,13 @@ public class VShortcut extends JLabel {
 
     private Icon genIcon(String iconPath) {
         Icon img = null;
-        
+
+        // This is just a randomly chosen default; subject to change
         String path = (iconPath != null) ? iconPath : "org/jwellman/virtualdesktop/images/global_ui/add196";
-        
+
         int genType = 2; // 1 = png, 2 = svg
         final String ext = (genType == 1) ? ".png" : ".svg";
-        final URL url = this.getClass().getClassLoader().getResource(path + ext);                
+        final URL url = this.getClass().getClassLoader().getResource(path + ext);
         switch (genType) {
             case 1:
                 img = new ImageIcon(url);
@@ -103,9 +110,9 @@ public class VShortcut extends JLabel {
                 } catch (TranscoderException ex) {
                     Logger.getLogger(VShortcut.class.getName()).log(Level.SEVERE, null, ex);
                 }
-                break;                                            
+                break;
         }
-        
+
         return img;
     }
 
@@ -128,9 +135,12 @@ public class VShortcut extends JLabel {
     /**
      * This is called when the item is double clicked on.
      * A subclass can provide an action here.
+     * @param e an ActionEvent
      */
-    public void invoke() {
+    public void invoke(ActionEvent e) {
         log.finer("Double-click desktop item");
+        System.out.println("Double-click desktop item");
+        this.action.actionPerformed(e);
     }
 
     /**
@@ -180,6 +190,7 @@ public class VShortcut extends JLabel {
      * @param ev The associated mouse event to get the context from.
      */
     protected void popup( MouseEvent ev ) {
+        System.out.println("Right-click desktop item");
     }
 
     private class MyEnterExitAdapter extends MouseAdapter {
@@ -220,7 +231,7 @@ public class VShortcut extends JLabel {
         }
 
         /**
-         * Called when the user clicks on the DeskItem.
+         * Called when the user double clicks on the DeskItem.
          * @param ev The event associated with the click operation.
          */
         @Override
@@ -229,7 +240,7 @@ public class VShortcut extends JLabel {
                 log.log(Level.FINER, "Invoking: {0}", VShortcut.this);
                 try {
                     // Invoke the item to process any action.
-                    item.invoke();
+                    item.invoke(null);
                 } catch( Exception ex ) {
                     reportException(ex);
                 }
@@ -264,7 +275,7 @@ public class VShortcut extends JLabel {
             // If not button 1, just ignore
             if ( ev.getButton() != 1 ) return;
 
-            // Activate motion listener and what for drag.
+            // Activate motion listener and wait for drag.
             createMotionListener(ev);
 
             // Add the mouse listener created, or already existing.
@@ -272,9 +283,9 @@ public class VShortcut extends JLabel {
         }
 
         /**
-         * called to create the MouseMotionListener when the drag operation starts.
-         * @param ev The associated mouse event.
-         */
+          * Called to create the MouseMotionListener when the drag operation starts.
+          * @param ev The associated mouse event.
+          */
         private void createMotionListener(MouseEvent ev) {
             lastItem = VShortcut.this;
             lastItem.enter();
@@ -349,7 +360,7 @@ public class VShortcut extends JLabel {
     /** The ComponentUI used for selected and active rendering (hover). */
     protected static MyUI selactui = new MyUI( new Color( 0, 0, 255, 90 ) );
 
-    /** Should gradient rendering be down at all? */
+    /** Should gradient rendering be done at all? */
     protected static boolean transparentBg = true;
 
     /**
@@ -364,29 +375,29 @@ public class VShortcut extends JLabel {
         int offy;
 
         /**
-         * updates the current offsets for each successive drag operation
-         * to the click point that the mouse was out when the mouse was pressed.
-         * @param x The X location of the initial mouse down event.
-         * @param y The Y location of the initial mouse down event.
-         */
+          * Updates the current offsets for each successive drag operation
+          * to the click point that the mouse was out when the mouse was pressed.
+          * @param x The X location of the initial mouse down event.
+          * @param y The Y location of the initial mouse down event.
+          */
         public void setOffsets(int x, int y ) {
             offx = x;
             offy = y;
         }
 
         /**
-         * Called when the mouse is moved without a button down.
-         * @param ev The associated event for this operation.
-         */
+          * Called when the mouse is moved without a button down.
+          * @param ev The associated event for this operation.
+          */
         @Override
         public void mouseMoved( MouseEvent ev ) {
             mouseDragged(ev);
         }
 
         /**
-         * Called when the mouse is moved with button one down.
-         * @param ev The associated mouse event.
-         */
+          * Called when the mouse is moved with button one down.
+          * @param ev The associated mouse event.
+          */
         @Override
         public void mouseDragged( MouseEvent ev ) {
             Point pt = getLocation();
@@ -408,9 +419,9 @@ public class VShortcut extends JLabel {
     }
 
     /**
-     * The UI used to control the drawing of the DeskItem
-     * without having to conditionalize the paint operations.
-     */
+      * The UI used to control the drawing of the DeskItem
+      * without having to conditionalize the paint operations.
+      */
     private static class MyUI extends com.sun.java.swing.plaf.windows.WindowsLabelUI {
 
         /** The color of the background. */
@@ -426,19 +437,19 @@ public class VShortcut extends JLabel {
         }
 
         /**
-         * Constructs and instance using the passed color for the background.
-         * @param c The color to use for the background painting operations.
-         */
+          * Constructs and instance using the passed color for the background.
+          * @param c The color to use for the background painting operations.
+          */
         public MyUI( Color c ) {
             col = c;
         }
 
         /**
-         * Called to perform the paint operation on the passed component.
-         * 
-         * @param g The graphics context for the paint operation.
-         * @param c The component to paint into the graphics environment.
-         */
+          * Called to perform the paint operation on the passed component.
+          *
+          * @param g The graphics context for the paint operation.
+          * @param c The component to paint into the graphics environment.
+          */
         @Override
         public void update(Graphics g, JComponent c) {
             if( !transparentBg ) {
@@ -446,17 +457,17 @@ public class VShortcut extends JLabel {
             } else {
                 final Graphics2D g2 = (Graphics2D)g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                
+
                 final Color original = g2.getColor();
-                
+
                     g2.setColor(col);
                     // g2.fillRect(0, 0, c.getWidth(),c.getHeight());
                     g2.fillRoundRect(0, 0, c.getWidth(),c.getHeight(), 15, 15 );
-                
+
                 g2.setColor( original );
 
-                super.update(g, c);                 
-            }            
+                super.update(g, c);
+            }
         }
 
     }

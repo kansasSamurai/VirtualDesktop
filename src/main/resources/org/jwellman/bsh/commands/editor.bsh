@@ -1,0 +1,65 @@
+/**
+    An improvement on the default bsh GUI editor; this one uses
+    Java Swing (JFrame, JPanel, etc.) and the RSyntaxTextArea (extends JTextArea).
+
+	Open a GUI editor from the command line or in the GUI desktop mode.
+	When run from the command line the editor is a simple standalone
+	frame.  When run inside the GUI desktop it is a workspace editor.
+	See workspaceEditor()
+*/
+
+import java.awt.BorderLayout;
+import javax.swing.*;
+import org.fife.ui.rtextarea.*;
+import org.fife.ui.rsyntaxtextarea.*;
+
+editor() {
+
+    // this.ta = new TextArea(15,40);
+    RSyntaxTextArea ta = new RSyntaxTextArea(20, 60);
+    ta.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+    ta.setCodeFoldingEnabled(true);
+
+    RTextScrollPane sp = new RTextScrollPane(ta);
+
+    // It is critical that we use 'void == this.panel' instead of 'null == this.panel'
+    if (void == this.panel) {
+	this.frame = new JFrame("Better Editor");
+	frame.add(sp, BorderLayout.CENTER);
+    } else {
+        this.panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        panel.add(sp, BorderLayout.CENTER);
+    }
+
+	this.p = new JPanel();
+	this.b = new JButton("Eval");
+	b.addActionListener(this);
+	p.add(b);
+
+	b = new JButton("Clear");
+	b.addActionListener(this);
+	p.add(b);
+
+	b = new JButton("Close");
+	b.addActionListener(this);
+	p.add(b);
+
+    if (void == this.panel) {
+	frame.add(p, BorderLayout.SOUTH);
+	frame.pack();
+	frame.show();
+    }
+
+    actionPerformed(e) {
+        if ( e.getActionCommand().equals("Close") )
+            frame.dispose();
+        else if ( e.getActionCommand().equals("Clear") )
+            ta.setText("");
+        else
+            this.interpreter.eval( ta.getText() );
+    }
+
+    print("Better Editor started...");
+    return this;
+}

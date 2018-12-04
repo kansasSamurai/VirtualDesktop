@@ -1,0 +1,31 @@
+/**
+ * A beanshell script that initializes my "working session" [1]
+ * by calling other scripts, etc.  This is meant to be customizable over time
+ * and must be run via the sourceUTF8() custom command[2].
+ *
+ * [1] "working session" is my terminology... just means that I run this
+ *     script on each invocation of the interactive shell so that it has
+ *     my custom methods and variables.
+ * [2] sourceUTF8() is in the commands folder and therefore is expected
+ *     to be loaded via the importCommands() command so make it the first
+ *     line in this script.  Also, I have added a default line in the console
+ *     history when it is initialized to make this easier (i.e. just hit the up key).
+ *     Finally, this script itself will *NOT* be read in UTF8 so avoid the use
+ *     of incompatible characters (i.e. see env.bsh for an example)
+
+import java.awt.Font;
+import java.awt.Color;
+import javax.swing.ImageIcon;
+
+ */
+
+// This must be the first line of this script
+importCommands("org.jwellman.bsh.commands");
+
+// A closure to help navigate the shell/console
+sourceUTF8("/org/jwellman/bsh/scripts/env.bsh");
+
+// Unfortunately, importCommands() does not override default commands
+// but they can be overridden via source().
+sourceUTF8("/org/jwellman/bsh/scripts/printBanner.bsh");
+

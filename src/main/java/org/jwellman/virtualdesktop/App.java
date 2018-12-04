@@ -1,14 +1,37 @@
 package org.jwellman.virtualdesktop;
 
 import com.alee.laf.WebLookAndFeel;
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.BorderLayout;
+import java.awt.Container;
+import java.awt.Dimension;
+import java.awt.GridLayout;
+import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.*;
+import javax.swing.Action;
+import javax.swing.Icon;
+import javax.swing.JDesktopPane;
+import javax.swing.JFrame;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTextArea;
+import javax.swing.KeyStroke;
+import javax.swing.UIManager;
 import javax.swing.UIManager.LookAndFeelInfo;
+import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.plaf.metal.DefaultMetalTheme;
+import javax.swing.plaf.metal.MetalLookAndFeel;
+import javax.swing.plaf.metal.OceanTheme;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
-import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
+import org.jwellman.swing.plaf.metal.MetalThemeManager;
+//import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
 //import static org.jwellman.virtualdesktop.App.registeredApps;
 import org.jwellman.virtualdesktop.desktop.VActionLNF;
 import org.jwellman.virtualdesktop.desktop.VException;
@@ -19,6 +42,8 @@ import org.jwellman.virtualdesktop.vswing.VDesktopPane;
 
 /**
  * A Virtual Desktop.
+ *
+ * TODO Make this application "eat its own dog food"; i.e. use my Foundation app library
  *
  * @author Rick Wellman
  */
@@ -35,7 +60,10 @@ public class App extends JFrame implements ActionListener {
     /** a custom scrollpane for a scrollable desktop */
     private DesktopScrollPane dsp;
 
-    /** This is only nececessary for a temp dev menu item; can eventually be removed */
+    /**
+     * This is only nececessary for a temp dev menu item; can eventually be removed
+     * Even now, I could probably use ActionFactory registeredApps instead.
+     */
     static Class[] registeredApps = {
         SpecBeanShell.class
         ,SpecJCXConsole.class
@@ -126,14 +154,23 @@ public class App extends JFrame implements ActionListener {
 
         DesktopAction.setDesktop(this);
         ActionFactory.initDesktop();
-        JMenuItem m = null;
 
+        // These are for desktop layout... this is VERY inelegant...
+        // this needs to be from persistence mechanism ...
+        // and overall, there needs to be a "layout manager" for the desktop
         int x = 10; int y = -70;
+
+        JMenuItem m = null;
         for (DesktopAction a : ActionFactory.getListOfActions()) {
+            /* TODO Currently this is coded so that it is either
+               on the desktop or in the menu.  I do not have a current
+               working example, but there can probably be both so
+               this implementation will have to change.
+             */
             if (a.isDesktopOnly()) {
                 final Icon icon = (Icon) a.getValue(Action.LARGE_ICON_KEY);
                 final String label = (String) a.getValue(Action.NAME);
-                final VShortcut vs = new VShortcut(label, icon, x, y+=80);
+                final VShortcut vs = new VShortcut(a, label, icon, x, y+=80);
                 desktop.add(vs);
             } else {
                 m = new JMenuItem(a);
@@ -175,11 +212,17 @@ public class App extends JFrame implements ActionListener {
         menu.setMnemonic(KeyEvent.VK_K);
         menuBar.add(menu);
 
+        // TODO for sake of precision, it should probably be determined that each
+        // lookandfeel is available before adding it to the menu.
+
+        // I have decided that weblaf will be the default and baseline look and feel
+        menuItem = new JMenuItem(new VActionLNF("Web",null,"com.alee.laf.WebLookAndFeel", this));
+        menu.add(menuItem);
+
         menuItem = new JMenuItem(new VActionLNF("Nimbus",null,"javax.swing.plaf.nimbus.NimbusLookAndFeel", this));
         menu.add(menuItem);
 
-        menuItem = new JMenuItem(new VActionLNF("Web",null,"com.alee.laf.WebLookAndFeel", this));
-        menu.add(menuItem);
+        // TODO add Metal
 
         menuItem = new JMenuItem(new VActionLNF("System",null,UIManager.getSystemLookAndFeelClassName(), this));
         menu.add(menuItem);
@@ -251,15 +294,18 @@ public class App extends JFrame implements ActionListener {
 
                     if (icon != null) frame.setFrameIcon(icon);
 
+                    frame.pack(); // see Note [1] below
                     if ((c.getWidth() * c.getHeight()) != 0) {
                         frame.setSize(c.getWidth(), c.getHeight());
+                        System.out.println("JIF setSize()");
                     } else {
-                        frame.pack(); // see Note [1] below
+//                        frame.pack(); // see Note [1] below
                     }
 
-                    frame.setVisible(true); //necessary as of 1.3
-                    // frame.setSelected(true);
+//                    frame.setVisible(true); //necessary as of 1.3
+//                    frame.setSelected(true);
                     desktop.add(frame);
+                    frame.setVisible(true); //necessary as of 1.3
                     frame.setSelected(true);
                 } catch (java.beans.PropertyVetoException e) {
                     e.printStackTrace(); // for now, simply swallow the exception
@@ -274,10 +320,26 @@ public class App extends JFrame implements ActionListener {
         // Note [1]: For now I am removing this via comment as it has undesired
         // side effects.  However, I have a feeling that I should be using
         // pack() and the side effects are due to a design error elsewhere.
+        // 9/2/2018:  Trying to always call pack() first, then setsize().
+    }
+
+    /**
+     * This currently exists ONLY to support the prototyping of integrating
+     * the Groovy Console via the jvdConsole.groovy script.
+     *
+     * It is currently not envisioned that apps can access the 'desktop'
+     * directly.  Rather, it is preferred that we implement an API/methods
+     * to allow JInternalFrames to be added to the desktop.
+     *
+     * @return
+     */
+    public JDesktopPane getDesktop() {
+        return this.desktop;
     }
 
     /**
      * Quit the application (not sure if there is "cleanup" to do)
+     * TODO implement some sort of app notification and/or veto feature
      */
     protected void quit() {
         System.exit(0);
@@ -314,7 +376,7 @@ public class App extends JFrame implements ActionListener {
                     // This does not appear to be working as expected?
                     // System.setProperty(WebLookAndFeel.PROPERTY_HONOR_USER_BORDERS, "true");
 
-                    int choice = 2;
+                    int choice = 3;
                     switch (choice) {
                         case 1:
                             final String sys = UIManager.getSystemLookAndFeelClassName();
@@ -327,6 +389,25 @@ public class App extends JFrame implements ActionListener {
                         case 3:
                             UIManager.setLookAndFeel ( NimbusLookAndFeel.class.getCanonicalName () );
                             WebLookAndFeel.initializeManagers ();
+                            break;
+                        case 4:
+                            // Sep. 2018:  Sea Glass seems to now work with Java8; I like certain things
+                            // but it now feels "dated" as it seems to look like a Windows version
+                            // of the mac aqua look and feel.  i.e. see the JTabbedPane implementation
+                            // Also, I think it is still pretty incomplete with intermittent buggy behavior :(
+                            UIManager.setLookAndFeel("com.seaglasslookandfeel.SeaGlassLookAndFeel");
+                            break;
+                        case 5:
+                            MetalLookAndFeel
+                                    .setCurrentTheme(MetalThemeManager.MODERN);
+                                    //.setCurrentTheme(MetalThemeManager.LARGE_FONT);
+                                    //.setCurrentTheme(new DefaultMetalTheme());
+                                    //.setCurrentTheme(new OceanTheme());
+                            UIManager.setLookAndFeel(new MetalLookAndFeel());
+                            break;
+                        case 6:
+                            // Sep. 2018:  evaluating pgs
+                            UIManager.setLookAndFeel("com.pagosoft.plaf.PgsLookAndFeel");
                             break;
                         case 99:
                             // This is my original code; don't use it.

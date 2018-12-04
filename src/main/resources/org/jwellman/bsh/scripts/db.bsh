@@ -1,0 +1,22 @@
+
+import ca.krasnay.sqlbuilder.SelectBuilder;
+
+db() {
+
+	var builder = new SelectBuilder();
+
+	demo() {
+		var demo = db().builder
+		    .from("Employee")
+		    .column("name")
+		    .column("age")
+		    .column("id")
+		    .where("dept = 'engineering'")
+		    .where("salary > 100000")
+		    ;
+
+		print( demo.toString() );
+	}
+
+	return this;
+}

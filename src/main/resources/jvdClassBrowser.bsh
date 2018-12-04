@@ -2,6 +2,7 @@
  *  Opens the class browser from the Java Virtual Desktop.
  *  i.e. this script is adapted to recognize the JVD.
  ** ================================================================= */
+import bsh.ClassIdentifier;
 import bsh.util.ClassBrowser;
 import org.jwellman.virtualdesktop.App;
 
@@ -28,6 +29,11 @@ jvdClassBrowser() {
         return frame;
     }
 
+    /* Purposely misspelled... suggestions welcome but 'goto' is a java keyword :( */
+    go2(Object o) {
+        browse(o);
+    }
+
     browse( Object o ) {
 	String classname;
 	if ( o instanceof String)
@@ -42,59 +48,76 @@ jvdClassBrowser() {
         this.browser.driveToClass(classname);
     }
 
-        this.javaVirtualDesktop = true;
-	this.inDesktop = true; // ( bsh.system.desktop != void );
-	if ( inDesktop ) {
-            if ( javaVirtualDesktop ) {
-                this.frame = App.getVSystem().createVApp(browser, "BeanShell Class Browser - jvd", bsh.system.icons.eye);
-            } else {
-		this.frame = makeInternalFrame("BeanShell Class Browser");
-		// frame.frameIcon = bsh.system.icons.eye;
-		// bsh.system.desktop.classbrowser = browser;
-            }
-	} else {
-		this.frame = new javax.swing.JFrame("BeanShell Class Browser");
-		// frame.iconImage=bsh.system.icons.eye;
-	}
-	frame.frameIcon = bsh.system.icons.eye;
+    // Expose this method as a convenience since it is used a lot
+    driveToClass(String classname) {
+        browse(classname);
+    }
 
-	// Ignore unhandled method invocations from listeners.
-	invoke( name, args ) {
-		if ( !name.startsWith("internalFrame") )
-			throw new Error("method: "+name);
-	}
-
-	internalFrameClosing( e ) {
-		// really need foo=void;...
-		// bsh.system.desktop.classbrowser = null;
-	}
-
-	if ( !javaVirtualDesktop ) {
-            if (inDesktop) { frame.addInternalFrameListener(this); }
-            browser.setFrame( frame );
-            frame.getContentPane().add("Center", browser);
-            frame.pack();
-            frame.show();
-            frame.selected=true;
+this.javaVirtualDesktop = true;
+    this.inDesktop = true; // ( bsh.system.desktop != void );
+    if ( inDesktop ) {
+        if ( javaVirtualDesktop ) {
+            this.frame = App.getVSystem().createVApp(browser, "BeanShell Class Browser - jvd", bsh.system.icons.eye);
         } else {
-            if (inDesktop) { frame.addInternalFrameListener(this); }
+            this.frame = makeInternalFrame("BeanShell Class Browser");
+            // frame.frameIcon = bsh.system.icons.eye;
+            // bsh.system.desktop.classbrowser = browser;
+        }
+    } else {
+            this.frame = new javax.swing.JFrame("BeanShell Class Browser");
+            // frame.iconImage=bsh.system.icons.eye;
+    }
+    frame.frameIcon = bsh.system.icons.eye;
+
+    // Ignore unhandled method invocations from listeners.
+    invoke( name, args ) {
+            if ( !name.startsWith("internalFrame") )
+                    throw new Error("method: "+name);
+    }
+
+    internalFrameClosing( e ) {
+            // really need foo=void;...
+            // bsh.system.desktop.classbrowser = null;
+    }
+
+    if ( !javaVirtualDesktop ) {
+        if (inDesktop) { frame.addInternalFrameListener(this); }
+        browser.setFrame( frame );
+        frame.getContentPane().add("Center", browser);
+        frame.pack();
+        frame.show();
+        frame.selected=true;
+    } else {
+        if (inDesktop) { frame.addInternalFrameListener(this); }
 //            browser.setFrame( frame );
 //            frame.getContentPane().add("Center", browser);
-            frame.pack();
+        frame.pack();
 //            frame.show();
 //            frame.selected=true;
-        }
+    }
 
-        if ( inDesktop ) {
-            if ( javaVirtualDesktop ) {
+    if ( inDesktop ) {
+        if ( javaVirtualDesktop ) {
 //                App.getVSystem().createVApp(browser, "BeanShell Class Browser", bsh.system.icons.eye);
-            } else {
-                bsh.system.desktop.addInternalFrame(frame);
-            }
+        } else {
+            bsh.system.desktop.addInternalFrame(frame);
         }
+    }
 
-	return this; // browser;
+    return this; // browser;
 }
 
-jvd = object();
+_JVD() {
+
+    classpath() {
+        ClassLoader cl = ClassLoader.getSystemClassLoader();
+        URL[] urls = ((URLClassLoader)cl).getURLs();
+        for (URL url: urls) { print(url.getFile()); }
+    }
+
+    return this;
+}
+
+jvd = _JVD();
 jvd.browser = jvdClassBrowser();
+jvd.app = org.jwellman.virtualdesktop.App.getVSystem();

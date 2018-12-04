@@ -1,0 +1,116 @@
+
+import ca.odell.glazedlists.*;
+
+glist() {
+
+    if (this.myEventList == void)
+        this.myEventList = new BasicEventList(); // this works
+
+    get() {
+        return this.myEventList;
+    }
+
+    add() {
+        this.myEventList.add("Mario");
+        this.myEventList.add("Donkey Kong");
+        this.myEventList.add(0, "Bowser");
+    }
+
+    addsonic() {
+        this.myEventList.add("Sonic");
+    }
+
+    addtails() {
+        if (this.myEventList.contains("Sonic"))
+            this.myEventList.add("Tails");
+    }
+
+    removezero() {
+        this.myEventList.remove(0);
+    }
+
+    remove() {
+        this.myEventList.remove("Donkey Kong");
+    }
+
+    print() {
+        for(Iterator i = this.myEventList.iterator(); i.hasNext(); ) {
+            print(i.next());
+        }
+    }
+
+    clear() {
+        this.myEventList.clear();
+    }
+
+    return this;
+}
+
+glist = glist();
+
+
+import ca.odell.glazedlists.swing.DefaultEventListModel;
+
+public class Glazed extends JPanel {
+
+    private JList original;
+    private JList sorted;
+    private DefaultEventListModel originalModel;
+    private DefaultEventListModel sortedModel;
+
+    public Glazed() {
+        super(new BorderLayout());
+
+        original = new JList();
+        original.setVisibleRowCount(5);
+        this.add(original, BorderLayout.EAST);
+
+        sorted = new JList();
+        sorted.setVisibleRowCount(5);
+        this.add(sorted, BorderLayout.WEST);
+
+    }
+
+    public void setModel(EventList elist) {
+        originalModel = new DefaultEventListModel(elist);
+        original.setModel(originalModel);
+
+        sortedModel = new DefaultEventListModel( new SortedList(elist) );
+        sorted.setModel(sortedModel);
+    }
+
+}
+
+demo() {
+
+    this.panel = new Glazed();
+
+    this.iframe = jvd.app.createVApp(this.panel, "GlazedLists Demo");
+
+    return this;
+}
+
+aa() { run() { glist.add();  } return this; }
+bb() { run() { glist.remove();  } return this; }
+cc() { run() { glist.clear();  } return this; }
+dd() { run() { glist.removezero();  } return this; }
+ee() { run() { glist.myEventList.add("Sonic");  } return this; }
+ff() { run() { glist.addtails();  } return this; }
+gg() {
+  this.mystring = "default";
+  set(String s) { mystring = s; return this; }
+  run() { glist.myEventList.add(this.mystring);  }
+  return this;
+}
+
+/* =================================
+These commands can now be run from the console:
+
+bsh % demo = demo();
+bsh % demo.panel.setModel(glist.myEventList);
+bsh % SwingUtilities.invokeLater( aa() );
+bsh % SwingUtilities.invokeLater( bb() );
+..
+bsh % SwingUtilities.invokeLater( gg().set("Rick") );
+
+*/

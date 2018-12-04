@@ -1,0 +1,84 @@
+import bsh.XThis;
+
+tree() { tree(global.namespace.getVariableNames()); }
+
+tree(String name) { tree(name,0); }
+
+tree(String[] vars) {
+    Arrays.sort(vars);
+    for ( String var : vars ) {
+        bsh.console.print("+ ");
+        bsh.console.println(var);
+        tree(var, 1);
+    }
+}
+
+tree(String name, int level) {
+
+    // bsh.console.print(name);
+    this.debug = false;
+
+    Object root = this.interpreter.get(name);
+    if (root instanceof XThis) {
+        String[] children = root.variables;
+        for (String child : children) {
+            for (int i=0; i < level; i++)  { bsh.console.print("  "); }
+            if (this.debug) bsh.console.print("L");
+            if (this.debug) bsh.console.print(level);
+            bsh.console.print(" + ");
+            bsh.console.print(child);
+            bsh.console.print("     .. ");
+
+            String fullname = name + "." + child;
+            bsh.console.print(fullname);
+
+            bsh.console.print(" <io> ");
+            if (this.interpreter.get(fullname) instanceof Object) {
+                // bsh.console.print(this.interpreter.get(fullname));
+                bsh.console.print(this.interpreter.get(fullname).getClass().getName());
+            } else {
+                bsh.console.print("primitive");
+            }
+
+            bsh.console.println(""); // always last before tree()
+            tree(fullname, level + 1);
+        }
+    } else {
+    }
+
+}
+
+/**
+ * I leave this here to show that EvalError and its subtypes
+ * do not work in a try/catch syntax :(
+ */
+tree(Object dontuseme) {
+
+    print("Dont use this method");
+    return;
+
+    if (level == 0) print("root");
+
+    Object root = this.interpreter.get(name);
+    try {
+        String[] children = root.variables;
+        for (String child : children) {
+            for (int i=0; i < level; i++) print(" ");
+            print(" +"); print(child);
+            tree(name + "." + child, level + 1);
+        }
+    } catch(EvalError e) {
+        // if it does not have children,
+        // simply do nothing
+    } catch(TargetError e) {
+        // if it does not have children,
+        // simply do nothing
+    } catch(Exception e) {
+        // if it does not have children,
+        // simply do nothing
+    }
+
+}
+
+//bsh % print(jvd.app.variables);
+// Error: EvalError: Cannot access field: variables, on object: org.jwellman.virtualdesktop.App[frame0,-8,-8,1234x784,invalid,layout

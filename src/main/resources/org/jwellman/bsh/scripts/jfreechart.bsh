@@ -3,24 +3,6 @@ JFreeChart
 ... tbd
 -------------------
 
-import java.util.Arrays;
-
-testscript() {
-    print("\nDefining testscript() ...");
-
-    displayGlobals() {
-        sorted = global.namespace.getVariableNames();
-        Arrays.sort(sorted);
-        for ( currentvar : sorted ) {
-          print(currentvar);
-        }
-    }
-
-    print("... testscript() defined");
-    return this;
-}
-mytestscript = testscript();
-
 -------------------
 import org.jwellman.virtualdesktop.*;
 import org.jwellman.jfreechart.*;
@@ -36,7 +18,8 @@ demoTimeSeriesChart()  {
     TimeSeriesTest test = new TimeSeriesTest();
     ChartPanel panel = new ChartPanel(test.chart);
     App app = org.jwellman.virtualdesktop.App.getVSystem();
-    app.createVApp(panel, "any title u want");
+    JInternalFrame iframe = app.createVApp(panel, "Time Series Test");
+
     XYPlot plot = test.chart.plot;
     plot.setBackgroundPaint( Color.black );
     plot.setBackgroundPaint( transparent );
@@ -67,15 +50,16 @@ demoTimeSeriesChart()  {
     import org.jfree.chart.renderer.xy.*;
     plot.setRenderer( new XYSplineRenderer(20, XYSplineRenderer$FillType.TO_ZERO) );
 
-    // The flowing two lines are optional - just decorates with JPreeChart
-    JPreeChart pre = new JPreeChart();
-    pre.decorate(panel.getChart());
-
     print("demoTimeSeriesChart has been defined");
     return this;
 }
 
 mypreechart = demoTimeSeriesChart();
+// The following two lines are optional - just decorates with JPreeChart
+JPreeChart pre = new JPreeChart();
+// pre.decorate(panel.getChart());
+
+
 -------------------
 
 import org.jwellman.virtualdesktop.*;

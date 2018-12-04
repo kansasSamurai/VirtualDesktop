@@ -1,0 +1,55 @@
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.sax.SAXSource;
+import javax.xml.transform.sax.SAXTransformerFactory;
+import javax.xml.transform.stream.StreamResult;
+import org.xml.sax.InputSource;
+
+import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.io.xml.StaxDriver;
+
+import org.jwellman.xstream.example.*;
+
+tester() {
+
+   main() {
+      //XStreamTester tester = new XStreamTester();
+      XStream xstream = new XStream(new StaxDriver());
+
+      Student student = tester.getStudentDetails();
+
+      //Object to XML Conversion
+      String xml = xstream.toXML(student);
+      print(xml); //(formatXml(xml));
+
+      //XML to Object Conversion
+      //Student student1 = (Student)xstream.fromXML(xml);
+      //System.out.println(student1);
+   }
+
+   Student getStudentDetails() {
+
+      Student student = new Student();
+      student.setFirstName("Mahesh");
+      student.setLastName("Parashar");
+      student.setRollNo(1);
+      student.setClassName("1st");
+
+      Address address = new Address();
+      address.setArea("H.No. 16/3, Preet Vihar.");
+      address.setCity("Delhi");
+      address.setState("Delhi");
+      address.setCountry("India");
+      address.setPincode(110012);
+
+      student.setAddress(address);
+      return student;
+   }
+
+    return this;
+}
+

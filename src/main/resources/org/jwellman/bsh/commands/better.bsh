@@ -1,0 +1,185 @@
+/**
+    An improvement on the default bsh GUI editor; this one uses
+    Java Swing (JFrame, JPanel, etc.) and the RSyntaxTextArea (extends JTextArea).
+
+    Open a GUI editor from the command line or in the GUI desktop mode.
+    When run from the command line the editor is a simple standalone
+    frame.  When run inside the GUI desktop it is a workspace editor.
+    See workspaceEditor()
+*/
+
+import bsh.ConsoleInterface;
+
+import javax.swing.*;
+import java.awt.BorderLayout;
+import java.awt.event.KeyEvent;
+import org.fife.ui.rtextarea.RTextScrollPane;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+
+/**
+ * A simple extenstion of JPanel to hold an RTextScrollPane/RSyntaxTextArea (RSTA)
+ * and expose the RSTA as the 'textarea' property (getter only).
+ */
+public class Editor extends JPanel {
+
+    private RSyntaxTextArea textarea; // exposed
+    private RTextScrollPane scrollpane; // hidden
+
+    public Editor() {
+        super(new BorderLayout());
+
+        textarea = new RSyntaxTextArea(20, 60);
+        textarea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+        textarea.setCodeFoldingEnabled(true);
+        textarea.setTabSize(4);
+        textarea.setTabsEmulated(true);
+
+        scrollpane = new RTextScrollPane(textarea);
+
+        this.add(scrollpane, BorderLayout.CENTER);
+    }
+
+    public RSyntaxTextArea getTextarea() { return this.textarea; }
+
+}
+
+/**
+ * A no-args version which simply defaults the title to 'Better Editor'
+ */
+better() {
+    better("Better Editor");
+}
+
+/**
+ * The full better(...) implementation.
+ *
+ * @param title The title for the container (either an JFrame or JInternalFrame)
+ */
+better(String title) {
+
+    if (void == jvd || void == jvd.app) {
+        print("This requires jvd.app; see TBD");
+        return;
+    }
+
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    this.iframe = null;
+
+    /** The top level container to put in a frame/internalframe */
+    this.panel = new JPanel();
+
+    /** The tabbed pane for holding editor instances */
+    this.tabbedpane = new JTabbedPane();
+    // Moved here from below... also, the following line works but trying it with the 'this' keyword
+    //    JTabbedPane tabbedpane = new JTabbedPane();
+
+    createNewTabContent() {
+        var editor = new Editor();
+        // 9/2/2018:  I think the following line is no longer applicable
+        // if (void == super.ta) super.ta = editor.textarea;
+        return editor;
+    }
+
+    actionPerformed(e) {
+        if ( e.getActionCommand().equals("Close") ) {
+            if (void != frame) frame.dispose();
+            if (void != panel) iframe.hide();
+        } else if ( e.getActionCommand().equals("New") ) {
+               this.tabbedpane.addTab("Editor", this.createNewTabContent());
+        } else if ( e.getActionCommand().equals("Clear") ) {
+            getCurrentTextArea().setText("");
+        } else {
+            print("[ Editor invoked interpreter.eval()... ]");
+
+            // The following line works but I want to see if I can directly use the input stream
+            this.interpreter.eval( getCurrentTextArea().getText()
+                + "\n\n this.interpreter.print( getBshPrompt() );"
+            ); // this works
+
+            // nope... bsh.console.inputStream.read( getCurrentTextArea().getText().getBytes() );
+
+            // this.interpreter.print( getBshPrompt() );
+            // the above 'sorta' works but only works like I want it to if the eval text/script does not include print() statements (which it OFTEN does)
+
+            // ((ConsoleInterface)bsh.console).prompt(getBshPrompt());
+            // the above doesn't work probably because this assumes v2.1 and we are on 2.05b:
+        }
+    }
+
+    dummy() {
+        // This is what happens when the "enter" key is pressed
+        // p:java.awt.event.KeyEvent[KEY_PRESSED,keyCode=10,keyText=Enter,keyChar=Enter,keyLocation=KEY_LOCATION_STANDARD,rawCode=13,primaryLevelUnicode=13,scancode=28,extendedKeyCode=0xa] on org.jwellman.bsh.JConsole$1[,0,0,641x599,layout=javax.swing.plaf.basic.BasicTextUI$UpdateHandler,alignmentX=0.0,alignmentY=0.0,border=,flags=296,maximumSize=,minimumSize=,preferredSize=,caretColor=java.awt.Color[r=128,g=128,b=128],disabledTextColor=javax.swing.plaf.ColorUIResource[r=160,g=160,b=160],editable=true,margin=java.awt.Insets[top=7,left=5,bottom=7,right=5],selectedTextColor=java.awt.Color[r=0,g=0,b=0],selectionColor=java.awt.Color[r=210,g=210,b=210],kit=javax.swing.text.StyledEditorKit@1ec67eb5,typeHandlers={text/plain=javax.swing.text.StyledEditorKit@1ec67eb5}]
+        // t:java.awt.event.KeyEvent[KEY_TYPED,keyCode=0,keyText=Unknown keyCode: 0x0,keyChar=Enter,keyLocation=KEY_LOCATION_UNKNOWN,rawCode=0,primaryLevelUnicode=0,scancode=0,extendedKeyCode=0x0] on org.jwellman.bsh.JConsole$1[,0,0,641x599,invalid,layout=javax.swing.plaf.basic.BasicTextUI$UpdateHandler,alignmentX=0.0,alignmentY=0.0,border=,flags=296,maximumSize=,minimumSize=,preferredSize=,caretColor=java.awt.Color[r=128,g=128,b=128],disabledTextColor=javax.swing.plaf.ColorUIResource[r=160,g=160,b=160],editable=true,margin=java.awt.Insets[top=7,left=5,bottom=7,right=5],selectedTextColor=java.awt.Color[r=0,g=0,b=0],selectionColor=java.awt.Color[r=210,g=210,b=210],kit=javax.swing.text.StyledEditorKit@1ec67eb5,typeHandlers={text/plain=javax.swing.text.StyledEditorKit@1ec67eb5}]
+        //      Pushing Runnable onto EDT via invokeAndWait()
+        // r:java.awt.event.KeyEvent[KEY_RELEASED,keyCode=10,keyText=Enter,keyChar=Enter,keyLocation=KEY_LOCATION_STANDARD,rawCode=13,primaryLevelUnicode=13,scancode=28,extendedKeyCode=0xa] on org.jwellman.bsh.JConsole$1[,0,0,641x599,layout=javax.swing.plaf.basic.BasicTextUI$UpdateHandler,alignmentX=0.0,alignmentY=0.0,border=,flags=296,maximumSize=,minimumSize=,preferredSize=,caretColor=java.awt.Color[r=128,g=128,b=128],disabledTextColor=javax.swing.plaf.ColorUIResource[r=160,g=160,b=160],editable=true,margin=java.awt.Insets[top=7,left=5,bottom=7,right=5],selectedTextColor=java.awt.Color[r=0,g=0,b=0],selectionColor=java.awt.Color[r=210,g=210,b=210],kit=javax.swing.text.StyledEditorKit@1ec67eb5,typeHandlers={text/plain=javax.swing.text.StyledEditorKit@1ec67eb5}]
+
+            var kevent = new KeyEvent(
+                _console.textpane,
+                KeyEvent.KEY_TYPED,
+                0L,     // When
+                0,      // Modifer
+                KeyEvent.VK_UNDEFINED,
+                KeyEvent.CHAR_UNDEFINED,
+                KeyEvent.KEY_LOCATION_UNKNOWN);
+
+            _console.keyTyped(kevent);
+    }
+
+    // currently does nothing but works if enabled
+    stateChanged(ChangeEvent changeEvent) {
+        // int index = this.tabbedpane.getSelectedIndex();
+        // print("Tab changed to: " + this.tabbedpane.getTitleAt(index));
+    }
+
+    JTextArea getCurrentTextArea() {
+        int index = this.tabbedpane.getSelectedIndex();
+        Editor cta = this.tabbedpane.getComponentAt(index);
+        return cta.textarea;
+    }
+
+// Original location of this line:
+//    JTabbedPane tabbedpane = new JTabbedPane();
+
+    // It is critical that we use 'void == this.panel' instead of 'null == this.panel'
+    if (void == this.panel) {
+        this.frame = new JFrame("Better Editor");
+        frame.add(sp, BorderLayout.CENTER);
+    } else {
+        this.tabbedpane.addTab("Editor", this.createNewTabContent());
+        this.tabbedpane.addChangeListener(this);
+
+        panel.setLayout(new BorderLayout());
+        panel.add(this.tabbedpane, BorderLayout.CENTER);
+    }
+
+    this.p = new JPanel();
+
+    this.b = new JButton("New");
+        b.addActionListener(this);
+        p.add(b);
+
+    b = new JButton("Eval");
+        b.addActionListener(this);
+        p.add(b);
+
+    b = new JButton("Clear");
+        b.addActionListener(this);
+        p.add(b);
+
+    b = new JButton("Close");
+        b.addActionListener(this);
+        p.add(b);
+
+    if (void == this.panel) {
+        frame.add(p, BorderLayout.SOUTH);
+        frame.pack();
+        frame.show();
+    } else {
+        this.panel.add(p, BorderLayout.SOUTH);
+        this.iframe = jvd.app.createVApp(this.panel, title);
+    }
+
+    print("Better Editor started...");
+    return this;
+}

@@ -1,4 +1,19 @@
 
+import javax.swing.JInternalFrame
+
+class CustomIFrameFactory extends groovy.swing.factory.RootPaneContainerFactory {
+
+    public Object newInstance(FactoryBuilderSupport builder, Object name, Object value, Map attributes) throws InstantiationException, IllegalAccessException {
+        if (FactoryBuilderSupport.checkValueIsType(value, name, JInternalFrame)) {
+            return value;
+        }
+        JInternalFrame frame = new JInternalFrame("[title-goes-here]", true, true, true, true);
+
+        return frame;
+    }
+}
+
+
 class CustomConsole extends groovy.ui.Console {
 
 def iframeDelegates = [
@@ -6,7 +21,7 @@ def iframeDelegates = [
             internalFrame(
                 title: 'GroovyConsole',
                 //location: [100,100], // in groovy 2.0 use platform default location
-                //frameIcon: imageIcon("/groovy/ui/ConsoleIcon.png").image                
+                //frameIcon: imageIcon("/groovy/ui/ConsoleIcon.png").image
             ) {
 //                try {
 ////                    current.locationByPlatform = true
@@ -22,12 +37,17 @@ def iframeDelegates = [
     ];
 
     void customRun() {
+
+        // This currently won't work because the 'swing' object is null :(
+        // swing.registerBeanFactory("customFrame", CustomIFrameFactory )
+
         this.run([
         rootContainerDelegate:{
             internalFrame(
                 title: 'MyGroovyConsole',
-                //location: [100,100], // in groovy 2.0 use platform default location
-                //frameIcon: imageIcon("/groovy/ui/ConsoleIcon.png").image                
+                // defaultCloseOperation: JInternalFrame.DO_NOTHING_ON_CLOSE,
+                // location: [100,100], // in groovy 2.0 use platform default location
+                // frameIcon: imageIcon("/groovy/ui/ConsoleIcon.png").image
             ) {
 //                try {
 ////                    current.locationByPlatform = true
@@ -38,16 +58,50 @@ def iframeDelegates = [
 //                containingWindows += current
             }
         },
-        menuBarDelegate: {arg->
-            current.JMenuBar = build(arg)}
+        menuBarDelegate: {arg-> current.JMenuBar = build(arg)}
         ] );
+//        swing.consoleFrame.setClosable(true);
+        swing.consoleFrame.setResizable(true);
+        swing.consoleFrame.setIconifiable(true);
+//        swing.consoleFrame.setMaximizable(true);
+
+        org.jwellman.virtualdesktop.App.getVSystem().getDesktop().add(swing.consoleFrame);
+        // org.jwellman.virtualdesktop.App.getVSystem().createVApp(swing.consoleFrame);
         swing.consoleFrame.pack();
         swing.consoleFrame.setVisible(true);
-        org.jwellman.virtualdesktop.App.getDesktop().add(swing.consoleFrame);
     }
 }
 
-console = new CustomConsole(); // groovy.ui.Console();
-console.customRun();
+gconsole = new CustomConsole(); // groovy.ui.Console();
+gconsole.customRun();
 // console.swing.consoleFrame.pack();
 // console.swing.consoleFrame.show();
+
+
+// =======================
+/* This is not quite working yet but I want to make sure I capture the current state:
+import groovy.swing.SwingBuilder;
+import java.awt.BorderLayout as BL
+
+class DesktopFactory extends AbstractFactory {
+    public Object newInstance( FactoryBuilderSupport builder, Object name, Object value, Map properties )
+    throws InstantiationException, IllegalAccessException {
+       return org.jwellman.virtualdesktop.App.getVSystem().getDesktop()
+    }
+}
+
+def swing = new SwingBuilder()
+swing.registerFactory( "desktop", new DesktopFactory() )
+
+def iframe = swing.edt {
+    desktop {
+        internalFrame(visible: true, title: 'MyGroovyConsole', bounds: [25, 25, 200, 100]) {
+            borderLayout()
+            textlabel = label(text: 'Click the button!', constraints: BL.NORTH)
+            button(text:'Click Me', constraints: BL.SOUTH)
+        }
+    }
+}
+*/
+// org.jwellman.virtualdesktop.App.getVSystem().getDesktop().add(iframe);
+

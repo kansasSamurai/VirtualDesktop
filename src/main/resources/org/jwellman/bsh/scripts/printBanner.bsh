@@ -1,0 +1,32 @@
+/**
+ * The original printBanner command will only print the icon
+ * if the Console is the original bsh.JConsole :(
+ */
+import java.awt.Font;
+import java.awt.Color;
+import javax.swing.ImageIcon;
+
+printBanner() {
+
+    if (this.font == void)
+    this.font = new java.awt.Font("SansSerif", java.awt.Font.BOLD, 12);
+
+    if (this.icon == void)
+    this.icon = new javax.swing.ImageIcon( getResource("/bsh/util/lib/small_bean_shell.gif"));
+
+    if (this.color == void)
+    this.color = new java.awt.Color(20,100,20);
+
+    if (this.bannertext == void)
+    this.bannertext = Interpreter.VERSION + " - by Pat Niemeyer (pat@pat.net)";
+
+    if ( bsh.console != void && Capabilities.haveSwing() ) {
+        this.jconsole = bsh.console;
+        jconsole.println( this.icon );
+        jconsole.print( this.bannertext, this.font, this.color );
+        jconsole.println();
+    } else {
+        print( "[BeanShell] " + this.bannertext);
+    }
+
+}

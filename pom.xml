@@ -34,6 +34,13 @@
         <version>2.6</version>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
+    <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>3.6</version>
+    </dependency>
+
     <dependency>
         <groupId>org.codehaus.groovy</groupId>
         <artifactId>groovy-all</artifactId>
@@ -52,7 +59,11 @@
         <version>0.2</version>
     </dependency>
 
-<!-- I think swinglabs was just an experiment; try to delete -->
+    <!-- SwingLabs inclusion was on purpose though nothing "currently
+         utilizes it.  It actually has many useful Swing components
+         and utilties for good UIs.  TODO create some beanshell scripts
+         that demonstrate these features.
+    -->
     <dependency>
         <groupId>org.swinglabs</groupId>
         <artifactId>swingx-core</artifactId>
@@ -77,11 +88,25 @@
         <version>3.0.4</version>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/com.jidesoft/jide-common
+         3.6.18 < Current version
+         3.6.4  < superceded on 11/11/2018 (this may need to be reverted; do some tests)
+    -->
     <dependency>
       <groupId>com.jidesoft</groupId>
       <artifactId>jide-oss</artifactId>
-      <version>3.6.4</version>
+      <version>3.6.18</version>
     </dependency>
+
+    <!-- https://mvnrepository.com/artifact/com.jidesoft/jide-common
+    11/11/2018:  I'm not currently sure but I think that jide-common
+    is superceded/included in jide-oss above
+    <dependency>
+        <groupId>com.jidesoft</groupId>
+        <artifactId>jide-common</artifactId>
+        <version>3.5.15</version>
+    </dependency>
+    -->
 
     <dependency>
         <groupId>xml-apis</groupId>
@@ -93,13 +118,6 @@
         <groupId>xml-apis</groupId>
         <artifactId>xml-apis-ext</artifactId>
         <version>1.3.04</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
-    <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-lang3</artifactId>
-        <version>3.6</version>
     </dependency>
 
     <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-exec -->
@@ -150,10 +168,31 @@
         <version>1.7</version>
     </dependency>
 
-    <dependency><!-- TODO https://github.com/beanshell/beanshell update to 2.0b6 -->
+    <!--
+        TODO https://github.com/beanshell/beanshell update to 2.0b6
+        version 2.0b5 works; rollback if necessary
+    <dependency>
         <groupId>org.beanshell</groupId>
         <artifactId>bsh</artifactId>
         <version>2.0b5</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache-extras.beanshell</groupId>
+      <artifactId>bsh</artifactId>
+      <version>2.0b6</version>
+    </dependency>
+    -->
+    <dependency>
+        <groupId>org.beanshell</groupId>
+        <artifactId>bsh</artifactId>
+        <version>2.0b5</version>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/com.googlecode.lanterna/lanterna -->
+    <dependency>
+        <groupId>com.googlecode.lanterna</groupId>
+        <artifactId>lanterna</artifactId>
+        <version>3.0.1</version>
     </dependency>
 
     <dependency>
@@ -174,17 +213,63 @@
         <version>1.29</version>
     </dependency>
 
-    <!-- This is currently only necessary for weblaf (though I may keep) -->
+        <!-- This is currently only necessary for weblaf (though I may keep) -->
+        <dependency>
+            <groupId>com.thoughtworks.xstream</groupId>
+            <artifactId>xstream</artifactId>
+            <version>1.4.7</version>
+        </dependency>
+
+    <!-- meh
     <dependency>
-        <groupId>com.thoughtworks.xstream</groupId>
-        <artifactId>xstream</artifactId>
-        <version>1.4.7</version>
+       <groupId>com.seaglasslookandfeel</groupId>
+       <artifactId>seaglasslookandfeel</artifactId>
+       <version>0.2.1</version>
+    </dependency>
+    -->
+
+    <!-- This look and feel is only incrementally better than Metal..., so meh
+    <dependency>
+            <groupId>com.github.arnabk</groupId>
+            <artifactId>pgslookandfeel</artifactId>
+            <version>1.1.4</version>
+    </dependency>
+    -->
+
+    <!-- ===== Calendar Component ========================================= -->
+    <!-- ===== At least one calendar component will be mandatory; -->
+    <!-- ===== currently evaluating: jcalendar, jdatepicker, ... -->
+
+    <!-- https://mvnrepository.com/artifact/com.toedter/jcalendar -->
+    <dependency>
+        <groupId>com.toedter</groupId>
+        <artifactId>jcalendar</artifactId>
+        <version>1.4</version>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/org.jdatepicker/jdatepicker -->
+    <dependency>
+        <groupId>org.jdatepicker</groupId>
+        <artifactId>jdatepicker</artifactId>
+        <version>1.3.4</version>
+    </dependency>
+
+    <dependency>
+        <groupId>com.glazedlists</groupId>
+        <artifactId>glazedlists</artifactId>
+        <version>1.11.0</version>
     </dependency>
 
     <dependency>
         <groupId>com.github.fracpete</groupId>
         <artifactId>vfsjfilechooser2</artifactId>
         <version>0.2.8</version>
+    </dependency>
+
+    <dependency>
+        <groupId>nl.knaw.dans.common</groupId>
+        <artifactId>dans-dbf-lib</artifactId>
+        <version>1.0.0-beta-10</version>
     </dependency>
 
     <dependency>
@@ -199,10 +284,18 @@
         <version>2.2.1</version>
     </dependency>
 
+    <!-- ===== Database Features ========================================= -->
+
     <dependency>
         <groupId>org.hsqldb</groupId>
         <artifactId>hsqldb</artifactId>
         <version>2.3.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>ca.krasnay</groupId>
+      <artifactId>sqlbuilder</artifactId>
+      <version>1.2</version>
     </dependency>
 
     <dependency>
@@ -215,6 +308,12 @@
         <groupId>net.sf.opencsv</groupId>
         <artifactId>opencsv</artifactId>
         <version>2.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.fifesoft</groupId>
+      <artifactId>rsyntaxtextarea</artifactId>
+      <version>2.6.1</version>
     </dependency>
 
     <dependency>

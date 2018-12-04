@@ -15,7 +15,7 @@ def iframeDelegates = [
             internalFrame(
                 title: 'GroovyConsole',
                 //location: [100,100], // in groovy 2.0 use platform default location
-                //frameIcon: imageIcon("/groovy/ui/ConsoleIcon.png").image                
+                //frameIcon: imageIcon("/groovy/ui/ConsoleIcon.png").image
             ) {
 //                try {
 ////                    current.locationByPlatform = true
@@ -34,4 +34,39 @@ console = new groovy.ui.Console();
 console.run(iframeDelegates);
 // console.swing.consoleFrame.pack();
 // console.swing.consoleFrame.show();
+
+// === Programatically create an internal frame and add it to the jpad desktop
+// This differs from "normal usage" in that we usually create a JPanel and use
+// the App.createVApp() interface to create a new internal frame.
+// Also note that this is a proof of concept; an overloaded "createVApp()"
+// should probably be created that does the pack(), setVisible(), etc.
+import groovy.swing.SwingBuilder;
+import java.awt.BorderLayout as BL
+
+def swing = new SwingBuilder()
+
+iframe = swing.internalFrame ( title: 'MyGroovyConsole',
+    resizable: true,
+    iconifiable: true,
+    maximizable: true,
+    closable: true,
+    bounds: [25, 25, 200, 100]) {
+
+    borderLayout()
+    lblMessage = label(text: 'Click the button!', constraints: BL.NORTH)
+    btnClickMe = button(text:'Click Me', constraints: BL.SOUTH)
+
+}
+
+swing.doLater {
+// These are necessary if you do not use the properties as shown above:
+//    iframe.setResizable(true)
+//    iframe.setMaximizable(true)
+//    iframe.setIconifiable(true)
+
+    org.jwellman.virtualdesktop.App.getVSystem().getDesktop().add(iframe)
+    iframe.pack()
+    iframe.setVisible(true)
+}
+
 

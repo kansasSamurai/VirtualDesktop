@@ -1,6 +1,0 @@
-
-// === This opens the groovy console ===
-gconsole() {
-    console = new groovy.ui.Console();
-    console.run();
-}

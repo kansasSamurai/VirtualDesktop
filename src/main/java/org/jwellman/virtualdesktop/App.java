@@ -173,8 +173,8 @@ public class App extends JFrame implements ActionListener {
                 final VShortcut vs = new VShortcut(a, label, icon, x, y+=80);
                 desktop.add(vs);
             } else {
-                m = new JMenuItem(a);
-                appMenu.add(m);
+                //m = new JMenuItem(a);
+                appMenu.add(a);
             }
         }
 

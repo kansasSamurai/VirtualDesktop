@@ -14,6 +14,8 @@ import org.jwellman.virtualdesktop.App;
  */
 public class DesktopAction extends AbstractAction implements Runnable {
 
+    private static final long serialVersionUID = 1L;
+
     /** All instances share a reference to the desktop */
     private static App vdesktop;
 
@@ -22,8 +24,10 @@ public class DesktopAction extends AbstractAction implements Runnable {
     /** xxx */
     private boolean desktopOnly;
 
+    private String clazzName;
+    
     /** Class of virtual app to create */
-    private Class clazz;
+    private Class<?> clazz;
 
     public DesktopAction(String title) {
         super(title);
@@ -39,7 +43,11 @@ public class DesktopAction extends AbstractAction implements Runnable {
             final String c = e.getActionCommand();
             this.clazz = Class.forName(c);
         } catch (ClassNotFoundException ex) {
-            Logger.getLogger(DesktopAction.class.getName()).log(Level.SEVERE, null, ex);
+            try {
+                this.clazz = Class.forName(this.getClazzName());
+            } catch (ClassNotFoundException e1) {
+                Logger.getLogger(DesktopAction.class.getName()).log(Level.SEVERE, null, e1);
+            }                
         }
         SwingUtilities.invokeLater(this);
     }
@@ -71,6 +79,14 @@ public class DesktopAction extends AbstractAction implements Runnable {
      */
     public void setDesktopOnly(boolean value) {
         this.desktopOnly = value;
+    }
+
+    public String getClazzName() {
+        return clazzName;
+    }
+
+    public void setClazzName(String clazzName) {
+        this.clazzName = clazzName;
     }
 
 }

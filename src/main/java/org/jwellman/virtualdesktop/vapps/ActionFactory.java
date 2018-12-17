@@ -5,7 +5,6 @@ import java.util.List;
 import javax.swing.Action;
 import javax.swing.Icon;
 import org.apache.batik.transcoder.TranscoderException;
-import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
 import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.VIcon;
 
@@ -17,31 +16,31 @@ import org.jwellman.virtualdesktop.desktop.VIcon;
  */
 public class ActionFactory {
 
-    public static Class[] registeredApps = {
+    public static Class<?>[] registeredApps = {
         SpecBeanShell.class
         ,SpecJCXConsole.class
-        ,SpecVfsFileChooser2.class
+//      ,SpecVfsFileChooser2.class // this app sucks
         ,SpecHyperSQL.class
         ,SpecJFreeChart.class
         ,SpecXChartDemo.class
-        ,SpecXionFM.class
+//      ,SpecXionFM.class // this app is targeted for Linux
         ,SpecUberDragAndDrop.class
-//        ,SpecXionFM.class // this app is targeted for Linux
-//        ,SpecJzy3D.class // this app sucks
+//      ,SpecJzy3D.class // this app sucks
     };
 
     private static final List<DesktopAction> listOfActions = new ArrayList<>();
 
     public static void initDesktop() {
 
-        DesktopAction a = null;
-        for (Class clazz : registeredApps) {
+        DesktopAction a = null; // reusable
+        
+        for (Class<?> clazz : registeredApps) {
             a = new DesktopAction(clazz.getSimpleName());
             getListOfActions().add(a);
 
             try {
-                a.putValue(Action.SMALL_ICON, VIcon.createSVGIcon("org/jwellman/virtualdesktop/images/global_ui/home156"));
-                a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName());
+                a.putValue(Action.SMALL_ICON, VIcon.createSVGIcon("org/jwellman/virtualdesktop/images/global_ui/home156", 16, 16));
+                a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName()); // i.e. org.jwellman.virtualdesktop.vapps.SpecJCXConsole
 //            a.putValue(Action.SHORT_DESCRIPTION, "");
 //            a.putValue(Action.MNEMONIC_KEY, "");
             } catch (TranscoderException ex) {
@@ -50,8 +49,9 @@ public class ActionFactory {
 
         }
 
-        String[] labels = {"Home", "Calendar", "Office Writer", "Trash"};
-        String[] icons = {"home156", "calendar168", "document176", "rubbish1"};
+        String[] labels = {"Home",    "Calendar",    "Office Writer", "Trash"};
+        String[] icons =  {"home156", "calendar168", "document176",   "rubbish1"};
+        String[] clazzs = {"SpecJCXConsole", "SpecJCXConsole", "SpecJCXConsole", "SpecJCXConsole"};
         String iconpath = "org/jwellman/virtualdesktop/images/global_ui/";
 
         for (int i=0; i < labels.length; i++) {
@@ -59,12 +59,12 @@ public class ActionFactory {
                 final Icon icon = VIcon.createSVGIcon(iconpath + icons[i]);
 
                 a = new DesktopAction(labels[i]);
-                a.setDesktopOnly(true);
-                a.putValue(Action.LARGE_ICON_KEY, icon);
-                // a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName());
-                // a.putValue(Action.SHORT_DESCRIPTION, "");
-                // a.putValue(Action.MNEMONIC_KEY, "");
-
+                    a.setDesktopOnly(true);
+                    a.setClazzName("org.jwellman.virtualdesktop.vapps.SpecJCXConsole"); // TODO (clazzs[i]);
+                    a.putValue(Action.LARGE_ICON_KEY, icon);
+                    // a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName());
+                    // a.putValue(Action.SHORT_DESCRIPTION, "");
+                    // a.putValue(Action.MNEMONIC_KEY, "");
                 getListOfActions().add(a);
 
             } catch (TranscoderException ex) {

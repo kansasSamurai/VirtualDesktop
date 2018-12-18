@@ -1,0 +1,97 @@
+import org.jwellman.swing.jtree.*;
+import org.jwellman.swing.jtree.renderer.*;
+
+public class TreeDemo extends JPanel {
+
+    public SmartNode root, asia, northAmerica, southAmerica, europe;
+    
+    public TreeDemo() {
+        super(new BorderLayout());
+
+        root = new SmartNode("Countries");
+
+        Country[] countries = new Country[]{
+                new Country("India", "/flags/in.png"),
+                new Country("Singapore", "/flags/sg.png"),
+                new Country("Indonesia", "/flags/id.png"),
+                new Country("Vietnam", "/flags/vn.png"),
+        };
+        asia = new SmartNode("Asia", countries);
+
+        countries = new Country[]{
+                new Country("United States", "/flags/us.png"),
+                new Country("Canada", "/flags/ca.png")
+        };
+        northAmerica = new SmartNode("North America", countries);
+
+        countries = new Country[]{
+                new Country("Brazil", "/flags/br.png"),
+                new Country("Argentina", "/flags/ar.png"),
+                new Country("Uruguay", "/flags/uy.png")
+        };
+        southAmerica = new SmartNode("South America", countries);
+
+        countries = new Country[]{
+                new Country("United Kingdom", "/flags/gb.png"),
+                new Country("Germany", "/flags/de.png"),
+                new Country("Spain", "/flags/es.png"),
+                new Country("France", "/flags/fr.png"),
+                new Country("Italy", "/flags/it.png")
+        };
+        europe = new SmartNode("Europe", countries);
+
+        root.add(asia);
+        root.add(northAmerica);
+        root.add(southAmerica);
+        root.add(europe);
+
+        final JTree tree = new JTree(root);
+        tree.setCellRenderer(new CountryTreeCellRenderer());
+
+        JScrollPane pane = new JScrollPane(tree);
+        //pane.setPreferredSize(new Dimension(200, 400));
+
+        this.add(pane, BorderLayout.CENTER);
+    }
+    
+}
+
+public class Country implements CountryAware {
+
+        private String name;
+        private String flagIcon;
+
+        Country(String name, String flagIcon) {
+            this.name = name;
+            this.flagIcon = flagIcon;
+        }
+
+        public Icon getFlagIcon() {
+            return null;
+        }
+        
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+        
+        public String toString() {
+            return this.getName();
+        }
+        
+}
+
+
+demo() {
+
+    this.panel = new TreeDemo();
+    this.iframe = jvd.app.createVApp(this.panel, "JTree Demo");
+
+    return this;
+}
+
+treedemo = demo();
+

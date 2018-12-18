@@ -1,2 +1,5 @@
-/target/
 /C:/
+/target/
+.project
+.settings
+.classpath

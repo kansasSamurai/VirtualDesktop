@@ -376,7 +376,7 @@ public class App extends JFrame implements ActionListener {
                     // This does not appear to be working as expected?
                     // System.setProperty(WebLookAndFeel.PROPERTY_HONOR_USER_BORDERS, "true");
 
-                    int choice = 3;
+                    int choice = 2;
                     switch (choice) {
                         case 1:
                             final String sys = UIManager.getSystemLookAndFeelClassName();

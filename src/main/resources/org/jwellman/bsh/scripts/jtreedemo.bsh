@@ -3,6 +3,8 @@ import org.jwellman.swing.jtree.renderer.*;
 
 public class TreeDemo extends JPanel {
 
+    public JTree tree;
+    public JScrollPane pane;
     public SmartNode root, asia, northAmerica, southAmerica, europe;
     
     public TreeDemo() {
@@ -45,10 +47,10 @@ public class TreeDemo extends JPanel {
         root.add(southAmerica);
         root.add(europe);
 
-        final JTree tree = new JTree(root);
+        tree = new JTree(root);
         tree.setCellRenderer(new CountryTreeCellRenderer());
 
-        JScrollPane pane = new JScrollPane(tree);
+        pane = new JScrollPane(tree);
         //pane.setPreferredSize(new Dimension(200, 400));
 
         this.add(pane, BorderLayout.CENTER);

@@ -1,12 +1,28 @@
 package org.jwellman.virtualdesktop.desktop;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.net.URL;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.*;
+
+import javax.swing.Action;
+import javax.swing.BorderFactory;
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JLayeredPane;
 import javax.swing.plaf.ComponentUI;
+
 import org.apache.batik.transcoder.TranscoderException;
 import org.jwellman.virtualdesktop.vapps.DesktopAction;
 
@@ -17,7 +33,9 @@ import org.jwellman.virtualdesktop.vapps.DesktopAction;
  */
 public class VShortcut extends JLabel {
 
-    /** The last shortcut that was selected. */
+	private static final long serialVersionUID = 1L;
+
+	/** The last shortcut that was selected. */
     private static VShortcut lastItem;
 
     /** The shortcut where the mouse is being hovered over (i.e. can also be null) */
@@ -65,6 +83,8 @@ public class VShortcut extends JLabel {
         this.setBorder();
         this.setLocation(xPos, yPos);
 
+        // TODO we need a pane parameter; this may be critical at some point in the future;
+        // or... more likely?  all shortcuts go one the same [bottom-most] layer
         this.pane = pane;
 
         this.setSize(this.getPreferredSize());
@@ -240,7 +260,10 @@ public class VShortcut extends JLabel {
                 log.log(Level.FINER, "Invoking: {0}", VShortcut.this);
                 try {
                     // Invoke the item to process any action.
-                    item.invoke(null);
+                    item.invoke( new ActionEvent(
+                    		ev.getSource(), 
+                    		ActionEvent.ACTION_FIRST, 
+                    		(String)action.getValue(Action.NAME)) );
                 } catch( Exception ex ) {
                     reportException(ex);
                 }
@@ -288,8 +311,9 @@ public class VShortcut extends JLabel {
           */
         private void createMotionListener(MouseEvent ev) {
             lastItem = VShortcut.this;
-            lastItem.enter();
-            Point p = lastItem.getLocation();
+            lastItem.enter();            
+            //Point p = lastItem.getLocation();
+            
             final int offx = ev.getX();
             final int offy = ev.getY();
 
@@ -337,7 +361,8 @@ public class VShortcut extends JLabel {
     }
 
     /** The original UI that we revert to when not selected, hovered or otherwise active. */
-    private ComponentUI oldUI;
+    @SuppressWarnings("unused")
+	private ComponentUI oldUI;
 
     /** Is this DeskItem in a selected state? */
     protected boolean selected;
@@ -422,17 +447,18 @@ public class VShortcut extends JLabel {
       * The UI used to control the drawing of the DeskItem
       * without having to conditionalize the paint operations.
       */
-    private static class MyUI extends com.sun.java.swing.plaf.windows.WindowsLabelUI {
+    @SuppressWarnings("restriction")
+	private static class MyUI extends com.sun.java.swing.plaf.windows.WindowsLabelUI {
 
         /** The color of the background. */
         Color col;
 
         /**
-         * Constructs an instance with the default coloring using the default background color
-         * associated with the look and feel.
-         * TODO:  this method of getting the background color is a hack
+         * Constructs an instance with the default coloring using the 
+         * default background color associated with the look and feel.
          */
-        public MyUI() {
+        @SuppressWarnings("unused")
+		public MyUI() {
             col = new JLabel().getBackground();
         }
 

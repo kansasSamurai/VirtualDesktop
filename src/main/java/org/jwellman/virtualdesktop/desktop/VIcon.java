@@ -65,6 +65,7 @@ public class VIcon extends UserAgentAdapter implements Icon {
 
     /**
      * Create a new VIcon object.
+     * 
      * @param uri The URI to read the SVG document from.
      * @param w The width of the icon.
      * @param h The height of the icon.
@@ -85,6 +86,7 @@ public class VIcon extends UserAgentAdapter implements Icon {
 
     /**
      * Create a new VIcon object.
+     * 
      * @param doc The SVG document.
      * @param w The width of the icon.
      * @param h The height of the icon.
@@ -92,19 +94,6 @@ public class VIcon extends UserAgentAdapter implements Icon {
      */
     public VIcon(Document doc, int w, int h) throws TranscoderException {
         generateBufferedImage(new TranscoderInput(doc), w, h);
-    }
-
-    /**
-     * A convenience method for creating Icons from their path.
-     *
-     * @param path
-     * @return
-     * @throws TranscoderException
-     */
-    public static VIcon createSVGIcon(String path) throws TranscoderException {
-        final URL url = VIcon.class.getClassLoader().getResource(path + ".svg");
-        final VIcon v = new VIcon(url.toString());
-        return v;
     }
 
     /**
@@ -117,10 +106,10 @@ public class VIcon extends UserAgentAdapter implements Icon {
     protected void generateBufferedImage(TranscoderInput in, int w, int h) throws TranscoderException {
 
         final BufferedImageTranscoder t = new BufferedImageTranscoder();
-        if (w != 0 && h != 0) {
-            t.setDimensions(w, h);
-        }
-        t.transcode(in, null);
+	        if (w != 0 && h != 0) {
+	            t.setDimensions(w, h);
+	        }
+	        t.transcode(in, null);
         bufferedImage = t.getBufferedImage();
         width = bufferedImage.getWidth();
         height = bufferedImage.getHeight();
@@ -217,5 +206,17 @@ public class VIcon extends UserAgentAdapter implements Icon {
     public Dimension2D getViewportSize() {
         return new Dimension(width, height);
     }
+
+	public static Icon createSVGIcon(String path) throws TranscoderException {
+		final URL url = VIcon.class.getClassLoader().getResource(path + ".svg");
+		final VIcon v = new VIcon(url.toString());
+		return v;
+	}
+
+	public static Icon createSVGIcon(String path, int w, int h) throws TranscoderException {
+		final URL url = VIcon.class.getClassLoader().getResource(path + ".svg");
+		final VIcon v = new VIcon(url.toString(), w, h);
+		return v;
+	}
 
 }

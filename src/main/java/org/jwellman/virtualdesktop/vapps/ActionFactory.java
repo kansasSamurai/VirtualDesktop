@@ -1,5 +1,6 @@
 package org.jwellman.virtualdesktop.vapps;
 
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.Action;

@@ -1,0 +1,31 @@
+import com.github.lgooddatepicker.components.*;
+import com.github.lgooddatepicker.zinternaltools.InternalUtilities;
+
+public class MyGoodDatePicker extends JPanel {
+
+    public MyGoodDatePicker() {
+        this.setLayout(new FlowLayout());
+
+        // Create a date picker, and add it to the form.
+        DatePicker datePicker1 = new DatePicker();
+        add(datePicker1);
+
+        // Create a time picker, and add it to the form.
+        TimePicker timePicker1 = new TimePicker();
+        add(timePicker1);
+        
+    }
+}
+
+_gooddemo() {
+
+    this.panel = new MyGoodDatePicker();    
+
+    this.iframe = jvd.app.createVApp(this.panel, "LGoodDatePicker Demo");
+
+    return this;
+}
+
+/*
+gooddemo = _gooddemo(); 
+*/

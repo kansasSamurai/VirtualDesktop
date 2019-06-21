@@ -1,10 +1,16 @@
 package org.jwellman.virtualdesktop.vapps;
 
 import ext.hsqldb.util.DatabaseManagerSwing;
+
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+
+import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import org.hsqldb.Server;
@@ -31,15 +37,15 @@ import org.hsqldb.Server;
  *
  * @author Rick Wellman
  */
-public class SpecHyperSQL extends VirtualAppSpec implements Runnable {
+public class SpecHyperSQL extends VirtualAppSpec implements Runnable, ActionListener {
 
     private static Server server;
+
+    private static final String CONNECTION_DRIVER = "org.hsqldb.jdbc.JDBCDriver";
 
     private static final String CONNECTION_URL = "jdbc:hsqldb:hsql://localhost:1234/sandbox";
 
     private static final String CONNECTION_USER = "SA";
-
-    private static final String CONNECTION_DRIVER = "org.hsqldb.jdbc.JDBCDriver";
 
     private static final String CONNECTION_PASSWORD = "";
 
@@ -49,7 +55,7 @@ public class SpecHyperSQL extends VirtualAppSpec implements Runnable {
     public SpecHyperSQL() {
 
         this.setTitle("HyperSQL Manager");
-        this.setContent(new JPanel());
+        this.setContent(this.createContent());
 
         if (server == null) {
             try {
@@ -61,23 +67,23 @@ public class SpecHyperSQL extends VirtualAppSpec implements Runnable {
                 server.setPort(1234);
                 server.setTrace(true);
                 server.setLogWriter(new PrintWriter(System.out));
-                server.start();
+                //server.start();
 
             } catch (ClassNotFoundException e) {
                 e.printStackTrace(System.out);
             }
         }
 
-        try {
-            Connection con = DriverManager.getConnection( CONNECTION_URL, CONNECTION_USER, CONNECTION_PASSWORD);
-            con.createStatement().executeUpdate(
-                "create table contacts (name varchar(45),email varchar(45),phone varchar(45))"
-            );
-        } catch (SQLException e) {
-            e.printStackTrace(System.out);
-        }
+//        try {
+//            Connection con = DriverManager.getConnection( CONNECTION_URL, CONNECTION_USER, CONNECTION_PASSWORD);
+//            con.createStatement().executeUpdate(
+//                "create table contacts (name varchar(45),email varchar(45),phone varchar(45))"
+//            );
+//        } catch (SQLException e) {
+//            e.printStackTrace(System.out);
+//        }
 
-        javax.swing.SwingUtilities.invokeLater(this);
+//        javax.swing.SwingUtilities.invokeLater(this);
 
     }
 
@@ -106,4 +112,31 @@ public class SpecHyperSQL extends VirtualAppSpec implements Runnable {
         }
     }
 
+    private JPanel createContent() {
+    	JButton start = new JButton("START"); start.addActionListener(this);
+    	JButton stop = new JButton("STOP"); stop.addActionListener(this);
+    	JButton client = new JButton("NEW CLIENT"); client.addActionListener(this);
+    	
+    	JPanel content = new JPanel();
+    	content.add(start);
+    	content.add(stop);
+    	content.add(client);
+    	return content;
+    }
+
+	@Override
+	public void actionPerformed(ActionEvent e) {
+		// final JComponent c = (JComponent) e.getSource();
+		final String command = e.getActionCommand();
+		
+		if (command.equalsIgnoreCase("start")) {
+			server.start();
+		} else if (command.equalsIgnoreCase("stop")) {
+			server.shutdownWithCatalogs(org.hsqldb.Database.CLOSEMODE_COMPACT);
+		} else if (command.equalsIgnoreCase("new client")) {
+			javax.swing.SwingUtilities.invokeLater(this);
+		}
+		
+	}
+    
 }

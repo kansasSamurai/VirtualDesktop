@@ -1,0 +1,21 @@
+import org.hsqldb.Server;
+
+hsql() {
+    Class.forName("org.hsqldb.jdbc.JDBCDriver");
+    this.server = new Server();
+    server.setAddress("localhost");
+    server.setDatabaseName(0, "sandbox");
+    server.setDatabasePath(0, "file:C:/data/hsqldb/sandbox");
+    server.setPort(1234);
+    server.setTrace(true);
+    server.setLogWriter(new PrintWriter(System.out));
+    server.start();
+
+    // This is the proper way to shutdown the server from code:
+    // x.server.shutdownWithCatalogs(org.hsqldb.Database.CLOSEMODE_COMPACT);
+    
+    // 1 = running, 4 = starting, 8 = stopping, 16 = shutdown
+    // print(x.server.getState());
+    
+    return this;
+}

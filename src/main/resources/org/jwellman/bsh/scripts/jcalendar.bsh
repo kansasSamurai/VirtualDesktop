@@ -1,0 +1,109 @@
+import com.toedter.calendar.*;
+import com.toedter.calendar.demo.*;
+import com.toedter.components.*;
+import javax.swing.plaf.basic.BasicSplitPaneDivider;
+import javax.swing.plaf.basic.BasicSplitPaneUI;
+
+
+// Extend JCalendarDemo to override init() and exclude the call to initializeLookAndFeels()
+public class MyJCalendarDemo extends com.toedter.calendar.demo.JCalendarDemo {
+
+    // This is a copy from JCalendarDemo except it does not call initializeLookAndFeels()
+    public void init() {
+        // Set the JGoodies Plastic 3D look and feel
+        print("Bypass initializeLookAndFeels()"); //initializeLookAndFeels();
+
+        // initialize all beans to demo
+        beans = new JComponent[6];
+        beans[0] = new DateChooserPanel();
+        beans[1] = new JCalendar();
+        beans[2] = new JDayChooser();
+        beans[3] = new JMonthChooser();
+        beans[4] = new JYearChooser();
+        beans[5] = new JSpinField();
+
+        ((JSpinField) beans[5]).adjustWidthToMaximumValue();
+        ((JYearChooser) beans[4]).setMaximum(((JSpinField) beans[5])
+                .getMaximum());
+        ((JYearChooser) beans[4]).adjustWidthToMaximumValue();
+
+        getContentPane().setLayout(new BorderLayout());
+        setJMenuBar(createMenuBar());
+
+        toolBar = createToolBar();
+        getContentPane().add(toolBar, BorderLayout.NORTH);
+
+        splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+        splitPane.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+        splitPane.setDividerSize(4);
+        splitPane.setDividerLocation(240);
+
+        BasicSplitPaneDivider divider = ((BasicSplitPaneUI) splitPane.getUI())
+                .getDivider();
+
+        if (divider != null) {
+            divider.setBorder(null);
+        }
+
+        propertyPanel = new JPanel();
+        componentPanel = new JPanel();
+
+        URL iconURL = beans[0].getClass().getResource(
+                "images/" + beans[0].getName() + "Color16.gif");
+        ImageIcon icon = new ImageIcon(iconURL);
+
+        propertyTitlePanel = new JTitlePanel("Properties", null, propertyPanel,
+                BorderFactory.createEmptyBorder(4, 4, 4, 4));
+
+        componentTitlePanel = new JTitlePanel("Component", icon,
+                componentPanel, BorderFactory.createEmptyBorder(4, 4, 0, 4));
+
+        splitPane.setBottomComponent(propertyTitlePanel);
+        splitPane.setTopComponent(componentTitlePanel);
+        installBean(beans[0]);
+
+        getContentPane().add(splitPane, BorderLayout.CENTER);
+    }
+
+}
+
+public class JCalendarVirtDemo extends JPanel {
+
+    public JCalendarVirtDemo() {
+        super(new BorderLayout());
+
+        MyJCalendarDemo demo = new MyJCalendarDemo();
+        demo.init();
+        this.add(demo, BorderLayout.CENTER);
+    }
+
+}
+
+virtdemo() {
+
+    this.panel = new JCalendarVirtDemo();    
+
+    this.iframe = jvd.app.createVApp(this.panel, "JCalendar Demo");
+
+    return this;
+}
+
+/* =====================================
+These commands can now be run from the console:
+
+jcaldemo = virtdemo();
+layout = (BorderLayout)jcaldemo.panel.getLayout();
+comp = layout.getLayoutComponent(BorderLayout.CENTER);
+jmenu = comp.getJMenuBar();
+print(jmenu.getMenuCount()); // 3
+print(jmenu.getMenu(1).getText()); // Look&Feel
+
+aa() { run() { 
+    jmenu.remove(jmenu.getMenu(1));
+    jmenu.revalidate();
+    jmenu.repaint(); 
+  } 
+return this; }
+
+SwingUtilities.invokeLater( aa() );
+*/

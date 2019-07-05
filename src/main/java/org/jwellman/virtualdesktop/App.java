@@ -38,6 +38,7 @@ import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.VShortcut;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
 import org.jwellman.virtualdesktop.vapps.*;
+import org.jwellman.virtualdesktop.vswing.VDesktopManager;
 import org.jwellman.virtualdesktop.vswing.VDesktopPane;
 
 /**
@@ -102,6 +103,7 @@ public class App extends JFrame implements ActionListener {
         JPanel controls = null;
 
         desktop = new VDesktopPane(); // new JDesktopPane(); //a specialized layered pane
+        desktop.setDesktopManager(new VDesktopManager());
         int version = 4;
         switch (version) {
             case 1:

@@ -1,0 +1,14 @@
+DELETE FROM PUBLIC.CONTACTS
+DROP TABLE PUBLIC.CONTACTS
+CREATE TABLE CONTACTS(NAME VARCHAR(45),EMAIL VARCHAR(45),PHONE VARCHAR(45))
+INSERT INTO PUBLIC.CONTACTS VALUES(?,?,?)
+	column=NAME datatype=VARCHAR value='ray'
+	column=EMAIL datatype=VARCHAR value='ray@example.com'
+	column=PHONE datatype=VARCHAR value='9995556677'
+
+	column=NAME datatype=VARCHAR value='rick'
+	column=EMAIL datatype=VARCHAR value='rick@yahoo.com'
+	column=PHONE datatype=VARCHAR value='9995554321'
+
+	Number of Rows=2
+

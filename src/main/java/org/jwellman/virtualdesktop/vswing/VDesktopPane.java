@@ -15,16 +15,18 @@ import javax.swing.JDesktopPane;
  */
 public class VDesktopPane extends JDesktopPane {
     
-    private Image image;
-    
+	private static final long serialVersionUID = 1L;
+
     private static final String path = "org/jwellman/virtualdesktop/images/";
-    private static final String[] images = { "blankWall.jpg", "railroadTracks.jpg", 
-        "javaBeans.jpg"};
+    
+    private static final String[] images = { "blankWall.jpg", "railroadTracks.jpg", "javaBeans.jpg"};
+    
+	private Image image;
     
     public VDesktopPane() {
         super();
         try {        
-            final URL url = this.getClass().getClassLoader().getResource(path + images[2]);
+            final URL url = this.getClass().getClassLoader().getResource(path + images[1]);
             this.image = ImageIO.read(url);
         } catch (IOException ex) {
             Logger.getLogger(VDesktopPane.class.getName()).log(Level.SEVERE, null, ex);

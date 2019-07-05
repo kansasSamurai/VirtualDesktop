@@ -1,0 +1,28 @@
+import com.toedter.calendar.JCalendar;
+
+public class VCalendar extends JPanel {
+
+    public VCalendar() {
+        super(new BorderLayout());
+
+        this.add(new JCalendar(), BorderLayout.CENTER);
+    }
+
+}
+
+caldemo() {
+
+    this.panel = new VCalendar();
+
+    this.iframe = jvd.app.createVApp(this.panel, "JCalendar Demo");
+
+    return this;
+}
+
+/* =================================
+These commands can now be run from the console:
+
+// Create a JVD JCalendar Internal Window
+bsh % demo = caldemo();
+
+*/

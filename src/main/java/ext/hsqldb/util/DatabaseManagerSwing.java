@@ -586,6 +586,7 @@ implements ActionListener, WindowListener, KeyListener, MouseListener {
 
         // Added: (weconsultants@users): For preloadng FontDialogSwing
         FontDialogSwing.creatFontDialog(refForFontDialogSwing);
+        
         m.start();
     }
 
@@ -649,8 +650,8 @@ implements ActionListener, WindowListener, KeyListener, MouseListener {
     
     /**
      * This stuff is all quick, except for the refreshTree().
-     * This unit can be kicked off in main Gui thread.  The refreshTree
-     * will be backgrounded and this method will return.
+     * This unit can be kicked off in main Gui thread.  
+     * The refreshTree will be backgrounded and this method will return.
      */
     public void connect(Connection c) {
 
@@ -676,7 +677,7 @@ implements ActionListener, WindowListener, KeyListener, MouseListener {
         rowConn = c;
 
         try {
-            dMeta      = cConn.getMetaData();
+            dMeta = cConn.getMetaData();
             isOracle = (dMeta.getDatabaseProductName().indexOf("Oracle") >= 0);
             sStatement = cConn.createStatement();
 

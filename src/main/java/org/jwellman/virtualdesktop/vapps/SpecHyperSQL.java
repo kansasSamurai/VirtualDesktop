@@ -1,7 +1,5 @@
 package org.jwellman.virtualdesktop.vapps;
 
-import ext.hsqldb.util.DatabaseManagerSwing;
-
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.PrintWriter;
@@ -10,10 +8,12 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 import javax.swing.JButton;
-import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+
 import org.hsqldb.Server;
+
+import ext.hsqldb.util.DatabaseManagerSwing;
 
 /**
  * This spec provides access to the HyperSQL Database Manager.
@@ -48,6 +48,9 @@ public class SpecHyperSQL extends VirtualAppSpec implements Runnable, ActionList
     private static final String CONNECTION_USER = "SA";
 
     private static final String CONNECTION_PASSWORD = "";
+    
+	private String command;
+
 
     /**
      *
@@ -89,32 +92,48 @@ public class SpecHyperSQL extends VirtualAppSpec implements Runnable, ActionList
 
     @Override
     public void run() {
-        DatabaseManagerSwing dbm = null;
-        try {
-            int version = 3;
-            switch (version) {
-                case 1:
-                    DatabaseManagerSwing.main(new String[]{"--noexit"});
-                    break;
-                case 2:
-                    // 20171007; this works but trying something new
-                    dbm = new DatabaseManagerSwing(new JFrame("Custom DBM"));
-                    dbm.main();
-                    break;
-                case 3:
-                    dbm = new DatabaseManagerSwing(new JFrame("Custom DBM"));
-                    dbm.main();
-                    dbm.postmain(dbm);
-                    break;
-            }
-        } catch (Exception e) {
-            e.printStackTrace(); // for now, simply swallow the exception
-        }
+
+		if (command.equalsIgnoreCase("start")) {
+			server.start();
+		} else if (command.equalsIgnoreCase("stop")) {
+			server.shutdownWithCatalogs(org.hsqldb.Database.CLOSEMODE_COMPACT);
+		} else if (command.equalsIgnoreCase("new client")) {
+	    	DatabaseManagerSwing dbm = null;
+	        try {
+	            int version = 3;
+	            switch (version) {
+	                case 1:
+	                    DatabaseManagerSwing.main(new String[]{"--noexit"});
+	                    break;
+	                case 2:
+	                    // 20171007; this works but trying something new
+	                    dbm = new DatabaseManagerSwing(new JFrame("Custom DBM"));
+	                    dbm.main();
+	                    break;
+	                case 3:
+	                    dbm = new DatabaseManagerSwing(new JFrame("Custom DBM"));
+	                    dbm.main();
+	                    dbm.postmain(dbm);
+	                    break;
+	            }
+	        } catch (Exception e) {
+	            e.printStackTrace(); // for now, simply swallow the exception
+	        }
+		} else if (command.equalsIgnoreCase("seed data")) {
+			try {
+				Connection conn = DriverManager.getConnection(CONNECTION_URL, CONNECTION_USER, CONNECTION_PASSWORD);
+				conn.createStatement().executeUpdate("create table contacts (name varchar(45),email varchar(45),phone varchar(45))");
+			} catch (SQLException exc) {
+				exc.printStackTrace(System.out);
+			}
+		}
+
     }
 
     private JPanel createContent() {
     	JButton start = new JButton("START"); start.addActionListener(this);
     	JButton stop = new JButton("STOP"); stop.addActionListener(this);
+    	JButton seed = new JButton("SEED DATA"); seed.addActionListener(this);
     	JButton client = new JButton("NEW CLIENT"); client.addActionListener(this);
     	
     	JPanel content = new JPanel();
@@ -124,19 +143,26 @@ public class SpecHyperSQL extends VirtualAppSpec implements Runnable, ActionList
     	return content;
     }
 
+    /**
+     * This probably is not perfect design to multiplex this way but it 
+     * should work as long as the user isn't clicking like crazy.
+     */
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		// final JComponent c = (JComponent) e.getSource();
-		final String command = e.getActionCommand();
 		
+		command = e.getActionCommand();
+		System.out.println("actionPerformed() > " + command + " < " + e.getWhen() );
+
 		if (command.equalsIgnoreCase("start")) {
-			server.start();
+			new Thread(this).start();
 		} else if (command.equalsIgnoreCase("stop")) {
-			server.shutdownWithCatalogs(org.hsqldb.Database.CLOSEMODE_COMPACT);
+			new Thread(this).start();
 		} else if (command.equalsIgnoreCase("new client")) {
 			javax.swing.SwingUtilities.invokeLater(this);
+		} else if (command.equalsIgnoreCase("seed data")) {
+			new Thread(this).start();
 		}
-		
+
 	}
     
 }

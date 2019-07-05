@@ -1,3 +1,8 @@
+# Branch Info - foundation
+Remove GUI bootstrap code and replace with my Foundation API.
+This will also allow my other foundation applications to be
+more easily integrated into the desktop.
+
 # VirtualDesktop
 A raw but functional virtual desktop - to be clear, this is not a "remote desktop".
 This is an application like any other... it just provides features that your desktop provides.

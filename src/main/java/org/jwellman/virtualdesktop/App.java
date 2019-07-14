@@ -30,6 +30,12 @@ import javax.swing.plaf.metal.DefaultMetalTheme;
 import javax.swing.plaf.metal.MetalLookAndFeel;
 import javax.swing.plaf.metal.OceanTheme;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
+
+import org.jwellman.foundation.Foundation;
+import org.jwellman.foundation.uContext;
+import org.jwellman.foundation.extend.AbstractSimpleApp;
+import org.jwellman.foundation.extend.AbstractSimpleMain;
+import org.jwellman.foundation.interfaces.uiCustomTheme;
 import org.jwellman.swing.plaf.metal.MetalThemeManager;
 //import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
 //import static org.jwellman.virtualdesktop.App.registeredApps;
@@ -48,7 +54,9 @@ import org.jwellman.virtualdesktop.vswing.VDesktopPane;
  *
  * @author Rick Wellman
  */
-public class App extends JFrame implements ActionListener {
+@SuppressWarnings("serial")
+public class App extends AbstractSimpleMain 
+implements uiCustomTheme, ActionListener {
 
     /** The singleton */
     private static App app;
@@ -56,43 +64,58 @@ public class App extends JFrame implements ActionListener {
     /** the desktop */
     private JDesktopPane desktop;
 
+    /** */
     private JMenu appMenu;
 
     /** a custom scrollpane for a scrollable desktop */
     private DesktopScrollPane dsp;
 
     /**
-     * This is only nececessary for a temp dev menu item; can eventually be removed
+     * This is only nececessary for a temp dev menu item (File > New); can eventually be removed.
      * Even now, I could probably use ActionFactory registeredApps instead.
      */
     static Class[] registeredApps = {
-        SpecBeanShell.class
+         SpecBeanShell.class
         ,SpecJCXConsole.class
         ,SpecHyperSQL.class
         ,SpecJFreeChart.class
         ,SpecXChartDemo.class
-        ,SpecXionFM.class
         ,SpecUberDragAndDrop.class
-//        ,SpecXionFM.class // this app is targeted for Linux
-//        ,SpecJzy3D.class // this app sucks
     };
 
     static int count = -1; // just a simple development control variable
 
+    /**
+     * I am going to mark this as deprecated because jPAD should not call
+     * this directly; it is here to allow beanshell scripts a way to access
+     * the jPAD inner workings.  I'm not entirely sure if this will 
+     * become non-deprecated or removed... time will tell.
+     * 
+     * @return
+     * 
+     * @deprecated see the javadoc for this method
+     */
     static public App getVSystem() {
         return app;
     }
 
     private App() {
-        super("Java Virtual Desktop");
+    }
+    
+    /**
+     * This was the constructor when App was a JFrame;
+     * can be deleted once the Foundation refactor is complete.
+     */
+    private void oldAppConstructor() {
+        // super("Java Virtual Desktop");
         App.app = this;
 
         //Make the big window be indented 50 pixels from each edge of the screen.
         int inset = 50;
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        setBounds(inset, inset, screenSize.width  - inset*2, screenSize.height - inset*2);
+        // setBounds(inset, inset, screenSize.width  - inset*2, screenSize.height - inset*2);
 
-        setJMenuBar(createMenuBar());
+        // setJMenuBar(createMenuBar());
 
         //Set up the GUI.
         JPanel p = new JPanel(new BorderLayout());
@@ -218,21 +241,21 @@ public class App extends JFrame implements ActionListener {
         // lookandfeel is available before adding it to the menu.
 
         // I have decided that weblaf will be the default and baseline look and feel
-        menuItem = new JMenuItem(new VActionLNF("Web",null,"com.alee.laf.WebLookAndFeel", this));
+        menuItem = new JMenuItem(new VActionLNF("Web",null,"com.alee.laf.WebLookAndFeel", (JFrame)this.window));
         menu.add(menuItem);
 
-        menuItem = new JMenuItem(new VActionLNF("Nimbus",null,"javax.swing.plaf.nimbus.NimbusLookAndFeel", this));
+        menuItem = new JMenuItem(new VActionLNF("Nimbus",null,"javax.swing.plaf.nimbus.NimbusLookAndFeel", (JFrame)this.window));
         menu.add(menuItem);
 
         // TODO add Metal
 
-        menuItem = new JMenuItem(new VActionLNF("System",null,UIManager.getSystemLookAndFeelClassName(), this));
+        menuItem = new JMenuItem(new VActionLNF("System",null,UIManager.getSystemLookAndFeelClassName(), (JFrame)this.window));
         menu.add(menuItem);
 
         return menuBar;
     }
 
-    //React to menu selections.
+    // React to menu selections.
     @Override public void actionPerformed(ActionEvent e) {
         if ("new".equals(e.getActionCommand())) {
             try {
@@ -250,13 +273,19 @@ public class App extends JFrame implements ActionListener {
         }
     }
 
+    /**
+     * I think this is the least desired use case...
+     * do a search for usage and then document.
+     * 
+     * @param newInstance
+     */
     public void createVApp(Object newInstance) {
         this.createVApp((VirtualAppSpec)newInstance);
     }
 
     /**
      * Create a new application.
-     * [This is the definitive method of the overloaded versions.]
+     * This is the most common use case for jPAD.
      *
      * @param spec
      */
@@ -279,6 +308,8 @@ public class App extends JFrame implements ActionListener {
      * This public method allows internal apps to create internal apps/windows.
      * i.e. via beanshell or others
      *
+     * [This is the definitive method of the overloaded versions; i.e. all roads lead here]
+     * 
      * @param c
      * @param title
      * @param icon
@@ -333,7 +364,9 @@ public class App extends JFrame implements ActionListener {
      * directly.  Rather, it is preferred that we implement an API/methods
      * to allow JInternalFrames to be added to the desktop.
      *
-     * @return
+     * @return the JDesktopPane
+     * 
+     * @deprecated see the javadoc why this will go away eventually
      */
     public JDesktopPane getDesktop() {
         return this.desktop;
@@ -347,21 +380,80 @@ public class App extends JFrame implements ActionListener {
         System.exit(0);
     }
 
-    /**
-     * Create the GUI and show it.
-     * For thread safety, this method should be invoked
-     * from the event-dispatching thread.
-     */
-    private static void createAndShowGUI() {
-        //Create and set up the window.
-        App frame = new App();
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        //Display the window.
-        frame.setVisible(true);
+    /**
+     * 
+     * @param args
+     */
+    public static void main(String[] args) {
+
+        // Install a custom security manager to prevent guests from shutting down the desktop.
+        System.setSecurityManager(new NoExitSecurityManager());
+        
+        App.app = new App().startup(true, args);
+        
+        /* Sequence Diagram ( https://www.websequencediagrams.com/ )
+			title Application Bootstrap Sequence
+			
+			JVM->App(static): static void main()
+			App(static)->App: new
+			App(static)->+App: startup()
+			note right of JVM: ... put notes here...
+			App->Foundation: init(uContext)
+			Foundation->Foundation: new
+			App->Foundation: useDesktop()
+			App-->-App(static): 
+
+         */
+    }
+    
+    /**
+     * 
+     * @param asMainFrame
+     * @param args
+     * @return
+     */
+    private App startup(boolean asMainFrame, String[] args) {
+    	
+        // Prepare - User Interface Context
+        final uContext context = uContext.createContext();
+        context.setTheme(this);
+        context.setDimension(85);
+
+        // Step 1 - Initialize Swing
+        final Foundation f = Foundation.init(context); // context
+        
+        // Step 3 - Use Foundation to create your "window"; give it your UI.
+        window = f.useDesktop(mainui); // f.useWindow(mainui);
+        // Step 3a (optional) - Customize your window
+        window.setTitle("jPAD - Java Powered Alternative Desktop - powered by the Foundation API"); 
+        window.setResizable(true);
+        window.setMaximizable(true);
+
+//		final ComponentGlassPane gp = new ComponentGlassPane((JFrame)this.window);		
+//		final DataBrowser b = (DataBrowser)this.mainui.getChild();
+//		b.getGlassPaneButton().addActionListener(gp);
+
+        // Step 4a - Create data models, controllers, and other non-UI objects
+        // n/a
+        
+        // Step 4b (optional)- Associate models with views
+        // n/a
+
+        // Step 5 - Display your User Interface
+        f.showGUI();
+
+    	return this;
     }
 
-    public static void main(String[] args) {
+    /**
+     * This is the copy of main before refactoring for Foundation API;
+     * it is here for reference during the refactoring but can be deleted
+     * once the refactoring is complete.
+     * 
+     * @param args
+     */
+    public static void oldmain(String[] args) {
 
         // Install a custom security manager to prevent guests from shutting down the desktop.
         System.setSecurityManager(new NoExitSecurityManager());
@@ -441,9 +533,15 @@ public class App extends JFrame implements ActionListener {
                         Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
-                createAndShowGUI();
+                // createAndShowGUI();
             } }
         );
     }
+
+	@Override
+	public void doCustomTheme() {
+		// TODO Auto-generated method stub
+		
+	}
 
 }

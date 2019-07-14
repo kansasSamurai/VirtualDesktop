@@ -11,9 +11,16 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
 /**
- *
+ * An action for changing the Java Look and Feel.
+ * Note that this should (sooner than later) call back to the Foundation API
+ * somehow for the updateComponentTree portion because in a fully populated
+ * desktop environment there are likely to be multiple JFrames and JInternalFrames
+ * which the API will have reference to.  (I need to test how/if JInternalFrames
+ * will update "properly" if they are: 1) minimized, 2) hidden )
+ * 
  * @author rwellman
  */
+@SuppressWarnings("serial")
 public class VActionLNF extends AbstractAction implements Runnable {
 
     private final JFrame frame;

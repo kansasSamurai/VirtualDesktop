@@ -1,6 +1,5 @@
 package org.jwellman.virtualdesktop;
 
-import com.alee.laf.WebLookAndFeel;
 import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Dimension;
@@ -11,6 +10,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javax.swing.Action;
 import javax.swing.Icon;
 import javax.swing.JDesktopPane;
@@ -26,16 +26,15 @@ import javax.swing.KeyStroke;
 import javax.swing.UIManager;
 import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.UnsupportedLookAndFeelException;
-import javax.swing.plaf.metal.DefaultMetalTheme;
 import javax.swing.plaf.metal.MetalLookAndFeel;
-import javax.swing.plaf.metal.OceanTheme;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 
 import org.jwellman.foundation.Foundation;
 import org.jwellman.foundation.uContext;
-import org.jwellman.foundation.extend.AbstractSimpleApp;
 import org.jwellman.foundation.extend.AbstractSimpleMain;
-import org.jwellman.foundation.interfaces.uiCustomTheme;
+import org.jwellman.foundation.interfaces.uiThemeProvider;
+import org.jwellman.foundation.swing.IWindow;
+import org.jwellman.foundation.interfaces.uiDesktopProvider;
 import org.jwellman.swing.plaf.metal.MetalThemeManager;
 //import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
 //import static org.jwellman.virtualdesktop.App.registeredApps;
@@ -43,9 +42,19 @@ import org.jwellman.virtualdesktop.desktop.VActionLNF;
 import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.VShortcut;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
-import org.jwellman.virtualdesktop.vapps.*;
+import org.jwellman.virtualdesktop.vapps.ActionFactory;
+import org.jwellman.virtualdesktop.vapps.DesktopAction;
+import org.jwellman.virtualdesktop.vapps.SpecBeanShell;
+import org.jwellman.virtualdesktop.vapps.SpecHyperSQL;
+import org.jwellman.virtualdesktop.vapps.SpecJCXConsole;
+import org.jwellman.virtualdesktop.vapps.SpecJFreeChart;
+import org.jwellman.virtualdesktop.vapps.SpecUberDragAndDrop;
+import org.jwellman.virtualdesktop.vapps.SpecXChartDemo;
+import org.jwellman.virtualdesktop.vapps.VirtualAppSpec;
 import org.jwellman.virtualdesktop.vswing.VDesktopManager;
 import org.jwellman.virtualdesktop.vswing.VDesktopPane;
+
+import com.alee.laf.WebLookAndFeel;
 
 /**
  * A Virtual Desktop.
@@ -56,7 +65,10 @@ import org.jwellman.virtualdesktop.vswing.VDesktopPane;
  */
 @SuppressWarnings("serial")
 public class App extends AbstractSimpleMain 
-implements uiCustomTheme, ActionListener {
+implements 
+	ActionListener,
+	uiThemeProvider,
+	uiDesktopProvider {
 
     /** The singleton */
     private static App app;
@@ -125,13 +137,16 @@ implements uiCustomTheme, ActionListener {
 
         JPanel controls = null;
 
+        JFrame dummy = new JFrame(); // not part of the original; just here to make this compile
+        // to make it work like the original replace with: dummy = this;
+        
         desktop = new VDesktopPane(); // new JDesktopPane(); //a specialized layered pane
         desktop.setDesktopManager(new VDesktopManager());
         int version = 4;
         switch (version) {
             case 1:
                 dsp = new DesktopScrollPane(desktop);
-                setContentPane(dsp); //(desktop);
+                dummy.setContentPane(dsp); //(desktop);
                 break;
             case 2:
                 controls = new JPanel(new GridLayout(3, 0));
@@ -141,7 +156,7 @@ implements uiCustomTheme, ActionListener {
 
                 p.add(controls, BorderLayout.WEST);
                 p.add(desktop);
-                this.setContentPane(p);
+                dummy.setContentPane(p);
                 break;
             case 3:
                 controls = new JPanel(new GridLayout(3, 0));
@@ -152,7 +167,7 @@ implements uiCustomTheme, ActionListener {
                 dsp = new DesktopScrollPane(desktop);
                 p.add(controls, BorderLayout.WEST);
                 p.add(dsp);
-                this.setContentPane(p);
+                dummy.setContentPane(p);
                 break;
             case 4:
                 controls = new JPanel(new GridLayout(3, 0));
@@ -167,7 +182,7 @@ implements uiCustomTheme, ActionListener {
                 splitPane.setOneTouchExpandable(true);
                 splitPane.setDividerLocation(150);
                 p.add(splitPane);
-                this.setContentPane(p);
+                dummy.setContentPane(p);
                 break;
 
         }
@@ -392,19 +407,6 @@ implements uiCustomTheme, ActionListener {
         
         App.app = new App().startup(true, args);
         
-        /* Sequence Diagram ( https://www.websequencediagrams.com/ )
-			title Application Bootstrap Sequence
-			
-			JVM->App(static): static void main()
-			App(static)->App: new
-			App(static)->+App: startup()
-			note right of JVM: ... put notes here...
-			App->Foundation: init(uContext)
-			Foundation->Foundation: new
-			App->Foundation: useDesktop()
-			App-->-App(static): 
-
-         */
     }
     
     /**
@@ -417,16 +419,57 @@ implements uiCustomTheme, ActionListener {
     	
         // Prepare - User Interface Context
         final uContext context = uContext.createContext();
-        context.setTheme(this);
         context.setDimension(85);
+        context.setDesktopTitle("jPAD - Java Powered Alternative Desktop - powered by the Foundation API");
+        context.setThemeProvider(this);
+        context.setDesktopProvider(this);
+        context.setDesktopMode(true);
 
         // Step 1 - Initialize Swing
         final Foundation f = Foundation.init(context); // context
+
+        // Step 2 - Create your UIs in JPanel(s)
+        mainui = f.registerUI("desktop.control", this.createDesktop()); // new DataBrowser());
+
+        /* Design Note, 7/26/2019 @ 11:28pm
+         * The issue in a desktop setup is how to differentiate/identify the JPanel
+         * that serves as the desktop container in the main JFrame.  i.e. the insertion
+         * of a main JPanel (that contains a desktop) is straight forward given the
+         * current design (i.e. use the useDesktop() method) but... what is not so 
+         * straight forward (because I am in the middle of designing it) is how to
+         * know that future IWindow objects must be added to the desktop *within*
+         * the JFrame/JPanel/JDesktoppane.  
+         * 
+         * Since desktop layouts are rare "in the wild" and usually require
+         * knowledge of Swing beyond the novice, I think it is fair to assume
+         * that I can require someone to register a desktop pane early in
+         * the foundation bootstrapping sequence if that is what they are wanting.
+         * (which jPAD would do).  That way, the registering of a desktop
+         * would explicitly indicate a desktop mode/use-case and future
+         * invocations of useDesktop()/useWindow() can respond accordingly.
+         * 
+         * What is confusing me (probably because I never did think it completely through)
+         * is what I intend to accomplish with registerUI() vs. useDesktop()/useWindow().
+         * They return different object types but there still seems to be some
+         * duplication of intent?  Well... the next step (described next) will
+         * probably prove this out.
+         * 
+         * Next Step(s):
+         * -- mainui needs to be the JPanel with the desktop pane
+         *    instead of the empty JPanel I am currently using as a placeholder
+         * -- this also means removing the default creation of a desktop pane
+         *    within the showGUI() method in Stone.java
+         * -- by having a desktop pane registered, the next implementation
+         *    of the showGUI() method can know whether an IWindow represents
+         *    a JFrame or a JInternalFrame; obviously, JInternalFrame(s)
+         *    would be placed on (i.e. added to) the desktop pane.
+         * 
+         */
         
         // Step 3 - Use Foundation to create your "window"; give it your UI.
-        window = f.useDesktop(mainui); // f.useWindow(mainui);
+        window = f.useWindow(mainui); // f.useWindow(mainui);
         // Step 3a (optional) - Customize your window
-        window.setTitle("jPAD - Java Powered Alternative Desktop - powered by the Foundation API"); 
+        window.setTitle("Control"); 
         window.setResizable(true);
         window.setMaximizable(true);
 
@@ -441,15 +484,47 @@ implements uiCustomTheme, ActionListener {
         // n/a
 
         // Step 5 - Display your User Interface
-        f.showGUI();
+        f.showGUI(window);
 
     	return this;
     }
 
-    /**
+    private JPanel createDesktop() {
+		
+    	// The JPanel to return
+        JPanel p = new JPanel(new BorderLayout());
+        
+        JTextArea species = new JTextArea("Species");
+        JTextArea locations = new JTextArea("Locations");
+        JTextArea travelPaths = new JTextArea("TravelPaths");
+
+        final JPanel controls = new JPanel(new GridLayout(3, 0));
+        controls.add(new JScrollPane(species));
+        controls.add(new JScrollPane(locations));
+        controls.add(new JScrollPane(travelPaths));
+
+        this.desktop = new VDesktopPane(); // new JDesktopPane(); //a specialized layered pane
+        this.desktop.setDesktopManager(new VDesktopManager());
+
+        this.dsp = new DesktopScrollPane(desktop);
+
+        //Create a split pane with the two scroll panes in it.
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, controls, dsp);
+        splitPane.setOneTouchExpandable(true);
+        splitPane.setDividerLocation(150);
+        p.add(splitPane);
+        // window.setContentPane(p);
+		
+		return p;
+	}
+
+	/**
      * This is the copy of main before refactoring for Foundation API;
      * it is here for reference during the refactoring but can be deleted
      * once the refactoring is complete.
+     * 
+     * The main thing to determine this can be removed is if the
+     * look and feel code has been incorporated into Foundation API.
      * 
      * @param args
      */
@@ -539,8 +614,72 @@ implements uiCustomTheme, ActionListener {
     }
 
 	@Override
-	public void doCustomTheme() {
+	public void doTheme() {
 		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void doCustomDesktop(IWindow w) {
+
+		//Set up the GUI.
+        JPanel p = new JPanel(new BorderLayout());
+        JTextArea species = new JTextArea("Species");
+        JTextArea locations = new JTextArea("Locations");
+        JTextArea travelPaths = new JTextArea("TravelPaths");
+
+        JPanel controls = null;
+
+        // comment out the next line... use the incoming 'window' parameter 
+        // JFrame window = new JFrame(); // not part of the original; just here to make this compile
+        // to make it work like the original replace with: dummy = this;
+        
+        desktop = new VDesktopPane(); // new JDesktopPane(); //a specialized layered pane
+        desktop.setDesktopManager(new VDesktopManager());
+        int version = 4;
+        switch (version) {
+            case 1:
+                dsp = new DesktopScrollPane(desktop);
+                window.setContentPane(dsp); //(desktop);
+                break;
+            case 2:
+                controls = new JPanel(new GridLayout(3, 0));
+                controls.add(new JScrollPane(species));
+                controls.add(new JScrollPane(locations));
+                controls.add(new JScrollPane(travelPaths));
+
+                p.add(controls, BorderLayout.WEST);
+                p.add(desktop);
+                window.setContentPane(p);
+                break;
+            case 3:
+                controls = new JPanel(new GridLayout(3, 0));
+                controls.add(new JScrollPane(species));
+                controls.add(new JScrollPane(locations));
+                controls.add(new JScrollPane(travelPaths));
+
+                dsp = new DesktopScrollPane(desktop);
+                p.add(controls, BorderLayout.WEST);
+                p.add(dsp);
+                window.setContentPane(p);
+                break;
+            case 4:
+                controls = new JPanel(new GridLayout(3, 0));
+                controls.add(new JScrollPane(species));
+                controls.add(new JScrollPane(locations));
+                controls.add(new JScrollPane(travelPaths));
+
+                dsp = new DesktopScrollPane(desktop);
+
+                //Create a split pane with the two scroll panes in it.
+                JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, controls, dsp);
+                splitPane.setOneTouchExpandable(true);
+                splitPane.setDividerLocation(150);
+                p.add(splitPane);
+                window.setContentPane(p);
+                break;
+
+        }
 		
 	}
 

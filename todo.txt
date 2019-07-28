@@ -20,3 +20,73 @@ To write "portable" java apps:
   trying to run.  Either throw an exception or
   call to the abstract dialog interface.
 
+==================
+
+title Application Bootstrap Sequence
+
+JVM->App(static): static void main()
+App(static)->App: new
+App(static)->+App: startup()
+note right of JVM: ... put notes here...
+App->+Foundation: init(uContext)
+Foundation->Foundation: new
+note right of Foundation: Java Look&Feel
+Foundation-->-App:
+
+App->Foundation: registerUI()
+App->Foundation: useDesktop()
+App->Foundation: showGUI()
+App-->-App(static): 
+
+============================
+
+title Application Bootstrap Sequence
+
+JVM->+App(static): static void main()
+App(static)->System: setSecurityManager()
+App(static)->+SwingUtilities: void invokeLater()
+App(static)-->-JVM: void
+note right of JVM: main() Thread finishes
+
+SwingUtilities->JFrame: setDefaultLookAndFeelDecorated(true)
+SwingUtilities->UIManager: setLookAndFeel()
+SwingUtilities->+App(static): createAndShowGUI()
+
+App(static)->+App: new()
+note right of App
+  === App isa JFrame ===
+  Note also that this JFrame instantiation
+  and all of its contents are being created
+  on the Swing EDT; though we DO want to be
+  on the EDT usually, all of this init
+  being on the EDT is really inefficient --
+  (which is why we are migrating to Foundation.
+end note
+
+App->App: setBounds()
+App->App: createMenuBar()
+App->VActionLNF: new(Web, this)
+App->VActionLNF: new(Nimbus, this)
+App->VActionLNF: new(System, this)
+App->JMenuBar: new()
+App->App: setMenuBar(createMenuBar())
+
+App->App: createTaskBar()
+App->VDesktopPane: new()
+VDesktopPane->VDesktopManager: new()
+VDesktopPane->VDesktopPane: setDesktopManager()
+
+App->DesktopScrollPane: new(desktop)
+App->VDesktopPane: setDragMode(OUTLINE_DRAG_MODE)
+
+App->DesktopAction: setDesktop(this)
+App->ActionFactory: initDesktop()
+
+App->VDesktopPane: add(new VShortcut()
+App->JMenuBar: add(new JMenu)
+App-->-App(static):
+
+App(static)->App: setDefaultCloseOperation(EXIT_ON_CLOSE)
+App(static)->App: setVisible(true);
+
+App(static)->-SwingUtilities: [end of thread task]

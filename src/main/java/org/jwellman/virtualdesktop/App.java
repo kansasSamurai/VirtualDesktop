@@ -63,7 +63,6 @@ import com.alee.laf.WebLookAndFeel;
  *
  * @author Rick Wellman
  */
-@SuppressWarnings("serial")
 public class App extends AbstractSimpleMain 
 implements 
 	ActionListener,
@@ -455,24 +454,31 @@ implements
          * probably prove this out.
          * 
          * Next Step(s):
-         * -- mainui needs to be the JPanel with the desktop pane
-         *    instead of the empty JPanel I am currently using as a placeholder
-         * -- this also means removing the default creation of a desktop pane
-         *    within the showGUI() method in Stone.java
-         * -- by having a desktop pane registered, the next implementation
-         *    of the showGUI() method can know whether an IWindow represents
-         *    a JFrame or a JInternalFrame; obviously, JInternalFrame(s)
-         *    would be placed on (i.e. added to) the desktop pane.
+         * -x- mainui needs to be the JPanel with the desktop pane
+         *     instead of the empty JPanel I am currently using as a placeholder
+         * -x- this also means removing the default creation of a desktop pane
+         *     within the showGUI() method in Stone.java
+         * -_- by having a desktop pane registered, the next implementation
+         *     of the showGUI() method can know whether an IWindow represents
+         *     a JFrame or a JInternalFrame; obviously, JInternalFrame(s)
+         *     would be placed on (i.e. added to) the desktop pane.
          * 
          */
         
         // Step 3 - Use Foundation to create your "window"; give it your UI.
         window = f.useWindow(mainui); // f.useWindow(mainui);
+        
         // Step 3a (optional) - Customize your window
         window.setTitle("Control"); 
         window.setResizable(true);
         window.setMaximizable(true);
 
+        // Step 3b (optional) - Register as "the" desktop
+        // Only true desktop environments (such as jPAD) will need to use
+        // this; TODO I may need a way to embed desktops within desktops
+        // and this is a likely place that will need modification later.
+        f.registerDesktopWindow(window);
+        
 //		final ComponentGlassPane gp = new ComponentGlassPane((JFrame)this.window);		
 //		final DataBrowser b = (DataBrowser)this.mainui.getChild();
 //		b.getGlassPaneButton().addActionListener(gp);
@@ -620,67 +626,68 @@ implements
 	}
 
 	@Override
-	public void doCustomDesktop(IWindow w) {
+	public JDesktopPane doCustomDesktop(IWindow w) {
 
-		//Set up the GUI.
-        JPanel p = new JPanel(new BorderLayout());
-        JTextArea species = new JTextArea("Species");
-        JTextArea locations = new JTextArea("Locations");
-        JTextArea travelPaths = new JTextArea("TravelPaths");
-
-        JPanel controls = null;
-
-        // comment out the next line... use the incoming 'window' parameter 
-        // JFrame window = new JFrame(); // not part of the original; just here to make this compile
-        // to make it work like the original replace with: dummy = this;
-        
-        desktop = new VDesktopPane(); // new JDesktopPane(); //a specialized layered pane
-        desktop.setDesktopManager(new VDesktopManager());
-        int version = 4;
-        switch (version) {
-            case 1:
-                dsp = new DesktopScrollPane(desktop);
-                window.setContentPane(dsp); //(desktop);
-                break;
-            case 2:
-                controls = new JPanel(new GridLayout(3, 0));
-                controls.add(new JScrollPane(species));
-                controls.add(new JScrollPane(locations));
-                controls.add(new JScrollPane(travelPaths));
-
-                p.add(controls, BorderLayout.WEST);
-                p.add(desktop);
-                window.setContentPane(p);
-                break;
-            case 3:
-                controls = new JPanel(new GridLayout(3, 0));
-                controls.add(new JScrollPane(species));
-                controls.add(new JScrollPane(locations));
-                controls.add(new JScrollPane(travelPaths));
-
-                dsp = new DesktopScrollPane(desktop);
-                p.add(controls, BorderLayout.WEST);
-                p.add(dsp);
-                window.setContentPane(p);
-                break;
-            case 4:
-                controls = new JPanel(new GridLayout(3, 0));
-                controls.add(new JScrollPane(species));
-                controls.add(new JScrollPane(locations));
-                controls.add(new JScrollPane(travelPaths));
-
-                dsp = new DesktopScrollPane(desktop);
-
-                //Create a split pane with the two scroll panes in it.
-                JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, controls, dsp);
-                splitPane.setOneTouchExpandable(true);
-                splitPane.setDividerLocation(150);
-                p.add(splitPane);
-                window.setContentPane(p);
-                break;
-
-        }
+//		//Set up the GUI.
+//        JPanel p = new JPanel(new BorderLayout());
+//        JTextArea species = new JTextArea("Species");
+//        JTextArea locations = new JTextArea("Locations");
+//        JTextArea travelPaths = new JTextArea("TravelPaths");
+//
+//        JPanel controls = null;
+//
+//        // comment out the next line... use the incoming 'window' parameter 
+//        // JFrame window = new JFrame(); // not part of the original; just here to make this compile
+//        // to make it work like the original replace with: dummy = this;
+//        
+//        desktop = new VDesktopPane(); // new JDesktopPane(); //a specialized layered pane
+//        desktop.setDesktopManager(new VDesktopManager());
+//        int version = 4;
+//        switch (version) {
+//            case 1:
+//                dsp = new DesktopScrollPane(desktop);
+//                window.setContentPane(dsp); //(desktop);
+//                break;
+//            case 2:
+//                controls = new JPanel(new GridLayout(3, 0));
+//                controls.add(new JScrollPane(species));
+//                controls.add(new JScrollPane(locations));
+//                controls.add(new JScrollPane(travelPaths));
+//
+//                p.add(controls, BorderLayout.WEST);
+//                p.add(desktop);
+//                window.setContentPane(p);
+//                break;
+//            case 3:
+//                controls = new JPanel(new GridLayout(3, 0));
+//                controls.add(new JScrollPane(species));
+//                controls.add(new JScrollPane(locations));
+//                controls.add(new JScrollPane(travelPaths));
+//
+//                dsp = new DesktopScrollPane(desktop);
+//                p.add(controls, BorderLayout.WEST);
+//                p.add(dsp);
+//                window.setContentPane(p);
+//                break;
+//            case 4:
+//                controls = new JPanel(new GridLayout(3, 0));
+//                controls.add(new JScrollPane(species));
+//                controls.add(new JScrollPane(locations));
+//                controls.add(new JScrollPane(travelPaths));
+//
+//                dsp = new DesktopScrollPane(desktop);
+//
+//                //Create a split pane with the two scroll panes in it.
+//                JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, controls, dsp);
+//                splitPane.setOneTouchExpandable(true);
+//                splitPane.setDividerLocation(150);
+//                p.add(splitPane);
+//                window.setContentPane(p);
+//                break;
+//
+//        }
 		
+        return desktop;
 	}
 
 }

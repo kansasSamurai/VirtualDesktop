@@ -1,3 +1,7 @@
+there appears to be "newer" JScrollableDesktopPane at https://github.com/hussachai/hswing/blob/master/src/main/java/org/jscroll/JScrollDesktopPane.java
+I do not know if it is "better" or even modified from the version that I currently have.
+More research required.
+
 todo: JInternalFrame with menu
 tood: create a tree of opened vapps;
       possibly override minimized apps to not display and

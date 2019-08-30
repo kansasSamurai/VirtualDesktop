@@ -84,12 +84,149 @@ virtdemo() {
     this.panel = new JCalendarVirtDemo();    
 
     this.iframe = jvd.app.createVApp(this.panel, "JCalendar Demo");
+    
+    dispose() {
+        this.panel = null;
+        this.iframe.dispose();
+        // If you implement a finalize() in VirtualAppFrame, you should see it "soon"?
+    }
+
+    reinit() {
+        this.panel = new JCalendarVirtDemo();    
+        this.iframe = jvd.app.createVApp(this.panel, "JCalendar Demo");
+    }
+
+    showinfo() {
+        layout = (BorderLayout)jcaldemo.panel.getLayout();
+        comp = layout.getLayoutComponent(BorderLayout.CENTER);
+        jmenu = comp.getJMenuBar();
+        print(jmenu.getMenuCount()); // 3
+        print(jmenu.getMenu(1).getText()); // Look&Feel
+    }
+        
+    aa() { run() { 
+        layout = (BorderLayout)jcaldemo.panel.getLayout();
+        comp = layout.getLayoutComponent(BorderLayout.CENTER);
+        jmenu = comp.getJMenuBar();
+        jmenu.remove(jmenu.getMenu(1));
+        jmenu.revalidate();
+        jmenu.repaint(); 
+      }
+      return this;
+    } 
 
     return this;
 }
 
+jcaldemo = virtdemo();
+
 /* =====================================
 These commands can now be run from the console:
+
+jvd.calendar = jvd.app.createVApp(new org.jwellman.jcalendar.VDayChooser(), "my calendar");
+or,
+jvd.calendar = new org.jwellman.jcalendar.VDayChooser();
+jvd.app.createVApp(jvd.calendar, "my calendar");
+
+demo() {
+
+    this.red = Color.red;
+
+    this.black = Color.black;
+
+    this.panel = 1;
+
+    this.day = 7;
+
+    this.color = Color.black;
+    
+    this.font = new Font("Segoe UI", Font.BOLD, 12);
+    
+    this.logical = true;
+    
+    this.option = 5;
+    run() {
+        switch(option) {
+            case 1: setDay(); break;
+            case 2: setSundayForeground(); break;
+            case 3: setWeekdayForeground(); break;
+            case 4: setFont(); break;
+            case 5: setWeekOfYearVisible(); break;
+            case 6: toggleDecorationBackgroundVisible(); break;
+            case 7: setDecorationBackgroundColor(); break;
+            case 8: toggleDayBordersVisible(); break;
+            default:
+              print("Invalid Option Selected");
+        }        
+    }
+
+    toggleDayBordersVisible() {
+        this.panel.setDayBordersVisible(!this.panel.isDayBordersVisible());                             
+    }
+
+    setDecorationBackgroundColor() {
+        print("setDecorationBackgroundColor to: " + this.color);
+        this.panel.setDecorationBackgroundColor(this.color);                     
+    }
+
+    toggleDecorationBackgroundVisible() {
+        this.panel.setDecorationBackgroundVisible(!this.panel.isDecorationBackgroundVisible());                            
+    }
+
+    setWeekOfYearVisible() {
+        print("setWeekOfYearVisible to: " + this.logical);
+        this.panel.setWeekOfYearVisible(this.logical);                
+    }
+
+    setFont() {
+        print("Setting font to: " + this.font);
+        this.panel.setFont(this.font);        
+    }
+
+    setDay() {
+        print("Setting day to: " + this.day);
+        this.panel.setDay(this.day);
+    }
+
+    setSundayForeground() {
+        print("Setting sunday foreground to: " + this.color);
+        this.panel.setSundayForeground(this.color);
+    }
+    
+    setWeekdayForeground() {
+        print("Setting weekday foreground to: " + this.color);
+        this.panel.setWeekdayForeground(this.color);
+    }
+    
+    return this;
+}
+
+demo = demo();
+demo.panel = jvd.calendar;
+
+/*
+demo.option = 1;
+demo.day = 7;  
+SwingUtilities.invokeLater( demo );
+
+demo.option = 2;
+demo.color = demo.black;  
+SwingUtilities.invokeLater( demo );
+
+demo.option = 3;
+demo.color = demo.black;  
+SwingUtilities.invokeLater( demo );
+
+demo.option = 4;
+demo.font = demo.font; // new Font("Segoe UI", Font.BOLD, 12);
+SwingUtilities.invokeLater( demo );
+
+demo.option = 5;
+demo.logical = true;  
+SwingUtilities.invokeLater( demo );
+
+*/
+
 
 jcaldemo = virtdemo();
 layout = (BorderLayout)jcaldemo.panel.getLayout();
@@ -106,4 +243,5 @@ aa() { run() {
 return this; }
 
 SwingUtilities.invokeLater( aa() );
+SwingUtilities.invokeLater( jcaldemo.aa() );
 */

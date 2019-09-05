@@ -1,0 +1,62 @@
+public class ColorChooserDemo extends JPanel {
+
+    public JColorChooser tcc;
+    
+    public ColorChooserDemo() {
+        super(new BorderLayout());
+
+        tcc = new JColorChooser();
+        this.add(tcc, BorderLayout.PAGE_END);
+    }
+    
+}
+
+ccdemo() {
+
+    /** A JPanel extension that contains the java color chooser */
+    this.ccpanel = new ColorChooserDemo();
+
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    this.iframe = jvd.app.createVApp(this.ccpanel, "Java Color Chooser");
+    
+    print("Color Chooser Demo started...");
+    return this;
+}
+
+jvd.ccapp = ccdemo();
+
+/* ==== Using reflection to update RecentSwatchPanel inside JColorChooser ====
+// as found at: https://www.oipapio.com/question-1749666
+// Beanshell doesn't support variable parameters, so you need to put it in an array as per older versions of the Java language:
+// Object.class.getMethod("equals", new Class[] { Object.class } );
+
+import javax.swing.colorchooser.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+
+//final JColorChooser chooser = new JColorChooser(Color.white);
+chooser = jvd.ccapp.ccpanel.tcc;
+
+for (AbstractColorChooserPanel p : chooser.getChooserPanels()) {
+    if (p.getClass().getSimpleName().equals("DefaultSwatchChooserPanel")) {
+        print(p.getClass().getSimpleName());
+        
+        Field recentPanelField = p.getClass().getDeclaredField("recentSwatchPanel");
+        recentPanelField.setAccessible(true);
+    
+        Object recentPanel = recentPanelField.get(p);
+        Class rpclass = recentPanel.getClass();
+        
+        Method recentColorMethod = rpclass.getMethod("setMostRecentColor", new Class[] { Color.class } );
+        recentColorMethod.setAccessible(true);
+    
+        // add colors...
+        recentColorMethod.invoke(recentPanel, new Object[]{Color.BLACK});
+        recentColorMethod.invoke(recentPanel, new Object[]{Color.RED});
+        // ... add more colors as desired
+    
+        break;
+    }
+}
+
+*/

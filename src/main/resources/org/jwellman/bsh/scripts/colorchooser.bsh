@@ -1,3 +1,37 @@
+import org.jwellman.swing.colorchooser.VColorChooser;
+
+public class ColorChooserDemo extends JPanel {
+
+    public VColorChooser tcc;
+    
+    public ColorChooserDemo() {
+        super(new BorderLayout());
+
+        tcc = new VColorChooser();
+        this.add(tcc, BorderLayout.CENTER);
+    }
+    
+}
+
+ccdemo() {
+
+    /** A JPanel extension that contains the java color chooser */
+    this.ccpanel = new ColorChooserDemo();
+
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    this.iframe = jvd.app.createVApp(this.ccpanel, "Java Color Chooser");
+    
+    print("Color Chooser Demo started...");
+    return this;
+}
+
+jvd.ccapp = ccdemo();
+
+//jvd.ccapp.ccpanel.tcc.setMostRecentColor(Color.green);
+//jvd.ccapp.ccpanel.tcc.setDragEnabled(true);
+
+----------------------------------------------------------------
+
 public class ColorChooserDemo extends JPanel {
 
     public JColorChooser tcc;
@@ -24,6 +58,12 @@ ccdemo() {
 }
 
 jvd.ccapp = ccdemo();
+// jvd.ccapp.ccpanel.tcc.setDragEnabled(true);
+
+
+
+
+
 
 /* ==== Using reflection to update RecentSwatchPanel inside JColorChooser ====
 // as found at: https://www.oipapio.com/question-1749666

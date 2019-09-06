@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Locale;
 
 import javax.swing.JButton;
-import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.UIManager;
 
@@ -32,8 +31,10 @@ import com.toedter.calendar.MinMaxDateEvaluator;
 /**
  * A modified version of JDayChooser bean for choosing a day.
  * -todo- Make "day labels" optional
+ * -todo- Create new background color for "days"; it currently only uses the LAF (unless selected)
+ * -todo- Create new foreground color for "today"; it is currently shared with the "sundayForeground" property
+ * -todo- Create new background color for "today"; it is currently shared with the "dayBackgroundColor" property
  * 
- * @author Kai Toedter
  * @author rwellman
  * 
  */
@@ -43,23 +44,27 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
 
     private static final int SUNDAY = 1;
     
-    // Buttons representing each day of the month; note that indexes 0-6 actually refer to "dayNames"
+    // Buttons representing each day of the month; note that indexes 0-6 actually refer to "dayNames" column headers
     protected JButton[] days;
 
-    // Buttons for the week numbers on the left
+    // Buttons for the week numbers; optionally displayed on the left
     protected JButton[] weeks;
 
+    // Button reference to keep track of the selected day; note that whatever button it is, it is also in the "days" array
     protected JButton selectedDay;
 
+    // A visual container for the "weeks" array buttons
     protected JPanel weekPanel;
 
+    // A visual container for the "days" array buttons
     protected JPanel dayPanel;
 
+    // The currently selected day of the month (1-31); 0 when nothing selected
     protected int day;
 
     protected Color oldDayBackgroundColor;
 
-    protected Color selectedColor;
+    protected Color selectedColor; // newf; accessors - this was previously not exposed
 
     protected Color sundayForeground;
 
@@ -67,14 +72,22 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
 
     protected Color decorationBackgroundColor;
     
-    public Color dayBackgroundColor = Color.white;
+    // The background color for the "days" array buttons; can be overridden via the corresponding property.
+    protected Color dayBackgroundColor = Color.white; // newf
 
+    // A default Insets object for the "days" array buttons; can be overridden via the corresponding property.
+    protected Insets dayMargin = new Insets(0, 0, 0, 0);
+
+    // A data container for the "dayNames" column headers
     protected String[] dayNames;
 
+    // A Calendar object for the entire month
     protected Calendar calendar;
 
+    // A Calendar object only representing "today"
     protected Calendar today;
 
+    // A Locale object for the entire day chooser
     protected Locale locale;
 
     protected boolean initialized;
@@ -85,16 +98,19 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
 
     protected boolean decorationBordersVisible;
 
-    protected boolean dayBordersVisible;
+    protected boolean dayHeadersVisible; // newf
+    
+	protected boolean dayBordersVisible;
 
     private boolean alwaysFireDayProperty;
 
+    // The maximum number of characters in the day header string; enforced to be 0-4 -- zero means use default shortdays based on locale
     protected int maxDayCharacters;
 
-    protected List dateEvaluators;
+    protected List<IDateEvaluator> dateEvaluators;
     
     protected MinMaxDateEvaluator minMaxDateEvaluator;
-
+    
     /**
      * Default JDayChooser constructor.
      */
@@ -112,7 +128,7 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
         setName("JDayChooser");
         setBackground(Color.blue);
 
-        dateEvaluators = new ArrayList(1);
+        dateEvaluators = new ArrayList<>(1);
         minMaxDateEvaluator = new MinMaxDateEvaluator();
         addDateEvaluator(minMaxDateEvaluator);
 
@@ -128,12 +144,12 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
         dayPanel = new JPanel();
         dayPanel.setLayout(new GridLayout(7, 7));
 
-        sundayForeground = new Color(164, 0, 0);
-        weekdayForeground = new Color(0, 90, 164);
+        sundayForeground = new Color(164, 0, 0); // = redish
+        weekdayForeground = new Color(0, 90, 164); // = blueish
 
         // decorationBackgroundColor = new Color(194, 211, 252);
         // decorationBackgroundColor = new Color(206, 219, 246);
-        decorationBackgroundColor = new Color(210, 228, 238);
+        decorationBackgroundColor = new Color(210, 228, 238); // = light-blueish
 
         for (int y = 0; y < 7; y++) {
             for (int x = 0; x < 7; x++) {
@@ -143,6 +159,7 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
                     // Create a button that doesn't react on clicks or focus changes.
                     // Thanks to Thomas Schaefer for the focus hint :)
                     days[index] = new DecoratorButton();
+                	days[index].setVisible(dayHeadersVisible);
                 } else {
                     days[index] = new CustomButton();  
                     	// new JButton("x") {
@@ -167,9 +184,11 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
                     days[index].addFocusListener(this);
                 }
 
-                days[index].setMargin(new Insets(0, 0, 0, 0));
+                // Apply this code to both 0-6 (headers) and 7-41 (days)
+                days[index].setMargin(dayMargin);
                 days[index].setFocusPainted(false);
                 dayPanel.add(days[index]);
+                	
             }
         }
 
@@ -180,12 +199,12 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
         weeks = new JButton[7];
         for (int i = 0; i < 7; i++) {
             weeks[i] = new DecoratorButton();
-            weeks[i].setMargin(new Insets(0, 0, 0, 0));
+            weeks[i].setMargin(dayMargin); // re-using dayMargin for weeks... TBD if we need/want a separate property
             weeks[i].setFocusPainted(false);
             weeks[i].setForeground(new Color(100, 100, 100));
 
             if (i != 0) {
-                weeks[i].setText("0" + (i + 1));
+                weeks[i].setText("0" + (i + 1)); // this default text seems pointless... TBD
             }
 
             weekPanel.add(weeks[i]);
@@ -208,7 +227,7 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
      * Initializes the locale specific names for the days of the week.
      */
     protected void init() {
-        JButton testButton = new JButton();
+        JButton testButton = new CustomButton(); // JButton();
         oldDayBackgroundColor = testButton.getBackground();
         selectedColor = new Color(160, 160, 160);
 
@@ -224,39 +243,42 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
      * Draws the day names of the day columns.
      */
     private void drawDayNames() {
-        
-    	// Initialize dayNames with full names based on the locale
-        final DateFormatSymbols dateFormatSymbols = new DateFormatSymbols(locale);
-        dayNames = dateFormatSymbols.getShortWeekdays();
-
-        // Initialize day pointer before entering loop
-        int day = calendar.getFirstDayOfWeek();
-        for (int i = 0; i < 7; i++) {
+        if (dayHeadersVisible) {
         	
-        	// Adjust dayName string length
-            if (maxDayCharacters > 0 && maxDayCharacters < 5) {
-                if (dayNames[day].length() >= maxDayCharacters) {
-                    dayNames[day] = dayNames[day].substring(0, maxDayCharacters);
-                }
-            }
-
-            // Update button properties
-            System.out.println("drawDayNames(): setting day button index " + i + " to " + day);
-            days[i].setText(dayNames[day]);
-            if (day == SUNDAY) {
-                days[i].setForeground(sundayForeground);
-            } else {
-                days[i].setForeground(weekdayForeground);
-            }
-
-            // Update day pointer (with rollover)
-            if (day < 7) {
-                day++;
-            } else {
-                day -= 6;
-            }
-            
-        }
+	    	// Initialize dayNames with full names based on the locale
+	        final DateFormatSymbols dateFormatSymbols = new DateFormatSymbols(locale);
+	        dayNames = dateFormatSymbols.getShortWeekdays();
+	
+	        // Initialize day pointer before entering loop
+	        int day = calendar.getFirstDayOfWeek();
+	        for (int i = 0; i < 7; i++) {
+	        	
+	        	// Adjust dayName string length
+	            if (maxDayCharacters > 0 && maxDayCharacters < 5) {
+	                if (dayNames[day].length() >= maxDayCharacters) {
+	                    dayNames[day] = dayNames[day].substring(0, maxDayCharacters);
+	                }
+	            }
+	
+	            // Update button properties
+	            System.out.println("drawDayNames(): setting day button index " + i + " to " + day);
+	            days[i].setText(dayNames[day]);
+	            if (day == SUNDAY) {
+	                days[i].setForeground(sundayForeground);
+	            } else {
+	                days[i].setForeground(weekdayForeground);
+	            }
+	
+	            // Update day pointer (with rollover)
+	            if (day < 7) {
+	                day++;
+	            } else {
+	                day -= 6;
+	            }
+	            
+	        } // end for
+	        
+        } // end if
     }
 
     /**
@@ -279,20 +301,22 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
      * Hides and shows the week buttons.
      */
     protected void drawWeeks() {
-        Calendar tmpCalendar = (Calendar) calendar.clone();
-
+    	
+        final Calendar tmpCalendar = (Calendar) calendar.clone();
         for (int i = 1; i < 7; i++) {
+        	// Use the temporary calendar for calculations
             tmpCalendar.set(Calendar.DAY_OF_MONTH, (i * 7) - 6);
-
             int week = tmpCalendar.get(Calendar.WEEK_OF_YEAR);
+            
+            // Set the text on the week button
             String buttonText = Integer.toString(week);
-
             if (week < 10) {
                 buttonText = "0" + buttonText;
             }
-
             weeks[i].setText(buttonText);
 
+            // Rows 5 and 6 do not always have a day in the month (i.e. Feb. only has 28 days), 
+            // so only make visible if there are days in this row
             if ((i == 5) || (i == 6)) {
                 weeks[i].setVisible(days[i * 7].isVisible());
             }
@@ -303,7 +327,7 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
      * Hides and shows the day buttons.
      */
     protected void drawDays() {
-        Calendar tmpCalendar = (Calendar) calendar.clone();
+        final Calendar tmpCalendar = (Calendar) calendar.clone();
         tmpCalendar.set(Calendar.HOUR_OF_DAY, 0);
         tmpCalendar.set(Calendar.MINUTE, 0);
         tmpCalendar.set(Calendar.SECOND, 0);
@@ -314,74 +338,80 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
         tmpCalendar.set(Calendar.DAY_OF_MONTH, 1);
 
         int firstDay = tmpCalendar.get(Calendar.DAY_OF_WEEK) - tmpCalendar.getFirstDayOfWeek();
-
         if (firstDay < 0) {
             firstDay += 7;
         }
 
         int i;
 
+        // Buttons in the 7x7 grid up until the first actual day are "turned off"
         for (i = 0; i < firstDay; i++) {
             days[i + 7].setVisible(false);
             days[i + 7].setText("");
         }
 
+        // Get the first day in next month
         tmpCalendar.add(Calendar.MONTH, 1);
-
-        Date firstDayInNextMonth = tmpCalendar.getTime();
+        final Date firstDayInNextMonth = tmpCalendar.getTime();
         tmpCalendar.add(Calendar.MONTH, -1);
 
-        Date day = tmpCalendar.getTime();
-        int n = 0;
+        // Initialize vars used in loop
         Color foregroundColor = getForeground();
+        Date day = tmpCalendar.getTime();
 
+        int n = 0;
         while (day.before(firstDayInNextMonth)) {
+        	
+        	// TODO create a ref variable for days[i+n+7] for maintenance/readability
             days[i + n + 7].setText(Integer.toString(n + 1));
             days[i + n + 7].setVisible(true);
 
-            if ((tmpCalendar.get(Calendar.DAY_OF_YEAR) == today
-                    .get(Calendar.DAY_OF_YEAR))
-                    && (tmpCalendar.get(Calendar.YEAR) == today
-                            .get(Calendar.YEAR))) {
+            if ((tmpCalendar.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR))
+                    && (tmpCalendar.get(Calendar.YEAR) == today.get(Calendar.YEAR))) {
+            	// If the day is "today", use a different foreground(text) color
+            	// TODO This design seems limiting; it is using the sundayForeground as the "current day" foreground
                 days[i + n + 7].setForeground(sundayForeground);
             } else {
+            	// Otherwise, use the same foreground(text) color as the look and feel
                 days[i + n + 7].setForeground(foregroundColor);
             }
 
+            // If drawing the currently selected day, set the background color appropriately
             if ((n + 1) == this.day) {
-                days[i + n + 7].setBackground(Color.blue); //(selectedColor);
+                days[i + n + 7].setBackground(selectedColor);
                 selectedDay = days[i + n + 7];
-            } else {
-                days[i + n + 7].setBackground(Color.green); // (oldDayBackgroundColor);
+            } else { // else, this day is NOT the currently selected day so set the background color appropriately
+                days[i + n + 7].setBackground(oldDayBackgroundColor);
             }
 
-            Iterator iterator = dateEvaluators.iterator(); 
+            // Set all "active" days to enabled
             days[i + n + 7].setEnabled(true);
+
+            // Decorate the current day according to the IDateEvaluator(s) on this day chooser 
+            final Iterator<IDateEvaluator> iterator = dateEvaluators.iterator(); 
             while (iterator.hasNext()) {
-                IDateEvaluator dateEvaluator = (IDateEvaluator) iterator.next();
+                final IDateEvaluator dateEvaluator = (IDateEvaluator) iterator.next();
                 if (dateEvaluator.isSpecial(day)) {
-                    days[i + n + 7].setForeground(dateEvaluator
-                            .getSpecialForegroundColor());
-                    days[i + n + 7].setBackground(dateEvaluator
-                            .getSpecialBackroundColor());
+                    days[i + n + 7].setForeground(dateEvaluator.getSpecialForegroundColor());
+                    days[i + n + 7].setBackground(dateEvaluator.getSpecialBackroundColor());
                     days[i + n + 7].setToolTipText(dateEvaluator.getSpecialTooltip());
                     days[i + n + 7].setEnabled(true);
                 } 
                 if (dateEvaluator.isInvalid(day)){
-                    days[i + n + 7].setForeground(dateEvaluator
-                            .getInvalidForegroundColor());
-                    days[i + n + 7].setBackground(dateEvaluator
-                            .getInvalidBackroundColor());
+                    days[i + n + 7].setForeground(dateEvaluator.getInvalidForegroundColor());
+                    days[i + n + 7].setBackground(dateEvaluator.getInvalidBackroundColor());
                     days[i + n + 7].setToolTipText(dateEvaluator.getInvalidTooltip());
                     days[i + n + 7].setEnabled(false);
                 }
             }
 
+            // Increment loop control vars
             n++;
             tmpCalendar.add(Calendar.DATE, 1);
             day = tmpCalendar.getTime();
         }
 
+        // The remaining buttons in the 7x7 grid are "turned off"
         for (int k = n + i + 7; k < 49; k++) {
             days[k].setVisible(false);
             days[k].setText("");
@@ -428,16 +458,17 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
      * @see #getDay
      */
     public void setDay(int d) {
+    	// This seems like it would hide logic errors on the client side; should we or should we throw an exception.
         if (d < 1) {
             d = 1;
         }
-        Calendar tmpCalendar = (Calendar) calendar.clone();
+        
+        final Calendar tmpCalendar = (Calendar) calendar.clone();
         tmpCalendar.set(Calendar.DAY_OF_MONTH, 1);
+        
         tmpCalendar.add(Calendar.MONTH, 1);
         tmpCalendar.add(Calendar.DATE, -1);
-
         int maxDaysInMonth = tmpCalendar.get(Calendar.DATE);
-
         if (d > maxDaysInMonth) {
             d = maxDaysInMonth;
         }
@@ -445,11 +476,14 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
         int oldDay = day;
         day = d;
 
+        // If there is a current/previous selected day, visually "unselect" it by updating its background color
         if (selectedDay != null) {
             selectedDay.setBackground(oldDayBackgroundColor);
             selectedDay.repaint();
         }
 
+        // Now find the new selectedDay button; save it and update its background color to selected color
+        // TODO maybe create a new internal property that points to the "first" day cell so we do not have to "search" for the cell?
         for (int i = 7; i < 49; i++) {
             if (days[i].getText().equals(Integer.toString(day))) {
                 selectedDay = days[i];
@@ -835,6 +869,38 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
         return dayBordersVisible;
     }
 
+    public void removeDateEvaluator(IDateEvaluator dateEvaluator) {
+        dateEvaluators.remove(dateEvaluator);
+    }
+
+	public Color getSelectedColor() {
+		return selectedColor;
+	}
+
+	// TODO redraw/repaint since a visual attribute has changed
+	public void setSelectedColor(Color selectedColor) {
+		this.selectedColor = selectedColor;
+		if (selectedDay != null)
+			selectedDay.setBackground(this.selectedColor); // TODO test that this works without calling repaint()
+	}
+
+	public Color getDayBackgroundColor() {
+		return dayBackgroundColor;
+	}
+
+	// TODO redraw/repaint since a visual attribute has changed
+	public void setDayBackgroundColor(Color dayBackgroundColor) {
+		this.dayBackgroundColor = dayBackgroundColor;
+	}
+
+    public boolean isDayHeadersVisible() {
+		return dayHeadersVisible;
+	}
+
+	public void setDayHeadersVisible(boolean dayHeadersVisible) {
+		this.dayHeadersVisible = dayHeadersVisible;
+	}
+
     /**
      * The decoration border is the button border of the day titles and the
      * weeks of the year.
@@ -989,14 +1055,14 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
         private static final long serialVersionUID = -5306477668406547495L;
         
         public CustomButton() {
-            setBackground(dayBackgroundColor);
+            setBackground(getDayBackgroundColor());
             setContentAreaFilled(true);
             setBorderPainted(false); // true works        	
         }
 
         public void setBackground(Color c) {
         	System.out.println(c);
-        	super.setBackground(Color.white);
+        	super.setBackground(c); // (Color.white);
         }
         
         public boolean isFocusable() {
@@ -1045,8 +1111,4 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
         dateEvaluators.add(dateEvaluator);
     }
 
-    public void removeDateEvaluator(IDateEvaluator dateEvaluator) {
-        dateEvaluators.remove(dateEvaluator);
-    }
-    
 }

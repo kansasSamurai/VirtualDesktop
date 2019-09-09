@@ -1,0 +1,60 @@
+/*
+     <!-- https://mvnrepository.com/artifact/com.miglayout/miglayout-core -->
+    <dependency>
+        <groupId>com.miglayout</groupId>
+        <artifactId>miglayout-core</artifactId>
+        <version>5.0</version>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/com.miglayout/miglayout-swing -->
+    <dependency>
+        <groupId>com.miglayout</groupId>
+        <artifactId>miglayout-swing</artifactId>
+        <version>5.0</version>
+    </dependency>
+
+
+ */
+
+import net.miginfocom.swing.MigLayout;
+
+public class MigDemo extends JPanel {
+
+    public JComponent widget3, headerLabel, footerLabel, widget1, widget2, avatarImage;
+    
+    public MigDemo() {
+        super(new MigLayout("nogrid, flowy, debug"));
+
+        widget3 = new JLabel("widget3");
+        headerLabel = new JLabel("headerLabel");
+        footerLabel = new JLabel("footerLabel");
+        widget1 = new JLabel("widget1");
+        widget2 = new JTextField("widget2"); // new JLabel("widget2");
+        avatarImage = new JLabel("avatarImage");
+
+        widget2.setBorder(null);
+        
+        //add flowing components
+        this.add(widget3, "w 100");
+        this.add(headerLabel, "h 40");
+        this.add(footerLabel, "h 40");
+        this.add(widget1, "w 80, wrap");
+        this.add(widget2, "w 80");
+        this.add(avatarImage);
+    }
+    
+}
+
+migdemo() {
+
+    /** A JPanel extension that contains the java color chooser */
+    this.panel = new MigDemo();
+
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    this.iframe = jvd.app.createVApp(this.panel, "MiG Layout Demo");
+    
+    print("Layout Demo started...");
+    return this;
+}
+
+jvd.migapp2 = migdemo();

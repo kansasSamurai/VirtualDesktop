@@ -41,23 +41,44 @@ public class ResponsiveLayout implements LayoutManager2, Serializable {
 
 	@Override
 	public Dimension preferredLayoutSize(Container parent) {
-		System.out.println("preferred");
+		System.out.print("preferred: [" + parent.getSize());
 	    synchronized (parent.getTreeLock()) {
-	        final Dimension dim = new Dimension(0, 0);
+	        Dimension dim = new Dimension(0, 0);
 	        
-	        // TODO properly account for non-visible components; see FlowLayout
-	        int nmembers = parent.getComponentCount();
-	        for (int i = 0 ; i < nmembers ; i++) {
-	            final Component m = parent.getComponent(i);
-	            if (m.isVisible()) {
-	                final Dimension d = m.getPreferredSize();
-	                
-	                dim.height += d.height;
-	                dim.width += d.width;
+	        final int version = 2;
+	        switch (version) {
+	        case 1:
+		        // TODO properly account for non-visible components; see FlowLayout
+	        	// This version works but is un-necessarily large - it was my first guess;
+	        	// it returns a region both wide enough for all components and 
+	        	// tall enough for all components.
+		        int nmembers = parent.getComponentCount();
+		        for (int i = 0 ; i < nmembers ; i++) {
+		            final Component m = parent.getComponent(i);
+		            if (m.isVisible()) {
+		                final Dimension d = m.getPreferredSize();
+		                
+		                dim.height += d.height;
+		                dim.width += d.width;
 
-	            }
-	        } // end for
+		            }
+		        } // end for
+	        	break;
+	        case 2:
+	        	int maxwidth = 0;
+	        	for (Component c : parent.getComponents()) {
+	        		int w = c.getMinimumSize().width;
+	        		if (w > maxwidth) {
+	        			dim = c.getMinimumSize();
+	        			maxwidth = w;
+	        		}
+	        	}
+	        	break;
+	        default:
+	        	dim = parent.getSize();
+	        }
 
+	        System.out.println("] " + dim);
 	        return dim;
 	    } // end synchronized
 	}

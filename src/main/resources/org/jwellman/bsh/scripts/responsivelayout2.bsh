@@ -1,0 +1,65 @@
+import org.jwellman.swing.layout.ResponsiveLayout;
+import javax.swing.border.Border;
+import javax.swing.BorderFactory;
+
+public class LayoutDemo2 extends JPanel {
+
+    private JPanel panel;
+    private Border border = BorderFactory.createLineBorder(Color.black);
+
+    private int ptr = 0;
+    private Dimension[] sizes = {
+        new Dimension(150,60),
+        new Dimension(75,40),
+        new Dimension(50,30)    
+    };
+    
+    public LayoutDemo2() {
+        super(new BorderLayout());
+
+        JLabel label;        
+        l2("North", BorderLayout.NORTH);
+        l2("South", BorderLayout.SOUTH);
+        l2("East", BorderLayout.EAST);
+        l2("West", BorderLayout.WEST);
+
+        panel = new JPanel(new ResponsiveLayout());
+        label = l("Live Feeds");
+        label = l("Smart Chat");
+        label = l("Calendar");
+        this.add(panel, BorderLayout.CENTER);
+
+    }
+
+    private JLabel l(String title) {
+        JLabel label = new JLabel(title);
+        label.setBorder(border);
+        label.setMinimumSize( sizes[ptr++] );
+        panel.add(label);
+        return label;
+    }
+    
+    private void l2(String title, String constraint) {
+        JPanel p = new JPanel(new GridBagLayout());       
+            JLabel label = new JLabel(title);
+            label.setBorder(border);
+            p.add(label);
+        this.add(p, constraint);
+    }
+    
+}
+
+layoutdemo2() {
+
+    /** A JPanel extension that contains the java color chooser */
+    this.panel = new LayoutDemo2();
+
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    this.iframe = jvd.app.createVApp(this.panel, "Responsive Layout");
+    
+    print("Layout Demo2 started...");
+    return this;
+}
+
+jvd.layoutapp2 = layoutdemo2();
+

@@ -18,6 +18,27 @@ import java.util.List;
 public class ResponsiveLayout implements LayoutManager2, Serializable {
 
 	private static final long serialVersionUID = 1L;
+	
+	private boolean uniformRowHeight;
+
+	// === Constructors ===
+	public ResponsiveLayout() {
+		this(true);
+	}
+	
+	public ResponsiveLayout(boolean urh) {
+		this.uniformRowHeight = urh;
+	}
+	
+	// === Properties ===
+	
+	public boolean isUniformRowHeight() {
+		return uniformRowHeight;
+	}
+
+	public void setUniformRowHeight(boolean uniformRowHeight) {
+		this.uniformRowHeight = uniformRowHeight;
+	}
 
 	// ===== LayoutManager interface
 	
@@ -45,7 +66,7 @@ public class ResponsiveLayout implements LayoutManager2, Serializable {
 	    synchronized (parent.getTreeLock()) {
 	        Dimension dim = new Dimension(0, 0);
 	        
-	        final int version = 2;
+	        final int version = 3;
 	        switch (version) {
 	        case 1:
 		        // TODO properly account for non-visible components; see FlowLayout
@@ -74,6 +95,46 @@ public class ResponsiveLayout implements LayoutManager2, Serializable {
 	        		}
 	        	}
 	        	break;
+	        case 3:
+	            // === put components into rows (storing row height as you go) ===
+	            final int N = parent.getComponentCount();
+	            int ROWS, sumWidths;
+	            final int[] rowidx = new int[N];
+	            final List<Integer> listRowHeight = new ArrayList<>(N);
+	            
+	            ROWS = sumWidths = 0;
+	            int hgtRow = 0;
+	            for (int ctrComponent=0; ctrComponent<N; ctrComponent++) {
+	            	sumWidths += parent.getComponent(ctrComponent).getMinimumSize().width;
+	            	if (sumWidths <= parent.getWidth()) {
+	                    // put in the current row
+	                    // rowidx[ctrComponent] = ctrRow;
+	                    
+	                    // store max row height
+	                    hgtRow = Math.max(hgtRow, parent.getComponent(ctrComponent).getMinimumSize().height);
+	            	} else {
+	                    // put in the next row
+	            		ROWS++;
+	                    // rowidx[ctrComponent] = ctrRow;
+	                    
+	                    // store/reset max row height
+	                    listRowHeight.add(hgtRow);
+	                    hgtRow = parent.getComponent(ctrComponent).getMinimumSize().height;
+	                    
+	                    // store/reset the accumulator
+	                	sumWidths = parent.getComponent(ctrComponent).getMinimumSize().width;
+	            	}
+	                rowidx[ctrComponent] = ROWS;
+	            }
+	            // Since we previously only add to the list on the completion of each row,
+	            // then we have to add the "last" row height here:
+	            listRowHeight.add(hgtRow);
+	            // ============================================================
+	            
+	            dim.width = parent.getWidth();
+	            for (int h : listRowHeight) { dim.height += h; }	            
+
+	        	break;
 	        default:
 	        	dim = parent.getSize();
 	        }
@@ -93,47 +154,17 @@ public class ResponsiveLayout implements LayoutManager2, Serializable {
 
 	@Override
 	public void layoutContainer(Container target) {
-		System.out.println("layout");
+		System.out.print("layout: [" + target.getSize());
 		
         final Insets insets = target.getInsets();
         final int N = target.getComponentCount();
+        int ROWS, sumWidths;
         // These are dynamic values; adjusted during layout
         int top = insets.top;
-        int bottom = target.getHeight() - insets.bottom;
+        // int bottom = target.getHeight() - insets.bottom;
         int left = insets.left;
-        int right = target.getWidth() - insets.right;
-        // Some more constants...
-        final int W = right - left + 1;
-        final int H = bottom - top + 1;
-        
-        //
-        int COLUMNS, ROWS, sumWidths;
-        
-        // === find the max columns for layout ===
-        sumWidths = 0;
-        for (Component c : target.getComponents()) {
-        	sumWidths += c.getMinimumSize().getWidth();
-        }
-        if (sumWidths <= target.getWidth()) {
-        	COLUMNS = 1;
-        } else {
-        	boolean found = false;
-        	int n = N-1;
-        	for (int i=n; n>0; n--) {
-        		for (int j=0; j<N-n; j++) {
-            		sumWidths = 0;
-            		for (int k=j; k<N-n; k++) {
-            			sumWidths += target.getComponent(k).getMinimumSize().width;
-            		}
-        			found = sumWidths < target.getWidth();
-        			if (found) break;
-        		}
-        		if (found) {
-        			COLUMNS = i;
-        			break;
-        		}
-        	}
-        }
+        // int right = target.getWidth() - insets.right;
+
         
         // === put components into rows (storing row height as you go) ===
         final int[] rowidx = new int[N];
@@ -178,8 +209,8 @@ public class ResponsiveLayout implements LayoutManager2, Serializable {
         	
         	final Component c = target.getComponent(i);
         	int w = c.getMinimumSize().width; // W / 1; // TODO 1 := (components per row ctrRow);
-        	c.setSize(w, ptrRowHeight); // w,h
-        	c.setBounds(left, top, w, ptrRowHeight); // x,y,w,h
+        	c.setSize(w, uniformRowHeight ? ptrRowHeight : c.getMinimumSize().height); // w,h
+        	c.setBounds(left, top, w, uniformRowHeight ? ptrRowHeight : c.getMinimumSize().height); // x,y,w,h
         	
         	left += w;
         }

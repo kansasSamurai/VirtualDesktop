@@ -5,6 +5,7 @@
 import bsh.ClassIdentifier;
 import bsh.util.ClassBrowser;
 import org.jwellman.virtualdesktop.App;
+import org.jwellman.virtualdesktop.DesktopManager;
 
 jvdClassBrowser() {
 
@@ -57,7 +58,10 @@ this.javaVirtualDesktop = true;
     this.inDesktop = true; // ( bsh.system.desktop != void );
     if ( inDesktop ) {
         if ( javaVirtualDesktop ) {
-            this.frame = App.getVSystem().createVApp(browser, "BeanShell Class Browser - jvd", bsh.system.icons.eye);
+        
+            // old this.frame = App.getVSystem().createVApp(browser, "BeanShell Class Browser - jvd", bsh.system.icons.eye);
+            // new
+            this.frame = DesktopManager.get().createVApp(browser, "BeanShell Class Browser - jvd", bsh.system.icons.eye);
         } else {
             this.frame = makeInternalFrame("BeanShell Class Browser");
             // frame.frameIcon = bsh.system.icons.eye;
@@ -121,3 +125,9 @@ _JVD() {
 jvd = _JVD();
 jvd.browser = jvdClassBrowser();
 jvd.app = org.jwellman.virtualdesktop.App.getVSystem();
+
+/*
+Examples:
+jvd.browser.browse("org.jwellman.virtualdesktop.DesktopManager");
+
+*/

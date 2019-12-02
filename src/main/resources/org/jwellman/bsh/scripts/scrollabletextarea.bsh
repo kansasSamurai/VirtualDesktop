@@ -1,0 +1,38 @@
+import javax.swing.border.Border;
+import javax.swing.BorderFactory;
+import org.jwellman.virtualdesktop.DesktopManager;
+
+public class ScrollableTextArea extends JPanel {
+
+    public JTextArea textArea;
+    
+    private Border border = BorderFactory.createLineBorder(Color.black);
+
+    public ScrollableTextArea() {
+        super(new BorderLayout());
+        
+        textArea = new JTextArea(5, 30);
+        JScrollPane scrollPane = new JScrollPane(textArea);
+
+        this.add(scrollPane, BorderLayout.CENTER);
+
+    }
+    
+}
+
+textareademo() {
+
+    /** A JPanel extension that contains the java color chooser */
+    this.panel = new ScrollableTextArea();
+
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+//  this.iframe = jvd.app.createVApp(this.panel, "Simple Scrollable Text Area");
+//  import org.jwellman.virtualdesktop.DesktopManager;
+    this.iframe = DesktopManager.get().createVApp(this.panel, "Simple Scrollable Text Area");
+    
+    print("Scrollable Text Area Demo2 started...");
+    return this;
+}
+
+jvd.textareademo = textareademo();
+

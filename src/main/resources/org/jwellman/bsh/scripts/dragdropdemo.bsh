@@ -1,12 +1,13 @@
 import org.jwellman.demo.BasicDnD;
+import org.jwellman.virtualdesktop.DesktopManager;
 
 ddemo1() {
 
     /** A JPanel extension that contains the java color chooser */
-    this.panel = new BasicDnD();Table Table 20  Table 21    Table 22    Table 2320    Table 21    Table 22    Table 23
+    this.panel = new BasicDnD();
 
     /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
-    this.iframe = jvd.app.createVApp(this.panel, "DnD Demo");
+    this.iframe = DesktopManager.get().createVApp(this.panel, "DnD Demo");
     
     print("DnD Demo started...");
     return this;
@@ -18,7 +19,7 @@ ddemo2() {
     this.panel = new BasicDnD();
 
     /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
-    this.iframe = jvd.app.createVApp(this.panel, "DnD Demo");
+    this.iframe = DesktopManager.get().createVApp(this.panel, "DnD Demo");
     
     print("DnD Demo started...");
     return this;
@@ -26,4 +27,3 @@ ddemo2() {
 
 jvd.dndapp1 = ddemo1();
 jvd.dndapp2 = ddemo2();
-

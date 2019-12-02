@@ -7,6 +7,7 @@ import javax.swing.AbstractAction;
 import javax.swing.Icon;
 import javax.swing.SwingUtilities;
 import org.jwellman.virtualdesktop.App;
+import org.jwellman.virtualdesktop.DesktopManager;
 
 /**
  *
@@ -55,7 +56,7 @@ public class DesktopAction extends AbstractAction implements Runnable {
     @Override
     public void run() {
             try {
-                vdesktop.createVApp( this.clazz.newInstance() );
+                DesktopManager.get().createVApp( this.clazz.newInstance() );
             } catch (InstantiationException | IllegalAccessException ex) {
                 Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
             }

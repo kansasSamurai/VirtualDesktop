@@ -23,6 +23,17 @@ abstract public class VirtualAppSpec {
         // Intentionally Empty
     }
 
+    /**
+     * Utility/convenience method to wrap an
+     * existing content/component/JComponent with
+     * a JPanel for insertion into a JInternalFrame.
+     * 
+     * This method should not be called until setWidth/Height()
+     * have been called (otherwise they defaults are zero). 
+     *  
+     * @param o
+     * @return
+     */
     protected JPanel createDefaultContent(Component o) {
         final JPanel pnl = new JPanel(new BorderLayout());
         pnl.setPreferredSize(new Dimension(width, height));
@@ -31,6 +42,18 @@ abstract public class VirtualAppSpec {
         return pnl;
     }
 
+    /**
+     * If a virtual app is marked as an "internal frame provider",
+     * then this callback will be used to populate the contents of the JInternalFrame.
+     * Note that very few virtual apps will probably use this and its use
+     * is discouraged, but it is provided for the one-off's since not all
+     * use cases can be envisioned nor can legacy apps be immediately refactored.
+     * 
+     * Note:  Users of this callback are responsible for all JInternalFrame
+     * display mechanisms such as setSize(), pack(), and setVisible().
+     * 
+     * @param frame
+     */
     public void populateInternalFrame(JInternalFrame frame) {
         // empty default impl
     }

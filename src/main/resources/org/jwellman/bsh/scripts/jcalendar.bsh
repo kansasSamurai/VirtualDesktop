@@ -4,6 +4,7 @@ import com.toedter.components.*;
 import javax.swing.plaf.basic.BasicSplitPaneDivider;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
 
+import org.jwellman.virtualdesktop.DesktopManager;
 
 // Extend JCalendarDemo to override init() and exclude the call to initializeLookAndFeels()
 public class MyJCalendarDemo extends com.toedter.calendar.demo.JCalendarDemo {
@@ -83,7 +84,8 @@ virtdemo() {
 
     this.panel = new JCalendarVirtDemo();    
 
-    this.iframe = jvd.app.createVApp(this.panel, "JCalendar Demo");
+//  import org.jwellman.virtualdesktop.DesktopManager;
+    this.iframe = DesktopManager.get().createVApp(this.panel, "JCalendar Demo");
     
     dispose() {
         this.panel = null;
@@ -93,7 +95,7 @@ virtdemo() {
 
     reinit() {
         this.panel = new JCalendarVirtDemo();    
-        this.iframe = jvd.app.createVApp(this.panel, "JCalendar Demo");
+        this.iframe = DesktopManager.get().createVApp(this.panel, "JCalendar Demo");
     }
 
     showinfo() {
@@ -123,10 +125,10 @@ jcaldemo = virtdemo();
 /* =====================================
 These commands can now be run from the console:
 
-jvd.calendar = jvd.app.createVApp(new org.jwellman.jcalendar.VDayChooser(), "my calendar");
+jvd.calendar = DesktopManager.get().createVApp(new org.jwellman.jcalendar.VDayChooser(), "my calendar");
 or,
 jvd.calendar = new org.jwellman.jcalendar.VDayChooser();
-jvd.app.createVApp(jvd.calendar, "my calendar");
+DesktopManager.get().createVApp(jvd.calendar, "my calendar");
 
 demo() {
 
@@ -242,6 +244,7 @@ aa() { run() {
   } 
 return this; }
 
+// The following are equivalent (as long as you don't change their definition, obviously)...
 SwingUtilities.invokeLater( aa() );
 SwingUtilities.invokeLater( jcaldemo.aa() );
 */

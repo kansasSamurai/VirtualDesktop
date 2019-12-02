@@ -1,6 +1,13 @@
 package org.jwellman.virtualdesktop;
 
 import com.alee.laf.WebLookAndFeel;
+import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLightLaf;
+import com.jtattoo.plaf.aluminium.AluminiumLookAndFeel;
+
+import ca.odell.glazedlists.swing.DefaultEventListModel;
+import ca.odell.glazedlists.swing.GlazedListsSwing;
+
 import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Dimension;
@@ -9,12 +16,14 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.Action;
 import javax.swing.Icon;
 import javax.swing.JDesktopPane;
 import javax.swing.JFrame;
+import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -36,9 +45,10 @@ import org.jwellman.swing.plaf.metal.MetalThemeManager;
 import org.jwellman.virtualdesktop.desktop.VActionLNF;
 import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.VShortcut;
+import org.jwellman.virtualdesktop.desktopmgr.VAppListCellRenderer;
+import org.jwellman.virtualdesktop.desktopmgr.VAppListSelectionListener;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
 import org.jwellman.virtualdesktop.vapps.*;
-import org.jwellman.virtualdesktop.vswing.VDesktopManager;
 import org.jwellman.virtualdesktop.vswing.VDesktopPane;
 
 /**
@@ -48,6 +58,7 @@ import org.jwellman.virtualdesktop.vswing.VDesktopPane;
  *
  * @author Rick Wellman
  */
+@SuppressWarnings("serial")
 public class App extends JFrame implements ActionListener {
 
     /** The singleton */
@@ -103,8 +114,9 @@ public class App extends JFrame implements ActionListener {
         JPanel controls = null;
 
         desktop = new VDesktopPane(); // new JDesktopPane(); //a specialized layered pane
-        desktop.setDesktopManager(new VDesktopManager());
-        int version = 4;
+        DesktopManager.get().setDesktop(desktop);
+        
+        int version = 5;
         switch (version) {
             case 1:
                 dsp = new DesktopScrollPane(desktop);
@@ -143,7 +155,28 @@ public class App extends JFrame implements ActionListener {
                 JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, controls, dsp);
                 splitPane.setOneTouchExpandable(true);
                 splitPane.setDividerLocation(150);
+                                
                 p.add(splitPane);
+                this.setContentPane(p);
+                break;
+            case 5:
+                controls = new JPanel(new BorderLayout());
+                
+                DefaultEventListModel<VirtualAppFrame> listmodel = GlazedListsSwing.eventListModel(DesktopManager.get().getFrames());
+                
+                final JList<VirtualAppFrame> jlist = new JList<>(listmodel);
+                jlist.setCellRenderer(new VAppListCellRenderer());
+                jlist.addListSelectionListener(new VAppListSelectionListener(jlist));
+                controls.add(jlist, BorderLayout.CENTER); // (new JScrollPane(jlist), BorderLayout.CENTER);
+
+                dsp = new DesktopScrollPane(desktop);
+
+                //Create a split pane with the two scroll panes in it.
+                JSplitPane splitPane2 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, controls, dsp);
+                splitPane2.setOneTouchExpandable(true);
+                splitPane2.setDividerLocation(150);                                
+                p.add(splitPane2);
+                
                 this.setContentPane(p);
                 break;
 
@@ -237,7 +270,7 @@ public class App extends JFrame implements ActionListener {
         if ("new".equals(e.getActionCommand())) {
             try {
                 // TODO This is just temporary; need to implement a real feature
-                createVApp( registeredApps[(++count % registeredApps.length)].newInstance() );
+                DesktopManager.get().createVApp( registeredApps[(++count % registeredApps.length)].newInstance() );
             } catch (InstantiationException ex) {
                 Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
             } catch (IllegalAccessException ex) {
@@ -248,81 +281,6 @@ public class App extends JFrame implements ActionListener {
         } else {
             throw new VException("Unknown Action", null);
         }
-    }
-
-    public void createVApp(Object newInstance) {
-        this.createVApp((VirtualAppSpec)newInstance);
-    }
-
-    /**
-     * Create a new application.
-     * [This is the definitive method of the overloaded versions.]
-     *
-     * @param spec
-     */
-    public void createVApp(final VirtualAppSpec spec) {
-
-        if (spec.isInternalFrameProvider()) {
-            final VirtualAppFrame frame = new VirtualAppFrame(spec.getTitle());
-            spec.populateInternalFrame(frame);
-        } else {
-            this.createVApp(spec.getContent(), spec.getTitle(), null);
-        }
-
-    }
-
-    public VirtualAppFrame createVApp(final Container c, final String title) {
-        return this.createVApp(c, title, null);
-    }
-
-    /**
-     * This public method allows internal apps to create internal apps/windows.
-     * i.e. via beanshell or others
-     *
-     * @param c
-     * @param title
-     * @param icon
-     * @return
-     */
-    public VirtualAppFrame createVApp(final Container c, final String title, final Icon icon) {
-
-        final VirtualAppFrame frame = new VirtualAppFrame(title);
-
-        javax.swing.SwingUtilities.invokeLater(new Runnable() {
-            @Override public void run() {
-                try {
-                    // final VirtualAppFrame frame = new VirtualAppFrame(title);
-                    frame.setContentPane(c);
-
-                    if (icon != null) frame.setFrameIcon(icon);
-
-                    frame.pack(); // see Note [1] below
-                    if ((c.getWidth() * c.getHeight()) != 0) {
-                        frame.setSize(c.getWidth(), c.getHeight());
-                        System.out.println("JIF setSize()");
-                    } else {
-//                        frame.pack(); // see Note [1] below
-                    }
-
-//                    frame.setVisible(true); //necessary as of 1.3
-//                    frame.setSelected(true);
-                    desktop.add(frame);
-                    frame.setVisible(true); //necessary as of 1.3
-                    frame.setSelected(true);
-                } catch (java.beans.PropertyVetoException e) {
-                    e.printStackTrace(); // for now, simply swallow the exception
-                } catch (Exception e) {
-                    e.printStackTrace(); // for now, simply swallow the exception
-                }
-            }
-        });
-
-        return frame;
-
-        // Note [1]: For now I am removing this via comment as it has undesired
-        // side effects.  However, I have a feeling that I should be using
-        // pack() and the side effects are due to a design error elsewhere.
-        // 9/2/2018:  Trying to always call pack() first, then setsize().
     }
 
     /**
@@ -361,6 +319,16 @@ public class App extends JFrame implements ActionListener {
         frame.setVisible(true);
     }
 
+    // These are a workaround because VirtualAppFrame needs to know the LAF
+    // for a workaround that it employs for WEBLAF only
+    public static final int LAF_SYSTEM = 1;
+    public static final int LAF_WEBLAF = 2;
+    public static final int LAF_NIMBUS = 3;
+    public static final int LAF_METAL = 5;
+    public static final int LAF_JTATTOO = 7;
+    public static final int LAF_FLATLAF = 8;
+    public static final int CHOSEN_LAF = LAF_SYSTEM;
+    
     public static void main(String[] args) {
 
         // Install a custom security manager to prevent guests from shutting down the desktop.
@@ -378,9 +346,11 @@ public class App extends JFrame implements ActionListener {
                     // This does not appear to be working as expected?
                     // System.setProperty(WebLookAndFeel.PROPERTY_HONOR_USER_BORDERS, "true");
 
-                    int choice = 2;
+                    Properties props = new Properties();
+
+                    int choice = CHOSEN_LAF;
                     switch (choice) {
-                        case 1:
+                        case LAF_SYSTEM:
                             final String sys = UIManager.getSystemLookAndFeelClassName();
                             UIManager.setLookAndFeel(sys);
                             break;
@@ -401,16 +371,34 @@ public class App extends JFrame implements ActionListener {
                             break;
                         case 5:
                             MetalLookAndFeel
-                                    .setCurrentTheme(MetalThemeManager.MODERN);
+                                    //.setCurrentTheme(MetalThemeManager.LOW_VISION); // MODERN | AQUA | LOW_VISION | ...
                                     //.setCurrentTheme(MetalThemeManager.LARGE_FONT);
                                     //.setCurrentTheme(new DefaultMetalTheme());
-                                    //.setCurrentTheme(new OceanTheme());
+                                    .setCurrentTheme(new OceanTheme());
                             UIManager.setLookAndFeel(new MetalLookAndFeel());
                             break;
                         case 6:
                             // Sep. 2018:  evaluating pgs
                             UIManager.setLookAndFeel("com.pagosoft.plaf.PgsLookAndFeel");
                             break;
+                        case LAF_JTATTOO:
+                            props.put("subTextFont", "Consolas BOLD 10"); // ???
+                            props.put("userTextFont", "Calibri PLAIN 14"); // JLabel, JCheckbox, Tab Titles, ... // Aluminium only respects:  TableHeaders, Checkboxes, (I assume RadioButtons), ...
+                            props.put("menuTextFont", "Calibri PLAIN 12"); // JMenu, ...
+                            props.put("systemTextFont", "Baskerville BOLD 24"); 
+                            props.put("controlTextFont", "Calibri PLAIN 14"); // JButton, ... // Aluminium does not respect this... well... maybe it does, I just don't know what components it affects yet?
+                            props.put("windowTitleFont", "Calibri PLAIN 16"); // JFrame, (JInternalFrame I asume), ...
+
+                        	AluminiumLookAndFeel.setCurrentTheme(props);
+                        	UIManager.setLookAndFeel("com.jtattoo.plaf.aluminium.AluminiumLookAndFeel");  
+                        	System.out.println("LAF := JTattoo");
+                        	break;
+                        case LAF_FLATLAF:
+                        	// UIManager.setLookAndFeel( new FlatDarkLaf() );
+                        	UIManager.setLookAndFeel( new FlatLightLaf() );
+                        	System.out.println("LAF := FlatLAF");
+                        	
+                        	break;
                         case 99:
                             // This is my original code; don't use it.
                             UIManager.installLookAndFeel("Web", "com.alee.laf.WebLookAndFeel");
@@ -427,6 +415,8 @@ public class App extends JFrame implements ActionListener {
                             break;
                     }
                 } catch (Exception e) {
+                	System.out.println("LAF := (fallback)");
+                	
                     // If Nimbus is not available, you can set the GUI to another look and feel.
                     final String sys = UIManager.getSystemLookAndFeelClassName();
                     try {

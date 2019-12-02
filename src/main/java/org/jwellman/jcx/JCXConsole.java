@@ -85,7 +85,9 @@ public class JCXConsole extends javax.swing.JPanel implements Runnable {
         commandline.setColumns(60);
         commandline.setRows(3);
         commandline.setTabSize(4);
-        commandline.setText("command-line >");
+        commandline.setLineWrap(true);
+        commandline.setWrapStyleWord(true);
+        commandline.setText("dir /o:gn /b");
         jScrollPane3.setViewportView(commandline);
 
         jPanel6.add(jScrollPane3, java.awt.BorderLayout.CENTER);

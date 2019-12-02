@@ -1,0 +1,15 @@
+import org.jwellman.swing_applets.FileNavigator;
+
+bdemo() {
+
+    /** A JPanel extension that contains the java color chooser */
+    this.panel = new FileNavigator("C:\\");
+
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    this.iframe = DesktopManager.get().createVApp(this.panel, "Demo - File Navigator");
+    
+    print("Demo started...");
+    return this;
+}
+
+jvd.bdemo = bdemo();

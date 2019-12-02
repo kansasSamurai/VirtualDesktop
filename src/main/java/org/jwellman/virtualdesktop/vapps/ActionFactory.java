@@ -1,11 +1,11 @@
 package org.jwellman.virtualdesktop.vapps;
 
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.Action;
 import javax.swing.Icon;
 import org.apache.batik.transcoder.TranscoderException;
+import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
 import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.VIcon;
 
@@ -20,7 +20,9 @@ public class ActionFactory {
     public static Class<?>[] registeredApps = {
         SpecBeanShell.class
         ,SpecJCXConsole.class
-//      ,SpecVfsFileChooser2.class // this app sucks
+        ,SpecGroovyConsole.class // newly readded
+        ,SpecJDatePicker.class
+        ,SpecVfsFileChooser2.class // this isn't as bad as I originally thought... I was confusing it with XionFM and/or SpecJzy3D below.
         ,SpecHyperSQL.class
         ,SpecJFreeChart.class
         ,SpecXChartDemo.class

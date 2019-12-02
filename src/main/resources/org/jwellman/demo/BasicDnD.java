@@ -205,18 +205,19 @@ public class BasicDnD extends JPanel implements ActionListener {
         //Create a tree.
         DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode("Mia Familia");
         DefaultMutableTreeNode sharon = new DefaultMutableTreeNode("Sharon");
-        rootNode.add(sharon);
+        	rootNode.add(sharon);
         DefaultMutableTreeNode maya = new DefaultMutableTreeNode("Maya");
-        sharon.add(maya);
+        	sharon.add(maya);
         DefaultMutableTreeNode anya = new DefaultMutableTreeNode("Anya");
-        sharon.add(anya);
-        sharon.add(new DefaultMutableTreeNode("Bongo"));
+        	sharon.add(anya);
+        	sharon.add(new DefaultMutableTreeNode("Bongo"));
         maya.add(new DefaultMutableTreeNode("Muffin"));
         anya.add(new DefaultMutableTreeNode("Winky"));
+        
         DefaultTreeModel model = new DefaultTreeModel(rootNode);
         tree = new JTree(model);
-        tree.getSelectionModel().setSelectionMode
-              (TreeSelectionModel.DISCONTIGUOUS_TREE_SELECTION);
+        tree.getSelectionModel().setSelectionMode(TreeSelectionModel.DISCONTIGUOUS_TREE_SELECTION);
+        
         JScrollPane treeView = new JScrollPane(tree);
         treeView.setPreferredSize(new Dimension(300, 100));
         rightPanel.add(createPanelForComponent(treeView, "JTree"));
@@ -226,8 +227,7 @@ public class BasicDnD extends JPanel implements ActionListener {
         toggleDnD.setActionCommand("toggleDnD");
         toggleDnD.addActionListener(this);
 
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
-                                              leftPanel, rightPanel);
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
         splitPane.setOneTouchExpandable(true);
 
         add(splitPane, BorderLayout.CENTER);
@@ -253,9 +253,10 @@ public class BasicDnD extends JPanel implements ActionListener {
     }
 
     private void displayDropLocation(final String string) {
+    	final BasicDnD me = this;
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-                JOptionPane.showMessageDialog(null, string);
+                JOptionPane.showMessageDialog(me, string);
             }
         });
     }

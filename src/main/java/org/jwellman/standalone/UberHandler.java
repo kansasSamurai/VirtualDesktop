@@ -1,8 +1,16 @@
 package org.jwellman.standalone;
 
-import java.awt.datatransfer.*;
-import java.io.*;
-import javax.swing.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.io.BufferedReader;
+import java.io.Reader;
+import java.util.List;
+
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.TransferHandler;
 
 /**
  * Based on (but modified):
@@ -11,9 +19,10 @@ import javax.swing.*;
  *
  * @author Rick Wellman
  */
+@SuppressWarnings("serial")
 public class UberHandler extends TransferHandler {
 
-    JTextArea output;
+    private JTextArea output;
 
     public void TransferHandler() {
     }
@@ -33,6 +42,7 @@ public class UberHandler extends TransferHandler {
         DataFlavor listFlavor = null;
         DataFlavor objectFlavor = null;
         DataFlavor readerFlavor = null;
+        DataFlavor jvmFlavor = null;
         int lastFlavor = flavors.length - 1;
 
         // Check the flavors and see if we find one we like. If we do, save it.
@@ -47,16 +57,19 @@ public class UberHandler extends TransferHandler {
             if (flavors[f].isRepresentationClassReader()) {
                 readerFlavor = flavors[f];
             }
+            if (flavors[f].isMimeTypeEqual(DataFlavor.javaJVMLocalObjectMimeType)) {
+                jvmFlavor = flavors[f];            	
+            }
         }
 
         // Now try to display the content of the drop.
         try {
-            final DataFlavor bestTextFlavor = DataFlavor.selectBestTextFlavor(flavors);
-
             BufferedReader br = null;
             String line = null;
+
+            final DataFlavor bestTextFlavor = DataFlavor.selectBestTextFlavor(flavors);
             if (bestTextFlavor != null) {
-                println("Best text flavor: " + bestTextFlavor.getMimeType());
+                println("BEST TEXT flavor: " + bestTextFlavor.getMimeType());
                 println("Content:");
                 Reader r = bestTextFlavor.getReaderForText(transferable);
                 br = new BufferedReader(r);
@@ -67,14 +80,14 @@ public class UberHandler extends TransferHandler {
                 }
                 br.close();
             } else if (listFlavor != null) {
-                java.util.List list =
-                        (java.util.List) transferable.getTransferData(listFlavor);
+            	println("No BEST TEXT flavor; showing flavor LIST:");
+                List<?> list = (List<?>) transferable.getTransferData(listFlavor);
                 println(list);
             } else if (objectFlavor != null) {
-                println("Data is a java object:\n"
-                        + transferable.getTransferData(objectFlavor));
+            	println("No BEST TEXT flavor; showing flavor OBJECT:");
+                println("Data is a java object:\n" + transferable.getTransferData(objectFlavor));
             } else if (readerFlavor != null) {
-                println("Data is an InputStream:");
+            	println("No BEST TEXT flavor; Data is an InputStream:");
                 br = new BufferedReader((Reader) transferable.getTransferData(readerFlavor));
                 line = br.readLine();
                 while (line != null) {
@@ -82,8 +95,11 @@ public class UberHandler extends TransferHandler {
                 }
                 br.close();
             } else {
-                // Don't know this flavor type yet
-                println("No text representation to show.");
+                // Don't know this flavor type yet... 
+            	// assume it is DataFlavor[mimetype=application/x-java-jvm-local-objectref;...]
+            	// and if not, let it fall through to the exception handler.
+                println("No text based MIME Content-type to show; calling toString():");
+                println(transferable.getTransferData(jvmFlavor));
             }
             println("\n\n");
         } catch (Exception e) {
@@ -97,11 +113,15 @@ public class UberHandler extends TransferHandler {
 
     @Override
     public void exportDone(JComponent src, Transferable data, int action) {
-        System.err.println("Export Done."); // Just let us know when it occurs.
+        System.out.println("Export Done."); // Just let us know when it occurs.
     }
 
     public void setOutput(JTextArea jta) {
         output = jta;
+        // the next line saves the developer one line of code on the client side ;)
+        // since the design of this class presumes that you are always going to have
+        // to do this.
+        jta.setTransferHandler(this);
     }
 
     protected void print(Object o) {
@@ -142,7 +162,7 @@ public class UberHandler extends TransferHandler {
         frame.getContentPane().add(new JScrollPane(jta));
         UberHandler uh = new UberHandler();
         uh.setOutput(jta);
-        jta.setTransferHandler(uh);
+        // setOutput() now does this automatically:  jta.setTransferHandler(uh);
 
         frame.setVisible(true);
 

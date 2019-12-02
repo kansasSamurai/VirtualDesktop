@@ -16,6 +16,7 @@ import java.awt.event.KeyEvent;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.jwellman.virtualdesktop.DesktopManager;
 
 /**
  * A simple extenstion of JPanel to hold an RTextScrollPane/RSyntaxTextArea (RSTA)
@@ -177,7 +178,9 @@ better(String title) {
         frame.show();
     } else {
         this.panel.add(p, BorderLayout.SOUTH);
-        this.iframe = jvd.app.createVApp(this.panel, title);
+        this.iframe = 
+            DesktopManager.get().createVApp(this.panel, title); // new
+        // old // jvd.app.createVApp(this.panel, title);
     }
 
     print("Better Editor started...");

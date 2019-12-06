@@ -1,0 +1,78 @@
+
+class SwingTester {
+    /* Adapted from ...
+     * https://www.tutorialspoint.com/swingexamples/using_jeditorpane_to_show_html.htm
+     */
+    JEditorPane jEditorPane;
+
+   public void run() {
+      createWindow();
+   }
+
+   public void createWindow() {    
+      JFrame frame = new JFrame("Swing Tester");
+      frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            
+      frame.getContentPane().add(createPanel(frame), BorderLayout.CENTER);
+      
+      frame.setSize(560, 450);      
+      frame.setLocationRelativeTo(null);  
+      frame.setVisible(true);
+   }
+
+   public JPanel createPanel(JFrame frame){  
+      JPanel panel = new JPanel(new FlowLayout());
+
+      jEditorPane = new JEditorPane();
+      jEditorPane.setEditable(false);   
+      jEditorPane.setBorder(null);
+      URL url= SwingTester.class.getResource("test.htm");
+
+      try {   
+         jEditorPane.setPage(url);
+      } catch (IOException e) { 
+         jEditorPane.setContentType("text/html");
+         jEditorPane.setText("<html>Page not found.</html>");
+      }
+
+      JScrollPane jScrollPane = new JScrollPane(jEditorPane);
+      jScrollPane.setPreferredSize(new Dimension(540,400));      
+
+      panel.add(jScrollPane);
+      return panel;
+          
+   }  
+   
+} 
+
+jvd.tester = new SwingTester();
+
+// -------------------------------------
+
+import org.jwellman.virtualdesktop.DesktopManager;
+
+tdemo() {
+
+    /** A JPanel extension that contains the java color chooser */
+    this.ccpanel = jvd.tester.createPanel(null);
+
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    this.iframe = DesktopManager.get().createVApp(this.ccpanel, "demo");
+    
+    print("Demo started...");
+    return this;
+}
+
+jvd.demo = tdemo();
+
+// -------------------------------------
+
+jvd.demo.url = new File("C:\\dev\\workspaces\\textfiles\\test.html").toURI().toURL();
+jvd.tester.jEditorPane.setPage(jvd.demo.url);
+
+// -------------------------------------
+// This allows the setPage() to be reloaded... it might make sense to put this in tdemo()
+javax.swing.text.Document doc = jvd.tester.jEditorPane.getDocument();
+doc.putProperty(javax.swing.text.Document.StreamDescriptionProperty, null);
+jvd.tester.jEditorPane.setPage(jvd.demo.url);
+

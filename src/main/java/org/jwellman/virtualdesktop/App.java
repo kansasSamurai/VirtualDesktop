@@ -72,6 +72,16 @@ public class App extends JFrame implements ActionListener {
     /** a custom scrollpane for a scrollable desktop */
     private DesktopScrollPane dsp;
 
+    // These are a workaround because VirtualAppFrame needs to know the LAF
+    // for a workaround that it employs for WEBLAF only
+    public static final int LAF_SYSTEM = 1;
+    public static final int LAF_WEBLAF = 2;
+    public static final int LAF_NIMBUS = 3;
+    public static final int LAF_METAL = 5;
+    public static final int LAF_JTATTOO = 7;
+    public static final int LAF_FLATLAF = 8;
+    public static final int CHOSEN_LAF = LAF_JTATTOO;
+    
     /**
      * This is only nececessary for a temp dev menu item; can eventually be removed
      * Even now, I could probably use ActionFactory registeredApps instead.
@@ -166,8 +176,9 @@ public class App extends JFrame implements ActionListener {
                 
                 final JList<VirtualAppFrame> jlist = new JList<>(listmodel);
                 jlist.setCellRenderer(new VAppListCellRenderer());
-                jlist.addListSelectionListener(new VAppListSelectionListener(jlist));
+                jlist.addListSelectionListener(DesktopManager.get()); // (new VAppListSelectionListener(jlist));
                 controls.add(jlist, BorderLayout.CENTER); // (new JScrollPane(jlist), BorderLayout.CENTER);
+            	DesktopManager.get().setObservedJList(jlist);                
 
                 dsp = new DesktopScrollPane(desktop);
 
@@ -319,16 +330,6 @@ public class App extends JFrame implements ActionListener {
         frame.setVisible(true);
     }
 
-    // These are a workaround because VirtualAppFrame needs to know the LAF
-    // for a workaround that it employs for WEBLAF only
-    public static final int LAF_SYSTEM = 1;
-    public static final int LAF_WEBLAF = 2;
-    public static final int LAF_NIMBUS = 3;
-    public static final int LAF_METAL = 5;
-    public static final int LAF_JTATTOO = 7;
-    public static final int LAF_FLATLAF = 8;
-    public static final int CHOSEN_LAF = LAF_SYSTEM;
-    
     public static void main(String[] args) {
 
         // Install a custom security manager to prevent guests from shutting down the desktop.

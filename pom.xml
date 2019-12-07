@@ -111,6 +111,13 @@
     </dependency>
     -->
 
+	<!-- https://mvnrepository.com/artifact/com.github.imcdonagh/image4j -->
+	<dependency>
+	    <groupId>com.github.imcdonagh</groupId>
+	    <artifactId>image4j</artifactId>
+	    <version>0.7.2</version>
+	</dependency>
+
     <dependency>
         <groupId>xml-apis</groupId>
         <artifactId>xml-apis</artifactId>
@@ -385,6 +392,18 @@
           </snapshots>
       </repository>
 
+      <repository>
+          <id>virtualdesktop_project.local</id>
+          <name>virtualdesktop_project</name>
+          <url>file:\\\${project.basedir}\repo\</url>
+            <releases>
+              <enabled>true</enabled>
+            </releases>
+            <snapshots>
+              <enabled>false</enabled>
+            </snapshots>
+      </repository>
+        
   </repositories>
 
 </project>

@@ -3,6 +3,7 @@ package org.jwellman.swing_applets;
 import java.awt.BorderLayout;
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.IOException;
 
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
@@ -16,6 +17,8 @@ import javax.swing.event.TreeSelectionListener;
 
 import org.jwellman.swing.jtree.FileNode;
 import org.jwellman.swing.jtree.FileSelectorModel;
+
+import net.sf.image4j.codec.ico.ICODecoder;
 
 @SuppressWarnings("serial")
 public class FileNavigator extends JPanel {
@@ -86,8 +89,23 @@ public class FileNavigator extends JPanel {
                 
                 // Update the file preview window...
                 if (selectedNode.isFile() && selectedNode.isImage()) {
-                    ImageIcon icon = new ImageIcon(selectedNode.getAbsolutePath());
-                    labelasview.setIcon(icon);                
+                	ImageIcon icon = null;
+                	
+            		final String lowername = selectedNode.getName().toLowerCase();
+            		if (lowername.endsWith(".ico")) {
+            			// Java does not natively support the .ico format; use image4j
+            			// http://zetcode.com/articles/javaico/
+            			try {
+							icon = new ImageIcon( ICODecoder.read(selectedNode).get(0) );
+						} catch (IOException e1) {
+							e1.printStackTrace();
+						}
+            		} else {
+                        icon = new ImageIcon(selectedNode.getAbsolutePath());            			
+            		}
+
+                    if (icon != null) labelasview.setIcon(icon);
+                    
                 }            	
             }
             

@@ -1,0 +1,53 @@
+<html>
+   <head>
+      <title>Swing Tester</title>
+      
+      <style>
+        body, p, h1, h2, h3, h4, ul, li {
+            color: #0A0A0A;
+            background-color: #CCCCCC;
+            font-family: 'segoe ui', consolas, 'courier new', monospaced;
+        }
+        p    {color: #5A5A5A;}
+        ul, li, h1, h2, h3, h4   {color: #3A3A3A;}
+        // li color affects the color of the "dots"
+      </style>
+
+   </head>
+   
+   <body>
+      <h1>Swing API</h1>
+      <p>This vapp can only be opened in an external frame.</p>
+      <p>This internal frame is simply a placeholder and
+            allows you to close/exit the vapp by clicking
+            the button below.
+      </p>
+      
+      <p>Swing API is a set of extensible GUI Components 
+         to ease the developer's life to create JAVA based Front End/GUI
+         Applications. It is build on top of AWT API and acts as a replacement of 
+         AWT API, since it has almost every control corresponding to AWT controls.
+         Swing component follows a Model-View-Controller architecture to 
+         fulfill the following criterias.</p>
+      <ul>
+         <li><p>A single API is to be sufficient to support multiple look and feel.</p></li>
+         <li><p>API is to be model driven so that the highest level API is not required to have data.</p></li>
+         <li><p>API is to use the Java Bean model so that Builder Tools and IDE can provide better services to the developers for use.</p></li>
+      </ul>
+      <h2>MVC Architecture</h2>
+      <p>Swing API architecture follows loosely based MVC architecture in the following manner.</p>
+      <ul>
+         <li><p>Model represents component's data.</p></li>
+         <li><p>View represents visual representation of the component's data.</p></li>
+         <li><p>Controller takes the input from the user on the view and reflects the changes in Component's data.</p></li>
+         <li><p>Swing component has Model as a seperate element, while the View and Controller part are clubbed in the User Interface elements. Because of which, Swing has a pluggable look-and-feel architecture.</p></li>
+      </ul>
+      <h2>Swing Features</h2>
+      <ul>
+         <li><p><b>Light Weight</b> âˆ’ Swing components are independent of native Operating System's API as Swing API controls are rendered mostly using pure JAVA code instead of underlying operating system calls.</p></li>
+         <li><p><b>Rich Controls</b> âˆ’ Swing provides a rich set of advanced controls like Tree, TabbedPane, slider, colorpicker, and table controls.</p></li>
+         <li><p><b>Highly Customizable</b> âˆ’ Swing controls can be customized in a very easy way as visual apperance is independent of internal representation.</p></li>
+         <li><p><b>Pluggable look-and-feel</b> âˆ’ SWING based GUI Application look and feel can be changed at run-time, based on available values.</p></li>
+      </ul>
+   </body>
+</html>

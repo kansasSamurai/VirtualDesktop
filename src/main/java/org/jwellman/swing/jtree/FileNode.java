@@ -7,6 +7,12 @@ package org.jwellman.swing.jtree;
  * keep it very simple.  You will note that by extending the java.io.File class,
  * we have merely created this as an adapter to support the JTree model.
  * 
+ * TODO After thinking this through... I need to remove the isText() and isImage()
+ * features.  These originated from proof of concept code so I kept them; 
+ * however, I want this class to support being in a multi-app/use-case 
+ * environment and use of the static arrays would not support that
+ * and honestly I don't think they should be here in the first place.
+ * This type of logic would be better placed outside of this class.
  * 
  * @author rwellman
  *
@@ -26,10 +32,7 @@ public class FileNode extends java.io.File {
     }
 
     public FileNode(FileNode parent, String child) {
-        super(parent, child);
-        
-        setTextTypes(".txt;.csv;.tsv;.xml;.html;.java");
-        setImageTypes(".png;.jpg;.gif");
+        super(parent, child);        
     }
 
     @Override
@@ -53,7 +56,7 @@ public class FileNode extends java.io.File {
     }
     
     public boolean isImage() {
-    	if (imageTypes == null) setImageTypes(".png;.jpg;.gif");
+    	if (imageTypes == null) setImageTypes(".png;.jpg;.gif;.ico");
 
 		final String lowername = this.getName().toLowerCase();
 		for (String tryme : imageTypes) {

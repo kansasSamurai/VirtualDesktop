@@ -1,26 +1,36 @@
+
 there appears to be "newer" JScrollableDesktopPane at https://github.com/hussachai/hswing/blob/master/src/main/java/org/jscroll/JScrollDesktopPane.java
 I do not know if it is "better" or even modified from the version that I currently have.
 More research required.
 
+todo: 12/9/2019: Use groovy classes in project
+https://github.com/groovy/groovy-eclipse/wiki/Groovy-Eclipse-Maven-plugin
+
 todo: JInternalFrame with menu
-tood: create a tree of opened vapps;
+
+done: ? - 12/9/2019: create a tree of opened vapps;
       possibly override minimized apps to not display and
       rely on the tree to restore
-todo: integrate desktop icons (from proof of concept)
+      Current implementation is a JList
+
+done: integrate desktop icons (from proof of concept)
+
 todo: possibly allow "sub-applications" to contribute to the desktop menubar/menus;
       if so, it might be wise/desirable to decorate either the standard menu items
       or the added menu items so that the user can differentiate which is which.
+      12/9/2019: I honestly don't know if I will ever make this a priority;
+      it might be neat as a proof of concept but it's not really a priority to me
       
 todo: create a class and/or framework jar as demo for how to write a simple app
       i.e. do not extend JFrame 
+
 To write "portable" java apps:
 * Do not use a look and feel
-* Do not use your own container; i.e. JFrame
+* Do not use your own container; i.e. JFrame or JInternalFrame (and JDialog)
+* Rather... use JPanel for EVERYTHING (let the framework put your JPanel in the appropriate container)
 * Do not call System.exit()!!!
-* Do not use modal dialogs directly;
-  use a portable interface.
+* Do not use modal dialogs directly; use a portable interface.
 * If your app is somehow specific to an OS, then
-  all such behavior must check for that OS before
-  trying to run.  Either throw an exception or
-  call to the abstract dialog interface.
+  all such behavior must check for that OS before trying to run.  
+  Either throw an exception or call to the abstract dialog interface.
 

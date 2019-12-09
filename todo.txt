@@ -5,6 +5,7 @@ More research required.
 
 todo: 12/9/2019: use/incorporate this groovy swingbuilder presentation
 https://www.oracle.com/technetwork/systems/ts-5098-1-159011.pdf
+https://web.archive.org/web/20140702234519/http://groovy.codehaus.org/Alphabetical+Widgets+List
 
 todo: 12/9/2019: Use groovy classes in project
 https://github.com/groovy/groovy-eclipse/wiki/Groovy-Eclipse-Maven-plugin

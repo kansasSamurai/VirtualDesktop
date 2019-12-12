@@ -9,6 +9,26 @@ https://web.archive.org/web/20140702234519/http://groovy.codehaus.org/Alphabetic
 see this page for doOutside and doLater:
 https://uberconf.com/blog/andres_almiray/2009/11/building_rich_swing_applications_with_groovy__part_i
 
+# groovy swingbuilder references
+Legend: * = simplest/reference, ** = tutorial, *** = useful, **** = real world/advanced, ***** = best of breed/you won't find this elsewhere
+
+***** https://www.oracle.com/technetwork/systems/ts-5098-1-159011.pdf
+****  https://uberconf.com/blog/andres_almiray/2009/11/building_rich_swing_applications_with_groovy__part_i
+****  https://dracodoc.wordpress.com/tag/swingbuilder/
+****  https://dracodoc.wordpress.com/2014/06/24/pdf4eink-convert-text-files-into-pdf-for-optimal-eink-reader-reading-experience/
+****  https://nofluffjuststuff.com/blog/kenneth_kousen/2013/07/a_groovy_chuck_norris_script
+***   https://www.cs.wcupa.edu/rkline/groovy/gui.html
+***   https://kousenit.org/2008/09/29/making-swing-groovy-part-i/
+***   https://kousenit.org/2008/10/03/making-swing-groovy-part-ii-binding/
+***   https://kousenit.org/2008/10/13/making-swing-groovy-part-iii-edt/
+**    https://www.tutorialspoint.com/groovy/groovy_builders.htm
+**    https://dzone.com/articles/swinging-groovy-fun
+**    https://alvinalexander.com/java/jwarehouse/groovy/src/examples/groovy/swing/TableLayoutDemo.groovy.shtml
+**    https://alvinalexander.com/java/jwarehouse/groovy/src/examples/groovy/swing
+*     https://web.archive.org/web/20140702234519/http://groovy.codehaus.org/Alphabetical+Widgets+List
+
+
+
 todo: 12/9/2019: Use groovy classes in project
 https://github.com/groovy/groovy-eclipse/wiki/Groovy-Eclipse-Maven-plugin
 
@@ -39,4 +59,3 @@ To write "portable" java apps:
 * If your app is somehow specific to an OS, then
   all such behavior must check for that OS before trying to run.  
   Either throw an exception or call to the abstract dialog interface.
-

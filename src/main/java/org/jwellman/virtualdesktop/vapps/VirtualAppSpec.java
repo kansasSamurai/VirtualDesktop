@@ -3,6 +3,8 @@ package org.jwellman.virtualdesktop.vapps;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+
+import javax.swing.JDesktopPane;
 import javax.swing.JInternalFrame;
 import javax.swing.JPanel;
 
@@ -54,7 +56,7 @@ abstract public class VirtualAppSpec {
      * 
      * @param frame
      */
-    public void populateInternalFrame(JInternalFrame frame) {
+    public void populateInternalFrame(JInternalFrame frame, JDesktopPane desktop) {
         // empty default impl
     }
 

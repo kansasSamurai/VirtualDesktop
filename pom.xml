@@ -47,7 +47,7 @@
         <version>2.3.0</version>
     </dependency>
 
-    <!-- these are only necessary for groovy poc graphics scripts
+    <!-- these two libs are necessary for groovy poc graphics scripts  -->    
     <dependency>
         <groupId>org.codehaus.groovy-contrib</groupId>
         <artifactId>graphicsbuilder</artifactId>
@@ -59,8 +59,6 @@
         <artifactId>jsilhouette</artifactId>
         <version>0.2</version>
     </dependency>
-
-    -->
     
     <!-- SwingLabs inclusion was on purpose though nothing "currently
          utilizes it.  It actually has many useful Swing components
@@ -296,13 +294,11 @@
         <version>0.2.8</version>
     </dependency>
 
-    <!-- add this to project repo
     <dependency>
         <groupId>nl.knaw.dans.common</groupId>
         <artifactId>dans-dbf-lib</artifactId>
         <version>1.0.0-beta-10</version>
     </dependency>
-     -->
 
     <dependency>
         <groupId>com.xeiam.xchart</groupId>

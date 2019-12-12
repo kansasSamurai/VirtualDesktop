@@ -11,6 +11,7 @@ import java.awt.image.BufferedImage;
 import java.util.HashMap;
 
 import javax.swing.ImageIcon;
+import javax.swing.JDesktopPane;
 import javax.swing.JFrame;
 import javax.swing.JInternalFrame;
 import javax.swing.JPanel;
@@ -48,6 +49,50 @@ public class SpecGroovyConsole extends VirtualAppSpec {
     }
     
     @Override
+    public void populateInternalFrame(JInternalFrame frame, JDesktopPane desktop) {
+    	System.out.println("populateInternalFrame()");
+
+    	boolean trySomethingElse = false;
+    	if (trySomethingElse) {
+    		// 12/5/2019... I thought this worked once...
+    		// maybe I thought it would but never finished the POC...
+            final HashMap<String, Component> map = new HashMap<>();
+            map.put("rootContainerDelegate", frame);
+            
+            Console c = new Console();
+            c.run(map); // this is a hack! not sure if it will even work
+    		
+    	} else {
+
+    		// This works ... 
+	        Console c = new Console(); c.run();        	
+	        final JFrame jframe = (JFrame) c.getFrame();	        
+            this.setContent(this.createDefaultContent(jframe.getContentPane()));
+            
+    		frame.add(this.getContent());
+      		frame.setJMenuBar(jframe.getRootPane().getJMenuBar());      		
+    		// DONE apparently the groovy .png is "big"... resize to look better in the DesktopManager
+    		frame.setFrameIcon(new ImageIcon( jframe.getIconImage().getScaledInstance(20, 20, java.awt.Image.SCALE_SMOOTH) ));
+    		
+    		SwingUtilities.invokeLater(() -> {
+    			// TODO this is required because the edit panel and output panel do not have preferred sizes
+    			frame.setPreferredSize(new Dimension(200, 300)); 
+    			
+        		frame.pack();
+        		frame.setVisible(true);    			
+    		} );
+    		
+    	}
+
+        
+    }
+    
+    /**
+     * This is the original version before the desktop was added to the API;
+     * thus allowing a new internal frame to be created and added to the desktop.
+     * 
+     * @param frame
+     */
     public void populateInternalFrame(JInternalFrame frame) {
     	System.out.println("populateInternalFrame()");
 
@@ -89,7 +134,8 @@ public class SpecGroovyConsole extends VirtualAppSpec {
     // I'm not using this at the moment but it was found as an alternative to the resizing
     // code above; not sure of the pros/cons of either approach.  FWIW, The approach used
     // above is a lot less code.
-    private Image getScaledImage(Image srcImg, int w, int h){
+    @SuppressWarnings("unused")
+	private Image getScaledImage(Image srcImg, int w, int h){
         BufferedImage resizedImg = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = resizedImg.createGraphics();
 

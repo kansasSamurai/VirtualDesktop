@@ -80,7 +80,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
         	System.out.println("createVApp() going to populateInternalFrame()");
             final VirtualAppFrame frame = this.createAppFrame(spec.getTitle());
             desktop.add(frame);
-            spec.populateInternalFrame(frame);
+            spec.populateInternalFrame(frame, desktop);
         } else {
         	System.out.println("createVApp() going to createVApp()");
             this.createVApp(spec.getContent(), spec.getTitle(), null);

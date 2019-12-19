@@ -119,6 +119,13 @@ _JVD() {
         for (URL url: urls) { print(url.getFile()); }
     }
 
+    // 'u' simply stands for "utility"; this creates an empty closure
+    // ... very often used by me to simply create my "namespaces"*
+    // ... i.e. not the same as a BSH namespace.
+    u() {
+        return this;
+    }
+
     return this;
 }
 

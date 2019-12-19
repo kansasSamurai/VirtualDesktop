@@ -1,0 +1,35 @@
+/*  All commands in this script 
+ *  can be run line by line
+ *  unless otherwise noted.
+ 
+    A few commands are missing;
+    see SplitPaneDemo.java
+    
+ */
+
+// Step 1
+jvd.demo.panel = new JPanel();
+jvd.demo.panel.setLayout(new BorderLayout());
+x = jvd.demo;
+
+// Step 2
+import org.jwellman.virtualdesktop.DesktopManager;
+jvd.demo.iframe = DesktopManager.get().createVApp(jvd.demo.panel, "Demo - UI");
+
+// Step 3 - setup data models
+jvd.demo.imageNames = new String[] { "Bird", "Cat", "Dog", "Rabbit", "Pig", "dukeWaveRed", "kathyCosmo", "lainesTongue", "left", "middle", "right", "stickerface" };
+
+// Step 4 - setup widgets
+jvd.demo.list = new JList(jvd.demo.imageNames);
+jvd.demo.list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+jvd.demo.list.setSelectedIndex(0);
+
+jvd.demo.picture = new JLabel();
+x.picture.setHorizontalAlignment(JLabel.CENTER);
+
+// Step 5 - build panel/widget hierarchy
+x.listpane = new JScrollPane(x.list);
+x.picpane = new JScrollPane(x.picture);
+x.splitpane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, x.listpane, x.picpane);
+
+x.panel.add(x.splitpane, BorderLayout.CENTER);

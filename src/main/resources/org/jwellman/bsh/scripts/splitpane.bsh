@@ -33,3 +33,8 @@ x.picpane = new JScrollPane(x.picture);
 x.splitpane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, x.listpane, x.picpane);
 
 x.panel.add(x.splitpane, BorderLayout.CENTER);
+
+// --------------------------------
+import org.jwellman.swing.jtree.ComponentTree;
+jvd.demo2.panel = ComponentTree.createTree(x.iframe);
+jvd.demo2.iframe = DesktopManager.get().createVApp(jvd.demo2.panel, "Demo3 - Tree");

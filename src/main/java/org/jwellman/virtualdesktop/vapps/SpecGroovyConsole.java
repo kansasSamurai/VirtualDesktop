@@ -24,17 +24,17 @@ import javax.swing.SwingUtilities;
  *                   then the "capture standout output/error" feature no longer works.
  * TODO 12/6/2019 :: another bug I just found because I did not know it was a feature is... drag/drop
  *                   supposedly you can drop a .groovy file from the file browser to open it
- * 
+ *
  * @author rwellman
  */
 public class SpecGroovyConsole extends VirtualAppSpec {
-    
+
     public SpecGroovyConsole() {
         super();
-        
+
         // the framework handles the title in both scenarios regarding 'internalFrameProvider'
-        this.setTitle("Groovy Console"); 
-        
+        this.setTitle("Groovy Console");
+
         this.internalFrameProvider = true;
         if (this.internalFrameProvider) {
         	// do nothing here... it will be done in populateInternalFrame()
@@ -42,12 +42,12 @@ public class SpecGroovyConsole extends VirtualAppSpec {
         	// populateInternalFrame() will NOT be called so do "stuff" here...
         	// This works but results in an external JFrame...
             this.setContent(new JPanel());
-            
+
 	        Console c = new Console();
-	        c.run();        	
+	        c.run();
         }
     }
-    
+
     @Override
     public void populateInternalFrame(JInternalFrame frame, JDesktopPane desktop) {
     	System.out.println("populateInternalFrame()");
@@ -58,39 +58,42 @@ public class SpecGroovyConsole extends VirtualAppSpec {
     		// maybe I thought it would but never finished the POC...
             final HashMap<String, Component> map = new HashMap<>();
             map.put("rootContainerDelegate", frame);
-            
+
             Console c = new Console();
             c.run(map); // this is a hack! not sure if it will even work
-    		
+
     	} else {
 
-    		// This works ... 
-	        Console c = new Console(); c.run();        	
-	        final JFrame jframe = (JFrame) c.getFrame();	        
+    		// This works ...
+    		// ... but results in leaving the original JFrame which is
+    		// ultimately undesirable.
+	        Console c = new Console(); c.run();
+	        final JFrame jframe = (JFrame) c.getFrame();
             this.setContent(this.createDefaultContent(jframe.getContentPane()));
-            
+
     		frame.add(this.getContent());
-      		frame.setJMenuBar(jframe.getRootPane().getJMenuBar());      		
+      		frame.setJMenuBar(jframe.getRootPane().getJMenuBar());
     		// DONE apparently the groovy .png is "big"... resize to look better in the DesktopManager
     		frame.setFrameIcon(new ImageIcon( jframe.getIconImage().getScaledInstance(20, 20, java.awt.Image.SCALE_SMOOTH) ));
-    		
+
     		SwingUtilities.invokeLater(() -> {
     			// TODO this is required because the edit panel and output panel do not have preferred sizes
     			frame.setPreferredSize(new Dimension(200, 300)); 
-    			
         		frame.pack();
-        		frame.setVisible(true);    			
+        		frame.setVisible(true);
+
+                jframe.setVisible(false);
     		} );
-    		
+
     	}
 
-        
+
     }
-    
+
     /**
      * This is the original version before the desktop was added to the API;
      * thus allowing a new internal frame to be created and added to the desktop.
-     * 
+     *
      * @param frame
      */
     public void populateInternalFrame(JInternalFrame frame) {
@@ -102,35 +105,35 @@ public class SpecGroovyConsole extends VirtualAppSpec {
     		// maybe I thought it would but never finished the POC...
             final HashMap<String, Component> map = new HashMap<>();
             map.put("rootContainerDelegate", frame);
-            
+
             Console c = new Console();
             c.run(map); // this is a hack! not sure if it will even work
-    		
+
     	} else {
 
-    		// This works ... 
-	        Console c = new Console(); c.run();        	
-	        final JFrame jframe = (JFrame) c.getFrame();	        
+    		// This works ...
+	        Console c = new Console(); c.run();
+	        final JFrame jframe = (JFrame) c.getFrame();
             this.setContent(this.createDefaultContent(jframe.getContentPane()));
-            
+
     		frame.add(this.getContent());
-      		frame.setJMenuBar(jframe.getRootPane().getJMenuBar());      		
+      		frame.setJMenuBar(jframe.getRootPane().getJMenuBar());
     		// DONE apparently the groovy .png is "big"... resize to look better in the DesktopManager
     		frame.setFrameIcon(new ImageIcon( jframe.getIconImage().getScaledInstance(20, 20, java.awt.Image.SCALE_SMOOTH) ));
-    		
+
     		SwingUtilities.invokeLater(() -> {
     			// TODO this is required because the edit panel and output panel do not have preferred sizes
-    			frame.setPreferredSize(new Dimension(200, 300)); 
-    			
+    			frame.setPreferredSize(new Dimension(200, 300));
+
         		frame.pack();
-        		frame.setVisible(true);    			
+        		frame.setVisible(true);
     		} );
-    		
+
     	}
 
-        
+
     }
-    
+
     // I'm not using this at the moment but it was found as an alternative to the resizing
     // code above; not sure of the pros/cons of either approach.  FWIW, The approach used
     // above is a lot less code.
@@ -145,5 +148,32 @@ public class SpecGroovyConsole extends VirtualAppSpec {
 
         return resizedImg;
     }
-    
+
+    /**
+     * Converts a given Image into a BufferedImage
+     * ... most often used when the underlying Image is
+     * ... an instance of sun.java.awt.ToolkitImage, and
+     * ... you need a BufferedImage for things like
+     * ... calling getScaledInstance()
+     *
+     * @param img The Image to be converted
+     * @return The converted BufferedImage
+     */    public static BufferedImage toBufferedImage(Image img) {
+
+        if (img instanceof BufferedImage) {
+            return (BufferedImage) img;
+        }
+
+        // Create a buffered image with transparency
+        BufferedImage bimage = new BufferedImage(img.getWidth(null), img.getHeight(null), BufferedImage.TYPE_INT_ARGB);
+
+        // Draw the image on to the buffered image
+        Graphics2D bGr = bimage.createGraphics();
+        bGr.drawImage(img, 0, 0, null);
+        bGr.dispose();
+
+        // Return the buffered image
+        return bimage;
+    }
+
 }

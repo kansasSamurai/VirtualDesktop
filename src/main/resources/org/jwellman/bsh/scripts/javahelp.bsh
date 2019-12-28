@@ -1,0 +1,47 @@
+import javax.help.*;
+import org.jwellman.virtualdesktop.DesktopManager;
+
+/*
+This is the top level directory where the javahelp files are:
+/c/dev/workspaces/git/VirtualDesktop-old/src/main/resources/org/jwellman/docs
+
+Copy the javahelp jar to this directory, then:
+
+> cd .../docs
+> java -cp javahelp-2.0.05.jar com.sun.java.help.search.Indexer ./
+
+This creates the folder:  JavaHelpSearch/
+... all files other than 'SCHEMA' are binary (so don't/can't edit them)
+
+see these sites for common problems with the "search index" (a.k.a. search database):
+https://community.oracle.com/thread/1304643
+
+*/
+tdemo() {
+
+    // Get the classloader of this class.
+    this.cl = JHelp.class.getClassLoader();
+
+    // Use the findHelpSet method of HelpSet to create a URL referencing the helpset file.
+    // Note that in this example the location of the helpset is implied as being in the same
+    // directory as the program by specifying "jhelpset.hs" without any directory prefix,
+    // this should be adjusted to suit the implementation.
+    // URL url = HelpSet.findHelpSet(cl, "rwellman-hs.xml");
+    this.url = new File("C:/dev/workspaces/git/VirtualDesktop-old/src/main/resources/org/jwellman/docs/rwellman-hs.xml").toURI().toURL();
+    print(this.url);
+
+    this.viewer = new JHelp(new HelpSet(this.cl, this.url));
+
+    /** A JPanel extension that contains the java color chooser */
+    this.ccpanel = new JPanel(new BorderLayout());
+    this.ccpanel.add(this.viewer, BorderLayout.CENTER);
+
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    this.iframe = DesktopManager.get().createVApp(this.ccpanel, "help");
+
+    print("Demo started...");
+    return this;
+}
+
+jvd.help = tdemo();
+

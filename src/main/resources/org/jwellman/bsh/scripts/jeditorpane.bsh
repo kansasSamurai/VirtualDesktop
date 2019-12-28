@@ -9,41 +9,41 @@ class SwingTester {
       createWindow();
    }
 
-   public void createWindow() {    
+   public void createWindow() {
       JFrame frame = new JFrame("Swing Tester");
       frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            
+
       frame.getContentPane().add(createPanel(frame), BorderLayout.CENTER);
-      
-      frame.setSize(560, 450);      
-      frame.setLocationRelativeTo(null);  
+
+      frame.setSize(560, 450);
+      frame.setLocationRelativeTo(null);
       frame.setVisible(true);
    }
 
-   public JPanel createPanel(JFrame frame){  
+   public JPanel createPanel(JFrame frame){
       JPanel panel = new JPanel(new FlowLayout());
 
       jEditorPane = new JEditorPane();
-      jEditorPane.setEditable(false);   
+      jEditorPane.setEditable(false);
       jEditorPane.setBorder(null);
       URL url= SwingTester.class.getResource("test.htm");
 
-      try {   
+      try {
          jEditorPane.setPage(url);
-      } catch (IOException e) { 
+      } catch (IOException e) {
          jEditorPane.setContentType("text/html");
          jEditorPane.setText("<html>Page not found.</html>");
       }
 
       JScrollPane jScrollPane = new JScrollPane(jEditorPane);
-      jScrollPane.setPreferredSize(new Dimension(540,400));      
+      jScrollPane.setPreferredSize(new Dimension(540,400));
 
       panel.add(jScrollPane);
       return panel;
-          
-   }  
-   
-} 
+
+   }
+
+}
 
 jvd.tester = new SwingTester();
 
@@ -58,7 +58,7 @@ tdemo() {
 
     /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
     this.iframe = DesktopManager.get().createVApp(this.ccpanel, "demo");
-    
+
     print("Demo started...");
     return this;
 }
@@ -67,7 +67,8 @@ jvd.demo = tdemo();
 
 // -------------------------------------
 
-jvd.demo.url = new File("C:\\dev\\workspaces\\textfiles\\test.html").toURI().toURL();
+//jvd.demo.url = new File("C:\\dev\\workspaces\\textfiles\\test.html").toURI().toURL();
+jvd.demo.url = new File("C:/dev/workspaces/git/VirtualDesktop-old/src/main/resources/org/jwellman/bsh/scripts/test.html").toURI().toURL();
 jvd.tester.jEditorPane.setPage(jvd.demo.url);
 
 // -------------------------------------

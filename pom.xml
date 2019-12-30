@@ -47,7 +47,7 @@
         <version>2.3.0</version>
     </dependency>
 
-    <!-- these two libs are necessary for groovy poc graphics scripts  -->
+    <!-- these are only necessary for groovy poc graphics scripts
     <dependency>
         <groupId>org.codehaus.groovy-contrib</groupId>
         <artifactId>graphicsbuilder</artifactId>
@@ -60,6 +60,8 @@
         <version>0.2</version>
     </dependency>
 
+    -->
+    
     <!-- SwingLabs inclusion was on purpose though nothing "currently
          utilizes it.  It actually has many useful Swing components
          and utilties for good UIs.  TODO create some beanshell scripts
@@ -157,7 +159,7 @@
         <version>1.5</version>
     </dependency>
 
-    <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-imaging
+    <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-imaging 
     <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-imaging</artifactId>
@@ -210,27 +212,39 @@
 	<version>1.0.17</version>
     </dependency>
 
-    <!-- https://mvnrepository.com/artifact/javax.help/javahelp -->
-    <dependency>
-        <groupId>javax.help</groupId>
-        <artifactId>javahelp</artifactId>
-        <version>2.0.05</version>
-    </dependency>
-
     <dependency>
         <groupId>org.jdesktop</groupId>
         <artifactId>beansbinding</artifactId>
         <version>1.2.1</version>
     </dependency>
 
-    <!-- This is currently only necessary for weblaf (though I may keep) -->
-    <dependency>
-        <groupId>com.thoughtworks.xstream</groupId>
-        <artifactId>xstream</artifactId>
-        <version>1.4.7</version>
-    </dependency>
+	<!-- https://mvnrepository.com/artifact/com.j2html/j2html -->
+	<dependency>
+	    <groupId>com.j2html</groupId>
+	    <artifactId>j2html</artifactId>
+	    <version>1.4.0</version>
+	</dependency>
 
-    <!-- ===== Look and Feels ========================================= -->
+	<!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-server -->
+	<dependency>
+	    <groupId>org.eclipse.jetty</groupId>
+	    <artifactId>jetty-server</artifactId>
+	    <version>9.4.25.v20191220</version>
+	</dependency>
+
+	<!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-servlet -->
+	<dependency>
+	    <groupId>org.eclipse.jetty</groupId>
+	    <artifactId>jetty-servlet</artifactId>
+	    <version>9.4.25.v20191220</version>
+	</dependency>
+
+	<!-- https://mvnrepository.com/artifact/javax.help/javahelp -->
+	<dependency>
+	    <groupId>javax.help</groupId>
+	    <artifactId>javahelp</artifactId>
+	    <version>2.0.05</version>
+	</dependency>
 
     <dependency>
         <groupId>com.formdev</groupId>
@@ -244,12 +258,19 @@
         <version>1.27</version>
     </dependency>
 
-    <dependency>
-        <groupId>com.jtattoo</groupId>
-        <artifactId>JTattoo</artifactId>
-        <version>1.6.11</version>
-    </dependency>
+        <!-- This is currently only necessary for weblaf (though I may keep) -->
+        <dependency>
+            <groupId>com.thoughtworks.xstream</groupId>
+            <artifactId>xstream</artifactId>
+            <version>1.4.7</version>
+        </dependency>
 
+    <dependency>    
+        <groupId>com.jtattoo</groupId>  
+        <artifactId>JTattoo</artifactId>    
+        <version>1.6.11</version>   
+    </dependency>          
+        
     <!-- meh
     <dependency>
        <groupId>com.seaglasslookandfeel</groupId>
@@ -303,11 +324,13 @@
         <version>0.2.8</version>
     </dependency>
 
+    <!-- add this to project repo
     <dependency>
         <groupId>nl.knaw.dans.common</groupId>
         <artifactId>dans-dbf-lib</artifactId>
         <version>1.0.0-beta-10</version>
     </dependency>
+     -->
 
     <dependency>
         <groupId>com.xeiam.xchart</groupId>
@@ -408,7 +431,7 @@
               <enabled>false</enabled>
             </snapshots>
       </repository>
-
+        
   </repositories>
 
 </project>

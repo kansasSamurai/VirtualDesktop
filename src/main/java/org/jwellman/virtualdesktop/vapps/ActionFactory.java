@@ -21,9 +21,11 @@ public class ActionFactory {
         SpecBeanShell.class
         ,SpecJCXConsole.class
         ,SpecGroovyConsole.class // newly readded
+        ,SpecJetty.class
+        ,SpecHyperSQL.class
+        ,SpecHyperSQLClient.class
         ,SpecJDatePicker.class
         ,SpecVfsFileChooser2.class // this isn't as bad as I originally thought... I was confusing it with XionFM and/or SpecJzy3D below.
-        ,SpecHyperSQL.class
         ,SpecJFreeChart.class
         ,SpecXChartDemo.class
 //      ,SpecXionFM.class // this app is targeted for Linux
@@ -36,7 +38,7 @@ public class ActionFactory {
     public static void initDesktop() {
 
         DesktopAction a = null; // reusable
-        
+
         for (Class<?> clazz : registeredApps) {
             a = new DesktopAction(clazz.getSimpleName());
             getListOfActions().add(a);

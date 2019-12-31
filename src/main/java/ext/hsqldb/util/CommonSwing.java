@@ -34,7 +34,6 @@ package ext.hsqldb.util;
 import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.Toolkit;
-import java.net.URL;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -235,13 +234,17 @@ class CommonSwing {
 //            if (targetTheme.equalsIgnoreCase(GTK)){
 //                UIManager.setLookAndFeel("com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
 //            }
+
+            // rlw: this is not necessary in jpad
             SwingUtilities.updateComponentTreeUI(comp);
 
             if (comp instanceof java.awt.Frame) {
                 ((java.awt.Frame) comp).pack();
             }
+
         } catch (Exception e) {
             errorMessage(e);
         }
     }
+
 }

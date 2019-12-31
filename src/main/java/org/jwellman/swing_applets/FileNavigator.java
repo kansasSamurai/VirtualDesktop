@@ -1,6 +1,9 @@
 package org.jwellman.swing_applets;
 
 import java.awt.BorderLayout;
+import java.awt.Graphics;
+import java.awt.MediaTracker;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -18,6 +21,7 @@ import javax.swing.event.TreeSelectionListener;
 import org.jwellman.swing.jtree.FileNode;
 import org.jwellman.swing.jtree.FileSelectorModel;
 
+import net.coobird.gui.simpleimageviewer4j.Viewer;
 import net.sf.image4j.codec.ico.ICODecoder;
 
 @SuppressWarnings("serial")
@@ -35,20 +39,20 @@ public class FileNavigator extends JPanel {
      * <li>call setView() and setListener() after using this constructor, or</li>
      * <li>use the full constructor FileNavigator(String directory, JComponent view, TreeSelectionListener listener)</li>
      * </ul>
-     * 
+     *
      * @param directory
      */
     public FileNavigator(String directory) {
     	this(directory, null, null);
     }
-    
+
     public FileNavigator(String directory, JComponent view, TreeSelectionListener listener) {
     	super(new BorderLayout());
-    	
+
     	// by design, support a default implementation when null
         if (view == null) view = new JLabel(); // new JTextArea();
         if (listener == null) listener = new ImagesTreeSelectionListener((JLabel) view) ; // new DefaultTreeSelectionListener();
-    	
+
         tree = new JTree(new FileSelectorModel(directory));
         tree.addTreeSelectionListener(listener);
 
@@ -59,15 +63,15 @@ public class FileNavigator extends JPanel {
             preview = (JTextArea) view;
             preview.setEditable(false);
             preview.setLineWrap(false);
-            // preview.setWrapStyleWord(false);        	
+            // preview.setWrapStyleWord(false);
         }
 
         this.add(BorderLayout.WEST, new JScrollPane(tree));
         this.add(BorderLayout.SOUTH, status);
         this.add(new JScrollPane(viewer));
-    	
+
     }
-    
+
     public void setStatusText(String newtext) {
     	this.status.setText(newtext);
     }
@@ -75,22 +79,22 @@ public class FileNavigator extends JPanel {
     class ImagesTreeSelectionListener implements TreeSelectionListener {
 
     	JLabel labelasview;
-    	
+
     	public ImagesTreeSelectionListener(JLabel view) {
     		labelasview = view;
     	}
-    	
+
     	@Override
         public void valueChanged(TreeSelectionEvent e) {
-            final FileNode selectedNode = (FileNode) tree.getLastSelectedPathComponent();            
+            final FileNode selectedNode = (FileNode) tree.getLastSelectedPathComponent();
             if (selectedNode != null) {
                 // Update the status bar...
                 status.setText(selectedNode.getAbsolutePath() + " (" + selectedNode.length() + " bytes)");
-                
+
                 // Update the file preview window...
                 if (selectedNode.isFile() && selectedNode.isImage()) {
                 	ImageIcon icon = null;
-                	
+
             		final String lowername = selectedNode.getName().toLowerCase();
             		if (lowername.endsWith(".ico")) {
             			// Java does not natively support the .ico format; use image4j
@@ -101,17 +105,19 @@ public class FileNavigator extends JPanel {
 							e1.printStackTrace();
 						}
             		} else {
-                        icon = new ImageIcon(selectedNode.getAbsolutePath());            			
+                        icon = new ImageIcon(selectedNode.getAbsolutePath());
             		}
 
-                    if (icon != null) labelasview.setIcon(icon);
-                    
-                }            	
+                    if (icon != null) {
+                        labelasview.setIcon(icon);
+                    }
+
+                }
             }
-            
+
     	}
     }
-    
+
     class DefaultTreeSelectionListener implements TreeSelectionListener {
 
     	@Override
@@ -120,12 +126,12 @@ public class FileNavigator extends JPanel {
             if (selectedNode != null) {
                 // Update the status bar...
                 status.setText(selectedNode.getAbsolutePath() + " (" + selectedNode.length() + " bytes)");
-                
+
                 // Update the file preview window...
                 if (selectedNode.isFile() && selectedNode.isText()) {
                 	// Erase the current contents...
                     preview.setText(null);
-                    
+
                     // Fill with the new contents...
                     String line = ""; int linecount = 0;
                     try (BufferedReader br = new BufferedReader(new FileReader(selectedNode.getAbsolutePath()))) {
@@ -141,15 +147,15 @@ public class FileNavigator extends JPanel {
                     } catch (Exception exc) {
                         exc.printStackTrace();
                     }
-                    
+
                     // Make sure we view the top of the file...
                     preview.setCaretPosition(0);
 
                 } // endif (selectedNode.isFile() && selectedNode.isText())
             } // endif (selectedNode != null)
         }
-    	
+
     }
-    
+
 }
 

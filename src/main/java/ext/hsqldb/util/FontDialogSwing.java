@@ -56,17 +56,23 @@ import javax.swing.JFrame;
 public class FontDialogSwing extends JDialog {
 
     private static boolean      isRunning   = false;
+
     private static final String BACKGROUND  = "Background";
-    private static String       defaultFont = "Dialog";
     private static final String FOREGROUND  = "Foreground";
-    private static JButton      bgColorButton;
-    private static JCheckBox    ckbbold;
-    private static JButton      closeButton;
-    private static JButton      fgColorButton;
+    private static final String FONTNAME_DEFAULT = "Dialog"; // previously defaultFont
+
     private static JComboBox    fontsComboBox;
+    private static JComboBox    fontSizesComboBox;
+    private static JCheckBox    cboxBold; // previously cboxBold
+    private static JCheckBox    cboxItalic; // previously cboxItalic
+    private static JButton      btnFgColor; // previously btnFgColor
+    private static JButton      btnBgColor; // previously btnBgColor
+    private static JButton      btnClose; // previously btnClose
+
+    private static final Dimension _fontsComboBoxDimension = new Dimension(160, 25);
+    private static final Dimension _spinnerDimension = new Dimension(45, 25);
 
     //  weconsultants@users 20050215 - Added for Compatbilty fix for JDK 1.3
-    private static JComboBox      fontSizesComboBox;
     private static final String[] fontSizes = {
         "8", "9", "10", "11", "12", "13", "14", "16", "18", "24", "36"
     };
@@ -74,104 +80,83 @@ public class FontDialogSwing extends JDialog {
     // weconsultants@users 20050215 - Commented out for Compatbilty fix for JDK 1.3
     //  private static JSpinner           spinnerFontSizes;
     //  private static SpinnerNumberModel spinnerModelSizes;
-    private static DatabaseManagerSwing fOwner;
-    private static JFrame frame =
-        new JFrame("DataBaseManagerSwing Font Selection Dialog");
-    private static JCheckBox ckbitalic;
+    private static DatabaseManagerInterface fOwner;
+
+    // TODO rethink this? to work with JPAD/JInternalFrames?
+    private static final JFrame frame = new JFrame("Font Selection Dialog");
 
     /**
      * Create and display FontDialogSwing Dialog.
      *
+     * @param owner
      */
-    public static void creatFontDialog(DatabaseManagerSwing owner) {
+    public static void creatFontDialog(DatabaseManagerInterface owner) {
 
         if (isRunning) {
+            fOwner = owner;
             frame.setVisible(true);
         } else {
-            CommonSwing.setSwingLAF(frame, CommonSwing.Native);
+            isRunning = true;
+
+            // CommonSwing.setSwingLAF(frame, CommonSwing.Native);
 
             fOwner = owner;
 
             frame.setIconImage(CommonSwing.getIcon("Frame"));
-
-            isRunning = true;
-
             frame.setSize(600, 100);
             CommonSwing.setFramePositon(frame);
 
-            ckbitalic = new JCheckBox(
-                new ImageIcon(CommonSwing.getIcon("ItalicFont")));
-
-            ckbitalic.putClientProperty("is3DEnabled", Boolean.TRUE);
-            ckbitalic.addActionListener(new ActionListener() {
-
+            cboxItalic = new JCheckBox( new ImageIcon(CommonSwing.getIcon("ItalicFont")) );
+            cboxItalic.putClientProperty("is3DEnabled", Boolean.TRUE);
+            cboxItalic.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     setStyle();
                 }
             });
 
-            ckbbold =
-                new JCheckBox(new ImageIcon(CommonSwing.getIcon("BoldFont")));
-
-            ckbbold.putClientProperty("is3DEnabled", Boolean.TRUE);
-            ckbbold.addActionListener(new ActionListener() {
-
+            cboxBold = new JCheckBox( new ImageIcon(CommonSwing.getIcon("BoldFont")) );
+            cboxBold.putClientProperty("is3DEnabled", Boolean.TRUE);
+            cboxBold.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     setStyle();
                 }
             });
 
-            fgColorButton = new JButton(
-                "Foreground",
-                new ImageIcon(CommonSwing.getIcon("ColorSelection")));
-
-            fgColorButton.putClientProperty("is3DEnabled", Boolean.TRUE);
-            fgColorButton.addActionListener(new ActionListener() {
-
+            btnFgColor = new JButton( "Foreground", new ImageIcon(CommonSwing.getIcon("ColorSelection")) );
+            btnFgColor.putClientProperty("is3DEnabled", Boolean.TRUE);
+            btnFgColor.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     setColor(FOREGROUND);
                 }
             });
 
-            bgColorButton = new JButton(
-                "Background",
-                new ImageIcon(CommonSwing.getIcon("ColorSelection")));
-
-            bgColorButton.putClientProperty("is3DEnabled", Boolean.TRUE);
-            bgColorButton.addActionListener(new ActionListener() {
-
+            btnBgColor = new JButton( "Background", new ImageIcon(CommonSwing.getIcon("ColorSelection")) );
+            btnBgColor.putClientProperty("is3DEnabled", Boolean.TRUE);
+            btnBgColor.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     setColor(BACKGROUND);
                 }
             });
 
-            closeButton =
-                new JButton("Close",
-                            new ImageIcon(CommonSwing.getIcon("Close")));
-
-            closeButton.putClientProperty("is3DEnabled", Boolean.TRUE);
-            closeButton.addActionListener(new ActionListener() {
-
+            btnClose = new JButton("Close", new ImageIcon(CommonSwing.getIcon("Close")));
+            btnClose.putClientProperty("is3DEnabled", Boolean.TRUE);
+            btnClose.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     frame.setVisible(false);
                 }
             });
 
-            GraphicsEnvironment ge =
-                GraphicsEnvironment.getLocalGraphicsEnvironment();
-            String[]  fontNames = ge.getAvailableFontFamilyNames();
-            Dimension fontsComboBoxDimension = new Dimension(160, 25);
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            final String[] fontNames = ge.getAvailableFontFamilyNames();
 
             fontsComboBox = new JComboBox(fontNames);
-
             fontsComboBox.putClientProperty("is3DEnabled", Boolean.TRUE);
-            fontsComboBox.setMaximumSize(fontsComboBoxDimension);
-            fontsComboBox.setPreferredSize(fontsComboBoxDimension);
-            fontsComboBox.setMaximumSize(fontsComboBoxDimension);
             fontsComboBox.setEditable(false);
-            fontsComboBox.setSelectedItem(defaultFont);
+            fontsComboBox.setSelectedItem(FONTNAME_DEFAULT);
+            fontsComboBox.setMaximumSize(_fontsComboBoxDimension);
+            fontsComboBox.setPreferredSize(_fontsComboBoxDimension);
+            fontsComboBox.setMaximumSize(_fontsComboBoxDimension);
             fontsComboBox.addActionListener(new ActionListener() {
-
                 public void actionPerformed(ActionEvent e) {
                     setFont();
                 }
@@ -179,17 +164,12 @@ public class FontDialogSwing extends JDialog {
 
             // weconsultants@users 20050215 - Added for Compatbilty fix for  JDK 1.3
             fontSizesComboBox = new JComboBox(fontSizes);
-
-            Dimension spinnerDimension = new Dimension(45, 25);
-
             fontSizesComboBox.putClientProperty("is3DEnabled", Boolean.TRUE);
-            fontSizesComboBox.setMinimumSize(spinnerDimension);
-            fontSizesComboBox.setPreferredSize(spinnerDimension);
-            fontSizesComboBox.setMaximumSize(spinnerDimension);
+            fontSizesComboBox.setMinimumSize(_spinnerDimension);
+            fontSizesComboBox.setPreferredSize(_spinnerDimension);
+            fontSizesComboBox.setMaximumSize(_spinnerDimension);
             fontSizesComboBox.addItemListener(new ItemListener() {
-
                 public void itemStateChanged(ItemEvent evt) {
-
                     if (evt.getStateChange() == ItemEvent.SELECTED) {
                         setFontSize((String) evt.getItem());
                     }
@@ -197,12 +177,12 @@ public class FontDialogSwing extends JDialog {
             });
 
             // weconsultants@users 20050215 - Commented out for Compatbilty fix for  JDK 1.3
-            //            Dimension spinnerDimension = new Dimension(50, 25);
+            //            Dimension _spinnerDimension = new Dimension(50, 25);
             //            spinnerFontSizes = new JSpinner();
             //            spinnerFontSizes.putClientProperty("is3DEnabled", Boolean.TRUE);
-            //            spinnerFontSizes.setMinimumSize(spinnerDimension);
-            //            spinnerFontSizes.setPreferredSize(spinnerDimension);
-            //            spinnerFontSizes.setMaximumSize(spinnerDimension);
+            //            spinnerFontSizes.setMinimumSize(_spinnerDimension);
+            //            spinnerFontSizes.setPreferredSize(_spinnerDimension);
+            //            spinnerFontSizes.setMaximumSize(_spinnerDimension);
             //            spinnerModelSizes = new SpinnerNumberModel(12, 8, 72, 1);
             //            spinnerFontSizes.setModel(spinnerModelSizes);
             //            spinnerFontSizes.addChangeListener(new ChangeListener() {
@@ -210,117 +190,76 @@ public class FontDialogSwing extends JDialog {
             //                    setFontSize();
             //                }
             //            });
-            Container contentPane = frame.getContentPane();
 
+            Container contentPane = frame.getContentPane();
             contentPane.setLayout(new FlowLayout());
             contentPane.add(fontsComboBox);
-
             // weconsultants@users 20050215 - Commented out for Compatbilty fix for 1.3
             // contentPane.add(spinnerFontSizes);
             // weconsultants@users 20050215 - Added for Compatbilty fix for 1.3
             contentPane.add(fontSizesComboBox);
-            contentPane.add(ckbbold);
-            contentPane.add(ckbitalic);
-            contentPane.add(fgColorButton);
-            contentPane.add(bgColorButton);
-            contentPane.add(closeButton);
+            contentPane.add(cboxBold);
+            contentPane.add(cboxItalic);
+            contentPane.add(btnFgColor);
+            contentPane.add(btnBgColor);
+            contentPane.add(btnClose);
+
             frame.pack();
             frame.setVisible(false);
         }
     }
 
+    /**
+     * Previous implementation moved/refactored to DatabaseManagerSwing
+     * (and anything that implements the interface 'DatabaseManagerInterface'
+     *
+     */
     public static void setFont() {
-
-        Font txtResultFont = fOwner.txtResult.getFont();
-
-        fOwner.txtResult.setFont(
-            new Font(
-                fontsComboBox.getSelectedItem().toString(),
-                txtResultFont.getStyle(), txtResultFont.getSize()));
-
-        Font txtCommandFont = fOwner.txtResult.getFont();
-
-        fOwner.txtCommand.setFont(
-            new Font(
-                fontsComboBox.getSelectedItem().toString(),
-                txtCommandFont.getStyle(), txtCommandFont.getSize()));
-
-        Font txtTreeFont = fOwner.txtResult.getFont();
-
-        fOwner.tTree.setFont(
-            new Font(
-                fontsComboBox.getSelectedItem().toString(),
-                txtTreeFont.getStyle(), txtTreeFont.getSize()));
+        fOwner.setFont(fontsComboBox.getSelectedItem().toString());
     }
 
     /**
-     * Displays a color chooser and Sets the selected color.
+     * Previous implementation moved/refactored to DatabaseManagerSwing
+     * (and anything that implements the interface 'DatabaseManagerInterface'
+     *
+     * @param inFontSize
      */
     public static void setFontSize(String inFontSize) {
-
-        // weconsultants@users 20050215 - Changed for Compatbilty fix for JDK 1.3
-        // Convert Strng to float for deriveFont() call
-        Float stageFloat = new Float(inFontSize);
-        float fontSize   = stageFloat.floatValue();
-        Font  fonttTree  = fOwner.tTree.getFont().deriveFont(fontSize);
-
-        fOwner.tTree.setFont(fonttTree);
-
-        Font fontTxtCommand =
-            fOwner.txtCommand.getFont().deriveFont(fontSize);
-
-        fOwner.txtCommand.setFont(fontTxtCommand);
-
-        Font fontTxtResult = fOwner.txtResult.getFont().deriveFont(fontSize);
-
-        fOwner.txtResult.setFont(fontTxtResult);
+        fOwner.setFontSize(inFontSize);
     }
 
     /**
-     * Changes the style (Bold, Italic ) of the selected text by checking the
-     * style buttons
+     * Previous implementation moved/refactored to DatabaseManagerSwing
+     * (and anything that implements the interface 'DatabaseManagerInterface'
+     *
+     * Changes the style (Bold, Italic ) of the selected text
+     * by checking the style buttons
+     *
      */
     public static void setStyle() {
 
         int style = Font.PLAIN;
-
-        if (ckbbold.isSelected()) {
+        if (cboxBold.isSelected()) {
             style |= Font.BOLD;
         }
-
-        if (ckbitalic.isSelected()) {
+        if (cboxItalic.isSelected()) {
             style |= Font.ITALIC;
         }
 
-        fOwner.tTree.setFont(fOwner.txtCommand.getFont().deriveFont(style));
-        fOwner.txtCommand.setFont(
-            fOwner.txtCommand.getFont().deriveFont(style));
-        fOwner.txtResult.setFont(
-            fOwner.txtResult.getFont().deriveFont(style));
+        fOwner.setStyle(style);
     }
 
+    /**
+     * Displays a color chooser and Sets the selected color.
+     *
+     * @param inTarget
+     */
     public static void setColor(String inTarget) {
-
         if (inTarget.equals(BACKGROUND)) {
-            Color backgroundColor = JColorChooser.showDialog(null,
-                "DataBaseManagerSwing Choose Background Color",
-                fOwner.txtResult.getBackground());
-
-            if (backgroundColor != null) {
-                bgColorButton.setBackground(backgroundColor);
-                fOwner.txtCommand.setBackground(backgroundColor);
-                fOwner.txtResult.setBackground(backgroundColor);
-            }
+            fOwner.setBackground();
         } else {
-            Color foregroundColor = JColorChooser.showDialog(null,
-                "DataBaseManagerSwing Choose Foreground Color",
-                fOwner.txtResult.getForeground());
-
-            if (foregroundColor != null) {
-                fgColorButton.setBackground(foregroundColor);
-                fOwner.txtCommand.setForeground(foregroundColor);
-                fOwner.txtResult.setForeground(foregroundColor);
-            }
+            fOwner.setForeground();
         }
     }
+
 }

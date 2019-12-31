@@ -152,7 +152,7 @@ import org.hsqldb.lib.java.JavaSystem;
  * @version 2.3.0
  * @since 1.7.0
  */
-public class DatabaseManagerSwing extends JApplet
+public class DatabaseManagerSwing2 extends JApplet
 implements DatabaseManagerInterface, ActionListener, WindowListener, KeyListener, MouseListener {
 
     /*
@@ -216,7 +216,7 @@ implements DatabaseManagerInterface, ActionListener, WindowListener, KeyListener
 
     static {
         try {
-            Class.forName(DatabaseManagerSwing.class.getPackage().getName() + ".Transfer");
+            Class.forName(DatabaseManagerSwing2.class.getPackage().getName() + ".Transfer");
             TT_AVAILABLE = true;
         } catch (Throwable t) {
             //System.err.println("Failed to get "
@@ -294,7 +294,7 @@ implements DatabaseManagerInterface, ActionListener, WindowListener, KeyListener
     private boolean gridFormat   = true;
 
     // Added: (weconsultants@users)
-    static DatabaseManagerSwing refForFontDialogSwing;
+    static DatabaseManagerSwing2 refForFontDialogSwing;
     boolean                     displayRowCounts = false;
     boolean                     showSys          = false;
     boolean                     showIndexDetails = true;
@@ -356,13 +356,13 @@ implements DatabaseManagerInterface, ActionListener, WindowListener, KeyListener
     static String  defDirectory;
     private String schemaFilter = null;
 
-    public DatabaseManagerSwing() {
+    public DatabaseManagerSwing2() {
         jframe = new JFrame("HSQLDB DatabaseManager");
         fMain  = jframe;
     }
     ;
 
-    public DatabaseManagerSwing(JFrame frameIn) {
+    public DatabaseManagerSwing2(JFrame frameIn) {
         jframe = frameIn;
         fMain  = jframe;
     }
@@ -520,15 +520,15 @@ implements DatabaseManagerInterface, ActionListener, WindowListener, KeyListener
                  */
                 throw new IllegalArgumentException(
                     "invalid argrument " + currentArg + " try:  java... "
-                    + DatabaseManagerSwing.class.getName() + " --help");
+                    + DatabaseManagerSwing2.class.getName() + " --help");
 
                 // No reason to localize, since the main syntax message is
                 // not localized.
             }
         }
 
-        DatabaseManagerSwing m =
-            new DatabaseManagerSwing(new JFrame("HSQL Database Manager"));
+        DatabaseManagerSwing2 m =
+            new DatabaseManagerSwing2(new JFrame("HSQL Database Manager"));
 
         // Added: (weconsultants@users): Need databaseManagerSwing for later Reference
         refForFontDialogSwing = m;
@@ -588,7 +588,7 @@ implements DatabaseManagerInterface, ActionListener, WindowListener, KeyListener
      *
      * @param m
      */
-    public void postmain(DatabaseManagerSwing m) {
+    public void postmain(DatabaseManagerSwing2 m) {
         String  urlid        = null;
         String  rcFile       = null;
         boolean autoConnect  = false;

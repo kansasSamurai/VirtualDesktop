@@ -1,3 +1,16 @@
+/**
+ * This was tested using Groovy Console (via SpecGroovy) on TUE 12/31/2019;
+ * the stack was (in maven coordinates):
+ * - JDK8
+ * - org.codehaus.groovy, groovy-all , 2.3.0
+ *
+ * TODO I think the linear gradient can be fixed by adding graphicsbuilder-ext-jdk6-0.6.1.jar
+ * from https://github.com/codehaus/griffon/tree/master/builders/gfxbuilder/tags/GFXBUILDER_0.2.3/GfxPad/lib
+ * ... and obviously add it to the project repo
+ * ... this todo was added 12/31/2019... do it quick before another groovy repo gets removed
+ *
+ */
+
 // Adapted from - http://groovy.329449.n5.nabble.com/GraphicsPad-part-of-GraphicsBuilder-how-does-it-differ-from-GroovyConsole-td369964.html
 import groovy.swing.SwingBuilder
 import groovy.swing.j2d.GraphicsBuilder

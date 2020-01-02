@@ -1,9 +1,17 @@
+// This script modified but originally found at:
+// http://groovy.codehaus.org/Swing+Builder
+
+/**
+ * This was tested using Groovy Console (via SpecGroovy) on TUE 12/31/2019;
+ * the stack was (in maven coordinates):
+ * - JDK8
+ * - org.codehaus.groovy, groovy-all , 2.3.0
+ *
+ */
+
 import javax.swing.*
 import javax.swing.tree.DefaultMutableTreeNode as TreeNode
 import groovy.swing.SwingBuilder
-
-// This script modified but originally found at:
-// http://groovy.codehaus.org/Swing+Builder
 
 mboxes = [
     [name: "root@example.com", folders: [[name: "Inbox"], [name: "Trash"]]],
@@ -12,21 +20,21 @@ mboxes = [
 def swing = new SwingBuilder()
 JTree mboxTree
 swing.frame(
-    title: 'Mailer', 
+    title: 'Mailer',
     defaultCloseOperation: JFrame.DISPOSE_ON_CLOSE,
-    size: [800, 600], 
-    show: true, 
+    size: [800, 600],
+    show: true,
     locationRelativeTo: null) {
-    
+
     // Do not set/adjust look and feel when running within JVD
     // lookAndFeel("system")
-    
+
     menuBar() {
         menu(text: "File", mnemonic: 'F') {
             menuItem(text: "Exit", mnemonic: 'X', actionPerformed: {dispose() })
         }
     }
-    
+
     splitPane {
         scrollPane(constraints: "left", preferredSize: [160, -1]) {
             mboxTree = tree(rootVisible: false)

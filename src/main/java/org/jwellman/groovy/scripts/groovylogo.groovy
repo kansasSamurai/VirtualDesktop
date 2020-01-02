@@ -1,3 +1,10 @@
+/**
+ * This was tested using Groovy Console (via SpecGroovy) on TUE 12/31/2019;
+ * the stack was (in maven coordinates):
+ * - JDK8
+ * - org.codehaus.groovy, groovy-all , 2.3.0
+ * 
+ */
 import groovy.swing.SwingBuilder
 import groovy.swing.j2d.*
 import java.awt.BorderLayout as BL

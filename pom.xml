@@ -47,7 +47,8 @@
         <version>2.3.0</version>
     </dependency>
 
-    <!-- these are only necessary for groovy poc graphics scripts -->
+    <!-- this is only necessary for groovy poc graphics scripts -->
+    <!-- TODO add to project repo -->
     <dependency>
         <groupId>org.codehaus.groovy-contrib</groupId>
         <artifactId>graphicsbuilder</artifactId>
@@ -55,13 +56,14 @@
     </dependency>
 
     <!-- these are only necessary for groovy poc graphics scripts -->
+    <!-- TODO add to project repo -->
     <dependency>
         <groupId>org.kordamp</groupId>
         <artifactId>jsilhouette</artifactId>
         <version>0.2</version>
     </dependency>
 
-    <!-- SwingLabs inclusion was on purpose though nothing "currently
+    <!-- SwingLabs inclusion was on purpose though nothing "currently"
          utilizes it.  It actually has many useful Swing components
          and utilties for good UIs.  TODO create some beanshell scripts
          that demonstrate these features.

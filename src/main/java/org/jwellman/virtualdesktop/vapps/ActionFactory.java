@@ -18,12 +18,13 @@ import org.jwellman.virtualdesktop.desktop.VIcon;
 public class ActionFactory {
 
     public static Class<?>[] registeredApps = {
-        SpecBeanShell.class
-        ,SpecJCXConsole.class
+         SpecBeanShell.class
         ,SpecGroovyConsole.class // newly readded
+        ,SpecGroovyGraphics.class
         ,SpecJetty.class
         ,SpecHyperSQL.class
         ,SpecHyperSQLClient.class
+        ,SpecJCXConsole.class
         ,SpecJDatePicker.class
         ,SpecVfsFileChooser2.class // this isn't as bad as I originally thought... I was confusing it with XionFM and/or SpecJzy3D below.
         ,SpecJFreeChart.class

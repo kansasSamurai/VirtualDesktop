@@ -47,7 +47,14 @@
         <version>2.3.0</version>
     </dependency>
 
-    <!-- this is only necessary for groovy poc graphics scripts -->
+    <!-- https://mvnrepository.com/artifact/org.codehaus.gant/gant_groovy2.3 -->
+    <dependency>
+        <groupId>org.codehaus.gant</groupId>
+        <artifactId>gant_groovy2.3</artifactId>
+        <version>1.9.11</version>
+    </dependency>
+
+    <!-- this is only necessary for groovy poc graphics scripts; i.e. not necessary for a build -->
     <!-- TODO add to project repo -->
     <dependency>
         <groupId>org.codehaus.groovy-contrib</groupId>
@@ -55,7 +62,7 @@
         <version>0.6.1</version>
     </dependency>
 
-    <!-- these are only necessary for groovy poc graphics scripts -->
+    <!-- this is only necessary for groovy poc graphics scripts; i.e. not necessary for a build -->
     <!-- TODO add to project repo -->
     <dependency>
         <groupId>org.kordamp</groupId>

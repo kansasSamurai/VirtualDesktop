@@ -2,6 +2,7 @@ import org.jwellman.swing.layout.ResponsiveLayout;
 import org.jwellman.swing.jpanel.OverflowX;
 import javax.swing.border.Border;
 import javax.swing.BorderFactory;
+import org.jwellman.virtualdesktop.DesktopManager;
 
 public class LayoutDemo2 extends JPanel {
 
@@ -13,13 +14,13 @@ public class LayoutDemo2 extends JPanel {
     private Dimension[] sizes = {
         new Dimension(150,60),
         new Dimension(75,40),
-        new Dimension(50,30)    
+        new Dimension(50,30)
     };
-    
+
     public LayoutDemo2() {
         super(new BorderLayout());
 
-        JLabel label;        
+        JLabel label;
         l2("North", BorderLayout.NORTH);
         l2("South", BorderLayout.SOUTH);
         l2("East", BorderLayout.EAST);
@@ -46,15 +47,15 @@ public class LayoutDemo2 extends JPanel {
         panel.add(label);
         return label;
     }
-    
+
     private void l2(String title, String constraint) {
-        JPanel p = new JPanel(new GridBagLayout());       
+        JPanel p = new JPanel(new GridBagLayout());
             JLabel label = new JLabel(title);
             label.setBorder(border);
             p.add(label);
         this.add(p, constraint);
     }
-    
+
 }
 
 layoutdemo2() {
@@ -63,8 +64,9 @@ layoutdemo2() {
     this.panel = new LayoutDemo2();
 
     /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
-    this.iframe = jvd.app.createVApp(this.panel, "Responsive Layout");
-    
+    // this.iframe = jvd.app.createVApp(this.panel, "Responsive Layout");
+    this.iframe = DesktopManager.get().createVApp(this.panel, "Responsive Layout");
+
     print("Layout Demo2 started...");
     return this;
 }

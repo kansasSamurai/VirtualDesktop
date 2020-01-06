@@ -1,5 +1,4 @@
 
-
 /* ==============================================================
    Title: Create a vapp from a jpanel
    This is often useful, not only for your own prototypes,
@@ -22,8 +21,18 @@ new SwingBuilder().edt {
       borderLayout()
       ...
     }
-...    
+...
 }
 
 */
 
+/* ==============================================================
+   Title: Using AntBuilder to get a list of files
+   ...
+   ==============================================================
+*/
+def files = new AntBuilder().fileScanner {
+  fileset(dir: 'C:/Users/Rick/Downloads') { include(name: '*.png') }
+}
+
+files.each { file -> println(file) } ;

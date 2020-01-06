@@ -1,4 +1,42 @@
 import org.jwellman.swing_applets.FileNavigator;
+import org.jwellman.virtualdesktop.DesktopManager;
+import org.jwellman.swing_applets.SwingViewCreator;
+import java.awt.image.BufferedImage;
+
+x() {
+
+    createView(Object model, Object api) {
+        return new JButton("button");    
+    }
+    
+    return this;
+}
+
+z() {
+
+    this.dimFilePreview = new Dimension(149,149);
+    
+    createView(Object model, Object api) {
+        File file = (File)model;
+        
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setMinimumSize(dimFilePreview);
+        panel.setMaximumSize(dimFilePreview);
+        panel.setPreferredSize(dimFilePreview);
+
+        JButton button = new JButton(file.name);
+
+        ImageIcon icon = api.createFileIcon(file);
+        BufferedImage image = api.createScaledImage( icon, 126, 126 );
+        JLabel label = new JLabel(new ImageIcon(image));
+
+        panel.add(label, BorderLayout.CENTER);
+        panel.add(button, BorderLayout.SOUTH);
+        return panel;    
+    }
+    
+    return this;
+}
 
 bdemo() {
 
@@ -6,10 +44,12 @@ bdemo() {
     this.panel = new FileNavigator("C:\\");
 
     /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
-    this.iframe = DesktopManager.get().createVApp(this.panel, "Demo - File Navigator");
+    //this.iframe = DesktopManager.get().createVApp(this.panel, "Demo - File Navigator");
     
-    print("Demo started...");
+    print("Demo created...");
     return this;
 }
 
 jvd.bdemo = bdemo();
+jvd.bdemo.panel.setImageView(z());
+jvd.bdemo.iframe = DesktopManager.get().createVApp(jvd.bdemo.panel, "Demo - File Navigator");

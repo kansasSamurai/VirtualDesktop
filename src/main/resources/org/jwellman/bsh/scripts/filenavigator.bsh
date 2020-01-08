@@ -12,7 +12,7 @@ x() {
     return this;
 }
 
-z() {
+y() {
 
     this.dimFilePreview = new Dimension(149,149);
     
@@ -30,6 +30,67 @@ z() {
         BufferedImage image = api.createScaledImage( icon, 126, 126 );
         JLabel label = new JLabel(new ImageIcon(image));
 
+        panel.add(label, BorderLayout.CENTER);
+        panel.add(button, BorderLayout.SOUTH);
+        return panel;    
+    }
+    
+    return this;
+}
+
+public class JpadMouseAdapter extends MouseAdapter {
+    public void mousePressed(MouseEvent e) {
+        JComponent c = (JComponent)e.getSource();
+        TransferHandler handler = c.getTransferHandler();
+        handler.exportAsDrag(c, e, TransferHandler.COPY);
+    }
+}
+
+public class JpadDropTargetListener extends java.awt.dnd.DropTargetAdapter {
+
+        private java.awt.dnd.DropTarget dropTarget;
+
+        public JpadDropTargetListener(JLabel component) {
+            this.dropTarget = new java.awt.dnd.DropTarget(
+                component, java.awt.dnd.DnDConstants.ACTION_COPY, this, true, null);
+        }
+
+        public void drop(java.awt.dnd.DropTargetDropEvent event) {
+            try {
+                event.rejectDrop();
+            } catch (Exception e) {
+                e.printStackTrace();
+                event.rejectDrop();
+            }
+        }
+        
+}
+
+z() {
+
+    this.dimFilePreview = new Dimension(149,149);
+    this.mouseAdapter = new JpadMouseAdapter();
+    
+    createView(Object model, Object api) {
+        File file = (File)model;
+        
+        JPanel panel = new JPanel(new BorderLayout());
+            panel.setMinimumSize(dimFilePreview);
+            panel.setMaximumSize(dimFilePreview);
+            panel.setPreferredSize(dimFilePreview);
+
+        JButton button = new JButton(file.name);
+
+        ImageIcon icon = api.createFileIcon(file);
+        BufferedImage image = api.createScaledImage( icon, 136, 136 );
+        
+        JLabel label = new JLabel(new ImageIcon(image));
+            label.setTransferHandler(new TransferHandler("icon"));
+            label.addMouseListener(mouseAdapter);
+            if (file.name.startsWith("a")) // this line, and/or the next line, are optional
+                new JpadDropTargetListener(label);
+
+        // Assemble components into the panel...
         panel.add(label, BorderLayout.CENTER);
         panel.add(button, BorderLayout.SOUTH);
         return panel;    

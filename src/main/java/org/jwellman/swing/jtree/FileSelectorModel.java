@@ -1,19 +1,32 @@
 package org.jwellman.swing.jtree;
 
+import java.io.File;
 import java.util.Arrays;
 
 import javax.swing.event.TreeModelListener;
 import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 
+/**
+ * 
+ * @author rwellman
+ *
+ */
 public class FileSelectorModel implements TreeModel {
 
     private FileNode root;
+    
+    private boolean directoriesOnly;
 
     /**
      * the constructor defines the root.
      */
     public FileSelectorModel(String directory) {
+        this(directory, false);
+    }
+
+    public FileSelectorModel(String directory, boolean directoriesOnly) {
+    	this.directoriesOnly = directoriesOnly;
         root = new FileNode(directory);
         root.setRoot(true);
     }
@@ -28,8 +41,12 @@ public class FileSelectorModel implements TreeModel {
      */
     @Override
     public Object getChild(Object parent, int index) {
-        final FileNode parentNode = (FileNode) parent;
-        return new FileNode(parentNode, parentNode.listFiles()[index].getName());
+        final FileNode parentNode = (FileNode) parent;        
+    	if (directoriesOnly) {
+    		return new FileNode(parentNode, parentNode.listFiles(File::isDirectory)[index].getName());    		
+    	} else {
+            return new FileNode(parentNode, parentNode.listFiles()[index].getName());    		
+    	}
     }
 
     /**
@@ -41,14 +58,18 @@ public class FileSelectorModel implements TreeModel {
      */
     @Override
     public int getChildCount(Object parent) {
-        FileNode parentNode = (FileNode) parent;
-        if (parent == null 
-                || !parentNode.isDirectory()
-                || parentNode.listFiles() == null) {
-            return 0;
-        }
-
-        return parentNode.listFiles().length;
+        final FileNode parentNode = (FileNode) parent;
+    	if (parentNode == null) return 0;
+    	
+    	if (directoriesOnly) {    		
+    		return parentNode.listFiles(File::isDirectory).length;
+    	} else {
+            if (   !parentNode.isDirectory()
+                 || parentNode.listFiles() == null) {
+                return 0;
+            }
+            return parentNode.listFiles().length;    		
+    	}
     }
 
     /**
@@ -56,7 +77,11 @@ public class FileSelectorModel implements TreeModel {
      */
     @Override
     public boolean isLeaf(Object node) {
-        return (getChildCount(node) == 0);
+    	if (directoriesOnly) {    		
+    		return false; // we want ALL directories to appear as "folders" and they ALL *potentially* have children
+    	} else {
+            return (getChildCount(node) == 0);
+    	}
     }
 
     /**
@@ -67,7 +92,12 @@ public class FileSelectorModel implements TreeModel {
         FileNode parentNode = (FileNode) parent;
         FileNode childNode = (FileNode) child;
 
-        return Arrays.asList(parentNode.list()).indexOf(childNode.getName());
+    	if (directoriesOnly) {    		
+            return Arrays.asList(parentNode.listFiles(File::isDirectory)).indexOf(childNode);
+    	} else {
+            return Arrays.asList(parentNode.list()).indexOf(childNode.getName());
+    	}
+
     }
 
     // The following methods are not implemented, as we won't need them for this example.

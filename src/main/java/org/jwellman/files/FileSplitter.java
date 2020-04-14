@@ -4,6 +4,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
@@ -14,7 +16,7 @@ public class FileSplitter {
 	protected int filecount = 0;
 	protected File sourceFile;
 	protected File currentOutputFile;
-	protected File[] allOutputFiles;
+	protected List<File> allOutputFiles = new ArrayList<>();
 	protected BufferedWriter currentWriter;
 	protected String destinationPath;
 	protected String destinationPrefix = "output_";
@@ -37,14 +39,11 @@ public class FileSplitter {
 	protected File startNewFile() throws IOException {
 		this.filecount++;
 		
-		String absolutePath = sourceFile.getCanonicalPath();
-		String filepath = absolutePath.substring(0,absolutePath.lastIndexOf(File.separator));
-		
-		currentOutputFile = new File(
-				filepath, 
-				this.destinationPrefix 
-				+ this.filecount 
-				+ this.destinationExtension);
+		final String absolutePath = sourceFile.getCanonicalPath();
+		final String filepath = absolutePath.substring(0,absolutePath.lastIndexOf(File.separator));
+		final String destination = this.destinationPrefix + this.filecount + this.destinationExtension;
+				
+		this.allOutputFiles.add(currentOutputFile = new File(filepath, destination));
 		return currentOutputFile;
 	}
 
@@ -56,7 +55,7 @@ public class FileSplitter {
 		try {
 			FileSplitter
 			.splitByContent()
-			.startNewFileWhen(LINE.beginsWith("START "))
+			.startNewFileWhen(LINE.beginsWith("ISA*00*"))
 			.begin();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -67,6 +66,76 @@ public class FileSplitter {
 	public FileSplitter startNewFileWhen(LINE predicate) {
 		this.startFilePredicate = new BEGINSWITH(predicate.value);
 		return this;
+	}
+
+	/**
+	 * @return the linecount
+	 */
+	public int getLinecount() {
+		return linecount;
+	}
+
+	/**
+	 * @return the filecount
+	 */
+	public int getFilecount() {
+		return filecount;
+	}
+
+	/**
+	 * @return the sourceFile
+	 */
+	public File getSourceFile() {
+		return sourceFile;
+	}
+
+	/**
+	 * @return the currentOutputFile
+	 */
+	public File getCurrentOutputFile() {
+		return currentOutputFile;
+	}
+
+	/**
+	 * @return the allOutputFiles
+	 */
+	public List<File> getAllOutputFiles() {
+		return allOutputFiles;
+	}
+
+	/**
+	 * @return the currentWriter
+	 */
+	public BufferedWriter getCurrentWriter() {
+		return currentWriter;
+	}
+
+	/**
+	 * @return the destinationPath
+	 */
+	public String getDestinationPath() {
+		return destinationPath;
+	}
+
+	/**
+	 * @return the destinationPrefix
+	 */
+	public String getDestinationPrefix() {
+		return destinationPrefix;
+	}
+
+	/**
+	 * @return the destinationExtension
+	 */
+	public String getDestinationExtension() {
+		return destinationExtension;
+	}
+
+	/**
+	 * @return the startFilePredicate
+	 */
+	public Predicate getStartFilePredicate() {
+		return startFilePredicate;
 	}
 	
 }
@@ -113,7 +182,7 @@ class SplitByContent extends FileSplitter {
 
 		LineIterator it = null;
 		try {
-			this.sourceFile = new File("C:/dev/workspaces/textfiles/loremipsum.txt");
+			this.sourceFile = new File("C:/dev/workspaces/textfiles/Generate_EDI3020_20200326.txt");
 			
 			it = FileUtils.lineIterator(this.sourceFile, "UTF-8");
 			while (it.hasNext()) {
@@ -121,9 +190,8 @@ class SplitByContent extends FileSplitter {
 				linecount++;
 
 				if (startFilePredicate.evaluate(line)) {
-					if (this.currentWriter != null)
-						this.currentWriter.close();
-					currentWriter = new BufferedWriter(new FileWriter(this.startNewFile()));
+					if (this.currentWriter != null) this.currentWriter.close();
+					currentWriter = new BufferedWriter(new FileWriter(this.startNewFile()));										
 				}
 				/// do something with line
 				currentWriter.write(line);

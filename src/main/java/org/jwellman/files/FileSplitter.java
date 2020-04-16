@@ -1,13 +1,24 @@
 package org.jwellman.files;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
+import org.apache.commons.compress.archivers.ArchiveException;
+import org.apache.commons.compress.archivers.ArchiveOutputStream;
+import org.apache.commons.compress.archivers.ArchiveStreamFactory;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 
 public class FileSplitter {
@@ -46,21 +57,23 @@ public class FileSplitter {
 		this.allOutputFiles.add(currentOutputFile = new File(filepath, destination));
 		return currentOutputFile;
 	}
-
-	public void stuff() {
+	
+	public void stuff() throws IOException {
 		
+//		import org.jwellman.files.FileCompressor;
 //		import org.jwellman.files.FileSplitter;
 //		import org.jwellman.files.LINE;
+//		import org.jwellman.files.*;
 
-		try {
-			FileSplitter
-			.splitByContent()
-			.startNewFileWhen(LINE.beginsWith("ISA*00*"))
-			.begin();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
+		FileSplitter fs = FileSplitter
+		.splitByContent()
+		.startNewFileWhen(LINE.beginsWith("ISA*00*"))
+		.begin();
+
+		//		print fs.getAllOutputFiles();
+//		fs.addFilesToZip(fs.getAllOutputFiles());
+// or
+//      FileCompressor.zip(fs.getAllOutputFiles());
 	}
 
 	public FileSplitter startNewFileWhen(LINE predicate) {
@@ -182,7 +195,8 @@ class SplitByContent extends FileSplitter {
 
 		LineIterator it = null;
 		try {
-			this.sourceFile = new File("C:/dev/workspaces/textfiles/Generate_EDI3020_20200326.txt");
+			this.sourceFile = new File("C:/dev/workspaces/textfiles/loremipsum.txt");
+			// loremipsum , Generate_EDI3020_20200326
 			
 			it = FileUtils.lineIterator(this.sourceFile, "UTF-8");
 			while (it.hasNext()) {

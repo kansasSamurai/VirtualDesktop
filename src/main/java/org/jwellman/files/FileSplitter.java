@@ -122,13 +122,6 @@ public class FileSplitter {
 	}
 
 	/**
-	 * @return the currentWriter
-	 */
-	public BufferedWriter getCurrentWriter() {
-		return currentWriter;
-	}
-
-	/**
 	 * @return the destinationPath
 	 */
 	public String getDestinationPath() {
@@ -218,7 +211,7 @@ class SplitByContent extends FileSplitter {
 				}
 				/// do something with line
 				currentWriter.write(line);
-				currentWriter.write(System.lineSeparator());
+				currentWriter.newLine();
 			}
 
 		} finally {

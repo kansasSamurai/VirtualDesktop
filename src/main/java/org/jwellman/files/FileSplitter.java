@@ -1,24 +1,13 @@
 package org.jwellman.files;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.compress.archivers.ArchiveException;
-import org.apache.commons.compress.archivers.ArchiveOutputStream;
-import org.apache.commons.compress.archivers.ArchiveStreamFactory;
-import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 
 public class FileSplitter {
@@ -33,12 +22,26 @@ public class FileSplitter {
 	protected String destinationPrefix = "output_";
 	protected String destinationExtension = ".txt";
 	protected Predicate startFilePredicate;
-	
-	public static FileSplitter splitByContent() {		
-		return new SplitByContent();
+
+	/**
+	 * Constructor
+	 * Do NOT make public
+	 * ... this is called by subclasses only!
+	 * ... and subclasses are instantiated via the factory methods:
+	 * splitByContent()
+	 * splitByLineCount()
+	 * 
+	 * @param sourceFile
+	 */
+	protected FileSplitter(String sourceFile) {
+		this.sourceFile = new File(sourceFile);
+	}
+
+	public static FileSplitter splitByContent(String sourceFile) {		
+		return new SplitByContent(sourceFile);
 	}
 	
-	public static FileSplitter splitBySize() {
+	public static FileSplitter splitByLineCount(String sourceFile) {
 		throw new RuntimeException("Method not implemented");
 	}
 	
@@ -66,11 +69,13 @@ public class FileSplitter {
 //		import org.jwellman.files.*;
 
 		FileSplitter fs = FileSplitter
-		.splitByContent()
+		.splitByContent("filepath/.../filename.ext")
 		.startNewFileWhen(LINE.beginsWith("ISA*00*"))
 		.begin();
+		// this.sourceFile = new File("C:/dev/workspaces/textfiles/loremipsum.txt");
+		// loremipsum , Generate_EDI3020_20200326
 
-		//		print fs.getAllOutputFiles();
+//		print fs.getAllOutputFiles();
 //		fs.addFilesToZip(fs.getAllOutputFiles());
 // or
 //      FileCompressor.zip(fs.getAllOutputFiles());
@@ -191,11 +196,15 @@ class BEGINSWITH extends LINE {
 
 class SplitByContent extends FileSplitter {
 
+	protected SplitByContent(String sourceFile) {
+		super(sourceFile);
+	}
+
 	public FileSplitter begin() throws IOException {
 
 		LineIterator it = null;
 		try {
-			this.sourceFile = new File("C:/dev/workspaces/textfiles/loremipsum.txt");
+			// this.sourceFile = new File("C:/dev/workspaces/textfiles/loremipsum.txt");
 			// loremipsum , Generate_EDI3020_20200326
 			
 			it = FileUtils.lineIterator(this.sourceFile, "UTF-8");

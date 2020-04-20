@@ -43,8 +43,37 @@ has the drawback that one misbehaving tool can
 crash the entire JVM.  Therefore, if you use this
 environment to edit files, be sure that you save often.
 
+## JDK11
+
+Due to the current version of Groovy being used, the Groovy console will throw
+the following exception (via SpecGroovyConsole):
+
+```
+Caused by: java.lang.reflect.InaccessibleObjectException: 
+Unable to make jdk.internal.loader.ClassLoaders$AppClassLoader(jdk.internal.loader.ClassLoaders$PlatformClassLoader,jdk.internal.loader.URLClassPath) accessible: 
+module java.base 
+	does not "opens jdk.internal.loader" 
+	to unnamed module @3fd08df9
+```
+
+This appears to be a relatively common issue with legacy APIs as 
+explained on the following web pages:
+
+* [https://docs.oracle.com/javase/9/migrate/toc.htm]
+* [https://issues.apache.org/jira/browse/GROOVY-9390]
+* [https://docs.microsoft.com/en-us/azure/java/jdk/transition-from-java-8-to-java-11#warning-an-illegal-reflective-access-operation-has-occurred]
+
+If calling from the command line, use the JAVA_OPTS syntax below...
+If calling via and Eclipse project, add to the 'VM arguments' textarea on the Run configuration: 
+
+```
+JAVA_OPTS=--add-opens=java.base/jdk.internal.loader=ALL-UNNAMED
+VM arguments:  --add-opens=java.base/jdk.internal.loader=ALL-UNNAMED
+```
+
+
 ## Dependencies
-These three .jar files have to be manually downloaded and installed to your
+These four(4) .jar files have to be manually downloaded and installed to your
 local maven repository (if I determine that I can upload them as part
 of the project files then I will):
 

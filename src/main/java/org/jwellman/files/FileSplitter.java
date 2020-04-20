@@ -9,7 +9,14 @@ import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
+import org.jwellman.files.predicate.LINE;
+import org.jwellman.files.predicate.Predicate;
 
+/**
+ * 
+ * @author rwellman
+ *
+ */
 public class FileSplitter {
 
 	protected int linecount = 0;
@@ -63,26 +70,27 @@ public class FileSplitter {
 	
 	public void stuff() throws IOException {
 		
-//		import org.jwellman.files.FileCompressor;
-//		import org.jwellman.files.FileSplitter;
-//		import org.jwellman.files.LINE;
-//		import org.jwellman.files.*;
+//      import org.jwellman.files.FileCompressor;
+//      import org.jwellman.files.FileSplitter;
+//      import org.jwellman.files.LINE;
+//      import org.jwellman.files.*;
+//      import org.jwellman.files.predicate.*;
 
-		FileSplitter fs = FileSplitter
-		.splitByContent("filepath/.../filename.ext")
-		.startNewFileWhen(LINE.beginsWith("ISA*00*"))
-		.begin();
-		// this.sourceFile = new File("C:/dev/workspaces/textfiles/loremipsum.txt");
-		// loremipsum , Generate_EDI3020_20200326
+      FileSplitter fs = FileSplitter
+      .splitByContent("filepath/.../filename.ext")
+      .startNewFileWhen (LINE.beginsWith("ISA*00*")) // (LINELENGTH.equals(7))
+      .begin();
+      // this.sourceFile = new File("C:/dev/workspaces/textfiles/loremipsum.txt");
+      // loremipsum , Generate_EDI3020_20200326
 
-//		print fs.getAllOutputFiles();
-//		fs.addFilesToZip(fs.getAllOutputFiles());
-// or
-//      FileCompressor.zip(fs.getAllOutputFiles());
+//      print fs.getAllOutputFiles();
+//      fs.addFilesToZip(fs.getAllOutputFiles());
+//or
+//    FileCompressor.zip(fs.getAllOutputFiles());
 	}
 
-	public FileSplitter startNewFileWhen(LINE predicate) {
-		this.startFilePredicate = new BEGINSWITH(predicate.value);
+	public FileSplitter startNewFileWhen(Predicate<?> predicate) {
+		this.startFilePredicate = predicate;
 		return this;
 	}
 
@@ -145,48 +153,17 @@ public class FileSplitter {
 	/**
 	 * @return the startFilePredicate
 	 */
-	public Predicate getStartFilePredicate() {
+	public Predicate<?> getStartFilePredicate() {
 		return startFilePredicate;
 	}
 	
 }
 
-interface Predicate {	
-	boolean evaluate(String s);
-}
-
-class LINE implements Predicate {
-
-	protected String value;
-	
-	protected LINE(String value) {
-		this.value = value;
-	}
-	
-	public static LINE beginsWith(String s) {
-		return new BEGINSWITH(s);
-	}
-	
-	@Override
-	public boolean evaluate(String s) {
-		return false;
-	}
-	
-}
-
-class BEGINSWITH extends LINE {
-	
-	protected BEGINSWITH(String value) {
-		super(value);
-	}
-	
-	@Override
-	public boolean evaluate(String s) {
-		return s.startsWith(value);
-	}
-	
-}
-
+/**
+ * 
+ * @author rwellman
+ *
+ */
 class SplitByContent extends FileSplitter {
 
 	protected SplitByContent(String sourceFile) {
@@ -195,30 +172,32 @@ class SplitByContent extends FileSplitter {
 
 	public FileSplitter begin() throws IOException {
 
-		LineIterator it = null;
-		try {
-			// this.sourceFile = new File("C:/dev/workspaces/textfiles/loremipsum.txt");
-			// loremipsum , Generate_EDI3020_20200326
-			
-			it = FileUtils.lineIterator(this.sourceFile, "UTF-8");
+    	try (LineIterator it = FileUtils.lineIterator(this.sourceFile, "UTF-8")) {
+						
 			while (it.hasNext()) {
-				String line = it.nextLine();
-				linecount++;
+				
+				// Read the next line and increment the line count
+				final String line = it.nextLine(); linecount++;
 
+				// First thing is first... should this line start a new output file?
 				if (startFilePredicate.evaluate(line)) {
 					if (this.currentWriter != null) this.currentWriter.close();
+					// TODO... this assignment of currentWriter is probably best embedded inside startNewFile()
 					currentWriter = new BufferedWriter(new FileWriter(this.startNewFile()));										
 				}
-				/// do something with line
-				currentWriter.write(line);
-				currentWriter.newLine();
+				
+				
+				
+
+				// ... if a file is open, write the line to the current output file
+				if (currentWriter != null) {
+					currentWriter.write(line);
+					currentWriter.newLine();					
+				}
 			}
 
 		} finally {
-			if (it != null)
-				LineIterator.closeQuietly(it);
-			if (currentWriter != null)
-				currentWriter.close();
+			if (currentWriter != null) currentWriter.close();
 		}		 
 		 
 		return this;

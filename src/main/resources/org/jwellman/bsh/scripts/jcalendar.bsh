@@ -127,6 +127,7 @@ These commands can now be run from the console:
 
 jvd.calendar = DesktopManager.get().createVApp(new org.jwellman.jcalendar.VDayChooser(), "my calendar");
 or,
+// Use the following two lines when using the demo() method/closure
 jvd.calendar = new org.jwellman.jcalendar.VDayChooser();
 DesktopManager.get().createVApp(jvd.calendar, "my calendar");
 
@@ -207,7 +208,7 @@ demo = demo();
 demo.panel = jvd.calendar;
 
 /*
-demo.option = 1;
+demo.option = 1; // setDay
 demo.day = 7;  
 SwingUtilities.invokeLater( demo );
 

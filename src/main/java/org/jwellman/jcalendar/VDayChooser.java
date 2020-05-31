@@ -94,11 +94,11 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
 
     protected boolean weekOfYearVisible;
 
-    protected boolean decorationBackgroundVisible = true;
+    protected boolean decorationBackgroundVisible = false;
 
     protected boolean decorationBordersVisible;
 
-    protected boolean dayHeadersVisible; // newf
+    protected boolean dayHeadersVisible = true; // newf
     
 	protected boolean dayBordersVisible;
 

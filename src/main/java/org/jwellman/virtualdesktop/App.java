@@ -50,6 +50,7 @@ import org.jwellman.virtualdesktop.desktopmgr.VAppListSelectionListener;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
 import org.jwellman.virtualdesktop.vapps.*;
 import org.jwellman.virtualdesktop.vswing.VDesktopPane;
+// import org.pushingpixels.substance.api.skin.SubstanceGraphiteLookAndFeel;
 
 /**
  * A Virtual Desktop.
@@ -80,8 +81,9 @@ public class App extends JFrame implements ActionListener {
     public static final int LAF_METAL = 5;
     public static final int LAF_JTATTOO = 7;
     public static final int LAF_FLATLAF = 8;
+    public static final int LAF_SUBSTANCE = 9;
     public static final int CHOSEN_LAF = LAF_JTATTOO;
-    
+
     /**
      * This is only nececessary for a temp dev menu item; can eventually be removed
      * Even now, I could probably use ActionFactory registeredApps instead.
@@ -125,7 +127,7 @@ public class App extends JFrame implements ActionListener {
 
         desktop = new VDesktopPane(); // new JDesktopPane(); //a specialized layered pane
         DesktopManager.get().setDesktop(desktop);
-        
+
         int version = 5;
         switch (version) {
             case 1:
@@ -165,29 +167,29 @@ public class App extends JFrame implements ActionListener {
                 JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, controls, dsp);
                 splitPane.setOneTouchExpandable(true);
                 splitPane.setDividerLocation(150);
-                                
+
                 p.add(splitPane);
                 this.setContentPane(p);
                 break;
             case 5:
                 controls = new JPanel(new BorderLayout());
-                
+
                 DefaultEventListModel<VirtualAppFrame> listmodel = GlazedListsSwing.eventListModel(DesktopManager.get().getFrames());
-                
+
                 final JList<VirtualAppFrame> jlist = new JList<>(listmodel);
                 jlist.setCellRenderer(new VAppListCellRenderer());
                 jlist.addListSelectionListener(DesktopManager.get()); // (new VAppListSelectionListener(jlist));
                 controls.add(jlist, BorderLayout.CENTER); // (new JScrollPane(jlist), BorderLayout.CENTER);
-            	DesktopManager.get().setObservedJList(jlist);                
+            	DesktopManager.get().setObservedJList(jlist);
 
                 dsp = new DesktopScrollPane(desktop);
 
                 //Create a split pane with the two scroll panes in it.
                 JSplitPane splitPane2 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, controls, dsp);
                 splitPane2.setOneTouchExpandable(true);
-                splitPane2.setDividerLocation(150);                                
+                splitPane2.setDividerLocation(150);
                 p.add(splitPane2);
-                
+
                 this.setContentPane(p);
                 break;
 
@@ -386,20 +388,26 @@ public class App extends JFrame implements ActionListener {
                             props.put("subTextFont", "Consolas BOLD 10"); // ???
                             props.put("userTextFont", "Calibri PLAIN 14"); // JLabel, JCheckbox, Tab Titles, ... // Aluminium only respects:  TableHeaders, Checkboxes, (I assume RadioButtons), ...
                             props.put("menuTextFont", "Calibri PLAIN 12"); // JMenu, ...
-                            props.put("systemTextFont", "Baskerville BOLD 24"); 
+                            props.put("systemTextFont", "Baskerville BOLD 24");
                             props.put("controlTextFont", "Calibri PLAIN 14"); // JButton, ... // Aluminium does not respect this... well... maybe it does, I just don't know what components it affects yet?
                             props.put("windowTitleFont", "Calibri PLAIN 16"); // JFrame, (JInternalFrame I asume), ...
 
                         	AluminiumLookAndFeel.setCurrentTheme(props);
-                        	UIManager.setLookAndFeel("com.jtattoo.plaf.aluminium.AluminiumLookAndFeel");  
+                        	UIManager.setLookAndFeel("com.jtattoo.plaf.aluminium.AluminiumLookAndFeel");
                         	System.out.println("LAF := JTattoo");
                         	break;
                         case LAF_FLATLAF:
                         	// UIManager.setLookAndFeel( new FlatDarkLaf() );
                         	UIManager.setLookAndFeel( new FlatLightLaf() );
                         	System.out.println("LAF := FlatLAF");
-                        	
+
                         	break;
+                        case LAF_SUBSTANCE:
+// June 2020 : I am deprecating this LAF for now; it is not terrible... just not worth keeping.
+//                            UIManager.setLookAndFeel(new SubstanceGraphiteLookAndFeel());
+//                        	System.out.println("LAF := Substance");
+
+                            break;
                         case 99:
                             // This is my original code; don't use it.
                             UIManager.installLookAndFeel("Web", "com.alee.laf.WebLookAndFeel");
@@ -417,7 +425,7 @@ public class App extends JFrame implements ActionListener {
                     }
                 } catch (Exception e) {
                 	System.out.println("LAF := (fallback)");
-                	
+
                     // If Nimbus is not available, you can set the GUI to another look and feel.
                     final String sys = UIManager.getSystemLookAndFeelClassName();
                     try {

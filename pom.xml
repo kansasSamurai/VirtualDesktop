@@ -306,6 +306,24 @@
         <version>1.6.11</version>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/org.java.net.substance/substance 
+    ## While this is a professional and well written look and feel, it had
+    ## some small (but admittedly subjective) issues so I don't really want
+    ## to bloat my dependencies with it at this time.  The issues were:
+    ## * The animations looked good but not so much as to provide real "value"
+    ##   and they seemed to affect performance on my laptop.
+    ## * Again, while this LAF looks good, it does not really add any aesthetic
+    ##   value over those that I already use.  
+    ## * Finally, the author of this LAF has moved onto a new Java9+ LAF...
+    ##   hopefully by the time I get this project to Java9 I would want to
+    ##   opt for his newer project.
+    <dependency>
+        <groupId>org.java.net.substance</groupId>
+        <artifactId>substance</artifactId>
+        <version>6.0</version>
+    </dependency>
+    -->
+
     <!-- meh
     <dependency>
        <groupId>com.seaglasslookandfeel</groupId>

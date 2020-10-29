@@ -140,6 +140,8 @@ demo() {
     this.panel = 1;
 
     this.day = 7;
+    this.year = 2020;
+    this.month = 6;
 
     this.color = Color.black;
     
@@ -158,6 +160,8 @@ demo() {
             case 6: toggleDecorationBackgroundVisible(); break;
             case 7: setDecorationBackgroundColor(); break;
             case 8: toggleDayBordersVisible(); break;
+            case 9: setMonth(); break;
+            case 10: setYear(); break;
             default:
               print("Invalid Option Selected");
         }        
@@ -191,6 +195,16 @@ demo() {
         this.panel.setDay(this.day);
     }
 
+    setMonth() {
+        print("Setting month to: " + this.month);
+        this.panel.setMonth(this.month);
+    }
+
+    setYear() {
+        print("Setting year to: " + this.year);
+        this.panel.setYear(this.year);
+    }
+
     setSundayForeground() {
         print("Setting sunday foreground to: " + this.color);
         this.panel.setSundayForeground(this.color);
@@ -206,6 +220,7 @@ demo() {
 
 demo = demo();
 demo.panel = jvd.calendar;
+
 
 /*
 demo.option = 1; // setDay
@@ -230,6 +245,29 @@ SwingUtilities.invokeLater( demo );
 
 */
 
+// ===================================
+/* This is an example of how to add a property change listener */
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+
+demo.listener = new PropertyChangeListener() {
+     propertyChange(PropertyChangeEvent e) {
+        String propertyName = e.getPropertyName();
+        if ("day".equals(propertyName)) {
+            print("day todo: " + e.getNewValue());
+            print(jvd.calendar.month);
+            print(jvd.calendar.year);            
+        } else {
+            print("unhandled property: " + propertyName);
+        }
+    }
+};
+
+jvd.calendar.alwaysFireDayProperty = true;
+jvd.calendar.addPropertyChangeListener(demo.listener);
+
+
+// ====================================
 
 jcaldemo = virtdemo();
 layout = (BorderLayout)jcaldemo.panel.getLayout();

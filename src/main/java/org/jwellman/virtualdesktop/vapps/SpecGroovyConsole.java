@@ -49,15 +49,15 @@ public class SpecGroovyConsole extends VirtualAppSpec {
     }
 
     @Override
-    public void populateInternalFrame(JInternalFrame frame, JDesktopPane desktop) {
-    	System.out.println("populateInternalFrame()");
+    public void populateInternalFrame(JInternalFrame iframe, JDesktopPane desktop) {
+    	System.out.println("SpecGroovyConsole::populateInternalFrame()");
 
     	boolean trySomethingElse = false;
     	if (trySomethingElse) {
     		// 12/5/2019... I thought this worked once...
     		// maybe I thought it would but never finished the POC...
             final HashMap<String, Component> map = new HashMap<>();
-            map.put("rootContainerDelegate", frame);
+            map.put("rootContainerDelegate", iframe);
 
             Console c = new Console();
             c.run(map); // this is a hack! not sure if it will even work
@@ -65,28 +65,29 @@ public class SpecGroovyConsole extends VirtualAppSpec {
     	} else {
 
     		// This works ...
-    		// ... but results in leaving the original JFrame which is
-    		// ultimately undesirable.
 	        Console c = new Console(); c.run();
+	        // TODO use a jprogressbar since c.run() takea a little bit of time.
+	        
 	        final JFrame jframe = (JFrame) c.getFrame();
-            this.setContent(this.createDefaultContent(jframe.getContentPane()));
+	        final JPanel content = this.createDefaultContent(jframe.getContentPane());
+	        this.setContent(content);
 
-    		frame.add(this.getContent());
-      		frame.setJMenuBar(jframe.getRootPane().getJMenuBar());
+    		iframe.add(this.getContent());
+      		iframe.setJMenuBar(jframe.getRootPane().getJMenuBar());
     		// DONE apparently the groovy .png is "big"... resize to look better in the DesktopManager
-    		frame.setFrameIcon(new ImageIcon( jframe.getIconImage().getScaledInstance(20, 20, java.awt.Image.SCALE_SMOOTH) ));
+    		iframe.setFrameIcon(new ImageIcon( jframe.getIconImage().getScaledInstance(20, 20, java.awt.Image.SCALE_SMOOTH) ));
 
     		SwingUtilities.invokeLater(() -> {
     			// TODO this is required because the edit panel and output panel do not have preferred sizes
-    			frame.setPreferredSize(new Dimension(200, 300)); 
-        		frame.pack();
-        		frame.setVisible(true);
+    			iframe.setPreferredSize(new Dimension(200, 300)); 
+        		iframe.pack();
+        		iframe.setVisible(true);
 
+        		// Remove the original jframe by setting its visibility to false
                 jframe.setVisible(false);
     		} );
 
     	}
-
 
     }
 

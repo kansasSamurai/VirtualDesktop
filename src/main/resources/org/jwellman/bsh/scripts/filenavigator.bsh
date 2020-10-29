@@ -101,11 +101,12 @@ z() {
 
 bdemo() {
 
-    /** A JPanel extension that contains the java color chooser */
+    /** A JPanel extension that contains a directory navigation tree */
     this.panel = new FileNavigator("C:\\");
 
     /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
     //this.iframe = DesktopManager.get().createVApp(this.panel, "Demo - File Navigator");
+    this.iframe = 1;
     
     print("Demo created...");
     return this;

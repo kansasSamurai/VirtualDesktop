@@ -21,6 +21,7 @@ JPanel yourpanel
 def options = [true, true, true]
 def chart = ChartFactory.createPieChart("Pie Chart Sample", piedataset, *options)
 chart.backgroundPaint = Color.white
+
 def swing = new SwingBuilder()
 swing.edt {
 //    frame(title:'Groovy PieChart', defaultCloseOperation:WC.DISPOSE_ON_CLOSE) {

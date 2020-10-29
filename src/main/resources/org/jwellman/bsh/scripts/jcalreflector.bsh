@@ -1,0 +1,67 @@
+public class CalendarReflector extends JPanel 
+    implements PropertyChangeListener {
+
+    public CalendarReflector( ) {
+        //this.setLayout();
+        JLabel description = new JLabel("mm/dd/yyyy");
+        this.add(description);
+
+        JTextField one = new JTextField(10);
+        this.add(one);
+    }
+
+    public void propertyChange(PropertyChangeEvent e) {
+        String propertyName = e.getPropertyName();
+        if ("day".equals(propertyName)) {
+            print("Reflector: " 
+                + jvd.calendar.month + "/"
+                + e.getNewValue() + "/"
+                + jvd.calendar.year
+            );
+        } else {
+            print("unhandled property: " + propertyName);
+        }
+    }
+        
+}
+
+cdemo() {
+
+    this.panel = new CalendarReflector( );
+
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    //this.iframe = DesktopManager.get().createVApp(this.panel, "Demo - File Navigator");
+    this.iframe = 1;
+    
+    print("Demo created...");
+    return this;
+}
+
+jvd.cdemo = cdemo();
+jvd.cdemo.iframe = DesktopManager.get().createVApp(jvd.cdemo.panel, "Demo - Calendar Utils");
+//jvd.calendar.addPropertyChangeListener(jvd.cdemo.panel);
+
+
+// ===================================
+
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+
+jvd.cdemo.listener = new PropertyChangeListener() {
+     propertyChange(PropertyChangeEvent e) {
+        comp = jvd.cdemo.panel;
+        
+        String propertyName = e.getPropertyName();
+        if ("day".equals(propertyName)) {
+            comp.one.setText( ""
+                + jvd.calendar.month + "/"
+                + e.getNewValue() + "/"
+                + jvd.calendar.year
+            );
+        } else {
+            print("unhandled property: " + propertyName);
+        }
+    }
+};
+
+jvd.calendar.addPropertyChangeListener(jvd.cdemo.listener);

@@ -430,6 +430,14 @@
         <version>2.3.0</version>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
+    <dependency>
+        <groupId>mysql</groupId>
+        <artifactId>mysql-connector-java</artifactId>
+        <version>5.1.49</version>
+        <scope>runtime</scope>
+    </dependency>
+
     <dependency>
       <groupId>ca.krasnay</groupId>
       <artifactId>sqlbuilder</artifactId>

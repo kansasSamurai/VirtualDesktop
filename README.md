@@ -43,7 +43,7 @@ has the drawback that one misbehaving tool can
 crash the entire JVM.  Therefore, if you use this
 environment to edit files, be sure that you save often.
 
-## JDK11
+## JDK9 and JDK11
 
 Due to the current version of Groovy being used, the Groovy console will throw
 the following exception (via SpecGroovyConsole):
@@ -64,7 +64,7 @@ explained on the following web pages:
 * [https://docs.microsoft.com/en-us/azure/java/jdk/transition-from-java-8-to-java-11#warning-an-illegal-reflective-access-operation-has-occurred]
 
 If calling from the command line, use the JAVA_OPTS syntax below...
-If calling via and Eclipse project, add to the 'VM arguments' textarea on the Run configuration: 
+If calling via an Eclipse project, add to the 'VM arguments' textarea option via the Run configuration: 
 
 ```
 JAVA_OPTS=--add-opens=java.base/jdk.internal.loader=ALL-UNNAMED

@@ -131,6 +131,12 @@ public class SpecJetty extends VirtualAppSpec {
         return server;
     }
 
+	/**
+	 * http://localhost:8080/helloworld
+	 * 
+	 * @author rcwel
+	 *
+	 */
 	private class HelloWorld extends AbstractHandler {
 		
 	    @Override

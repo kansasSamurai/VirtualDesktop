@@ -4,7 +4,9 @@ import javax.swing.*;
 import org.jwellman.virtualdesktop.DesktopManager;
 import org.jwellman.virtualdesktop.vapps.VirtualAppSpec;
 
-/* TODO:  the current implementation of createvapp with internalfameprovider = true
+/**
+ *
+ * TODO:  the current implementation of createvapp with internalfameprovider = true
  * will create a default internal iframe that is useless and therefore excess;
  * need to rethink this.
  * 

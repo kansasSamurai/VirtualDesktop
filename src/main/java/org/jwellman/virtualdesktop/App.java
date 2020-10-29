@@ -1,15 +1,6 @@
 package org.jwellman.virtualdesktop;
 
-import com.alee.laf.WebLookAndFeel;
-import com.formdev.flatlaf.FlatDarkLaf;
-import com.formdev.flatlaf.FlatLightLaf;
-import com.jtattoo.plaf.aluminium.AluminiumLookAndFeel;
-
-import ca.odell.glazedlists.swing.DefaultEventListModel;
-import ca.odell.glazedlists.swing.GlazedListsSwing;
-
 import java.awt.BorderLayout;
-import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.Toolkit;
@@ -19,6 +10,7 @@ import java.awt.event.KeyEvent;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javax.swing.Action;
 import javax.swing.Icon;
 import javax.swing.JDesktopPane;
@@ -35,21 +27,35 @@ import javax.swing.KeyStroke;
 import javax.swing.UIManager;
 import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.UnsupportedLookAndFeelException;
-import javax.swing.plaf.metal.DefaultMetalTheme;
 import javax.swing.plaf.metal.MetalLookAndFeel;
 import javax.swing.plaf.metal.OceanTheme;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
-import org.jwellman.swing.plaf.metal.MetalThemeManager;
+
 //import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
 //import static org.jwellman.virtualdesktop.App.registeredApps;
 import org.jwellman.virtualdesktop.desktop.VActionLNF;
 import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.VShortcut;
 import org.jwellman.virtualdesktop.desktopmgr.VAppListCellRenderer;
-import org.jwellman.virtualdesktop.desktopmgr.VAppListSelectionListener;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
-import org.jwellman.virtualdesktop.vapps.*;
+import org.jwellman.virtualdesktop.vapps.ActionFactory;
+import org.jwellman.virtualdesktop.vapps.DesktopAction;
+import org.jwellman.virtualdesktop.vapps.SpecBeanShell;
+import org.jwellman.virtualdesktop.vapps.SpecHyperSQL;
+import org.jwellman.virtualdesktop.vapps.SpecJCXConsole;
+import org.jwellman.virtualdesktop.vapps.SpecJFreeChart;
+import org.jwellman.virtualdesktop.vapps.SpecUberDragAndDrop;
+import org.jwellman.virtualdesktop.vapps.SpecXChartDemo;
+import org.jwellman.virtualdesktop.vapps.SpecXionFM;
 import org.jwellman.virtualdesktop.vswing.VDesktopPane;
+
+import com.alee.laf.WebLookAndFeel;
+import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLightLaf;
+import com.jtattoo.plaf.aluminium.AluminiumLookAndFeel;
+
+import ca.odell.glazedlists.swing.DefaultEventListModel;
+import ca.odell.glazedlists.swing.GlazedListsSwing;
 // import org.pushingpixels.substance.api.skin.SubstanceGraphiteLookAndFeel;
 
 /**
@@ -81,7 +87,7 @@ public class App extends JFrame implements ActionListener {
     public static final int LAF_METAL = 5;
     public static final int LAF_JTATTOO = 7;
     public static final int LAF_FLATLAF = 8;
-    public static final int LAF_SUBSTANCE = 9;
+    public static final int LAF_SUBSTANCE = 9; // deprecated / not currently used
     public static final int CHOSEN_LAF = LAF_JTATTOO;
 
     /**
@@ -397,9 +403,13 @@ public class App extends JFrame implements ActionListener {
                         	System.out.println("LAF := JTattoo");
                         	break;
                         case LAF_FLATLAF:
-                        	// UIManager.setLookAndFeel( new FlatDarkLaf() );
-                        	UIManager.setLookAndFeel( new FlatLightLaf() );
                         	System.out.println("LAF := FlatLAF");
+
+                        	int flatTheme = 2;
+                        	switch (flatTheme) {
+                        	case 1: UIManager.setLookAndFeel( new FlatLightLaf() ); break;
+                        	case 2: UIManager.setLookAndFeel( new FlatDarkLaf() ); break;
+                        	}
 
                         	break;
                         case LAF_SUBSTANCE:

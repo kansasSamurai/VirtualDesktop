@@ -62,6 +62,12 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
     // The currently selected day of the month (1-31); 0 when nothing selected
     protected int day;
 
+    // The current month being displayed
+    protected int month;
+    
+	// The current year being displayed
+    protected int year;
+    
     protected Color oldDayBackgroundColor;
 
     protected Color selectedColor; // newf; accessors - this was previously not exposed
@@ -500,11 +506,10 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
     }
 
     /**
-     * this is needed for JDateChooser.
+     * This is needed for JDateChooser.
      * 
      * @param alwaysFire
-     *            true, if day property shall be fired every time a day is
-     *            chosen.
+     *            true, if day property shall be fired every time a day is chosen.
      */
     public void setAlwaysFireDayProperty(boolean alwaysFire) {
         alwaysFireDayProperty = alwaysFire;
@@ -522,13 +527,15 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
     }
 
     /**
-     * Sets a specific month. This is needed for correct graphical
-     * representation of the days.
+     * Sets a specific month. 
+     * This is needed for correct graphical representation of the days.
      * 
      * @param month
      *            the new month
      */
     public void setMonth(int month) {
+    	this.month = month;
+    	
         calendar.set(Calendar.MONTH, month);
         int maxDays = calendar.getActualMaximum(Calendar.DAY_OF_MONTH);
 
@@ -540,20 +547,36 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
     }
 
     /**
-     * Sets a specific year. This is needed for correct graphical representation
-     * of the days.
+	 * @return the month
+	 */
+	public int getMonth() {
+		return month;
+	}
+
+    /**
+     * Sets a specific year. 
+     * This is needed for correct graphical representation of the days.
      * 
      * @param year
      *            the new year
      */
     public void setYear(int year) {
+    	this.year = year;
+    	
         calendar.set(Calendar.YEAR, year);
         drawDays();
     }
 
+	/**
+	 * @return the year
+	 */
+	public int getYear() {
+		return year;
+	}
+
     /**
-     * Sets a specific calendar. This is needed for correct graphical
-     * representation of the days.
+     * Sets a specific calendar. 
+     * This is needed for correct graphical representation of the days.
      * 
      * @param calendar
      *            the new calendar

@@ -31,7 +31,7 @@ import java.io.*;
  * You should have received a copy of the GNU Lesser Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Please ee the following page for the LGPL license:
+ * Please see the following page for the LGPL license:
  * http://www.gnu.org/licenses/lgpl.txt
  *
  */
@@ -92,14 +92,21 @@ class ThreadedStreamHandler extends Thread {
         // on mac os x 10.5.x, when i run a 'sudo' command, i need to write
         // the admin password out immediately; that's why this code is here.
         if (sudoIsRequested) {
-            //doSleep(500);
+            doSleep(500);
             printWriter.println(adminPassword);
             printWriter.flush();
         }
 
         BufferedReader bufferedReader = null;
         try {
-            bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+
+            final InputStreamReader isr = new InputStreamReader(inputStream, "cp850"); // "cp437" works!! as does "cp850"!! 
+            // These do not work as "desired" on windows(10):   , "Cp1252"); // "ISO-8859-1"); // "UTF8");
+            // The encodings are from the following URL with a hint using the windows 'chcp' command
+            // https://docs.oracle.com/javase/8/docs/technotes/guides/intl/encoding.doc.html
+            System.out.println("TSH encoding: " + isr.getEncoding() + " : " + inputStream.getClass().getCanonicalName());
+            
+            bufferedReader = new BufferedReader(isr);
             String line = null;
             while ((line = bufferedReader.readLine()) != null) {
                 this.lineOut(line);
@@ -124,7 +131,8 @@ class ThreadedStreamHandler extends Thread {
     protected void lineOut(String line) {
         outputBuffer.append(line).append("\n");
     }
-
+    
+    /** This method is only required when sudoIsRequested = true */
     private void doSleep(long millis) {
         try {
             Thread.sleep(millis);

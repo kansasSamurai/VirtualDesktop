@@ -1,7 +1,11 @@
 package org.jwellman.jcx;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.List;
+
 import javax.swing.JTextArea;
 
 /**
@@ -33,15 +37,15 @@ import javax.swing.JTextArea;
  *
  */
 public class SystemCommandExecutor {
+	
+    private String adminPassword ;
+    private List<String> commandInformation ;
+    private ThreadedStreamHandler inputStreamHandler ;
+    private ThreadedStreamHandler errorStreamHandler ;
 
-  private List<String> commandInformation;
-  private String adminPassword;
-  private ThreadedStreamHandler inputStreamHandler;
-  private ThreadedStreamHandler errorStreamHandler;
-
-  private JTextArea stderr;
-  private JTextArea stdout;
-  private File directory;
+    private JTextArea txtStdErr ;
+    private JTextArea txtStdOut ;
+    private File directory ;
 
   /**
    * Pass in the system command you want to run as a List of Strings, as shown here:
@@ -68,8 +72,8 @@ public class SystemCommandExecutor {
     if (commandInformation==null) throw new NullPointerException("The commandInformation is required.");
     this.commandInformation = commandInformation;
     this.adminPassword = null;
-    this.stdout = stdout;
-    this.stderr = stderr;
+    this.txtStdOut = stdout;
+    this.txtStdErr = stderr;
     this.directory = directory;
   }
 
@@ -84,22 +88,21 @@ public class SystemCommandExecutor {
     int exitValue = -99;
 
     try {
-      ProcessBuilder pb = new ProcessBuilder(commandInformation);
+      final ProcessBuilder pb = new ProcessBuilder(commandInformation);
       pb.directory(this.directory); // this handles null
-      Process process = pb.start();
-
-      // you need this if you're going to write something to the command's input stream
+      
+      final Process process = pb.start();
+      final InputStream inputStream = process.getInputStream(); // [2]
+      final InputStream errorStream = process.getErrorStream(); // [2]
+      final OutputStream outputStream = process.getOutputStream(); // [1]
+      // [1] You need this if you're going to write something to the command's input stream
       // (such as when invoking the 'sudo' command, and it prompts you for a password).
-      OutputStream stdOutput = process.getOutputStream();
-
-      // i'm currently doing these on a separate line here in case i need to set them to null
+      // [2] I'm currently doing these on a separate line here in case i need to set them to null
       // to get the threads to stop.
       // see http://java.sun.com/j2se/1.5.0/docs/guide/misc/threadPrimitiveDeprecation.html
-      InputStream inputStream = process.getInputStream();
-      InputStream errorStream = process.getErrorStream();
 
-      // these need to run as java threads to get the standard output and error from the command.
-      // the inputstream handler gets a reference to our stdOutput in case we need to write
+      // These need to run as java threads to get the standard output and error from the command.
+      // The inputstream handler gets a reference to our stdOutput in case we need to write
       // something to it, such as with the sudo command
       errorStreamHandler = this.getErrorHandler(errorStream); // new ThreadedStreamHandler(errorStream);
       inputStreamHandler = this.getInputHandler(inputStream); // new ThreadedStreamHandler(inputStream, stdOutput);
@@ -130,13 +133,13 @@ public class SystemCommandExecutor {
   }
 
   private ThreadedStreamHandler getErrorHandler(InputStream is) {
-      if (stderr == null) return new ThreadedStreamHandler(is);
-      else return new ThreadedSwingHandler(is, stderr);
+      if (txtStdErr == null) return new ThreadedStreamHandler(is);
+      else return new ThreadedSwingHandler(is, txtStdErr);
   }
 
   private ThreadedStreamHandler getInputHandler(InputStream is) {
-      if (stdout == null) return new ThreadedStreamHandler(is);
-      else return new ThreadedSwingHandler(is, stdout);
+      if (txtStdOut == null) return new ThreadedStreamHandler(is);
+      else return new ThreadedSwingHandler(is, txtStdOut);
   }
 
   /**

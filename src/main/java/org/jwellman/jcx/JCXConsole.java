@@ -1,31 +1,34 @@
 package org.jwellman.jcx;
 
-import com.jidesoft.swing.FolderChooser;
 import java.awt.Font;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+
 import org.apache.commons.lang.SystemUtils;
-import org.apache.commons.lang.text.StrBuilder;
 import org.jwellman.swing.TextAreaActionAdapter;
 import org.jwellman.swing.TextAreaTabKeyAdapter;
+
+import com.jidesoft.swing.FolderChooser;
 
 /**
  * A simple UI/Panel for the JCXEngine.
  *
  * @author Rick Wellman
  */
-public class JCXConsole extends javax.swing.JPanel implements Runnable {
+public class JCXConsole extends JPanel implements Runnable {
 
 	private static final long serialVersionUID = 1L;
 
-	private final List<String> commands = new ArrayList<>();
+    private static final Font FONT = new Font("Consolas", Font.PLAIN, 16); // "Courier New" "Lucida Console ("Consolas", 0, 16); // "Monospaced
 
-    private static final Font FONT = new java.awt.Font("Consolas", 0, 16); // "Monospaced
+	private final List<String> commands = new ArrayList<>();
 
     /**
      * Creates new form JCXConsole

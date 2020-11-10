@@ -119,6 +119,7 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
     
     /**
      * Default JDayChooser constructor.
+     * Weeks of the year will not be visible.
      */
     public VDayChooser() {
         this(false);
@@ -144,6 +145,8 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
         selectedDay = null;
         calendar = Calendar.getInstance(locale);
         today = (Calendar) calendar.clone();
+	        this.month = today.get(Calendar.MONTH) + 1;
+	        this.year = today.get(Calendar.YEAR);
 
         setLayout(new BorderLayout());
 
@@ -162,6 +165,8 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
                 int index = x + (7 * y);
 
                 if (y == 0) {
+                	// This is the first row; i.e. the Day Headers SUN - SAT
+                	
                     // Create a button that doesn't react on clicks or focus changes.
                     // Thanks to Thomas Schaefer for the focus hint :)
                     days[index] = new DecoratorButton();
@@ -470,8 +475,7 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
         }
         
         final Calendar tmpCalendar = (Calendar) calendar.clone();
-        tmpCalendar.set(Calendar.DAY_OF_MONTH, 1);
-        
+        tmpCalendar.set(Calendar.DAY_OF_MONTH, 1);        
         tmpCalendar.add(Calendar.MONTH, 1);
         tmpCalendar.add(Calendar.DATE, -1);
         int maxDaysInMonth = tmpCalendar.get(Calendar.DATE);
@@ -479,8 +483,7 @@ public class VDayChooser extends JPanel implements ActionListener, KeyListener, 
             d = maxDaysInMonth;
         }
 
-        int oldDay = day;
-        day = d;
+        int oldDay = day; day = d;
 
         // If there is a current/previous selected day, visually "unselect" it by updating its background color
         if (selectedDay != null) {

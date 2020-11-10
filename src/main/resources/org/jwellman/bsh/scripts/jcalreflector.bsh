@@ -1,15 +1,32 @@
+// ===================================
+// Usage:  This script depends on jcalendar.bsh being run first to 
+//         create the jvd.calendar object which, as of 10/28/2020,
+//         is approximately line 128 of that script.  i.e. the top
+//         part of the script creates a full JCalendar demo app
+//         which is not the target/intent of this script.
+// ===================================
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+
 public class CalendarReflector extends JPanel 
     implements PropertyChangeListener {
 
-    public CalendarReflector( ) {
-        //this.setLayout();
-        JLabel description = new JLabel("mm/dd/yyyy");
-        this.add(description);
+    public JTextField one = new JTextField(10);
+    public JTextField two = new JTextField(10);
 
-        JTextField one = new JTextField(10);
-        this.add(one);
+    public CalendarReflector( ) {
+        this.setLayout(new GridLayout(0,2));
+
+        this.createField(this, "mm/dd/yyyy", one);
+        this.createField(this, "mm-dd-yyyy", two);
     }
 
+    public void createField(CalendarReflector panel, String label, JTextField field) {
+        panel.add(new JLabel(label));
+        panel.add(field);
+
+    }
+    
     public void propertyChange(PropertyChangeEvent e) {
         String propertyName = e.getPropertyName();
         if ("day".equals(propertyName)) {
@@ -39,13 +56,10 @@ cdemo() {
 
 jvd.cdemo = cdemo();
 jvd.cdemo.iframe = DesktopManager.get().createVApp(jvd.cdemo.panel, "Demo - Calendar Utils");
-//jvd.calendar.addPropertyChangeListener(jvd.cdemo.panel);
+// [A] // jvd.calendar.addPropertyChangeListener(jvd.cdemo.panel);
 
 
 // ===================================
-
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 
 jvd.cdemo.listener = new PropertyChangeListener() {
      propertyChange(PropertyChangeEvent e) {
@@ -53,11 +67,8 @@ jvd.cdemo.listener = new PropertyChangeListener() {
         
         String propertyName = e.getPropertyName();
         if ("day".equals(propertyName)) {
-            comp.one.setText( ""
-                + jvd.calendar.month + "/"
-                + e.getNewValue() + "/"
-                + jvd.calendar.year
-            );
+            comp.one.setText( "" + jvd.calendar.month + "/" + e.getNewValue() + "/" + jvd.calendar.year); 
+            comp.two.setText( "" + jvd.calendar.month + "-" + e.getNewValue() + "-" + jvd.calendar.year); 
         } else {
             print("unhandled property: " + propertyName);
         }

@@ -3,6 +3,8 @@ A raw but functional virtual desktop - to be clear, this is not a "remote deskto
 This is an application like any other... it just provides features that your desktop provides.
 So why create an app that duplicates features I already have?... One simple answer... control! :)
 
+https://kansassamurai.github.io/VirtualDesktop/ 
+
 Though I do have bigger plans for this application, this idea started because:
 
 1) I am tired of Winblows arbitrarily reorganizing my desktop space.  I do keep many shortcuts

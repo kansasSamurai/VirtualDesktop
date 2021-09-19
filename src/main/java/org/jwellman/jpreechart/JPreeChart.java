@@ -51,7 +51,6 @@ public class JPreeChart {
 
     public void decorate(JFreeChart chart) {
         this.chart = chart;
-
         chart.setAntiAlias(true);
         chart.setTextAntiAlias(true);
 
@@ -83,9 +82,12 @@ public class JPreeChart {
 
         final Plot p = chart.getPlot();
         p.setOutlineVisible(false);
-        Object o = p.getDrawingSupplier();
         p.setDrawingSupplier(this.createDrawingSupplier());
-        o = p.getDrawingSupplier();
+
+// Dec. 2020 - Not sure what I was doing here... copied line 2 then commented out:
+//        Object o = p.getDrawingSupplier();
+//        p.setDrawingSupplier(this.createDrawingSupplier());
+//        o = p.getDrawingSupplier();
 
         if (p instanceof XYPlot) {
             XYPlot xyp = (XYPlot)p;
@@ -115,17 +117,17 @@ public class JPreeChart {
         final Shape[] shapes = new Shape[1];
         shapes[0] = new Ellipse2D.Double(-delta, -delta, size, size);
 
-        final Paint[] paintseq = {
-            Color.decode("#CD4E3C"),
-            Color.decode("#579340"),
-            Color.decode("#5582A6"),
-            Color.decode("#CA4FCC"),
-            Color.decode("#7D6EC7"),
-            Color.decode("#A87829")
-        };
-
         final Stroke[] strokes = new Stroke[1];
         strokes[0] = STROKE_DEFAULT;
+
+        final Paint[] paintseq = {
+                Color.decode("#CD4E3C"), // red
+                Color.decode("#579340"), // green
+                Color.decode("#5582A6"), // blue
+                Color.decode("#CA4FCC"), // magenta
+                Color.decode("#7D6EC7"), // purple
+                Color.decode("#A87829")  // brown
+            };
 
         final DrawingSupplier s = new DefaultDrawingSupplier(
             paintseq,
@@ -138,11 +140,11 @@ public class JPreeChart {
         return s;
     }
 
-    private void customizePlot(Plot p) {
+	public void customizePlot(Plot p) {
 
     }
 
-    private void customizePlot(XYPlot p) {
+    public void customizePlot(XYPlot p) {
         p.setDomainGridlinesVisible(false);
         p.getRangeAxis().setLabelFont(FONTS[0].deriveFont(Font.BOLD));
         p.setShadowGenerator(new DefaultShadowGenerator());

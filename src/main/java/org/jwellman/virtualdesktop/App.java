@@ -24,6 +24,8 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
+import javax.swing.LookAndFeel ;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.UnsupportedLookAndFeelException;
@@ -31,6 +33,7 @@ import javax.swing.plaf.metal.MetalLookAndFeel;
 import javax.swing.plaf.metal.OceanTheme;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 
+import org.jwellman.swing.plaf.metal.MetalThemeManager ;
 //import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
 //import static org.jwellman.virtualdesktop.App.registeredApps;
 import org.jwellman.virtualdesktop.desktop.VActionLNF;
@@ -54,9 +57,19 @@ import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.jtattoo.plaf.aluminium.AluminiumLookAndFeel;
 
+import bibliothek.gui.dock.ScreenDockStation;
+import bibliothek.gui.dock.common.CControl;
+import bibliothek.gui.dock.station.screen.InternalBoundaryRestriction;
+import bibliothek.gui.dock.station.screen.InternalFullscreenStrategy;
+import bibliothek.gui.dock.station.screen.window.InternalScreenDockWindowFactory;
 import ca.odell.glazedlists.swing.DefaultEventListModel;
 import ca.odell.glazedlists.swing.GlazedListsSwing;
+import jiconfont.icons.FontAwesome;
+import jiconfont.icons.GoogleMaterialDesignIcons;
+import jiconfont.swing.IconFontSwing;
 // import org.pushingpixels.substance.api.skin.SubstanceGraphiteLookAndFeel;
+import net.sourceforge.napkinlaf.NapkinLookAndFeel ;
+import net.sourceforge.napkinlaf.NapkinTheme ;
 
 /**
  * A Virtual Desktop.
@@ -85,10 +98,12 @@ public class App extends JFrame implements ActionListener {
     public static final int LAF_WEBLAF = 2;
     public static final int LAF_NIMBUS = 3;
     public static final int LAF_METAL = 5;
+    public static final int LAF_PGS = 6;
     public static final int LAF_JTATTOO = 7;
     public static final int LAF_FLATLAF = 8;
     public static final int LAF_SUBSTANCE = 9; // deprecated / not currently used
-    public static final int CHOSEN_LAF = LAF_JTATTOO;
+    public static final int LAF_NAPKIN = 10;
+    public static final int CHOSEN_LAF = LAF_JTATTOO; //LAF_JTATTOO;
 
     /**
      * This is only nececessary for a temp dev menu item; can eventually be removed
@@ -343,9 +358,13 @@ public class App extends JFrame implements ActionListener {
         // Install a custom security manager to prevent guests from shutting down the desktop.
         System.setSecurityManager(new NoExitSecurityManager());
 
+        // Global Initialization(s) [ Frameworks, etc. ]
+        IconFontSwing.register(FontAwesome.getIconFont());
+        IconFontSwing.register(GoogleMaterialDesignIcons.getIconFont());
+        
         //Schedule a job for the event-dispatching thread:
         //creating and showing this application's GUI.
-        javax.swing.SwingUtilities.invokeLater(
+        SwingUtilities.invokeLater(
             new Runnable() { @Override public void run() {
                 try {
 
@@ -380,21 +399,28 @@ public class App extends JFrame implements ActionListener {
                             break;
                         case 5:
                             MetalLookAndFeel
-                                    //.setCurrentTheme(MetalThemeManager.LOW_VISION); // MODERN | AQUA | LOW_VISION | ...
+                                    .setCurrentTheme(MetalThemeManager.XP); // MODERN | AQUA | LOW_VISION | ...
                                     //.setCurrentTheme(MetalThemeManager.LARGE_FONT);
                                     //.setCurrentTheme(new DefaultMetalTheme());
-                                    .setCurrentTheme(new OceanTheme());
+                                    //.setCurrentTheme(new OceanTheme());
                             UIManager.setLookAndFeel(new MetalLookAndFeel());
                             break;
-                        case 6:
+                        case LAF_PGS:
                             // Sep. 2018:  evaluating pgs
                             UIManager.setLookAndFeel("com.pagosoft.plaf.PgsLookAndFeel");
+                            break;
+                        case LAF_NAPKIN:
+                            String[] themeNames = NapkinTheme.Manager.themeNames();
+                            String themeToUse = "napkin"; // napkin | blueprint
+                            NapkinTheme.Manager.setCurrentTheme(themeToUse);
+                            LookAndFeel laf = new NapkinLookAndFeel();
+                            UIManager.setLookAndFeel(laf);
                             break;
                         case LAF_JTATTOO:
                             props.put("subTextFont", "Consolas BOLD 10"); // ???
                             props.put("userTextFont", "Calibri PLAIN 14"); // JLabel, JCheckbox, Tab Titles, ... // Aluminium only respects:  TableHeaders, Checkboxes, (I assume RadioButtons), ...
                             props.put("menuTextFont", "Calibri PLAIN 12"); // JMenu, ...
-                            props.put("systemTextFont", "Baskerville BOLD 24");
+                            props.put("systemTextFont", "Calibri PLAIN 14"); // JToolTip, ... Baskerville BOLD 24
                             props.put("controlTextFont", "Calibri PLAIN 14"); // JButton, ... // Aluminium does not respect this... well... maybe it does, I just don't know what components it affects yet?
                             props.put("windowTitleFont", "Calibri PLAIN 16"); // JFrame, (JInternalFrame I asume), ...
 

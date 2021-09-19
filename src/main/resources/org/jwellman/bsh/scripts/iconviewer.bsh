@@ -1,0 +1,61 @@
+import javax.imageio.ImageIO;
+import jiconfont.swing.IconFontSwing;
+import jiconfont.icons.FontAwesome;
+import jiconfont.icons.GoogleMaterialDesignIcons;
+
+icv() {
+
+    // This object/class is a custom JLabel
+    this.preview = new org.jwellman.virtualdesktop.vapps.iconviewer.IconViewer();
+    
+    this.btnColor = new JButton("Icon Color", new ColorIcon(Color.black, 14));
+
+    this.west = new JPanel(new GridLayout(0,1));    
+    this.west.add(btnColor);
+        
+    this.panel = new JPanel(new BorderLayout());
+    this.panel.add(this.preview.getView(), BorderLayout.CENTER);    
+    this.panel.add(west, BorderLayout.WEST);
+
+    this.file = new File("test.png");
+
+    export() {
+
+        Image img = jvd.icv.preview.getIcon().getImage();        
+        BufferedImage bi = new BufferedImage(img.getWidth(null),img.getHeight(null),BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = bi.createGraphics();
+        g2.drawImage(img, 0, 0, null);
+        g2.dispose();
+        
+        ImageIO.write(bi, "png", this.file);
+        print(this.file.canonicalPath);
+
+    }
+    
+    return this;
+}
+
+jvd.icv = icv();
+jvd.icv.preview.setTransferHandler(new TransferHandler("foreground"));
+
+// DesktopManager.get().createVApp(jvd.icv.panel, "Icon Viewer");
+// jvd.icv.preview.view.setOpaque(true);
+// jvd.icv.preview.view.setBackground(Color.white);
+
+/* If you have a reference to a dockable 'x' (see dockables.bsh)
+   then you can do this... (and also use a colorchooser)
+   
+   x.addDockable( "Icon Viewer", jvd.icv.panel );
+*/
+
+/*  ========================================
+
+jvd.icv.preview.setIcon(
+
+    IconFontSwing.buildIcon(
+    //    GoogleMaterialDesignIcons.BORDER_ALL, 48, Color.red)
+        FontAwesome.BALANCE_SCALE, 48, jvd.icv.preview.foreground)
+    
+);
+
+*/

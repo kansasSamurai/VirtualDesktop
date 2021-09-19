@@ -17,8 +17,7 @@ demoTimeSeriesChart()  {
 
     TimeSeriesTest test = new TimeSeriesTest();
     ChartPanel panel = new ChartPanel(test.chart);
-    App app = org.jwellman.virtualdesktop.App.getVSystem();
-    JInternalFrame iframe = app.createVApp(panel, "Time Series Test");
+    DesktopManager.get().createVApp(panel, "Time Series Test");
 
     XYPlot plot = test.chart.plot;
     plot.setBackgroundPaint( Color.black );
@@ -57,7 +56,7 @@ demoTimeSeriesChart()  {
 mypreechart = demoTimeSeriesChart();
 // The following two lines are optional - just decorates with JPreeChart
 JPreeChart pre = new JPreeChart();
-// pre.decorate(panel.getChart());
+// pre.decorate(mypreechart.panel.getChart());
 
 
 -------------------
@@ -74,8 +73,7 @@ import org.jwellman.jpreechart.*;
 demoJFreeChart() {
     JFreeChartDemo demo = JFreeChartDemo.createMainUI(null);
 
-    App app = org.jwellman.virtualdesktop.App.getVSystem();
-    app.createVApp(demo.getPanel(), "any title u want");
+    DesktopManager.get().createVApp(demo.getPanel(), "JPreeChart");
 
     JPreeChart pre = new JPreeChart();
     pre.decorate(demo.getChart());

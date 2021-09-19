@@ -53,6 +53,7 @@ import javax.swing.*;
 public class DesktopScrollPane extends JScrollPane {
 
     private JDesktopPane desktopPane;
+
     private InternalFrameComponentListener componentListener;
 
     /**
@@ -76,6 +77,7 @@ public class DesktopScrollPane extends JScrollPane {
                 onComponentRemoted(e);
             }
         });
+
         setViewportView(desktopPane);
 
         // set some defaults
@@ -129,19 +131,16 @@ public class DesktopScrollPane extends JScrollPane {
 
                 // has to go through all the internal frames now and make sure none
                 // off screen, and if so, add those scroll bars!
-
-                Rectangle viewPort = getViewport().getViewRect();
+                final Rectangle viewPort = getViewport().getViewRect();
 
                 int maxX = viewPort.width + viewPort.x, maxY = viewPort.height + viewPort.y;
                 int minX = viewPort.x, minY = viewPort.y;
 
+                JInternalFrame frame = null; // reusable obj ref
+                
                 // determine the min/max extents of all internal frames
-
-                JInternalFrame frame = null;
                 JInternalFrame[] frames = getAllFrames();
-
                 for (int i = 0; i < frames.length; i++) {
-
                     frame = frames[i];
 
                     if (frame.getX() < minX) { // get minimum X
@@ -159,21 +158,17 @@ public class DesktopScrollPane extends JScrollPane {
                     }
                 }
 
-                // Don't count with frames that get off screen from the left side ant the top
-                if (minX < 0) {
-                    minX = 0;
-                }
-                if (minY < 0) {
-                    minY = 0;
-                }
+                // Don't count with frames that get off screen from the left side and the top
+                if (minX < 0) { minX = 0; }
+                if (minY < 0) { minY = 0; }
 
                 setVisible(false); // don't update the viewport
                 // while we move everything (otherwise desktop looks 'bouncy')
 
                 if (minX != 0 || minY != 0) {
+
                     // have to scroll it to the right or up the amount that it's off screen...
                     // before scroll, move every component to the right / down by that amount
-
                     for (int i = 0; i < frames.length; i++) {
                         frame = frames[i];
                         frame.setLocation(frame.getX() - minX, frame.getY() - minY);
@@ -192,7 +187,6 @@ public class DesktopScrollPane extends JScrollPane {
                 setDesktopSize(new Dimension(maxX - minX, maxY - minY));
 
                 setVisible(true); // update the viewport again
-
 
             }
         });
@@ -227,6 +221,8 @@ public class DesktopScrollPane extends JScrollPane {
         }
     }
 
+    private static final long serialVersionUID = 1L;
+    
     private class InternalFrameComponentListener implements ComponentListener {
 
         @Override
@@ -246,6 +242,7 @@ public class DesktopScrollPane extends JScrollPane {
         @Override
         public void componentHidden(ComponentEvent e) {
         }
+        
     }
 
 }

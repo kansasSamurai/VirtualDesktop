@@ -1,3 +1,5 @@
+package org.jwellman.virtualdesktop.desktop;
+
 /*
  * This class is heavily based on:
  * -------------------------------------------
@@ -12,7 +14,6 @@
  *
  * Initial version: April 21, 2005
  */
-package org.jwellman.virtualdesktop.desktop;
 
 import java.awt.Component;
 import java.awt.Dimension;
@@ -186,6 +187,7 @@ public class VIcon extends UserAgentAdapter implements Icon {
 
     /**
      * Draw the icon at the specified location.
+     * 
      * @param c
      * @param g
      * @param x

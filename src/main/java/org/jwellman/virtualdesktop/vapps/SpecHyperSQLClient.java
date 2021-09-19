@@ -42,6 +42,8 @@ public class SpecHyperSQLClient extends VirtualAppSpec {
             frame.setVisible(true);
 
             jframe.setVisible(false);
+            jframe.dispose(); // new Jan. 2021; does this work or have side effects?
+            
         } );
 
     }

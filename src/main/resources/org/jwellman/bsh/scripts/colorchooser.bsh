@@ -1,3 +1,34 @@
+import org.jwellman.virtualdesktop.DesktopManager;
+
+cdemo1() {
+
+    /** A JPanel extension that contains the java color chooser */
+    this.panel = new JPanel();
+
+    this.chooser = new JColorChooser();
+    this.chooser.setDragEnabled(true);
+    this.panel.add(this.chooser);
+    
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    this.iframe = DesktopManager.get().createVApp(this.panel, "Color Chooser");
+    
+    print("Color Chooser Demo - started...");
+    return this;
+}
+
+jvd.colorchooser = cdemo1();
+
+----------------------------------------------------------------
+/**
+    Color Chooser
+
+    This script puts a JColorChooser in a vapp panel/frame
+    for demonstration purposes.  This version is identical
+    to the next version (below) except that this version
+    uses a customized JColorChooser class (VColorChooser).
+    
+*/
+
 import org.jwellman.swing.colorchooser.VColorChooser;
 
 public class ColorChooserDemo extends JPanel {
@@ -19,7 +50,7 @@ ccdemo() {
     this.ccpanel = new ColorChooserDemo();
 
     /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
-    this.iframe = jvd.app.createVApp(this.ccpanel, "Java Color Chooser");
+    this.iframe = DesktopManager.get().createVApp(this.ccpanel, "Java Color Chooser");
     
     print("Color Chooser Demo started...");
     return this;
@@ -32,6 +63,14 @@ jvd.ccapp = ccdemo();
 
 ----------------------------------------------------------------
 
+/**
+    Color Chooser
+
+    This script puts a JColorChooser in a vapp panel/frame
+    for demonstration purposes.  This version uses a plain
+    JColorChooser class from the JDK.  See the version above
+    for a customized version.    
+*/
 public class ColorChooserDemo extends JPanel {
 
     public JColorChooser tcc;
@@ -51,7 +90,7 @@ ccdemo() {
     this.ccpanel = new ColorChooserDemo();
 
     /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
-    this.iframe = jvd.app.createVApp(this.ccpanel, "Java Color Chooser");
+    this.iframe = DesktopManager.get().createVApp(this.ccpanel, "Java Color Chooser");
     
     print("Color Chooser Demo started...");
     return this;
@@ -91,7 +130,9 @@ for (AbstractColorChooserPanel p : chooser.getChooserPanels()) {
         recentColorMethod.setAccessible(true);
     
         // add colors...
+        // recentPanel.setMostRecentColor(Color.BLACK)
         recentColorMethod.invoke(recentPanel, new Object[]{Color.BLACK});
+        // recentPanel.setMostRecentColor(Color.RED)
         recentColorMethod.invoke(recentPanel, new Object[]{Color.RED});
         // ... add more colors as desired
     

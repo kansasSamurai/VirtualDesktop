@@ -19,6 +19,8 @@ public class ActionFactory {
 
     public static Class<?>[] registeredApps = {
          SpecBeanShell.class
+        ,SpecDocking.class
+        ,SpecJediTerm.class
         ,SpecGroovyConsole.class // newly readded
         ,SpecGroovyGraphics.class
         ,SpecJetty.class

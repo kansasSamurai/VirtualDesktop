@@ -8,5 +8,6 @@ and open the template in the editor.
 <toc version="2.0">
     <tocitem text="JPAD TOC">
         <tocitem text="About JPAD" target="org.rwellman.about"/>
+        <tocitem text="About Java Swing" target="org.rwellman.aboutjswing"/>
     </tocitem>
 </toc>

@@ -1,0 +1,185 @@
+/**
+    mycalendar.bsh
+
+    This script demonstrates a proof of concept calendar component.
+        
+    This is a work in progress.
+    
+*/
+
+import javax.swing.border.*;
+import org.jwellman.swing.jpanel.RestrictedHeightPanel;
+import org.jwellman.swing.jbutton.RolloverButton;
+
+class MyCalendar extends JPanel {
+    
+    public final Font VERDANA = new Font("Verdana", Font.PLAIN, 10);    
+    public final Font VERDANA2 = new Font("Verdana", Font.PLAIN, 14);    
+    public final Font VERDANA3 = new Font("Verdana", Font.BOLD, 18);    
+    public final Font LABEL_FONT = new Font("Calibri", Font.BOLD, 12);
+
+    public final Color TEAL = new Color(0x078e8e);
+    public final Color DARK_TEAL = new Color(0x016565);
+    public final Color DARK_GRAY = new Color(0x657b83);
+
+    public final Border CBUTTON_BORDER = BorderFactory.createEmptyBorder(1,1,1,1); //(2,2,2,2);
+    
+    public MyCalendar() {
+        JPanel container = this;
+        container.setLayout(new BoxLayout(container, BoxLayout.PAGE_AXIS));     
+        
+        // Reusable object refs
+        JPanel panel, panel2;
+        JLabel label;
+        JButton button;
+
+        FlowLayout flow = new FlowLayout(FlowLayout.CENTER, 0, 0);
+
+        panel = panel(false);
+        panel.setLayout(flow);
+        panel.setBackground(DARK_TEAL);     
+            label = label("September 2019");
+            label.setForeground(Color.WHITE);
+            label.setFont(VERDANA);
+            panel.add(label);
+        container.add(panel);
+        
+        panel = panel(false);
+        panel.setLayout(flow);
+        panel.setBackground(TEAL);
+            label = label("Monday");
+            label.setForeground(Color.WHITE);
+            label.setFont(VERDANA2);
+            panel.add(label);
+        container.add(panel);
+                
+        panel = panel(false);
+        panel.setLayout(flow);
+        panel.setBackground(TEAL);
+            label = label("4th");
+            label.setForeground(Color.WHITE);
+            label.setFont(VERDANA3);
+            panel.add(label);
+        container.add(panel);
+                
+        panel = panel(false);
+        panel.setBackground(TEAL);
+        panel.setLayout(new BorderLayout());
+//          label = l("[]");
+//          label.setForeground(Color.WHITE);
+//          label.setFont(VERDANA2);
+//          panel.add(label, BorderLayout.WEST);
+            button = b2("[]"); panel.add(button, BorderLayout.WEST);
+
+            label = label("[]");
+            label.setForeground(Color.WHITE);
+            label.setFont(VERDANA2);
+            panel.add(label, BorderLayout.EAST);
+        
+            panel2 = new JPanel(new GridBagLayout());
+            panel2.setOpaque(false);
+                label = label("12:00 PM");
+                label.setForeground(Color.LIGHT_GRAY);
+                label.setFont(VERDANA);
+                panel2.add(label);
+            panel.add(panel2, BorderLayout.CENTER);
+        
+        container.add(panel);
+                
+        panel = panel(false);
+        panel.setBackground(Color.WHITE);
+        panel.setLayout(new BorderLayout());
+            label = label("<");
+            // label.setForeground(Color.WHITE);
+            label.setFont(VERDANA2);
+            panel.add(label, BorderLayout.WEST);
+
+            label = label(">");
+            //label.setForeground(Color.WHITE);
+            label.setFont(VERDANA2);
+            panel.add(label, BorderLayout.EAST);
+        
+            panel2 = new JPanel(new GridBagLayout());
+            panel2.setOpaque(false);
+                label = label("September 2019");
+                label.setFont(VERDANA);
+                panel2.add(label);
+            panel.add(panel2, BorderLayout.CENTER);
+        
+        container.add(panel);
+        
+        panel = panel(false);
+        panel.setBackground(Color.WHITE);
+        panel.setLayout(new GridLayout(1,7));
+            button = b2("Sun"); button.setEnabled(false); panel.add(button);
+            button = b2("Mon"); button.setEnabled(false); panel.add(button);
+            button = b2("Tue"); button.setEnabled(false); panel.add(button);
+            button = b2("Wed"); button.setEnabled(false); panel.add(button);
+            button = b2("Thu"); button.setEnabled(false); panel.add(button);
+            button = b2("Fri"); button.setEnabled(false); panel.add(button);
+            button = b2("Sat"); button.setEnabled(false); panel.add(button);
+        
+        container.add(panel);
+        
+        for (int row = 0; row < 5; row++) {
+            panel = panel(false);
+            panel.setBackground(Color.WHITE);           
+            panel.setLayout(new GridLayout(1,7));
+            for (int col = 1; col < 8; col++) {
+                final int day = row*7+col;
+                final String s = (day < 32) ? ("" + day) : "";
+                button = b2(s); panel.add(button);
+                if (day > 31) button.setEnabled(false);
+            }
+            
+            container.add(panel);           
+        }
+
+    }
+
+    protected JLabel label(String text) {
+        final JLabel label = new JLabel(text);
+        if (true) {
+            label.setFont(LABEL_FONT);          
+            label.setForeground(DARK_GRAY);
+        }
+        
+        return label;
+    }
+    
+    private JPanel panel(boolean padleft) {
+        final JPanel p = new RestrictedHeightPanel(); // JPanel();
+        
+        if (true) {
+            p.setBackground(Color.WHITE);
+            if (padleft)
+                p.setBorder(BorderFactory.createEmptyBorder(0,15,0,0));         
+        }
+        
+        return p;       
+    }
+    
+    private JButton b2(String string) {
+        Color d = (Color) UIManager.getDefaults().get("Button.disabledText");// .put("Button.disabledText")
+        RolloverButton b = new RolloverButton(string);
+        b.setFont(VERDANA);
+        b.setHorizontalAlignment(SwingConstants.CENTER);
+        b.setBorder(CBUTTON_BORDER);
+        b.setRollColor(d);
+//      Insets inset = b.getBorder().getBorderInsets(b);
+//      System.out.println(inset.toString());
+        return b;
+    }
+
+}
+
+/*------- Example... -------
+// 'x' requires dockables.bsh
+
+jvd.calendar = new MyCalendar();
+    p = new JPanel(new GridBagLayout());
+    p.add(jvd.calendar);
+x.addDockable( "Calendar Demo", p );
+
+// ===== end Example ===== */
+

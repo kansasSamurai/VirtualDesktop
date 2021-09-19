@@ -5,10 +5,22 @@ and open the template in the editor.
 -->
 <html>
     <head>
-        <title>JPAD Title</title>
+        <title>About JPAD</title>
+        /* It does not appear that this title affects anything seen within
+           the "help viewer", but does appear as a page header when printed.
+           ... wrong... it also appears in the search tab as the name of the
+           "page" where it finds results.  To me, this is a bit confusing as
+           I would expect the search results to display according to the 
+           table of contents but this is just my natural assumption.
+           Maybe there's a reason for this that just doesn't click yet.
+           Regardless, this seems to be the designed behavior so
+           maybe this is a "best practice" to ensure that this title
+           attribute matches the table of contents (*-toc.xml)
+        */
+
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
-      <style>
+        <style>
 
         body, p, h1, h2, h3, h4, ul, li {
             color: #0A0A0A;
@@ -25,44 +37,40 @@ and open the template in the editor.
             color: #3A3A3A;
         }
 
-      </style>
+        </style>
 
     </head>
 
    <body>
-      <h1>Swing API</h1>
+      <h1>About JPAD</h1>
+      <p>JPAD is a Java-Powered Alternative Desktop.  To be clear, it is *not*
+      an application that actually replaces your Operating System desktop in *any*
+      way.  It is simply an application (written in Java) that you could(should?)
+      use instead of your native desktop to accomplish MANY of the same things. 
+      </p>
+      <p>Why would you want to use an application instead of just using your native desktop?
+      Answer:  To put *you* in control of your desktop.
+      </p>
+      <p>Not all users will agree but I do not always like when my OS manufacturer
+      "enhances" the native desktop experience with an upgrade.  From simple things
+      like "I don't need/want that feature" all the way to "where the hell did my
+      shortcuts go?!".  I am a developer and I get VERY accustomed to my desktop
+      experience and rely on it for productivity since I am in front of my computer
+      for at least 8 hours a day.  I like having icons for my often used applications
+      on my desktop. I like to have them where I put them and I want them to stay there
+      (even after an OS upgrade).  While most of this stems from how Microsoft
+      has upgraded its desktop over the years and I overwhelmingly use Windows
+      both at home and work, another benefit is that I can run this desktop
+      environment on both Mac and Linux AND IT STILL RUNS THE SAME!!!!
+      My icons are the same, they are in the same location, etc. etc.
+      </p>
       <p>This vapp can only be opened in an external frame.</p>
       <p>This internal frame is simply a placeholder and
             allows you to close/exit the vapp by clicking
             the button below.
       </p>
+      <p>... todo: finish this</p>
 
-      <p>Swing API is a set of extensible GUI Components
-         to ease the developer's life to create JAVA based Front End/GUI
-         Applications. It is build on top of AWT API and acts as a replacement of
-         AWT API, since it has almost every control corresponding to AWT controls.
-         Swing component follows a Model-View-Controller architecture to
-         fulfill the following criterias.</p>
-      <ul>
-         <li><p>A single API is to be sufficient to support multiple look and feel.</p></li>
-         <li><p>API is to be model driven so that the highest level API is not required to have data.</p></li>
-         <li><p>API is to use the Java Bean model so that Builder Tools and IDE can provide better services to the developers for use.</p></li>
-      </ul>
-      <h2>MVC Architecture</h2>
-      <p>Swing API architecture follows loosely based MVC architecture in the following manner.</p>
-      <ul>
-         <li><p>Model represents component's data.</p></li>
-         <li><p>View represents visual representation of the component's data.</p></li>
-         <li><p>Controller takes the input from the user on the view and reflects the changes in Component's data.</p></li>
-         <li><p>Swing component has Model as a seperate element, while the View and Controller part are clubbed in the User Interface elements. Because of which, Swing has a pluggable look-and-feel architecture.</p></li>
-      </ul>
-      <h2>Swing Features</h2>
-      <ul>
-         <li><p><b>Light Weight</b> - Swing components are independent of native Operating System's API as Swing API controls are rendered mostly using pure JAVA code instead of underlying operating system calls.</p></li>
-         <li><p><b>Rich Controls</b> - Swing provides a rich set of advanced controls like Tree, TabbedPane, slider, colorpicker, and table controls.</p></li>
-         <li><p><b>Highly Customizable</b> - Swing controls can be customized in a very easy way as visual apperance is independent of internal representation.</p></li>
-         <li><p><b>Pluggable look-and-feel</b> - SWING based GUI Application look and feel can be changed at run-time, based on available values.</p></li>
-      </ul>
    </body>
 
 </html>

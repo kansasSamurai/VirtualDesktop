@@ -1,0 +1,54 @@
+/**
+    File Chooser
+
+    This script puts a JFileChooser in a vapp panel/frame
+    for demonstration purposes.  It may be enhanced in the
+    future as I would like to use it for some minimal 
+    real world purpose but it does not yet have any
+    actions/hooks associated with the open/cancel buttons.
+    
+*/
+
+import org.jwellman.virtualdesktop.DesktopManager;
+
+fdemo1() {
+
+    /** A JPanel extension that contains the java color chooser */
+
+    this.filechooser = new JFileChooser();
+    this.filechooser.setControlButtonsAreShown(false);
+
+    this.panel = new JPanel(new BorderLayout());
+    this.panel.add(this.filechooser, BorderLayout.CENTER);
+
+    this.west = new JPanel();
+    this.west.setLayout( new BoxLayout(this.west, BoxLayout.PAGE_AXIS) );
+    this.panel.add(west, BorderLayout.WEST);
+
+    a1() { actionPerformed( e ) { this.filechooser.setFileSelectionMode(JFileChooser.FILES_ONLY); } return this; }
+    a2() { actionPerformed( e ) { this.filechooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY); } return this; }
+    a3() { actionPerformed( e ) { this.filechooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES); } return this; }
+    
+    this.button = new JButton("FILEs Only"); this.west.add( this.button );
+    this.button.addActionListener( a1() ); 
+    
+    this.button = new JButton("DIRs Only"); this.west.add( this.button );
+    this.button.addActionListener( a2() ); 
+    
+    this.button = new JButton("FILEs/DIRs"); this.west.add( this.button );
+    this.button.addActionListener( a3() ); 
+    
+    
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    this.iframe = DesktopManager.get().createVApp(this.panel, "File Chooser");
+    
+    print("File Chooser Demo - started...");
+    return this;
+}
+
+jvd.fdemo = fdemo1();
+
+
+// ============== Examples ===============
+// jvd.fdemo.filechooser.getSelectedFile().toString();
+

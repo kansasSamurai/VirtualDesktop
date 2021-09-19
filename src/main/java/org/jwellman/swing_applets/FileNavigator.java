@@ -28,7 +28,6 @@ import org.jwellman.swing.jtree.FileSelectorModel;
 
 import net.sf.image4j.codec.ico.ICODecoder;
 
-@SuppressWarnings("serial")
 public class FileNavigator extends JPanel {
 
     private JTree tree;
@@ -40,6 +39,8 @@ public class FileNavigator extends JPanel {
 	private final String[] imageTypes = ".png;.jpg;.gif;.ico".split(";");
 	private final ImageScaler SCALER = new ImageScaler();
 
+	public enum TYPE { TEXT, IMAGES }
+	
     /**
      * Create a FileNavigator whose root is the directory specified.
      * This constructor will result in the default implementation of a simple
@@ -51,7 +52,32 @@ public class FileNavigator extends JPanel {
      * @param directory
      */
     public FileNavigator(String directory) {
-    	this(directory, null, null);
+        this(directory, null, null);
+    }
+    
+    public FileNavigator(String directory, TYPE T) {
+        this(directory, null, null);
+	    
+	    switch (T) {
+	    case TEXT:
+            viewer = new JTextArea();
+            preview = (JTextArea) viewer;
+            preview.setEditable(false);
+            preview.setLineWrap(false);
+            
+            tree = new JTree(new FileSelectorModel(directory, false));
+            tree.addTreeSelectionListener(new DefaultTreeSelectionListener());
+
+            // preview.setWrapStyleWord(false);         
+            this.add(status, BorderLayout.SOUTH);
+            this.add(new JScrollPane(tree), BorderLayout.WEST);
+            this.add(new JScrollPane(viewer), BorderLayout.CENTER);
+
+	        break;
+	    case IMAGES:
+	        // do nothing; the constructor defaults to images
+	        break;
+	    }
     }
     
     public FileNavigator(String directory, JComponent view, TreeSelectionListener listener) {
@@ -67,28 +93,26 @@ public class FileNavigator extends JPanel {
             if (listener == null) listener = new DefaultTreeSelectionListener();
     		break;
     	case 2:
+    	    // I probably broke this Jan. 2021... if you use it again, it needs to look similar
+    	    // to case 3 (but should probably be moved into the enumerated constructor with
+    	    // a new type)
             if (view == null) view = new JLabel(); 
             if (listener == null) listener = new ImagesTreeSelectionListener((JLabel) view); 
     		break;
     	case 3:
             if (view == null) view = new OverflowX(); 
+                viewer = view;      
             if (listener == null) listener = new ImagesPanelTreeSelectionListener((JPanel) view, this);
+            
+            tree = new JTree(new FileSelectorModel(directory, true));
+            tree.addTreeSelectionListener(listener);
+
+            this.add(status, BorderLayout.SOUTH);
+            this.add(new JScrollPane(tree), BorderLayout.WEST);
+            this.add(new JScrollPane(viewer), BorderLayout.CENTER);
+            
     		break;    		
     	}
-        viewer = view;
-        if (view instanceof JTextArea) {
-            preview = (JTextArea) view;
-            preview.setEditable(false);
-            preview.setLineWrap(false);
-            // preview.setWrapStyleWord(false);        	
-        }
-    	
-        tree = new JTree(new FileSelectorModel(directory, true));
-        tree.addTreeSelectionListener(listener);
-
-        this.add(status, BorderLayout.SOUTH);
-        this.add(new JScrollPane(tree), BorderLayout.WEST);
-        this.add(new JScrollPane(viewer), BorderLayout.CENTER);
     	
     }
     
@@ -126,8 +150,10 @@ public class FileNavigator extends JPanel {
 	public BufferedImage createScaledImage(ImageIcon icon, int w, int h) {
     	return SCALER.scaleImage( icon, BufferedImage.TYPE_INT_RGB, w, h);			
 	}		
-	
-	class ImagesPanelTreeSelectionListener implements TreeSelectionListener {
+
+    private static final long serialVersionUID = 1L;
+    
+	public class ImagesPanelTreeSelectionListener implements TreeSelectionListener {
 
     	JPanel panelasview;
     	FileNavigator navigator;
@@ -216,7 +242,7 @@ public class FileNavigator extends JPanel {
 		
     }
     
-    class ImagesTreeSelectionListener implements TreeSelectionListener {
+    public class ImagesTreeSelectionListener implements TreeSelectionListener {
 
     	JLabel labelasview;
     	
@@ -256,7 +282,7 @@ public class FileNavigator extends JPanel {
     	}
     }
     
-    class DefaultTreeSelectionListener implements TreeSelectionListener {
+    public class DefaultTreeSelectionListener implements TreeSelectionListener {
 
     	@Override
         public void valueChanged(TreeSelectionEvent e) {
@@ -295,7 +321,7 @@ public class FileNavigator extends JPanel {
     	
     }
     
-    class ImageScaler {
+    public class ImageScaler {
 
     	/**
          * Scale an image while preserving aspect ratio

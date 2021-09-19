@@ -60,7 +60,7 @@ better() {
 better(String title) {
 
     if (void == jvd || void == jvd.app) {
-        print("This requires jvd.app; see TBD");
+        print("This requires jvd.app; see jvdClassBrowser.bsh");
         return;
     }
 
@@ -72,13 +72,9 @@ better(String title) {
 
     /** The tabbed pane for holding editor instances */
     this.tabbedpane = new JTabbedPane();
-    // Moved here from below... also, the following line works but trying it with the 'this' keyword
-    //    JTabbedPane tabbedpane = new JTabbedPane();
 
     createNewTabContent() {
         var editor = new Editor();
-        // 9/2/2018:  I think the following line is no longer applicable
-        // if (void == super.ta) super.ta = editor.textarea;
         return editor;
     }
 
@@ -86,18 +82,24 @@ better(String title) {
         if ( e.getActionCommand().equals("Close") ) {
             if (void != frame) frame.dispose();
             if (void != panel) iframe.hide();
+
         } else if ( e.getActionCommand().equals("New") ) {
-               this.tabbedpane.addTab("Editor", this.createNewTabContent());
+            // Create a new tab and make it the selected one
+            var x = this.createNewTabContent();
+            this.tabbedpane.addTab("Editor", x);
+            this.tabbedpane.setSelectedComponent(x);
+            
         } else if ( e.getActionCommand().equals("Clear") ) {
             getCurrentTextArea().setText("");
-        } else {
+
+        } else { // e.getActionCommand().equals("Eval")
             print("[ Editor invoked interpreter.eval()... ]");
 
             // The following line works but I want to see if I can directly use the input stream
-            this.interpreter.eval( getCurrentTextArea().getText()
+            this.interpreter.eval( 
+                getCurrentTextArea().getText()
                 + "\n\n this.interpreter.print( getBshPrompt() );"
             ); // this works
-
             // nope... bsh.console.inputStream.read( getCurrentTextArea().getText().getBytes() );
 
             // this.interpreter.print( getBshPrompt() );
@@ -139,9 +141,6 @@ better(String title) {
         return cta.textarea;
     }
 
-// Original location of this line:
-//    JTabbedPane tabbedpane = new JTabbedPane();
-
     // It is critical that we use 'void == this.panel' instead of 'null == this.panel'
     if (void == this.panel) {
         this.frame = new JFrame("Better Editor");
@@ -156,21 +155,21 @@ better(String title) {
 
     this.p = new JPanel();
 
-    this.b = new JButton("New");
-        b.addActionListener(this);
-        p.add(b);
-
-    b = new JButton("Eval");
-        b.addActionListener(this);
-        p.add(b);
-
-    b = new JButton("Clear");
-        b.addActionListener(this);
-        p.add(b);
-
-    b = new JButton("Close");
-        b.addActionListener(this);
-        p.add(b);
+        this.b = new JButton("New");
+            b.addActionListener(this);
+            p.add(b);
+    
+        b = new JButton("Eval");
+            b.addActionListener(this);
+            p.add(b);
+    
+        b = new JButton("Clear");
+            b.addActionListener(this);
+            p.add(b);
+    
+        b = new JButton("Close");
+            b.addActionListener(this);
+            p.add(b);
 
     if (void == this.panel) {
         frame.add(p, BorderLayout.SOUTH);
@@ -178,8 +177,7 @@ better(String title) {
         frame.show();
     } else {
         this.panel.add(p, BorderLayout.SOUTH);
-        this.iframe = 
-            DesktopManager.get().createVApp(this.panel, title); // new
+        this.iframe = DesktopManager.get().createVApp(this.panel, title); // new
         // old // jvd.app.createVApp(this.panel, title);
     }
 

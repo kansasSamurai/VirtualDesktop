@@ -12,10 +12,11 @@ import javax.swing.JPanel;
  *
  * @author Rick Wellman
  */
+@SuppressWarnings("rawtypes")
 abstract public class VirtualAppSpec {
 
     private String title;
-    private Class clazz;
+	private Class clazz;
     private JPanel content;
     protected int height = 0;
     protected int width = 0;
@@ -31,7 +32,7 @@ abstract public class VirtualAppSpec {
      * a JPanel for insertion into a JInternalFrame.
      * 
      * This method should not be called until setWidth/Height()
-     * have been called (otherwise they defaults are zero). 
+     * have been called (otherwise the defaults are zero). 
      *  
      * @param o
      * @return

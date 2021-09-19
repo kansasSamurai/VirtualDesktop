@@ -1,0 +1,78 @@
+/*
+ Some scripting and classes to emulate designs found at:
+ https://www.deviantart.com/z-design/art/AdvancedUI-Status-Screen-120947815
+
+ This script can be run in its entirety and will display
+ an initial "user interface".  Then, you can run
+ advuserinterface_pt2.bsh and it will replace the center
+ component with an updated graph.
+ 
+*/
+
+import java.awt.geom.*;
+import org.jwellman.swing.Sandbox;
+import org.jwellman.swing.CircleSandbox;
+import org.jwellman.swing.FiveBarStatusDemo;
+
+demo = object();
+
+x = new JPanel();
+    demo.panel = x;
+    demo.s = new Sandbox();
+    demo.c = new CircleSandbox(1);
+    demo.g1 = new FiveBarStatusDemo(); // CircleSandbox(2);
+    demo.g2 = new CircleSandbox(2);
+x.setLayout(new BorderLayout());
+
+
+panel = new JPanel( );
+panel.setBackground(new Color(0x013066));
+panel.add(demo.s);
+x.add(panel, BorderLayout.NORTH);
+
+panel = new JPanel(new GridBagLayout());
+panel.add(demo.c);
+x.add(panel, BorderLayout.CENTER);
+
+panel = new JPanel(new GridBagLayout());
+panel.add(demo.g1);
+x.add(panel, BorderLayout.EAST);
+
+panel = new JPanel(new GridBagLayout());
+panel.add(demo.g2);
+x.add(panel, BorderLayout.WEST);
+
+
+
+proxy() {
+  paintComponent(Graphics g, JComponent c) {
+        
+  }
+}
+
+class TriangleShape extends Path2D.Double {
+  public TriangleShape(Point2D p1, Point2D p2, Point2D p3) {
+    moveTo(p1.getX(), p1.getY());
+    lineTo(p2.getX(), p2.getY());
+    lineTo(p3.getX(), p3.getY());
+    closePath();
+  }
+}
+
+palette() {
+    
+    Color myblue = new Color(0x004892);
+    Color darkblue = new Color(0x003770);
+    Color lightblue = new Color(0x69E2FF);
+    Color midnightblue = new Color(0x012D5C);
+    Color ledgreen = new Color(0x12FF00);
+    Color ledwarning = new Color(0xFFB901);
+
+    return this;
+}
+
+demo.palette = palette();
+
+
+
+jvd.a = DesktopManager.get().createVApp(demo.panel, "Demo");

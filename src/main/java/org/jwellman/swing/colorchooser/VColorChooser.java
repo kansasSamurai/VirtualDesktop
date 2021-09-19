@@ -43,8 +43,8 @@ public class VColorChooser extends JColorChooser implements ActionListener {
 		panel.setOpaque(true);
 		panel.setBorder(BorderFactory.createEmptyBorder(5, 30, 5, 30));
         panel.add(button);        
-//        this.setPreviewPanel(panel);
-        this.getPreviewPanel().add(panel);
+        this.setPreviewPanel(panel);
+        // this.getPreviewPanel().add(panel);
         
 		this.getSelectionModel().addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent e) {				
@@ -58,7 +58,24 @@ public class VColorChooser extends JColorChooser implements ActionListener {
 	public void actionPerformed(ActionEvent e) {
 		this.setMostRecentColor(this.getColor());
 	}
+
+	// Implement a custom property to be used with TransferHandler(s)
+	// and JComponent(s) that also have this custom property.
 	
+	public Color getDndColor() {
+	    return this.getColor();
+	}
+	
+	public void setDndColor(Color c) {
+	    this.setColor(c);
+	}
+	
+	/**
+	 * Uses reflection to expose the setMostRecentColor(Color c) method on the
+	 * DefaultSwatchChooserPanel (which updates the recentSwatchPanel).
+	 * 
+	 * @param c
+	 */
 	public void setMostRecentColor(Color c) {
 		for (AbstractColorChooserPanel p : this.getChooserPanels()) {
 			 if (p.getClass().getSimpleName().equals("DefaultSwatchChooserPanel")) {

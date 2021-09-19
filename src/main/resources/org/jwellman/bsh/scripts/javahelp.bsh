@@ -1,9 +1,6 @@
-import javax.help.*;
-import org.jwellman.virtualdesktop.DesktopManager;
-
-/*
+/* =========================================================================
 This is the top level directory where the javahelp files are:
-/c/dev/workspaces/git/VirtualDesktop-old/src/main/resources/org/jwellman/docs
+/c/dev/workspaces/git/VirtualDesktop/src/main/resources/org/jwellman/docs
 
 Copy the javahelp jar to this directory, then:
 
@@ -16,7 +13,13 @@ This creates the folder:  JavaHelpSearch/
 see these sites for common problems with the "search index" (a.k.a. search database):
 https://community.oracle.com/thread/1304643
 
-*/
+=========================================================================== */
+
+
+
+import javax.help.*;
+import org.jwellman.virtualdesktop.DesktopManager;
+
 tdemo() {
 
     // Get the classloader of this class.
@@ -27,7 +30,7 @@ tdemo() {
     // directory as the program by specifying "jhelpset.hs" without any directory prefix,
     // this should be adjusted to suit the implementation.
     // URL url = HelpSet.findHelpSet(cl, "rwellman-hs.xml");
-    this.url = new File("C:/dev/workspaces/git/VirtualDesktop-old/src/main/resources/org/jwellman/docs/rwellman-hs.xml").toURI().toURL();
+    this.url = new File("C:/dev/workspaces/git/VirtualDesktop/src/main/resources/org/jwellman/docs/rwellman-hs.xml").toURI().toURL();
     print(this.url);
 
     this.viewer = new JHelp(new HelpSet(this.cl, this.url));
@@ -37,7 +40,7 @@ tdemo() {
     this.ccpanel.add(this.viewer, BorderLayout.CENTER);
 
     /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
-    this.iframe = DesktopManager.get().createVApp(this.ccpanel, "help");
+    this.iframe = DesktopManager.get().createVApp(this.ccpanel, "JavaHelp - JPAD Demo");
 
     print("Demo started...");
     return this;

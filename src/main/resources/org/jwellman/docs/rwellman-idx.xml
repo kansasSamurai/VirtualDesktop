@@ -6,8 +6,7 @@ and open the template in the editor.
 -->
 <!DOCTYPE index PUBLIC "-//Sun Microsystems Inc.//DTD JavaHelp Index Version 2.0//EN" "http://java.sun.com/products/javahelp/index_2_0.dtd">
 <index version="2.0">
-    
-    <indexitem text="About JPAD" target="org.rwellman.about"/>
+
     <indexitem text=".prof extension (profile data)" target="prof.profile" />
     <indexitem text="accelerators (keyboard), see 'keyboard commands'" />
     <indexitem text="adding existing portfolio" target="proj.import" />
@@ -17,6 +16,9 @@ and open the template in the editor.
         <indexitem text="procedures for" target="proj.importproject2" />
     </indexitem>
     <indexitem text="analyzing program performance, see 'profiler'" />
+
+    <indexitem text="JPAD" target="org.rwellman.about"/>
+    <indexitem text="Java Swing" target="org.rwellman.aboutjswing"/>
     <indexitem text="Java Applets">
         <indexitem text="overview" target="applet_over"
             presentationtype="javax.help.SecondaryWindow"

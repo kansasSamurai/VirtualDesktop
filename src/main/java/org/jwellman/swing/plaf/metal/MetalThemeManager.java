@@ -72,6 +72,11 @@ public final class MetalThemeManager {
   public static final MetalTheme MODERN = new Modern();
 
   /**
+   * Trying to emulate colors and design of https://www.deviantart.com/z-design/art/Z-DESIGN-Tech-Brush-Set-v6-287214074
+   */
+  public static final MetalTheme XP = new Experimental();
+  
+  /**
   * Differs from {@link #DEFAULT} only in font sizes.
   */
   public static final MetalTheme LARGE_FONT = new LargeFont();
@@ -119,6 +124,8 @@ public final class MetalThemeManager {
   private static final MetalTheme[] fValues = {
     DEFAULT,
     AQUA,
+    MODERN,
+    XP,
     LARGE_FONT,
     LOW_VISION
   };
@@ -134,38 +141,45 @@ public final class MetalThemeManager {
   private static final String fLOW_VISION_NAME = "Low Vision";
   private static final String fMODERN_NAME = "Modern";
 
-  public static void update(MetalTheme aTheme, JFrame aFrame){
-    MetalLookAndFeel.setCurrentTheme(aTheme);
-    try {
-      UIManager.setLookAndFeel(new MetalLookAndFeel());
-    }
-    catch ( UnsupportedLookAndFeelException ex ){
-      System.out.println("Cannot set new Theme for Java Look and Feel.");
-    }
-    SwingUtilities.updateComponentTreeUI(aFrame);
-  }
-
-  /*
-  * All items below are private nested classes which define the various
-  * themes.
-  */
-
-  private static class Default extends DefaultMetalTheme {
-    public String getName(){
-      return fName;
-    }
     /**
-    * This override is provided such that Theme objects can
-    * be directly passed to JComboBox, instead of Strings. (This would
-    * not be necessary if getName had been named toString instead).
-    */
-    @Override public final String toString() {
-      return getName();
-    }
-    private final String fName = fDEFAULT_NAME;
-  }
+     * 
+     * @param aTheme
+     * @param aFrame
+     */
+    public static void update(MetalTheme aTheme , JFrame aFrame) {
+        MetalLookAndFeel.setCurrentTheme ( aTheme ) ;
+        try {
+            UIManager.setLookAndFeel ( new MetalLookAndFeel ( ) ) ;
+        } catch ( UnsupportedLookAndFeelException ex ) {
+            System.out.println ( "Cannot set new Theme for Java Look and Feel." ) ;
+        }
 
-  /**
+        SwingUtilities.updateComponentTreeUI ( aFrame ) ;
+    }
+
+    /*
+     * All items below are private nested classes which define the various themes.
+     */
+    private static class Default extends DefaultMetalTheme {
+        private final String fName = fDEFAULT_NAME ;
+
+        public String getName() {
+            return fName ;
+        }
+
+        /**
+         * This override is provided such that Theme objects can be directly passed to
+         * JComboBox, instead of Strings. (This would not be necessary if getName had
+         * been named toString instead).
+         */
+        @ Override
+        public final String toString() {
+            return getName ( ) ;
+        }
+
+    }
+
+    /**
         nimrodlf.b=#474544
         nimrodlf.w=#BBBBBB
 
@@ -206,6 +220,52 @@ public final class MetalThemeManager {
     protected ColorUIResource getSecondary3() { return fSecondary3; }
   }
 
+  private static class Experimental extends Default {
+
+      public String getName(){ return fName; }
+      private final String fName = fMODERN_NAME;
+      
+      private final ColorUIResource fBlack = new ColorUIResource(0x6C8697); // 0x6C8697 is dark-grayish 
+      private final ColorUIResource fWhite = new ColorUIResource(0xFFFFFF); // 0xEFF0F2 is light-gray // background for JList, JTree, JText***, etc.
+
+      private final ColorUIResource fRed   = new ColorUIResource(0xFF0000); // temporary... for helping figure out which color goes where
+      private final ColorUIResource fSkyBlue  = new ColorUIResource(0x10A7FF);
+
+      private final ColorUIResource fPrimary1 = new ColorUIResource(0x6C8697); // 0x10A7FF is sky blue (0x009999); // Border of selected JInternalFrame
+      private final ColorUIResource fPrimary2 = new ColorUIResource(0xDEDEDE); //(0xDEDEDE); // Background for... Scrollbar, JMenu rollover, ...
+      private final ColorUIResource fPrimary3 = new ColorUIResource(0xBBBBBB); //(0xBBBBBB); // Background for... JFrame/JInternalFrame title bar, selected text/item 
+      
+      private final ColorUIResource fSecondary1 = new ColorUIResource(0x57889C); // getControlDarkShadow()
+      //^^^ As its name implies, I'm pretty sure that the metal theme uses the "secondary1" color as a
+      //^^^ complement to the "primary1" color.  i.e. Wherever you see primary1 used, it is likely/possible
+      //^^^ that you will see secondary1 used as well.  Therefore, these two colors should "complement" each other.
+      private final ColorUIResource fSecondary2 = new ColorUIResource(0xDEDEDE); // getControlShadow()
+      private final ColorUIResource fSecondary3 = new ColorUIResource(0xEFF0F2); // 0xC5CED5 (0xEFEFEF); // getControl()
+      // The name of this resource is a bit misleading IMO... it states that it is "secondary" and its 'importance' is "three"
+      // However, ... as the comment states, this is actually the primary color of all "controls" which, as you might imagine,
+      // would fairly dominate the typical user interface.  These are buttons, menus, separator bars, ...,
+      // and last but not least, the background of a JPanel (which is not a control but DOES use this color).
+      // 
+
+      protected ColorUIResource getBlack() { return fBlack; }
+      protected ColorUIResource getWhite() { return fWhite; }
+
+      protected ColorUIResource getPrimary1() { return fPrimary1; }
+      protected ColorUIResource getPrimary2() { return fPrimary2; }
+      protected ColorUIResource getPrimary3() { return fPrimary3; }
+
+      protected ColorUIResource getSecondary1() { return fSecondary1; }
+      protected ColorUIResource getSecondary2() { return fSecondary2; }
+      protected ColorUIResource getSecondary3() { return fSecondary3; }
+      
+      public ColorUIResource getWindowTitleForeground() { return fWhite; }
+      public ColorUIResource getWindowTitleBackground() { return fSkyBlue; } // { return getPrimary3(); }
+      public ColorUIResource getSeparatorForeground()   { return getBlack(); } // { return getPrimary1(); }
+      public ColorUIResource getAcceleratorForeground() { return fRed; } // { return getPrimary1(); }
+      
+      
+  }
+  
   private static class Aqua extends Default {
     public String getName(){ return fName; }
     protected ColorUIResource getPrimary1() { return fPrimary1; }

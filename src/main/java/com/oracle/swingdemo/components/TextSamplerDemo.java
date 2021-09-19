@@ -134,8 +134,7 @@ public class TextSamplerDemo extends JPanel implements ActionListener {
         //Create a text pane.
         JTextPane textPane = createTextPane();
         JScrollPane paneScrollPane = new JScrollPane(textPane);
-        paneScrollPane.setVerticalScrollBarPolicy(
-                        JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        paneScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         paneScrollPane.setPreferredSize(new Dimension(250, 155));
         paneScrollPane.setMinimumSize(new Dimension(10, 10));
 
@@ -234,8 +233,7 @@ public class TextSamplerDemo extends JPanel implements ActionListener {
 
         String[] initStyles =
                 { "regular", "italic", "bold", "small", "large",
-                  "regular", "button", "regular", "icon",
-                  "regular"
+                  "regular", "button", "regular", "icon", "regular"
                 };
 
         JTextPane textPane = new JTextPane();
@@ -334,10 +332,12 @@ public class TextSamplerDemo extends JPanel implements ActionListener {
         //creating and showing this application's GUI.
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-                 //Turn off metal's use of bold fonts
-        UIManager.put("swing.boldMetal", Boolean.FALSE);
-        createAndShowGUI();
+                //Turn off metal's use of bold fonts
+                UIManager.put("swing.boldMetal", Boolean.FALSE);
+                
+                createAndShowGUI();
             }
         });
     }
+    
 }

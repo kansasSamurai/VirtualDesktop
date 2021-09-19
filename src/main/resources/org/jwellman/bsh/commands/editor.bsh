@@ -1,10 +1,13 @@
 /**
     An improvement on the default bsh GUI editor; this one uses
     Java Swing (JFrame, JPanel, etc.) and the RSyntaxTextArea (extends JTextArea).
+    
+    @deprecated  This is an early version - it works but is deprecated.
+    See better.bsh for the latest version.    
 
 	Open a GUI editor from the command line or in the GUI desktop mode.
-	When run from the command line the editor is a simple standalone
-	frame.  When run inside the GUI desktop it is a workspace editor.
+	When run from the command line the editor is a simple standalone frame.  
+	When run inside the GUI desktop it is a workspace editor.
 	See workspaceEditor()
 */
 
@@ -24,8 +27,8 @@ editor() {
 
     // It is critical that we use 'void == this.panel' instead of 'null == this.panel'
     if (void == this.panel) {
-	this.frame = new JFrame("Better Editor");
-	frame.add(sp, BorderLayout.CENTER);
+    	this.frame = new JFrame("Better Editor");
+    	frame.add(sp, BorderLayout.CENTER);
     } else {
         this.panel = new JPanel();
         panel.setLayout(new BorderLayout());
@@ -33,22 +36,22 @@ editor() {
     }
 
 	this.p = new JPanel();
-	this.b = new JButton("Eval");
-	b.addActionListener(this);
-	p.add(b);
-
-	b = new JButton("Clear");
-	b.addActionListener(this);
-	p.add(b);
-
-	b = new JButton("Close");
-	b.addActionListener(this);
-	p.add(b);
+    	this.b = new JButton("Eval");
+    	b.addActionListener(this);
+    	p.add(b);
+    
+    	b = new JButton("Clear");
+    	b.addActionListener(this);
+    	p.add(b);
+    
+    	b = new JButton("Close");
+    	b.addActionListener(this);
+    	p.add(b);
 
     if (void == this.panel) {
-	frame.add(p, BorderLayout.SOUTH);
-	frame.pack();
-	frame.show();
+    	frame.add(p, BorderLayout.SOUTH);
+    	frame.pack();
+    	frame.show();
     }
 
     actionPerformed(e) {

@@ -1,0 +1,33 @@
+/**
+    dockables.bsh
+
+    This script demonstrates putting actual content
+    into the SpecDocking vapp.  As of Jan 2021,
+    it works based on the state of SpecDocking.java
+    and the addDockable() method.
+    
+    This is a work in progress.
+    
+*/
+
+/*------- Step 1 -------*/
+import org.jwellman.virtualdesktop.vapps.*;
+
+x = new SpecDocking();
+DesktopManager.get().createVApp(x);
+// ===== end step 1 ===== */
+
+
+/*------- Step 2 -------
+jvd.cc = new JColorChooser();
+jvd.cc.setTransferHandler( new TransferHandler("color")  );
+x.addDockable( "Color Chooser", jvd.cc );
+// ===== end step 2 ===== */
+
+
+/*------- Step 3 -------
+jvd.fc = new JFileChooser();
+// jvd.fc.setControlButtonsAreShown(false); // if these are not shown, you cannot use the 'filename:' field to manually change directories 
+x.addDockable( "File Chooser", jvd.fc );
+// ===== end step 3 ===== */
+

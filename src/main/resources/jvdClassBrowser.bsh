@@ -1,6 +1,17 @@
 /** =================================================================
  *  Opens the class browser from the Java Virtual Desktop.
  *  i.e. this script is adapted to recognize the JVD.
+ *  One of the reasons this script is a bit bigger than the
+ *  original classBrowser.bsh script is because the original
+ *  is dependent on the bsh.system.desktop "environment".
+ *  The JVD effectively "replaces" that environment so
+ *  some code has to be copies/moved here so it will work
+ *  outside the original environment.
+ * 
+ *  // TODO Jan 2021 : this could be optimized a bit because
+ *  // the bsh.util.ClassBrowser object takes a while to 
+ *  // load/instantiate which causes the UI to hang briefly.
+ *  // it is low priority but I would like to get it done some day.
  ** ================================================================= */
 import bsh.ClassIdentifier;
 import bsh.util.ClassBrowser;
@@ -20,7 +31,7 @@ jvdClassBrowser() {
 		new ImageIcon(getResource("/bsh/util/lib/eye.jpg"));
 
     this.browser = new ClassBrowser( this.interpreter.getClassManager() );
-    browser.init();
+    this.browser.init();
 
     makeInternalFrame( String name ) {
         // Closable by default
@@ -36,15 +47,15 @@ jvdClassBrowser() {
     }
 
     browse( Object o ) {
-	String classname;
-	if ( o instanceof String)
-		classname = o;
-	else if ( o instanceof ClassIdentifier )
-		classname = this.namespace.identifierToClass(o).getName();
-	else if ( o instanceof Class )
-		classname = o.getName();
-	else
-		classname = o.getClass().getName();
+    	String classname;
+    	if ( o instanceof String)
+    		classname = o;
+    	else if ( o instanceof ClassIdentifier )
+    		classname = this.namespace.identifierToClass(o).getName();
+    	else if ( o instanceof Class )
+    		classname = o.getName();
+    	else
+    		classname = o.getClass().getName();
 
         this.browser.driveToClass(classname);
     }
@@ -54,7 +65,7 @@ jvdClassBrowser() {
         browse(classname);
     }
 
-this.javaVirtualDesktop = true;
+    this.javaVirtualDesktop = true;
     this.inDesktop = true; // ( bsh.system.desktop != void );
     if ( inDesktop ) {
         if ( javaVirtualDesktop ) {
@@ -130,8 +141,14 @@ _JVD() {
 }
 
 jvd = _JVD();
-jvd.browser = jvdClassBrowser();
 jvd.app = org.jwellman.virtualdesktop.App.getVSystem();
+// The next line seems to fail under Java11+ and I have
+// not completely diagnosed the issue yet.  Therefore,
+// it has been moved to the last line of this script
+// so that everything else runs; particularly the jvd.app
+// line above which is required by the better.bsh which 
+// I use a lot.
+jvd.browser = jvdClassBrowser();
 
 /*
 Examples:

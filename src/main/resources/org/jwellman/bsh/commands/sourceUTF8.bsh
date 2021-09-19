@@ -1,7 +1,10 @@
 sourceUTF8(String filename) {
-    var url = this.getResource(filename);
 
-    var in  = new BufferedReader( new InputStreamReader(url.openStream(), "UTF-8") );
-        this.interpreter.eval(in, global.namespace, "URL: " + url.toString());
+    var url = getResource(filename); // this.getResource(filename);
+
+    var in  = new BufferedReader( 
+        new InputStreamReader(url.openStream(), "UTF-8") );
+        
+    this.interpreter.eval(in, global.namespace, "URL: " + url.toString());
     in.close();
 }

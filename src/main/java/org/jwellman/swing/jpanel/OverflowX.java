@@ -5,7 +5,6 @@ import java.awt.Dimension;
 import java.awt.LayoutManager;
 import java.awt.Rectangle;
 
-import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JViewport;
 import javax.swing.Scrollable;
@@ -24,6 +23,8 @@ import org.jwellman.swing.layout.ResponsiveLayout;
 public class OverflowX extends JPanel implements Scrollable {
 
 	private static final long serialVersionUID = 3805622194014202694L;
+
+	private boolean debug = false;
 	
 	public OverflowX() {
 		this(new ResponsiveLayout());
@@ -81,7 +82,7 @@ public class OverflowX extends JPanel implements Scrollable {
         	final int parw = parent.getWidth();
         	final int prew = this.getPreferredSize().width;
         	final boolean vpLarger = parw > prew;
-        	System.out.println("tvw: " + vpLarger + " >>> vp: " + parw + ", pref: " + prew);
+        	d("tvw: " + vpLarger + " >>> vp: " + parw + ", pref: " + prew);
             return vpLarger;
         }
         return false;
@@ -94,10 +95,16 @@ public class OverflowX extends JPanel implements Scrollable {
         	final int parh = parent.getHeight();
         	final int preh = this.getPreferredSize().height;
         	final boolean vpLarger = parh > preh;
-        	System.out.println("tvh: " + vpLarger + " >>> vp: " + parh + ", pref: " + preh);
+        	d("tvh: " + vpLarger + " >>> vp: " + parh + ", pref: " + preh);
             return vpLarger;
         }
         return false;
+	}
+	
+	private void d(String s) {
+	    if (this.debug) {
+	        System.out.println(s);
+	    }
 	}
 
 }

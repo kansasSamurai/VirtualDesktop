@@ -1,0 +1,58 @@
+int test = 4;
+
+switch(test) {
+    case 1:
+        String name = JOptionPane.showInputDialog(null ,"Enter Name");
+        if (name == null) print("<cancelled>");
+        else print(name.toUpperCase());
+    break;
+    
+    case 2:
+        options = new Object[] {"Red", "Green", "Blue"};
+        int index = JOptionPane.showInternalOptionDialog(
+            jvd.calendar,
+            "Please select a color",
+            "Example",
+            JOptionPane.DEFAULT_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            options,
+            "Blue"
+            );
+        if (index > 0) print(options[index]);        
+        else print("<cancelled>");
+        
+    break;
+
+    case 3:
+        if (jvd.democalendar == void) jvd.democalendar = new MyCalendar();
+        int index = JOptionPane.showInternalOptionDialog(
+            jvd.calendar,
+            jvd.democalendar,
+            "Example",
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.PLAIN_MESSAGE,
+            null,
+            null,
+            null
+            );
+        if (index > 0) print(options[index]);        
+        else print("<cancelled>");
+        
+    break;
+    
+    case 4:
+        if (jvd.democalendar == void) jvd.democalendar = new MyCalendar();
+        int index = JOptionPane.showInternalConfirmDialog(
+            jvd.calendar,
+            jvd.democalendar,
+            "Choose a date...",
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.PLAIN_MESSAGE
+            );
+        if (index > 0) print("<cancelled>");
+        else print("OK");
+        
+    break;
+}
+

@@ -7,38 +7,33 @@ import java.awt.GradientPaint ;
 import java.awt.Graphics ;
 import java.awt.Graphics2D ;
 import java.awt.RenderingHints ;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 import javax.swing.JComponent;
+import javax.swing.Timer;
+
+import org.apache.commons.lang3.RandomUtils;
 
 /**
+ * This is an animated version of Sandbox.
+ * 
  * This is just a "dummy" component that displays some hardcoded user interface concepts.
  * Hopefully, real components will emerge from this.
  * 
  * @author rwellman
  *
- * How to demo inside JPAD:
-
-import org.jwellman.swing.Sandbox;
-
-public class Demo extends JPanel {
-
-    public Demo() {
-        super(new GridBagLayout());
-
-        Sandbox demo = new Sandbox();
-        this.add(demo); //, BorderLayout.CENTER);
-    }
-
-}
-
-jvd.a = DesktopManager.get().createVApp(new Demo(), "Demo");
-
  */
-public class Sandbox extends JComponent {
+public class Sandbox2 extends JComponent implements ActionListener {
 
     private static final long serialVersionUID = 1L ;
 
     private int height, width;
+
+    // Variables to support animation
+    private int ramValue, ramMax;
+    private int jvmValue, jvmMax;
+    private Timer timer;
 
     private static final Color myblue = new Color(0x004892);
     private static final Color darkblue = new Color(0x003770);
@@ -53,12 +48,22 @@ public class Sandbox extends JComponent {
     // This is not intended to be made public; a flyweight to simply avoid the overhead of a new object each time.
     private Dimension dimension = new Dimension();
     
-    public Sandbox() {
+    public Sandbox2() {
         this.width = 225 ;
         this.height = 110;
         this.dimension.setSize(this.width, this.height);
         this.setBackground(myblue);
         this.setFont(MONO_LARGE);
+
+        ramValue = jvmValue = 0;
+        ramMax = RandomUtils.nextInt(0, 15);
+        jvmMax = RandomUtils.nextInt(0, 15);
+
+        // 1000 / 5 is "five steps/frame per second (1000 ms)"
+        this.timer = new Timer(1000 / 20, this);
+        timer.setInitialDelay(0);
+        timer.start();
+
     }
     
     @Override
@@ -88,42 +93,51 @@ public class Sandbox extends JComponent {
         int x=45, y=81;
         g2.setColor(Color.white); g2.setFont(MONO_SMALL);
         g2.drawString("RAM", 10, 90);
-        
-        g2.setColor(ledgreen);
-        for (int n=0; n<5; n++) {
-            g2.fillRect(x += 5, y, 4, 10);            
+                
+        for (int n = 0; n < 15; n++) {
+            if (n < ramValue) {
+                g2.setColor(n < 10 ? ledgreen : ledwarning);
+            } else {
+                g2.setColor(midnightblue);
+            }
+            g2.fillRect(x += 5, y, 4, 10);
         }
-
-        g2.setColor(midnightblue);
-        for (int n=0; n<10; n++) {
-            g2.fillRect(x += 5, y, 4, 10);            
+        if (++ramValue > ramMax) {
+            ramValue = 0;
+            ramMax = RandomUtils.nextInt(0, 15);
         }
         
         // ===== JVM Memory =====
         x=45; y=95;
         g2.setColor(Color.white); g2.setFont(MONO_SMALL);
         g2.drawString("JVM", 10, 102);
+
+        for (int n = 0; n < 15; n++) {
+            if (n < jvmValue) {
+                g2.setColor(n < 10 ? ledgreen : ledwarning);
+            } else {
+                g2.setColor(midnightblue);
+            }
+            g2.fillRect(x += 5, y, 4, 10);
+        }
+        if (++jvmValue > jvmMax) {
+            jvmValue = 0;
+            jvmMax = RandomUtils.nextInt(0, 15);
+        }
         
-        g2.setColor(ledgreen);
-        for (int n=0; n<10; n++) {
-            g2.fillRect(x += 5, y, 4, 10);            
-        }
 
-        g2.setColor(ledwarning);
-        for (int n=0; n<3; n++) {
-            g2.fillRect(x += 5, y, 4, 10);            
-        }
-
-        g2.setColor(midnightblue);
-        for (int n=0; n<2; n++) {
-            g2.fillRect(x += 5, y, 4, 10);            
-        }
-
+        g2.dispose();
     }
     
     @Override
     public Dimension getPreferredSize() {
         return this.dimension;
     }
-    
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        
+        this.repaint();
+    }
+
 }

@@ -63,8 +63,7 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
     // This is not intended to be made public; a flyweight to simply avoid the overhead of a new object each time.
     private Dimension dimension = new Dimension();
 
-    @SuppressWarnings ( "unused" )
-    private boolean debug;
+    private boolean debug = false;
     
     public FiveBarStatusDemo() {
         this.width = 225;
@@ -75,6 +74,7 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
         
         this.addMouseListener(this);
 
+        // 1000 / 20 is "twenty steps/frame per second (1000 ms)"
         this.timer = new Timer(1000 / 20, this);
         timer.setInitialDelay(0);
         timer.start();
@@ -102,63 +102,64 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
                 timer.restart();
 
                 for (int i=0; i < 5; i++) {
-                    System.out.print("  newvalues[" + i + "] " + newvalues[i]);                    
-                } System.out.println("\n-----");
+                    print("  newvalues[" + i + "] " + newvalues[i]);                    
+                } println("\n-----");
             } 
             
             this.repaint();
 
         } else { // create new values
-            for (int i=0; i < 5; i++) {
-                System.out.print("    avalues[" + i + "] " + values[i]);
-            } System.out.println();
+            
+            // print the current values (which will be replaced)
+            if (debug) {
+                for (int i=0; i < 5; i++) {
+                    print("    avalues[" + i + "] " + values[i]);
+                } println("");                
+            }
             
             for (int i=0; i < 5; i++) {
                 // store current values before generating new values
-                oldvalues[i] = values[i];
-                newvalues[i] = values[i];
+                oldvalues[i] = values[i]; // << oldvalues is a copy of values that does not change during animation.
+                newvalues[i] = values[i]; // << newvalues is updated incrementally during each frame of animation.
                 
                 // generate new values
                 boolean old = false;
                 if (old) {
+                    // This just uses a random value
                     values[i] = RandomUtils.nextInt(0, 161);                    
                 } else {
+                    // This is random like the case above, except the random max is smaller and ...
                     if (i < 4) values[i] = RandomUtils.nextInt(0, 61);
+                    // The last bar is always greater than the other four bars
                     else values[i] = values[0] + values[1] + values[2] + values[3]; 
                 }
+                print("    bvalues[" + i + "] " + values[i]);
 
                 // generate the animation "step" values
                 stepvalues[i] = (values[i] - oldvalues[i]) / 20f;
+                // if the step value is less than 1(pixel), then set it to either 1 or -1
+                // ... this makes the animation smoother
                 if (Math.abs(stepvalues[i]) < 1) {
                     // determine which "direction" the new value is
                     int stepdir = (values[i] > oldvalues[i]) ? 1 : -1;                    
                     stepvalues[i] = (float)stepdir;
                 }
 
-                System.out.print("    bvalues[" + i + "] " + values[i]);
-            } System.out.println();
+            } println("");
 
-            for (int i=0; i < 5; i++) {
-                System.out.print(" stepvalues[" + i + "] " + stepvalues[i]);
-            } System.out.println();
+            // print the calculated step values 
+            if (debug) {
+                for (int i=0; i < 5; i++) {
+                    print(" stepvalues[" + i + "] " + stepvalues[i]);
+                } println("");
+            }
             
             animActive = true;
             framecount = 0;
         }
         
     }
-    
-    public void actionPerformed_old(ActionEvent e) {
-        for (int i=0; i < 5; i++) {
-            int direction = RandomUtils.nextBoolean() ? 1 : -1;
-            values[i] += direction * RandomUtils.nextInt(0, 6);
-                if (values[i] < 20) values[i] = 20;
-                if (values[i] > 100) values[i] = 100;            
-        }
-        
-        this.repaint();
-    }
-    
+
     @Override
     public void paintComponent(Graphics g) {
 
@@ -183,12 +184,9 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
         final int left = 0, right = width-1, top = 0, bottom = height-1;
         final int midx = right/2, midy = bottom/2;
 
-        if (background == null) 
-                this.createBackground();
+        if (background == null) this.createBackground();
         g2.drawImage(background, 0, 0, null);
-        
-// old code goes here
-        
+
         // Axes
         int barsLeftStart = 50, barsBottom = bottom-3, barsWidth = 25;
         int axesWidth = 6;
@@ -232,11 +230,12 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
             cursor.translate(barsWidth, 0);            
         }
         
+        g2.dispose();
     }
     
     @SuppressWarnings( "unused" )
     protected void createBackground() {
-        System.out.println("creating background image");
+        println("creating background image");
         
         background = new BufferedImage(this.width, this.height, BufferedImage.TYPE_INT_ARGB);
         
@@ -328,8 +327,16 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
             line.setLine(p1, p2);
         }
 
-  }
+    }
 
+    private void print(String msg) {
+        if (debug) System.out.print(msg);
+    }
+    
+    private void println(String msg) {
+        if (debug) System.out.println(msg);
+    }
+    
     /**
      * @return the paintProxy
      */

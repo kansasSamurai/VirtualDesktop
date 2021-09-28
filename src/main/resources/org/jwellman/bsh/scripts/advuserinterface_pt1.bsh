@@ -11,6 +11,7 @@
 
 import java.awt.geom.*;
 import org.jwellman.swing.Sandbox;
+import org.jwellman.swing.Sandbox2;
 import org.jwellman.swing.CircleSandbox;
 import org.jwellman.swing.FiveBarStatusDemo;
 
@@ -18,26 +19,29 @@ demo = object();
 
 x = new JPanel();
     demo.panel = x;
-    demo.s = new Sandbox();
+    demo.s = new Sandbox2();
     demo.c = new CircleSandbox(1);
     demo.g1 = new FiveBarStatusDemo(); // CircleSandbox(2);
     demo.g2 = new CircleSandbox(2);
 x.setLayout(new BorderLayout());
 
-
+// ===== NORTH : SANDBOX/CLOCK + STATUS BAR(S) =====
 panel = new JPanel( );
 panel.setBackground(new Color(0x013066));
 panel.add(demo.s);
 x.add(panel, BorderLayout.NORTH);
 
+// ===== CENTER : CIRCLESANDBOX (STILL UNDER CONSTRUCTION)
 panel = new JPanel(new GridBagLayout());
 panel.add(demo.c);
 x.add(panel, BorderLayout.CENTER);
 
+// ===== EAST : FIVEBARSTATUSDEMO (ANIMATED!)
 panel = new JPanel(new GridBagLayout());
 panel.add(demo.g1);
 x.add(panel, BorderLayout.EAST);
 
+// ===== WEST : CIRCLESANDBOX 2
 panel = new JPanel(new GridBagLayout());
 panel.add(demo.g2);
 x.add(panel, BorderLayout.WEST);

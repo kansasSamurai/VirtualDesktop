@@ -5,6 +5,10 @@
  This script is intended to be run AFTER advuserinterface_pt1.bsh
  ...it will replace the center component with an updated graph.
  
+Actually, as of early 2021, this still works but is really just the prototype
+for FiveBarStatusDemo() which is an improved version of the graph
+which also includes pretty awesome animation (if I do say so myself).
+ 
 */
 
 import java.awt.geom.*;

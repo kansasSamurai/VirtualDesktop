@@ -49,13 +49,13 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
     protected static final Color myblue = new Color(0x004892);
     protected static final Color darkblue = new Color(0x003770);
     protected static final Color lightblue = new Color(0x69E2FF);
-    protected static final Color midnightblue = new Color(0x012D5C);
+    protected static final Color midnightblue = new Color(0x88012D5C, true);
     protected static final Color graphlineblue = new Color(0x0075C2);
     protected static final Color axisgray = new Color(0xB9D7F1);
     
     protected static final Color ledgreen = new Color(0x12FF00);
     protected static final Color ledwarning = new Color(0xFFB901);
-    protected static final Color capshadow = new Color(255,255,0,64);
+    protected static final Color capshadow = new Color(255,255,0,32);
     protected static final Color capshadowred = new Color(255,0,0,64);
     protected static final Color tgray100 = new Color(0,0,0,0);
     protected static final Color tgray75 = new Color(0,0,0,255);

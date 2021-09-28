@@ -13,7 +13,7 @@
 /*------- Step 1 -------*/
 import org.jwellman.virtualdesktop.vapps.*;
 
-x = new SpecDocking();
+x = new SpecDocking("JVD Dockable");
 DesktopManager.get().createVApp(x);
 // ===== end step 1 ===== */
 

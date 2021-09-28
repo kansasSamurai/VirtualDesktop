@@ -46,11 +46,17 @@ public class SpecDocking extends VirtualAppSpec {
 	// Each instance gets its own content area (by API design)
 	private CContentArea content = null;
 	
-    public SpecDocking() {
+	public SpecDocking() {
+        this("Docking Framework");
+    }
+
+    public SpecDocking(String title) {
         super();
 
         this.setTitle("Docking Framework");
         this.internalFrameProvider = true;
+        this.setTitle(title);
+        this.internalFrameProvider = true;        
     }
 
     @Override

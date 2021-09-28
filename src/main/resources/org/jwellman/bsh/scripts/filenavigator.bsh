@@ -152,6 +152,8 @@ jvd.bdemo = bdemo();
 jvd.bdemo.panel.setImageView(zz());
 jvd.bdemo.iframe = DesktopManager.get().createVApp(jvd.bdemo.panel, "File Navigator - Image Viewer");
 
+// c:/dev/jpad/files/bckgrnd
+
 // ================================
 // The code above implements a file navigator that displays any images in 
 // a particular directory.  The zz() method/closure is an implementation of

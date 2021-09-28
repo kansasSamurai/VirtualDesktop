@@ -224,7 +224,7 @@ public class CircleSandbox extends JComponent {
         g2.drawLine(midx-3, bottom-3, midx-3, bottom-3-6);
         g2.drawLine(midx+3, bottom-3, midx+3, bottom-3-6);
         
-        g2.setStroke(doublestroke);
+//        g2.setStroke(doublestroke);
             g2.drawArc(5, 5, right-10, bottom-10,  60, 28);
             g2.drawArc(5, 5, right-10, bottom-10,  92, 28);
             g2.drawArc(5, 5, right-10, bottom-10, 270-30, 28);

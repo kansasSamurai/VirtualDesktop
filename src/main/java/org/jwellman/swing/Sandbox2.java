@@ -42,7 +42,7 @@ public class Sandbox2 extends JComponent implements ActionListener {
     private static final Color ledgreen = new Color(0x12FF00);
     private static final Color ledwarning = new Color(0xFFB901);
     
-    private static final Font MONO_LARGE = new Font("Consolas", Font.PLAIN, 18);
+    private static final Font MONO_LARGE = new Font("Consolas", Font.PLAIN, 14);
     private static final Font MONO_SMALL = new Font("Consolas", Font.BOLD, 12);
     
     // This is not intended to be made public; a flyweight to simply avoid the overhead of a new object each time.

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.jetbrains.jediterm</groupId>
+  <artifactId>jediterm-pty</artifactId>
+  <version>2.33</version>
+  <name>JediTerm</name>
+  <description>Pure Java Terminal Emulator. Works with SSH and PTY.</description>
+  <url>https://github.com/JetBrains/jediterm</url>
+  <scm>
+    <connection>scm:git:git://github.com/JetBrains/jediterm.git</connection>
+    <developerConnection>scm:git:ssh:github.com/JetBrains/jediterm.git</developerConnection>
+    <url>https://github.com/JetBrains/jediterm</url>
+  </scm>
+  <licenses>
+    <license>
+      <name>LGPL 3.0</name>
+      <url>https://www.gnu.org/licenses/lgpl.txt</url>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>JetBrains</id>
+      <name>JetBrains Team</name>
+      <organization>JetBrains</organization>
+      <organizationUrl>https://www.jetbrains.com</organizationUrl>
+      <email>dmitry.trofimov@jetbrains.com</email>
+    </developer>
+  </developers>
+</project>

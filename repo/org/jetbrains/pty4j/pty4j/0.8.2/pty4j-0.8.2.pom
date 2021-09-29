@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.jetbrains.pty4j</groupId>
+  <artifactId>pty4j</artifactId>
+  <version>0.8.2</version>
+  <name>pty4j</name>
+  <description>Pseudo terminal(PTY) implementation in Java</description>
+  <url>https://github.com/traff/pty4j</url>
+  <licenses>
+    <license>
+      <name>Eclipse Public License 1.0</name>
+      <url>https://opensource.org/licenses/eclipse-1.0.php</url>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>JetBrains</id>
+      <name>JetBrains Team</name>
+      <email>dmitry.trofimov@jetbrains.com</email>
+      <organization>JetBrains</organization>
+      <organizationUrl>https://www.jetbrains.com</organizationUrl>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git:git@github.com:JetBrains/pty4j.git</connection>
+    <developerConnection>scm:git:ssh:github.com/JetBrains/pty4j.git</developerConnection>
+    <url>https://github.com/JetBrains/pty4j</url>
+  </scm>
+  <dependencies>
+    <dependency>
+      <groupId>org.jetbrains.pty4j</groupId>
+      <artifactId>purejavacomm</artifactId>
+      <version>0.0.11.1</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+      <version>16.0.2</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>24.0-jre</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <version>1.2.14</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna</artifactId>
+      <version>4.5.0</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna-platform</artifactId>
+      <version>4.5.0</version>
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
+</project>

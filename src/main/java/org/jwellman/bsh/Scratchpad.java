@@ -3,14 +3,19 @@ package org.jwellman.bsh;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.net.URL;
 
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -24,7 +29,10 @@ import javax.swing.border.Border;
 
 import org.jwellman.swing.icon.ColorIcon;
 import org.jwellman.swing.jbutton.RolloverButton;
+import org.jwellman.swing.jpanel.BackgroundPanel;
 import org.jwellman.swing.jpanel.RestrictedHeightPanel;
+import org.jwellman.virtualdesktop.DesktopManager;
+import org.jwellman.virtualdesktop.VirtualAppFrame;
 
 /**
  * This class is just used to assist with writing BSH scripts
@@ -384,4 +392,21 @@ class Calendar extends JPanel {
         return b;
     }
 
+    private JPanel advuserinterface_pt3() throws IOException {
+        
+        final URL url = this.getClass().getClassLoader().getResource("/graphics/deviantart_AdvancedUI-Status-Screen-120947815.jpg");        
+        final JPanel b = new BackgroundPanel(ImageIO.read(url));
+        b.setBounds(1,2,3,4);
+        
+        VirtualAppFrame f = DesktopManager.get().createVApp(b, "Demo 3");
+        f.setResizable(false);
+        
+        Insets insets = b.getInsets();
+        Dimension size = b.getPreferredSize();
+        b.setBounds(25 + insets.left, 5 + insets.top,
+                     size.width, size.height);
+        
+        return b;
+        
+    }
 }

@@ -1,0 +1,46 @@
+// Component Placement Prototype
+
+/*
+This script serves as a good template for prototyping new
+user interfaces while directly using the SpecEmpty vapp.
+*/
+
+import java.awt.geom.*;
+import org.jwellman.virtualdesktop.vapps.*;
+
+demo = object();
+
+x = new SpecEmpty();
+x.setTitle("Empty");
+DesktopManager.get().createVApp(x);
+x = demo.panel = x.getContent();
+x.setLayout(new BorderLayout());
+
+y = demo.pnlKeys = new JPanel ( new GridLayout(2,3) ); 
+    x.add(y, BorderLayout.EAST);
+y = demo.pnlControls = new JPanel( new GridLayout(2,4) );  
+    x.add(y, BorderLayout.WEST);
+
+
+x = demo.pnlControls;
+y = new JTextField("x"); x.add(y);
+y = new JTextField("y"); x.add(y);
+y = new JTextField("w"); x.add(y);
+y = new JTextField("h"); x.add(y);
+
+y = new JLabel("x pos"); x.add(y);
+y = new JLabel("y pos"); x.add(y);
+y = new JLabel("width"); x.add(y);
+y = new JLabel("height"); x.add(y);
+
+x = demo.pnlKeys;
+y = new JLabel(""); x.add(y);
+y = new JButton("^"); x.add(y);
+y = new JLabel(""); x.add(y);
+y = new JButton("<"); x.add(y);
+y = new JButton("d"); x.add(y);
+y = new JButton(">"); x.add(y);
+
+
+jvd.demo5 = demo;
+

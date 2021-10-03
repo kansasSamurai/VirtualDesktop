@@ -1,0 +1,104 @@
+// script title
+
+/*
+ Some scripting and classes to emulate designs found at:
+ https://www.deviantart.com/z-design/art/AdvancedUI-Status-Screen-120947815
+
+ This script can be run in its entirety and will display
+ an initial "user interface".  Then, you can run
+ advuserinterface_pt2.bsh and it will replace the center
+ component with an updated graph.
+ 
+*/
+
+import java.awt.geom.*;
+import java.net.URL;
+import javax.imageio.ImageIO;
+
+import org.jwellman.swing.jpanel.BackgroundPanel;
+import org.jwellman.swing.indicator.LEDBars;
+
+URL url = DesktopManager.get().getClass().getClassLoader().getResource("graphics/deviantart_AdvancedUI-Status-Screen-120947815.jpg");        
+
+demo = object();
+
+x = new BackgroundPanel(ImageIO.read(url));
+    demo.panel = x;
+x.setLayout(null);
+Insets insets = x.getInsets();
+
+y = demo.leds = new LEDBars();
+y.setOpaque(true);
+y.setBackground(new Color(0x015FA7));
+y.setBarWidth(4);
+y.setBarHeight(8);
+y.setGap(2);
+y.setTotalNormalBars(7);
+y.setTotalWarningBars(3);
+x.add(demo.leds); Dimension size = demo.leds.getPreferredSize();
+demo.leds.setBounds(5 + insets.left, 376 + insets.top,
+                     size.width, size.height);
+
+
+y = demo.leds = new LEDBars();
+y.setOpaque(true);
+y.setBackground(new Color(0x01549A));
+y.setBarWidth(4);
+y.setBarHeight(8);
+y.setGap(2);
+y.setTotalNormalBars(7);
+y.setTotalWarningBars(3);
+x.add(demo.leds); size = demo.leds.getPreferredSize();
+demo.leds.setBounds(5 + insets.left, 402 + insets.top,
+                     size.width, size.height);
+
+y = demo.leds = new LEDBars();
+y.setOpaque(true);
+y.setBackground(new Color(0x004A8B));
+y.setBarWidth(4);
+y.setBarHeight(8);
+y.setGap(2);
+y.setTotalNormalBars(7);
+y.setTotalWarningBars(3);
+x.add(demo.leds); size = demo.leds.getPreferredSize();
+demo.leds.setBounds(5 + insets.left, 428 + insets.top,
+                     size.width, size.height);
+
+y = demo.leds = new LEDBars();
+y.setOpaque(true);
+y.setBackground(new Color(0x00407D));
+y.setBarWidth(4);
+y.setBarHeight(8);
+y.setGap(2);
+y.setTotalNormalBars(7);
+y.setTotalWarningBars(3);
+x.add(demo.leds); size = demo.leds.getPreferredSize();
+demo.leds.setBounds(5 + insets.left, 454 + insets.top,
+                     size.width, size.height);
+
+y = demo.leds = new LEDBars();
+y.setOpaque(true);
+y.setBackground(new Color(0x013A6F));
+y.setBarWidth(4);
+y.setBarHeight(8);
+y.setGap(2);
+y.setTotalNormalBars(7);
+y.setTotalWarningBars(3);
+x.add(demo.leds); size = demo.leds.getPreferredSize();
+demo.leds.setBounds(5 + insets.left, 454 + 26 + insets.top,
+                     size.width, size.height);
+
+
+jvd.demo3 = DesktopManager.get().createVApp(demo.panel, "Demo 3");
+jvd.demo3.setResizable(false);
+
+/* Step 1
+import org.jwellman.swing_applets.*;
+
+jvd.demo4 = new ComponentPlacer();
+DesktopManager.get().createVApp(jvd.demo4, "controller");
+
+Step 2
+jvd.demo4.setTarget(demo.leds);
+*/
+

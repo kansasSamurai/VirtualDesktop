@@ -37,7 +37,9 @@ import bibliothek.gui.dock.station.split.SplitDockGrid;
  */
 public class SpecDocking extends VirtualAppSpec {
 	
-    private static int counter = 1;
+    private static int counter = 0;
+    
+    private static final JFrame externalFrame = new JFrame();
     
     // In order to drag/drop between internal frames,
     // they must all share a controller (therefore it is static)
@@ -46,17 +48,21 @@ public class SpecDocking extends VirtualAppSpec {
 	// Each instance gets its own content area (by API design)
 	private CContentArea content = null;
 	
+	private static final String DEFAULT_TITLE = "Docking Framework";
+
 	public SpecDocking() {
-        this("Docking Framework");
+        this(DEFAULT_TITLE);
     }
 
     public SpecDocking(String title) {
         super();
 
-        this.setTitle("Docking Framework");
-        this.internalFrameProvider = true;
         this.setTitle(title);
-        this.internalFrameProvider = true;        
+        this.internalFrameProvider = true;
+
+        // Update the counter so that content area names are unique
+        counter++;
+
     }
 
     @Override
@@ -95,8 +101,9 @@ public class SpecDocking extends VirtualAppSpec {
 
         // Setup Docking Controller...
         if (control == null) {
-            control = new CControl(); // [1]
-            //control.putProperty( DockTheme.DOCKABLE_MOVING_IMAGE_FACTORY, ScreencaptureMovingImageFactory );
+            control = new CControl( externalFrame ); // [1]
+            // control = new CControl(); // [1]
+            // control.putProperty( DockTheme.DOCKABLE_MOVING_IMAGE_FACTORY, ScreencaptureMovingImageFactory );
             
             this.content = control.getContentArea();
             
@@ -104,7 +111,10 @@ public class SpecDocking extends VirtualAppSpec {
             // it also does not use animations (which I also prefer).
             final ThemeMap themes = control.getThemes();
             themes.select(ThemeMap.KEY_FLAT_THEME);
-            
+ 
+            externalFrame.setSize(300, 500);
+            externalFrame.setLocationRelativeTo(null);
+            externalFrame.setVisible(true);
         } else {
             this.content = control.createContentArea("ContentArea_" + counter);
         }
@@ -113,31 +123,34 @@ public class SpecDocking extends VirtualAppSpec {
         frame.setLayout(new BorderLayout());
         frame.add( content, BorderLayout.CENTER );
 
-        // Create some Dockables...
-        SingleCDockable red = demoDockable("Red_" + counter, Color.red);
-        SingleCDockable blue = demoDockable("Blue_" + counter, Color.blue);
-        SingleCDockable green = demoDockable("Green_" + counter++, Color.green);
-                
-        // Add Dockables to the Controller:
-        control.addDockable( green );
-        control.addDockable( red );
-        control.addDockable( blue );
+        // This populates the demo app spec.  Others will be "blank"
+        if (this.getTitle().equals(DEFAULT_TITLE)) {
+            // Create some Dockables...
+            SingleCDockable red = demoDockable("Red_" + counter, Color.red);
+            SingleCDockable blue = demoDockable("Blue_" + counter, Color.blue);
+            SingleCDockable green = demoDockable("Green_" + counter, Color.green);
+                    
+            // Add Dockables to the Controller:
+            control.addDockable( green );
+            control.addDockable( red );
+            control.addDockable( blue );
 
-        // Locations cannot be set until:
-        // 1) the Controller content area is added to a component
-        // 2) the Dockable has been added to the Controller
-        green.setLocation( CLocation.base(content).normal() );
-        green.setVisible( true );
-        
-        red.setLocation( CLocation.base(content).minimalNorth(0) );
-        red.setVisible( true );
+            // Locations cannot be set until:
+            // 1) the Controller content area is added to a component
+            // 2) the Dockable has been added to the Controller
+            green.setLocation( CLocation.base(content).normal() );
+            green.setVisible( true );
+            
+            red.setLocation( CLocation.base(content).minimalNorth(0) );
+            red.setVisible( true );
 
-        blue.setLocation( CLocation.base(content).minimalNorth(1) );
-        // blue.setLocation( CLocation.external( 300, 200, 200, 100 ) ); // [2]
-        blue.setVisible( true );
-        // [2] Note that external will only work if there is a visible JFrame
-        //     attached.  Since the goal of this framework is to *not* proliferate
-        //     JFrames, then this demo will not do so (but, again, it's possible).
+  //          blue.setLocation( CLocation.base(content).minimalNorth(1) );
+            blue.setLocation( CLocation.external( 300, 200, 200, 100 ) ); // [2]
+            blue.setVisible( true );
+            // [2] Note that external will only work if there is a visible JFrame
+            //     attached.  Since the goal of this framework is to *not* proliferate
+            //     JFrames, then this demo will not do so (but, again, it's possible).            
+        }
         
         SwingUtilities.invokeLater(() -> {
             frame.pack();
@@ -157,6 +170,7 @@ public class SpecDocking extends VirtualAppSpec {
      * @param frame
      * @param desktop
      */
+    @SuppressWarnings("deprecation")
     private void version03(JInternalFrame frame, JDesktopPane desktop) {
         
         //JFrame frame = new JFrame( "Demo" );

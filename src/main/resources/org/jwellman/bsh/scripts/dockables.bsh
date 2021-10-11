@@ -21,6 +21,7 @@ DesktopManager.get().createVApp(x);
 /*------- Step 2 -------
 jvd.cc = new JColorChooser();
 jvd.cc.setTransferHandler( new TransferHandler("color")  );
+jvd.cc.setDragEnabled(true);
 x.addDockable( "Color Chooser", jvd.cc );
 // ===== end step 2 ===== */
 

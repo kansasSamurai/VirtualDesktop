@@ -1,6 +1,7 @@
 package org.jwellman.virtualdesktop;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.Toolkit;
@@ -33,6 +34,9 @@ import javax.swing.plaf.metal.MetalLookAndFeel;
 import javax.swing.plaf.metal.OceanTheme;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 
+import org.jwellman.dsp.DSP;
+import org.jwellman.dsp.FontAwesomeIconProvider;
+import org.jwellman.dsp.icons.IconSpecifier;
 import org.jwellman.swing.plaf.metal.MetalThemeManager ;
 //import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
 //import static org.jwellman.virtualdesktop.App.registeredApps;
@@ -132,17 +136,13 @@ public class App extends JFrame implements ActionListener {
         App.app = this;
 
         //Make the big window be indented 50 pixels from each edge of the screen.
-        int inset = 50;
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        setBounds(inset, inset, screenSize.width  - inset*2, screenSize.height - inset*2);
+        setBounds(0, 0, screenSize.width , screenSize.height );
 
         setJMenuBar(createMenuBar());
 
         //Set up the GUI.
         JPanel p = new JPanel(new BorderLayout());
-        JTextArea species = new JTextArea("Species");
-        JTextArea locations = new JTextArea("Locations");
-        JTextArea travelPaths = new JTextArea("TravelPaths");
 
         JPanel controls = null;
 
@@ -151,47 +151,7 @@ public class App extends JFrame implements ActionListener {
 
         int version = 5;
         switch (version) {
-            case 1:
-                dsp = new DesktopScrollPane(desktop);
-                setContentPane(dsp); //(desktop);
-                break;
-            case 2:
-                controls = new JPanel(new GridLayout(3, 0));
-                controls.add(new JScrollPane(species));
-                controls.add(new JScrollPane(locations));
-                controls.add(new JScrollPane(travelPaths));
-
-                p.add(controls, BorderLayout.WEST);
-                p.add(desktop);
-                this.setContentPane(p);
-                break;
-            case 3:
-                controls = new JPanel(new GridLayout(3, 0));
-                controls.add(new JScrollPane(species));
-                controls.add(new JScrollPane(locations));
-                controls.add(new JScrollPane(travelPaths));
-
-                dsp = new DesktopScrollPane(desktop);
-                p.add(controls, BorderLayout.WEST);
-                p.add(dsp);
-                this.setContentPane(p);
-                break;
-            case 4:
-                controls = new JPanel(new GridLayout(3, 0));
-                controls.add(new JScrollPane(species));
-                controls.add(new JScrollPane(locations));
-                controls.add(new JScrollPane(travelPaths));
-
-                dsp = new DesktopScrollPane(desktop);
-
-                //Create a split pane with the two scroll panes in it.
-                JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, controls, dsp);
-                splitPane.setOneTouchExpandable(true);
-                splitPane.setDividerLocation(150);
-
-                p.add(splitPane);
-                this.setContentPane(p);
-                break;
+            // previous versions are in source control if needed
             case 5:
                 controls = new JPanel(new BorderLayout());
 
@@ -216,8 +176,6 @@ public class App extends JFrame implements ActionListener {
 
         }
 
-        // createVApp(new SpecBeanShell()); //(new SpecEmpty()); //create first "window"
-
         //Make dragging a little faster but perhaps uglier.
         desktop.setDragMode(JDesktopPane.OUTLINE_DRAG_MODE);
 
@@ -229,7 +187,6 @@ public class App extends JFrame implements ActionListener {
         // and overall, there needs to be a "layout manager" for the desktop
         int x = 10; int y = -70;
 
-        JMenuItem m = null;
         for (DesktopAction a : ActionFactory.getListOfActions()) {
             /* TODO Currently this is coded so that it is either
                on the desktop or in the menu.  I do not have a current
@@ -299,11 +256,15 @@ public class App extends JFrame implements ActionListener {
         return menuBar;
     }
 
-    //React to menu selections.
+    /**
+     * React to menu selections.
+     * TODO This is just a placeholder; need to determine how menus
+     * are globally handled and implement that feature.
+     */
     @Override public void actionPerformed(ActionEvent e) {
         if ("new".equals(e.getActionCommand())) {
             try {
-                // TODO This is just temporary; need to implement a real feature
+             // TODO This is just temporary; need to implement a real feature
                 DesktopManager.get().createVApp( registeredApps[(++count % registeredApps.length)].newInstance() );
             } catch (InstantiationException ex) {
                 Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
@@ -359,7 +320,19 @@ public class App extends JFrame implements ActionListener {
         System.setSecurityManager(new NoExitSecurityManager());
 
         // Global Initialization(s) [ Frameworks, etc. ]
-        IconFontSwing.register(FontAwesome.getIconFont());
+
+        DSP.Icons.registerProvider("FontAwesome", new FontAwesomeIconProvider());
+
+        DSP.Icons.register("jpad.java", new IconSpecifier( "FontAwesome", "COFFEE", 18, null, Color.black, Color.white) );
+        DSP.Icons.register("jpad.eye", new IconSpecifier( "FontAwesome", "EYE", 18, null, Color.black, Color.white) );
+        DSP.Icons.register("jpad.bsh_class_browser", new IconSpecifier( "FontAwesome", "EYE", 18, null, Color.black, Color.white) );
+        DSP.Icons.register("jpad.calendar", new IconSpecifier( "FontAwesome", "CALENDAR", 18, null, Color.black, Color.white) );
+        DSP.Icons.register("jpad.cog", new IconSpecifier( "FontAwesome", "COG", 18, null, Color.black, Color.white) );
+        DSP.Icons.register("jpad.leaf", new IconSpecifier( "FontAwesome", "LEAF", 18, null, Color.black, Color.white) );
+        DSP.Icons.register("jpad.check", new IconSpecifier( "FontAwesome", "CHECK", 18, null, Color.black, Color.white) );
+
+        
+        
         IconFontSwing.register(GoogleMaterialDesignIcons.getIconFont());
         
         //Schedule a job for the event-dispatching thread:

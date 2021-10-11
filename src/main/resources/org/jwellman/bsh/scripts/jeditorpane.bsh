@@ -21,7 +21,7 @@ class SwingTester {
    }
 
    public JPanel createPanel(JFrame frame){
-      JPanel panel = new JPanel(new FlowLayout());
+      JPanel panel = new JPanel(new BorderLayout());
 
       jEditorPane = new JEditorPane();
       jEditorPane.setEditable(false);
@@ -36,9 +36,9 @@ class SwingTester {
       }
 
       JScrollPane jScrollPane = new JScrollPane(jEditorPane);
-      jScrollPane.setPreferredSize(new Dimension(540,400));
+      // jScrollPane.setPreferredSize(new Dimension(540,400));
 
-      panel.add(jScrollPane);
+      panel.add(jScrollPane, BorderLayout.CENTER);
       return panel;
 
    }
@@ -46,6 +46,7 @@ class SwingTester {
 }
 
 jvd.tester = new SwingTester();
+print("Created SwingTest() as:  jvd.tester");
 
 // -------------------------------------
 
@@ -64,16 +65,16 @@ tdemo() {
 }
 
 jvd.demo = tdemo();
-
+print("Created tdemo() as:  jvd.demo");
 // -------------------------------------
 
 //jvd.demo.url = new File("C:\\dev\\workspaces\\textfiles\\test.html").toURI().toURL();
-jvd.demo.url = new File("C:/dev/workspaces/git/VirtualDesktop-old/src/main/resources/org/jwellman/bsh/scripts/test.html").toURI().toURL();
+jvd.demo.url = new File("C:/dev/workspaces/git/virtualdesktop/src/main/resources/org/jwellman/bsh/scripts/test.html").toURI().toURL();
 jvd.tester.jEditorPane.setPage(jvd.demo.url);
 
 // -------------------------------------
-// This allows the setPage() to be reloaded... it might make sense to put this in tdemo()
+/* This allows the setPage() to be reloaded... it might make sense to put this in tdemo()
 javax.swing.text.Document doc = jvd.tester.jEditorPane.getDocument();
 doc.putProperty(javax.swing.text.Document.StreamDescriptionProperty, null);
 jvd.tester.jEditorPane.setPage(jvd.demo.url);
-
+*/

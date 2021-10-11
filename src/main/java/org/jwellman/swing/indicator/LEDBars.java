@@ -21,9 +21,9 @@ import org.apache.commons.lang3.RandomUtils;
  * <p>
  * Design goals:<br>
  * a) transparent background by default (to allow any background to show through)<br>
- * b) number,color, dimension of "normal" bars
- * c) number,color, dimension of "warning" bars
- * d) spacing between bars
+ * b) number,color, dimension of "normal" bars<br>
+ * c) number,color, dimension of "warning" bars<br>
+ * d) spacing between bars<br>
  * 
  * 
  * @author rwellman
@@ -50,13 +50,13 @@ public class LEDBars extends JComponent implements ActionListener, MouseListener
     private Dimension barDimension = new Dimension();;
 
     // Variables to support animation
-    private int ramValue, ramMax;
     private Timer timer;
     private boolean timerEnabled = true;
+    private int animValue, animMax;
 
-    private static final Color ledgreen = new Color(0x12FF00);
-    private static final Color ledyellow = new Color(0xFFB901);
-    private static final Color midnightblue = new Color(0x012D5C);
+    public static final Color LED_GREEN = new Color(0x12FF00);
+    public static final Color LED_YELLOW = new Color(0xFFB901);
+    public static final Color LED_MIDNIGHTBLUE = new Color(0x012D5C);
 
     // This is not intended to be made public; a flyweight to simply avoid the overhead of a new object each time.
     private Dimension dimension = new Dimension();
@@ -72,17 +72,17 @@ public class LEDBars extends JComponent implements ActionListener, MouseListener
         this.totalNormalBars = 10;
         this.totalWarningBars = 5;
 
-        this.colorOff = midnightblue;
-        this.colorNormalBars = ledgreen;
-        this.colorWarningBars = ledyellow;
+        this.colorOff = LED_MIDNIGHTBLUE;
+        this.colorNormalBars = LED_GREEN;
+        this.colorWarningBars = LED_YELLOW;
 
         this.barDimension.width = 4;
         this.barDimension.height = 10;
 
         this.gap = 1;
         
-        ramValue = 0;
-        ramMax = RandomUtils.nextInt(0, 15);
+        animValue = 0;
+        animMax = RandomUtils.nextInt(0, 15);
 
         this.calcSize();
 
@@ -123,26 +123,14 @@ public class LEDBars extends JComponent implements ActionListener, MouseListener
         // ===== Normal Bars =====
         int x=Math.negateExact(spacing), y=0;
         for (int n = 0; n < this.totalNormalBars; n++) {
-            g2.setColor((n < ramValue) ? this.colorNormalBars : this.colorOff );
+            g2.setColor((n < animValue) ? this.colorNormalBars : this.colorOff );
             g2.fillRect(x += spacing, y, this.barDimension.width, this.barDimension.height);
         }
 
         // ===== Warning Bars =====
         for (int n = 0; n < this.totalWarningBars; n++) {
-            g2.setColor(((n+this.totalNormalBars) < ramValue) ? this.colorWarningBars : this.colorOff );
+            g2.setColor(((n+this.totalNormalBars) < animValue) ? this.colorWarningBars : this.colorOff );
             g2.fillRect(x += spacing, y, this.barDimension.width, this.barDimension.height);
-        }
-
-        // ===== reset value
-        if (++ramValue > ramMax) {
-            ramValue = 0;
-            ramMax = RandomUtils.nextInt(0, 15);
-            /* Technically, this should be the sum of normal bars
-             * plus warning bars.  However, for the demo, it actually
-             * looks better leaving it at a number larger than the sum.
-             * This might be a future enhancement.
-             * 
-             */
         }
 
         g2.dispose();
@@ -169,6 +157,21 @@ public class LEDBars extends JComponent implements ActionListener, MouseListener
     @Override
     public void actionPerformed(ActionEvent e) {        
         this.repaint();
+
+        // ===== reset value
+        if (this.timerEnabled) {
+            if (++animValue > animMax) {
+                animValue = 0;
+                animMax = RandomUtils.nextInt(0, 15);
+                /* Technically, this should be the sum of normal bars
+                 * plus warning bars.  However, for the demo, it actually
+                 * looks better leaving it at a number larger than the sum.
+                 * This might be a future enhancement.
+                 * 
+                 */
+            }            
+        }
+
     }
 
     @ Override
@@ -294,11 +297,17 @@ public class LEDBars extends JComponent implements ActionListener, MouseListener
         this.colorOff = colorOff;
     }
 
+    /**
+     * @param w the bar width
+     */
     public void setBarWidth(int w) {
         this.barDimension.width = w;
         this.calcSize();
     }
     
+    /**
+     * @param h the bar height
+     */
     public void setBarHeight(int h) {
         this.barDimension.height = h;
         this.calcSize();

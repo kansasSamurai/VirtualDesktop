@@ -12,7 +12,7 @@ public class IconViewer extends JLabel {
     public JPanel view;
     
     public IconViewer() {
-        super();
+        super("< This is your icon");
         
     }
     
@@ -20,7 +20,7 @@ public class IconViewer extends JLabel {
         if (view == null) {
             view = new JPanel(new GridBagLayout());
             view.setBorder(BorderFactory.createTitledBorder("Icon Preview"));
-            
+            view.setOpaque(false);
             view.add(this);            
         }
         

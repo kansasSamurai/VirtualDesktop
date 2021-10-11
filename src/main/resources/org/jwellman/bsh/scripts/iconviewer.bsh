@@ -1,7 +1,10 @@
+import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import jiconfont.swing.IconFontSwing;
 import jiconfont.icons.FontAwesome;
 import jiconfont.icons.GoogleMaterialDesignIcons;
+
+import org.jwellman.swing.icon.ColorIcon;
 
 icv() {
 
@@ -19,6 +22,10 @@ icv() {
 
     this.file = new File("test.png");
 
+/* Note to self:
+   When exporting images/icons created by jIconFont,
+   the PNGs do have transparent backgrounds.
+*/
     export() {
 
         Image img = jvd.icv.preview.getIcon().getImage();        
@@ -39,6 +46,12 @@ jvd.icv = icv();
 jvd.icv.preview.setTransferHandler(new TransferHandler("foreground"));
 
 // DesktopManager.get().createVApp(jvd.icv.panel, "Icon Viewer");
+
+// If you want just the label opaque:
+// jvd.icv.preview.setOpaque(true);
+// jvd.icv.preview.setBackground(Color.white);
+
+// If you want the entire label view opaque:
 // jvd.icv.preview.view.setOpaque(true);
 // jvd.icv.preview.view.setBackground(Color.white);
 
@@ -49,6 +62,46 @@ jvd.icv.preview.setTransferHandler(new TransferHandler("foreground"));
 */
 
 /*  ========================================
+
+import jiconfont.icons.*;
+print(jiconfont.icons.FontAwesome.values());
+for (GoogleMaterialDesignIcons value : jiconfont.icons.GoogleMaterialDesignIcons.values()) {
+    if (value.toString().contains("ZOOM"))
+        print(value);
+}
+
+//import org.jwellman.dsp.DSP;
+//import org.jwellman.dsp.FontAwesomeIconProvider;
+//import org.jwellman.dsp.icons.IconSpecifier;
+//import org.jwellman.swing.icon.ColorIcon;
+//import org.jwellman.swing.jbutton.RolloverButton;
+//import org.jwellman.swing.jpanel.BackgroundPanel;
+//import org.jwellman.swing.jpanel.RestrictedHeightPanel;
+//import org.jwellman.virtualdesktop.DesktopManager;
+//import org.jwellman.virtualdesktop.VirtualAppFrame;
+
+
+//DSP.Icons.registerProvider("FontAwesome", new FontAwesomeIconProvider());
+
+IconSpecifier is = new IconSpecifier( "FontAwesome", "CALENDAR"
+        , 18, null, Color.black, Color.white);
+DSP.Icons.register("jpad.calendar", is);
+
+
+//IconSpecifier is = new IconSpecifier(
+//        "FontAwesome", "BALANCE_SCALE"
+//        , 48, null, Color.black, Color.white);
+
+
+//DSP.Icons.register("myapp.scales", is);
+
+
+//jvd.icv.preview.setIcon(
+//
+//    DSP.Icons.getIcon("myapp.scales")
+//    DSP.Icons.getIcon("myapp.scales", jvd.icv.preview.foreground)
+//    
+//);
 
 jvd.icv.preview.setIcon(
 

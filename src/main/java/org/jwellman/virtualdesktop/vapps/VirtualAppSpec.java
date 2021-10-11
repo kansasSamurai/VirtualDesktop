@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 
+import javax.swing.Icon;
 import javax.swing.JDesktopPane;
 import javax.swing.JInternalFrame;
 import javax.swing.JPanel;
@@ -15,6 +16,7 @@ import javax.swing.JPanel;
 @SuppressWarnings("rawtypes")
 abstract public class VirtualAppSpec {
 
+    private Icon icon;
     private String title;
 	private Class clazz;
     private JPanel content;
@@ -101,6 +103,20 @@ abstract public class VirtualAppSpec {
      */
     public void setContent(JPanel content) {
         this.content = content;
+    }
+
+    /**
+     * @return the icon
+     */
+    public Icon getIcon() {
+        return icon;
+    }
+
+    /**
+     * @param icon the icon to set
+     */
+    public void setIcon(Icon icon) {
+        this.icon = icon;
     }
 
     public int getHeight() {

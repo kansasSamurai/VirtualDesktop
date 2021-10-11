@@ -13,6 +13,7 @@ import javax.swing.event.InternalFrameListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import org.jwellman.dsp.DSP;
 import org.jwellman.virtualdesktop.vapps.VirtualAppSpec;
 
 import ca.odell.glazedlists.BasicEventList;
@@ -63,6 +64,9 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 	/**
 	 * Create a new application.
 	 * 
+     * Currently (Oct. 2021), this is used solely by 
+     * menu actions and desktop icons.
+	 * 
 	 * @param newInstance
 	 */
     public void createVApp(Object newInstance) {
@@ -72,6 +76,8 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
     /**
      * Create a new application.
      *
+     * Currently (Oct. 2021), this is only called by createVApp(Object newInstance).
+     * 
      * @param spec
      */
     public void createVApp(final VirtualAppSpec spec) {
@@ -83,13 +89,16 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
             spec.populateInternalFrame(frame, desktop);
         } else {
         	System.out.println("createVApp() going to createVApp()");
-            this.createVApp(spec.getContent(), spec.getTitle(), null);
+            this.createVApp(spec.getContent(), spec.getTitle(), spec.getIcon());
         }
 
     }
 
     /**
      * Create a new application.
+     * 
+     * Currently (Oct. 2021), this is used by beanshell scripts since they
+     * do not need the formality of creating a VirtualAppSpec object.
      * 
      * @param c
      * @param title
@@ -105,6 +114,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
      * This public method allows internal apps to create internal apps/windows.
      * i.e. via beanshell or others !! All overloaded methods lead here !!
      * [This is the definitive method of the overloaded versions.]
+     * Currently (Oct. 2021), there is one exception:  VirtualAppSpec where internalframeprovider is true.
      *
      * @param c
      * @param title
@@ -114,7 +124,11 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
     public VirtualAppFrame createVApp(final Container c, final String title, final Icon icon) {
 
     	final VirtualAppFrame frame = this.createAppFrame(title); 
-        if (icon != null) frame.setFrameIcon(icon);
+        if (icon != null) {
+            frame.setFrameIcon(icon);            
+        } else {
+            frame.setFrameIcon(DSP.Icons.getIcon("jpad.java"));
+        }
 
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             @Override public void run() {

@@ -66,8 +66,8 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
     private boolean debug = false;
     
     public FiveBarStatusDemo() {
-        this.width = 225;
-        this.height = 225;
+        this.width = 250 + 1; // multiple of 5 + 1
+        this.height = 255 + 1; // multiple of 5 + 1
         this.dimension.setSize(this.width, this.height);
 
         this.setBackground(myblue);
@@ -182,7 +182,7 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
 
         // Calculate commonly used values:
         final int left = 0, right = width-1, top = 0, bottom = height-1;
-        final int midx = right/2, midy = bottom/2;
+        // final int midx = right/2, midy = bottom/2;
 
         if (background == null) this.createBackground();
         g2.drawImage(background, 0, 0, null);
@@ -196,7 +196,7 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
         int x = axesLeft + axesWidth + 4 + 2;
         TriangleShape triangleShape = null;
         for (int n=0; n<5; n++) {
-            int y = barsBottom - newvalues[n] - 20; // 'values' is an interesting effect
+            int y = barsBottom - newvalues[n] - 20; // 'values' is an interesting effect // 'newvalues'
             triangleShape = new TriangleShape(
                 new Point2D.Double(x, y),
                 new Point2D.Double(x+5, y-4), 
@@ -245,7 +245,7 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
 
         // Calculate commonly used values:
         final int left = 0, right = width-1, top = 0, bottom = height-1;
-        final int midx = right/2, midy = bottom/2;
+        // final int midx = right/2, midy = bottom/2;
 
         // old background
         //g2.setPaint(new GradientPaint(0, 50, darkblue, 112, 50, myblue, true));
@@ -270,7 +270,7 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
         g2.fillRect(0, 0, this.width, this.height);
 
         // Axes
-        int barsLeftStart = 50, barsBottom = bottom-3, barsWidth = 25;
+        int barsLeftStart = 50, barsBottom = bottom-3;
         this.drawMajorAxis(g2, barsLeftStart, barsBottom);
         this.drawMinorAxis(g2, barsLeftStart, barsBottom);
         

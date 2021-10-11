@@ -16,6 +16,7 @@ import java.net.URL;
 import javax.imageio.ImageIO;
 
 import org.jwellman.swing.jpanel.BackgroundPanel;
+import org.jwellman.swing.FiveBarStatusDemo;
 import org.jwellman.swing.indicator.LEDBars;
 
 URL url = DesktopManager.get().getClass().getClassLoader().getResource("graphics/deviantart_AdvancedUI-Status-Screen-120947815.jpg");        
@@ -73,7 +74,7 @@ y.setGap(2);
 y.setTotalNormalBars(7);
 y.setTotalWarningBars(3);
 x.add(demo.leds); size = demo.leds.getPreferredSize();
-demo.leds.setBounds(5 + insets.left, 454 + insets.top,
+demo.leds.setBounds(5 + insets.left, 428 + 26 + insets.top,
                      size.width, size.height);
 
 y = demo.leds = new LEDBars();
@@ -84,10 +85,14 @@ y.setBarHeight(8);
 y.setGap(2);
 y.setTotalNormalBars(7);
 y.setTotalWarningBars(3);
-x.add(demo.leds); size = demo.leds.getPreferredSize();
+x.add(demo.leds); size = y.getPreferredSize();
 demo.leds.setBounds(5 + insets.left, 454 + 26 + insets.top,
                      size.width, size.height);
 
+y = demo.graph = new FiveBarStatusDemo();
+x.add(y); size = y.getPreferredSize();
+y.setBounds(1122 + insets.left, 145 + insets.top,
+                     size.width, size.height);
 
 jvd.demo3 = DesktopManager.get().createVApp(demo.panel, "Demo 3");
 jvd.demo3.setResizable(false);

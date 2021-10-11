@@ -27,6 +27,9 @@ import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
 
+import org.jwellman.dsp.DSP;
+import org.jwellman.dsp.FontAwesomeIconProvider;
+import org.jwellman.dsp.icons.IconSpecifier;
 import org.jwellman.swing.icon.ColorIcon;
 import org.jwellman.swing.jbutton.RolloverButton;
 import org.jwellman.swing.jpanel.BackgroundPanel;
@@ -43,6 +46,7 @@ import org.jwellman.virtualdesktop.VirtualAppFrame;
  * @author rwellman
  *
  */
+@SuppressWarnings("unused")
 public class Scratchpad {
 
     public Scratchpad() {
@@ -50,6 +54,15 @@ public class Scratchpad {
         //ImageIO.write(im, formatName, output);
         new JButton("Icon Color", new ColorIcon(Color.black, 14));
         UIManager.get("Tree.collapsedIcon");
+        
+        IconSpecifier is = new IconSpecifier(
+                "FontAwesome", "BALANCE_SCALE"
+                , 48, null, Color.black, Color.white);
+
+        DSP.Icons.registerProvider("FontAwesome", new FontAwesomeIconProvider());
+        DSP.Icons.register("myapp.scales", is);
+
+        DSP.Icons.getIcon("myapp.scales");
     }
     
     public Scratchpad(int a) {  

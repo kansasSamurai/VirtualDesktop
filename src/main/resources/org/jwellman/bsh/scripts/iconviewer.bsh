@@ -102,7 +102,18 @@ DSP.Icons.register("jpad.calendar", is);
 //    DSP.Icons.getIcon("myapp.scales", jvd.icv.preview.foreground)
 //    
 //);
+--------------------------------
+z = 0;
+for (VirtualAppFrame y : DesktopManager.get().getFrames()) {
+    if ( y.getTitle().equals("BeanShell Class Browser - jvd") ) {
+        z = y;
+    }
+}
 
+print(z);
+z.setFrameIcon(DSP.Icons.getIcon("jpad.bsh_class_browser"));
+
+------------------------
 jvd.icv.preview.setIcon(
 
     IconFontSwing.buildIcon(

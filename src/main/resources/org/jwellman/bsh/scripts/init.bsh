@@ -12,11 +12,6 @@
  *     history when it is initialized to make this easier (i.e. just hit the up key).
  *     Finally, this script itself will *NOT* be read in UTF8 so avoid the use
  *     of incompatible characters (i.e. see env.bsh for an example)
-
-import java.awt.Font;
-import java.awt.Color;
-import javax.swing.ImageIcon;
-
  */
 
 // This must be the first line of this script
@@ -29,3 +24,4 @@ sourceUTF8("/org/jwellman/bsh/scripts/env.bsh");
 // but they can be overridden via source().
 sourceUTF8("/org/jwellman/bsh/scripts/printBanner.bsh");
 
+cls();

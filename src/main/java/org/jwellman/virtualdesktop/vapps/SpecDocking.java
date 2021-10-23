@@ -39,7 +39,7 @@ public class SpecDocking extends VirtualAppSpec {
 	
     private static int counter = 0;
     
-    private static final JFrame externalFrame = new JFrame();
+    private static final JFrame externalFrame = new JFrame("Docking Frame");
     
     // In order to drag/drop between internal frames,
     // they must all share a controller (therefore it is static)

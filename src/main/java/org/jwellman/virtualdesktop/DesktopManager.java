@@ -83,8 +83,17 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
     public void createVApp(final VirtualAppSpec spec) {
 
         if (spec.isInternalFrameProvider()) {
+            // TODO I want to move this somehow into the definitive method;
+            // I do not like having logic spread throughout all these createvapp methods.
         	System.out.println("createVApp() going to populateInternalFrame()");
             final VirtualAppFrame frame = this.createAppFrame(spec.getTitle());
+            
+            if (spec.getIcon() != null) {
+                frame.setFrameIcon(spec.getIcon());            
+            } else {
+                frame.setFrameIcon(DSP.Icons.getIcon("jpad.java"));
+            }
+
             desktop.add(frame);
             spec.populateInternalFrame(frame, desktop);
         } else {

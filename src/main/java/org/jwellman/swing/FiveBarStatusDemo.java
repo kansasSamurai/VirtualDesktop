@@ -66,8 +66,8 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
     private boolean debug = false;
     
     public FiveBarStatusDemo() {
-        this.width = 250 + 1; // multiple of 5 + 1
-        this.height = 255 + 1; // multiple of 5 + 1
+        this.width = 240 + 1; // multiple of 5 + 1
+        this.height = 275 + 1; // multiple of 5 + 1
         this.dimension.setSize(this.width, this.height);
 
         this.setBackground(myblue);

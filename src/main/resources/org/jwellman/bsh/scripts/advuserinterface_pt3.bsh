@@ -91,7 +91,7 @@ demo.leds.setBounds(5 + insets.left, 454 + 26 + insets.top,
 
 y = demo.graph = new FiveBarStatusDemo();
 x.add(y); size = y.getPreferredSize();
-y.setBounds(1122 + insets.left, 145 + insets.top,
+y.setBounds(1112 + insets.left, 144 + insets.top,
                      size.width, size.height);
 
 jvd.demo3 = DesktopManager.get().createVApp(demo.panel, "Demo 3");

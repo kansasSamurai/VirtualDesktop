@@ -1,0 +1,45 @@
+/*
+This script creates a JTree that can be used
+for browsing a user interface.  As each node
+is selected, it can be referenced by 'y.selected'.
+
+Mostly this script could be run standalone;
+however, currently it relies on dockables.bsh
+in order to place the user interface in a 
+usable container.
+*/
+
+import javax.swing.tree.DefaultTreeModel;
+import org.jwellman.swing.jtree.SwingTreeNode;
+import javax.swing.tree.DefaultMutableTreeNode;
+
+y = object();
+y.panel = new JPanel();
+y.tree = new JTree();
+
+y.panel.setLayout(new BorderLayout());
+y.panel.add(y.tree, BorderLayout.WEST);
+
+x.addDockable( "Demo", y.panel );
+
+//y.tree.setModel(new DefaultTreeModel(new SwingTreeNode(y.panel), true));
+
+//y.listener = 
+// new TreeSelectionListener() {
+//    public void valueChanged(TreeSelectionEvent e) {
+//        DefaultMutableTreeNode node = (DefaultMutableTreeNode)
+//                           y.tree.getLastSelectedPathComponent();
+//
+//    /* if nothing is selected */ 
+//        if (node == null) return;
+//
+//    /* retrieve the node that was selected */ 
+//        Object nodeInfo = node.getUserObject();
+//        y.selected = nodeInfo;
+//        
+//    /* React to the node selection. */
+//
+//    }
+//};
+//
+//y.tree.addTreeSelectionListener(y.listener);

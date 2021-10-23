@@ -18,6 +18,19 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.jwellman.virtualdesktop.DesktopManager;
 
+// Since I almost always start with opening this editor/script,
+// put some common imports here for future usage:
+// (i.e. these imports are not strictly needed for this script)
+import org.jwellman.dsp.DSP;
+import org.jwellman.dsp.FontAwesomeIconProvider;
+import org.jwellman.dsp.icons.IconSpecifier;
+import org.jwellman.swing.icon.ColorIcon;
+import org.jwellman.swing.jbutton.RolloverButton;
+import org.jwellman.swing.jpanel.BackgroundPanel;
+import org.jwellman.swing.jpanel.RestrictedHeightPanel;
+import org.jwellman.virtualdesktop.DesktopManager;
+import org.jwellman.virtualdesktop.VirtualAppFrame;
+
 /**
  * A simple extenstion of JPanel to hold an RTextScrollPane/RSyntaxTextArea (RSTA)
  * and expose the RSTA as the 'textarea' property (getter only).
@@ -95,11 +108,16 @@ better(String title) {
         } else { // e.getActionCommand().equals("Eval")
             print("[ Editor invoked interpreter.eval()... ]");
 
-            // The following line works but I want to see if I can directly use the input stream
-            this.interpreter.eval( 
-                getCurrentTextArea().getText()
-                + "\n\n this.interpreter.print( getBshPrompt() );"
-            ); // this works
+            try {
+                this.interpreter.eval( getCurrentTextArea().getText() );
+            } catch (Exception e) {
+                this.interpreter.print( "  !! Exception during eval(); see console !!\n" );
+                e.printStackTrace();
+            } finally {
+                this.interpreter.print( getBshPrompt() );
+            }
+
+            // the following didn't work; I need to keep it for a while to see if it is btter if it does work
             // nope... bsh.console.inputStream.read( getCurrentTextArea().getText().getBytes() );
 
             // this.interpreter.print( getBshPrompt() );
@@ -182,5 +200,6 @@ better(String title) {
     }
 
     print("Better Editor started...");
+
     return this;
 }

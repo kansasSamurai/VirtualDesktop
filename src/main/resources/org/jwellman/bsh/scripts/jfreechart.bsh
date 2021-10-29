@@ -22,10 +22,11 @@ demoTimeSeriesChart()  {
     XYPlot plot = test.chart.plot;
     plot.setBackgroundPaint( Color.black );
     plot.setBackgroundPaint( transparent );
+    plot.setOutlineVisible(false);
+    plot.setDomainGridlinesVisible(false);
 
     test.chart.getLegend().setBorder(0, 0, 0, 0);
     test.chart.getLegend().setBackgroundPaint(transparent);
-    plot.setDomainGridlinesVisible(false);
     // ---------------------------------
     plot.setBackgroundPaint( Color.darkGray );
     test.chart.setBackgroundPaint( Color.darkGray );
@@ -34,7 +35,6 @@ demoTimeSeriesChart()  {
     plot.getRangeAxis().setTickMarksVisible(false);
     plot.getRangeAxis().setAxisLineVisible(true);
     plot.getRangeAxis().setAxisLineVisible(false);
-    plot.setOutlineVisible(false);
     plot.getRangeAxis().setTickMarksVisible(false);
     plot.getDomainAxis().setAxisLineVisible(false);
     plot.getDomainAxis().setAxisLineVisible(false);
@@ -59,7 +59,7 @@ JPreeChart pre = new JPreeChart();
 // pre.decorate(mypreechart.panel.getChart());
 
 
--------------------
+// -------- Apply JPreeChart to the JFreeChartDemo
 
 import org.jwellman.virtualdesktop.*;
 import org.jwellman.jfreechart.*;
@@ -83,3 +83,12 @@ demoJFreeChart() {
 }
 
 myjfreechart = demoJFreeChart();
+
+// ----------- Change fonts
+// myjfreechart.pre.setFontName("Segoe UI");
+// myjfreechart.pre.decorate(myjfreechart.demo.getChart());
+
+// ----------- Change title
+// myjfreechart.demo.getChart().setTitle("Drive Space");
+
+

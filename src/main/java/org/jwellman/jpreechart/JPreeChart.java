@@ -26,11 +26,11 @@ import org.jfree.ui.RectangleInsets;
  */
 public class JPreeChart {
 
-    private String fontName;
-
     private JFreeChart chart;
 
-    protected String TITLE_FONT = "Arial"; // Lucida Bright
+    private String fontName;
+
+    protected String TITLE_FONT = "Segoe UI"; // Arial, Lucida Bright
 
     protected Font[] FONTS = {
         new Font(TITLE_FONT, Font.PLAIN, 12),
@@ -38,12 +38,12 @@ public class JPreeChart {
         new Font(TITLE_FONT, Font.PLAIN, 24)
     };
 
-    private StandardChartTheme theme = (StandardChartTheme)StandardChartTheme.createJFreeTheme();
+    public StandardChartTheme theme = (StandardChartTheme)StandardChartTheme.createJFreeTheme();
 
-    final protected static Color slate = new Color(0x333333); // Color.decode("#333333");
-    final protected static Color midgray = new Color(0xC0C0C0); // Color.decode("#C0C0C0");
-    final protected static Color transparent = new Color(255,255,255,0);
-    final protected static BasicStroke STROKE_DEFAULT =
+    final public static Color slate = new Color(0x333333); // Color.decode("#333333");
+    final public static Color midgray = new Color(0xC0C0C0); // Color.decode("#C0C0C0");
+    final public static Color transparent = new Color(255,255,255,0);
+    final public static BasicStroke STROKE_DEFAULT =
             new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL);
 
     public JPreeChart() {
@@ -76,9 +76,11 @@ public class JPreeChart {
         chart.getTitle().setHorizontalAlignment(HorizontalAlignment.CENTER);
 
         final LegendTitle t = chart.getLegend();
-        t.setBorder(0, 0, 0, 0);
-        t.setBackgroundPaint(transparent);
-        t.setItemFont(FONTS[0].deriveFont(Font.BOLD));
+        if (t != null) { // Some charts don't have legends (piechart)
+            t.setBorder(0, 0, 0, 0);
+            t.setBackgroundPaint(transparent);
+            t.setItemFont(FONTS[0].deriveFont(Font.BOLD));
+        }
 
         final Plot p = chart.getPlot();
         p.setOutlineVisible(false);

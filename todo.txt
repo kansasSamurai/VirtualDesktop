@@ -1,3 +1,13 @@
+
+todo: right-click context menu for app list
+    todo: move app between jframe and jinternalframe
+    todo: improve jlist presentation using new rixlist
+
+todo: add jiconfont to application
+
+
+
+
 GPL   :: Missing artifact com.mgarin:weblaf:jar:1.27	pom.xml	/VirtualDesktop	line 375	Maven Dependency Problem
 
 

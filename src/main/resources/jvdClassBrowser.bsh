@@ -79,10 +79,10 @@ jvdClassBrowser() {
             // bsh.system.desktop.classbrowser = browser;
         }
     } else {
-            this.frame = new javax.swing.JFrame("BeanShell Class Browser");
-            // frame.iconImage=bsh.system.icons.eye;
+        this.frame = new javax.swing.JFrame("BeanShell Class Browser");
+        // frame.iconImage=bsh.system.icons.eye;
+        frame.frameIcon = bsh.system.icons.eye;
     }
-    frame.frameIcon = bsh.system.icons.eye;
 
     // Ignore unhandled method invocations from listeners.
     invoke( name, args ) {

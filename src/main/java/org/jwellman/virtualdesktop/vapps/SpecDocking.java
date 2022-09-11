@@ -29,8 +29,8 @@ import bibliothek.gui.dock.station.screen.window.InternalScreenDockWindowFactory
 import bibliothek.gui.dock.station.split.SplitDockGrid;
 
 /**
- * Demonstrate the Docking Framework API
- * <p>See JDesktopPaneExample in the Docking Framework project
+ * Demonstrate the Docking Framework API<p>
+ * See JDesktopPaneExample in the Docking Framework project
  * for references as to how/why things are done the way they're done.
  *
  * @author Rick Wellman
@@ -38,7 +38,9 @@ import bibliothek.gui.dock.station.split.SplitDockGrid;
 public class SpecDocking extends VirtualAppSpec {
 	
     private static int counter = 0;
-    
+
+    // TODO 9/3/2022: Instead of using this "independent" JFrame, I could probably also
+    // use the jpad JFrame if I figure out an API way of exposing it to the VApps.
     private static final JFrame externalFrame = new JFrame("Docking Frame");
     
     // In order to drag/drop between internal frames,
@@ -147,9 +149,7 @@ public class SpecDocking extends VirtualAppSpec {
   //          blue.setLocation( CLocation.base(content).minimalNorth(1) );
             blue.setLocation( CLocation.external( 300, 200, 200, 100 ) ); // [2]
             blue.setVisible( true );
-            // [2] Note that external will only work if there is a visible JFrame
-            //     attached.  Since the goal of this framework is to *not* proliferate
-            //     JFrames, then this demo will not do so (but, again, it's possible).            
+            // [2] Note that external will only work if there is a visible JFrame attached.
         }
         
         SwingUtilities.invokeLater(() -> {

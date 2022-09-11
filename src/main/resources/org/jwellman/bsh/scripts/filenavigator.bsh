@@ -153,6 +153,7 @@ jvd.bdemo.panel.setImageView(zz());
 jvd.bdemo.iframe = DesktopManager.get().createVApp(jvd.bdemo.panel, "File Navigator - Image Viewer");
 
 // c:/dev/jpad/files/bckgrnd
+// C:\dev\workspaces\git\virtualdesktop\src\main\resources\org\jwellman\bsh\scripts
 
 // ================================
 // The code above implements a file navigator that displays any images in 
@@ -167,10 +168,13 @@ jvd.bdemo.iframe = DesktopManager.get().createVApp(jvd.bdemo.panel, "File Naviga
 // ================================
 
 import org.jwellman.swing_applets.FileNavigator;
+import org.jwellman.swing.jtree.FileNode;
 import org.jwellman.virtualdesktop.DesktopManager;
 import org.jwellman.swing_applets.SwingViewCreator;
 
 ddemo() {
+
+    FileNode.addTextTypes(".bsh"); // Allow beanshell scripts to be viewed as text
 
     /** A JPanel extension that contains a directory navigation tree */
     this.panel = new FileNavigator("C:\\", FileNavigator.TYPE.TEXT );

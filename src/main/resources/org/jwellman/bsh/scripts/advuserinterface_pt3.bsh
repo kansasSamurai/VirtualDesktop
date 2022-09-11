@@ -1,13 +1,13 @@
-// script title
+// advuserinterface_pt3.bsh
 
 /*
  Some scripting and classes to emulate designs found at:
  https://www.deviantart.com/z-design/art/AdvancedUI-Status-Screen-120947815
 
- This script can be run in its entirety and will display
- an initial "user interface".  Then, you can run
- advuserinterface_pt2.bsh and it will replace the center
- component with an updated graph.
+ This version overlays custom components onto the static background image
+ to more closely emulate a "dynamic" user interface.
+ 
+ This script can be run in its entirety.
  
 */
 
@@ -90,6 +90,7 @@ demo.leds.setBounds(5 + insets.left, 454 + 26 + insets.top,
                      size.width, size.height);
 
 y = demo.graph = new FiveBarStatusDemo();
+y.setBarsWidth(31);
 x.add(y); size = y.getPreferredSize();
 y.setBounds(1112 + insets.left, 144 + insets.top,
                      size.width, size.height);

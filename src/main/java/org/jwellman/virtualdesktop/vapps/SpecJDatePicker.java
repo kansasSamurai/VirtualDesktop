@@ -9,6 +9,8 @@ import org.jdatepicker.impl.UtilDateModel;
 
 /**
  * A demonstration of the JDatePicker component
+ * // TODO Update to 2.0 snapshot; several reasons
+ * // but mainly because the JDatePanel is "better".
  * 
  * Online References:
  * https://github.com/JDatePicker/JDatePicker
@@ -43,8 +45,9 @@ public class SpecJDatePicker extends VirtualAppSpec {
 		
 		datePanel = new JDatePanelImpl(model, p);
 		datePicker = new JDatePickerImpl(datePanel, new DateComponentFormatter() );
-		
-        this.setContent(this.createDefaultContent(datePicker));
+
+        this.setContent(this.createDefaultContent(datePanel));
+//        this.setContent(this.createDefaultContent(datePicker));
 	}
 	
 }

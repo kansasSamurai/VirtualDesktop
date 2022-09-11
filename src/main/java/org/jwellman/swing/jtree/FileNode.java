@@ -1,5 +1,8 @@
 package org.jwellman.swing.jtree;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * A node class for JTrees that supports viewing the filesystem.
  * 
@@ -23,9 +26,9 @@ public class FileNode extends java.io.File {
 	// false by default is what we want (for convenience)
 	private boolean isRoot;
 	
-	private static String[] textTypes;
+	private static final List<String> textTypes = new ArrayList<>();
 	
-	private static String[] imageTypes;
+	private static final List<String> imageTypes = new ArrayList<>();
 	
     public FileNode(String directory) {
         super(directory);
@@ -44,15 +47,31 @@ public class FileNode extends java.io.File {
     		return this.getName();
     	}
     }
-    
+
+    public static void addTextTypes(String delimited) {
+        setTextTypes(delimited);
+    }
+
     public static void setTextTypes(String delimited) {
     	final String normalized = delimited.toLowerCase();
-    	textTypes = normalized.split(";");
+    	for (String onetype : normalized.split(";")) {
+    	    if (onetype.startsWith(".")) {
+                textTypes.add(onetype);    	        
+    	    } else {
+    	        System.out.println("file types/extensions must start with a period '.'");
+    	    }
+    	}
     }
     
     public static void setImageTypes(String delimited) {
     	final String normalized = delimited.toLowerCase();
-    	imageTypes = normalized.split(";");
+        for (String onetype : normalized.split(";")) {
+            if (onetype.startsWith(".")) {
+                imageTypes.add(onetype);             
+            } else {
+                System.out.println("file types/extensions must start with a period '.'");
+            }
+        }
     }
     
     public boolean isImage() {

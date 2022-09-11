@@ -69,7 +69,8 @@ class MyCalendar extends JPanel {
 //          label.setForeground(Color.WHITE);
 //          label.setFont(VERDANA2);
 //          panel.add(label, BorderLayout.WEST);
-            button = b2("[]"); panel.add(button, BorderLayout.WEST);
+            button = b2(""); panel.add(button, BorderLayout.WEST);
+            button.setIcon( DSP.Icons.getIcon("jpad.clock") ); // this line not tested yet
 
             label = label("[]");
             label.setForeground(Color.WHITE);

@@ -41,7 +41,12 @@ abstract public class VirtualAppSpec {
      */
     protected JPanel createDefaultContent(Component o) {
         final JPanel pnl = new JPanel(new BorderLayout());
-        pnl.setPreferredSize(new Dimension(width, height));
+        // Only do this when non-zero dimensions are set; this should be the exception
+        // since most uses cases would normally just use pack() as the framework initializes
+        // the internal app window.
+        if ( width * height > 0) {
+            pnl.setPreferredSize(new Dimension(width, height));            
+        }
         pnl.add(o, BorderLayout.CENTER);
 
         return pnl;

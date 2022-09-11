@@ -30,6 +30,7 @@ public class SwingTreeNode extends DefaultMutableTreeNode {
     private JComponent getWrapped() {
         return (JComponent)this.getUserObject();
     }
+
     @Override
     public boolean isLeaf() {
         return this.getWrapped().getComponentCount() == 0;

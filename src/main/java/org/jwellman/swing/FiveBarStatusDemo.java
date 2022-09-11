@@ -33,6 +33,7 @@ import org.jwellman.swing.shapes.TriangleShape;
 public class FiveBarStatusDemo extends JComponent implements ActionListener, MouseListener {
 
     private int height, width;
+    private int barsWidth = 25;
     private int[] values = {20,30,50,80,130};
     private int[] oldvalues = {20,30,50,80,130};
     private int[] newvalues = {20,30,50,80,130};
@@ -162,15 +163,12 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
 
     @Override
     public void paintComponent(Graphics g) {
-
         // If a proxy is defined, then use it and return.
         if (this.getPaintProxy() != null) {
             this.getPaintProxy().paintComponent(g, this);
-            return;
+        } else {
+            this.drawGraph(g);
         }
-                
-        this.drawGraph(g);
-
     }
     
     @SuppressWarnings( "unused" )
@@ -188,7 +186,7 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
         g2.drawImage(background, 0, 0, null);
 
         // Axes
-        int barsLeftStart = 50, barsBottom = bottom-3, barsWidth = 25;
+        int barsLeftStart = 50, barsBottom = bottom-3;
         int axesWidth = 6;
         int axesLeft = barsLeftStart - 23;
 
@@ -337,6 +335,8 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
         if (debug) System.out.println(msg);
     }
     
+    private static final long serialVersionUID = 1L ;
+
     /**
      * @return the paintProxy
      */
@@ -351,7 +351,19 @@ public class FiveBarStatusDemo extends JComponent implements ActionListener, Mou
         this.paintProxy = paintProxy ;
     }
     
-    private static final long serialVersionUID = 1L ;
+    /**
+     * @return the barsWidth
+     */
+    public int getBarsWidth() {
+        return barsWidth;
+    }
+
+    /**
+     * @param barsWidth the barsWidth to set
+     */
+    public void setBarsWidth(int barsWidth) {
+        this.barsWidth = barsWidth;
+    }
 
     @ Override
     public void mouseClicked(MouseEvent e) {

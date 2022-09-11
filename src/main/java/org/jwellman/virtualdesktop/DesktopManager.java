@@ -118,12 +118,13 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
     }
 
     /**
-     * Create a new application.
-     * 
+     * Create a new application.<br/>
+     * !! All overloaded methods lead here !!<p>
+     * Currently (Oct. 2021), there is one exception:<br/>  
+     * VirtualAppSpec where internalframeprovider is true.
+     * <p>
      * This public method allows internal apps to create internal apps/windows.
-     * i.e. via beanshell or others !! All overloaded methods lead here !!
-     * [This is the definitive method of the overloaded versions.]
-     * Currently (Oct. 2021), there is one exception:  VirtualAppSpec where internalframeprovider is true.
+     * i.e. via beanshell or others 
      *
      * @param c
      * @param title
@@ -134,7 +135,11 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 
     	final VirtualAppFrame frame = this.createAppFrame(title); 
         if (icon != null) {
-            frame.setFrameIcon(icon);            
+            if (title.equals("BeanShell Class Browser - jvd")) {
+                frame.setFrameIcon(DSP.Icons.getIcon("jpad.bsh_class_browser"));                
+            } else {
+                frame.setFrameIcon(icon);                            
+            }
         } else {
             frame.setFrameIcon(DSP.Icons.getIcon("jpad.java"));
         }
@@ -274,6 +279,19 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 		// TODO Auto-generated method stub
 		displayMessage("IFRAME :: iconfy", e);
 		e.getInternalFrame().hide();
+		
+		if ( null == desktop.getSelectedFrame() ) {
+		    this.observedJList.clearSelection();
+		}
+		boolean allframesareicons = true;
+		final JInternalFrame[] array = desktop.getAllFrames();
+		for (JInternalFrame f : array) {
+		    if (!f.isIcon()) {
+		        allframesareicons = false;
+		        break;
+		    }
+		}
+		if (allframesareicons) this.observedJList.clearSelection();
 	}
 
 	@Override
@@ -317,6 +335,8 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 			// do nothing... wait until the user is finished selecting
 		} else {
 			final VirtualAppFrame frame = observedJList.getSelectedValue();
+			if (null == frame) return;
+			
 			// frame.setSelected(true); // exception is on this line... 
 			// it does not make sense to do the rest if an exception is thrown
 			// so put the rest inside the try block.

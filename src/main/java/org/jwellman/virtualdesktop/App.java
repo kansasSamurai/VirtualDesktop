@@ -3,7 +3,6 @@ package org.jwellman.virtualdesktop;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -21,9 +20,7 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
-import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
 import javax.swing.LookAndFeel ;
 import javax.swing.SwingUtilities;
@@ -31,7 +28,6 @@ import javax.swing.UIManager;
 import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.plaf.metal.MetalLookAndFeel;
-import javax.swing.plaf.metal.OceanTheme;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 
 import org.jwellman.dsp.DSP;
@@ -61,14 +57,8 @@ import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.jtattoo.plaf.aluminium.AluminiumLookAndFeel;
 
-import bibliothek.gui.dock.ScreenDockStation;
-import bibliothek.gui.dock.common.CControl;
-import bibliothek.gui.dock.station.screen.InternalBoundaryRestriction;
-import bibliothek.gui.dock.station.screen.InternalFullscreenStrategy;
-import bibliothek.gui.dock.station.screen.window.InternalScreenDockWindowFactory;
 import ca.odell.glazedlists.swing.DefaultEventListModel;
 import ca.odell.glazedlists.swing.GlazedListsSwing;
-import jiconfont.icons.FontAwesome;
 import jiconfont.icons.GoogleMaterialDesignIcons;
 import jiconfont.swing.IconFontSwing;
 // import org.pushingpixels.substance.api.skin.SubstanceGraphiteLookAndFeel;
@@ -113,6 +103,7 @@ public class App extends JFrame implements ActionListener {
      * This is only nececessary for a temp dev menu item; can eventually be removed
      * Even now, I could probably use ActionFactory registeredApps instead.
      */
+    @SuppressWarnings("rawtypes")
     static Class[] registeredApps = {
         SpecBeanShell.class
         ,SpecJCXConsole.class
@@ -314,13 +305,7 @@ public class App extends JFrame implements ActionListener {
         frame.setVisible(true);
     }
 
-    public static void main(String[] args) {
-
-        // Install a custom security manager to prevent guests from shutting down the desktop.
-        System.setSecurityManager(new NoExitSecurityManager());
-
-        // Global Initialization(s) [ Frameworks, etc. ]
-
+    private static void createTheme() {
         DSP.Icons.registerProvider("FontAwesome", new FontAwesomeIconProvider());
 
         DSP.Icons.register("jpad.java", new IconSpecifier( "FontAwesome", "COFFEE", 18, null, Color.black, Color.white) );
@@ -330,11 +315,20 @@ public class App extends JFrame implements ActionListener {
         DSP.Icons.register("jpad.cog", new IconSpecifier( "FontAwesome", "COG", 18, null, Color.black, Color.white) );
         DSP.Icons.register("jpad.leaf", new IconSpecifier( "FontAwesome", "LEAF", 18, null, Color.black, Color.white) );
         DSP.Icons.register("jpad.check", new IconSpecifier( "FontAwesome", "CHECK", 18, null, Color.black, Color.white) );
+        DSP.Icons.register("jpad.clock", new IconSpecifier( "FontAwesome", "CLOCK_O", 14, null, Color.white, Color.white) );
 
-        
-        
         IconFontSwing.register(GoogleMaterialDesignIcons.getIconFont());
-        
+            
+    }
+
+    public static void main(String[] args) {
+
+        // Install a custom security manager to prevent guests from shutting down the desktop.
+        System.setSecurityManager(new NoExitSecurityManager());
+
+        // Global Initialization(s) [ Frameworks, etc. ]
+        createTheme();
+
         //Schedule a job for the event-dispatching thread:
         //creating and showing this application's GUI.
         SwingUtilities.invokeLater(
@@ -383,7 +377,7 @@ public class App extends JFrame implements ActionListener {
                             UIManager.setLookAndFeel("com.pagosoft.plaf.PgsLookAndFeel");
                             break;
                         case LAF_NAPKIN:
-                            String[] themeNames = NapkinTheme.Manager.themeNames();
+                            @SuppressWarnings("unused") String[] themeNames = NapkinTheme.Manager.themeNames();
                             String themeToUse = "napkin"; // napkin | blueprint
                             NapkinTheme.Manager.setCurrentTheme(themeToUse);
                             LookAndFeel laf = new NapkinLookAndFeel();

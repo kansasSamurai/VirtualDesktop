@@ -1,9 +1,12 @@
 import bsh.XThis;
 
+// This is the most often used from the bsh console
 tree() { tree(global.namespace.getVariableNames()); }
 
+// A convenience override since you almost always want to start at Level 0
 tree(String name) { tree(name,0); }
 
+// Not sure why I created this override... documentation TBD
 tree(String[] vars) {
     Arrays.sort(vars);
     for ( String var : vars ) {
@@ -13,6 +16,12 @@ tree(String[] vars) {
     }
 }
 
+/* ========================================================
+    All roads lead to this implementation.
+    This is the recursive method that drills into whichever
+    object is specified by 'name'.
+   ========================================================
+*/ 
 tree(String name, int level) {
 
     // bsh.console.print(name);
@@ -32,11 +41,14 @@ tree(String name, int level) {
             String fullname = name + "." + child;
             bsh.console.print(fullname);
 
-            bsh.console.print(" <io> ");
+            bsh.console.print(" <io> "); // io := instanceof
             if (this.interpreter.get(fullname) instanceof Object) {
                 // bsh.console.print(this.interpreter.get(fullname));
                 bsh.console.print(this.interpreter.get(fullname).getClass().getName());
             } else {
+                // Oct. 2022 - I am realizing that this case never(rarely?) gets called;
+                // all properties seem to be cast to their object counterpart.
+                // i.e. Integer, Boolean, ...
                 bsh.console.print("primitive");
             }
 

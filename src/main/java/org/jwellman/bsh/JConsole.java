@@ -61,6 +61,9 @@ public class JConsole extends JScrollPane implements
         PropertyChangeListener,
         GUIConsoleInterface
 {
+
+    private static final long serialVersionUID = 1L;
+
     private final static String CUT = "Cut";
     private final static String COPY = "Copy";
     private final static String PASTE = "Paste";
@@ -69,13 +72,10 @@ public class JConsole extends JScrollPane implements
 
     private final static int SHOW_AMBIG_MAX = 10;
 
+    private Font font = new Font("Consolas", Font.PLAIN, 16); // Monospaced
+
     private JTextPane text;
     private JPopupMenu menu;
-
-    private String fontname = "Consolas";
-    private int fontstyle = Font.PLAIN;
-    private int fontsize = 48;
-    private Font font = new Font("Consolas", Font.PLAIN, 16); // Monospaced
 
     private NameCompletion nameCompletion;
     private InputStream in;
@@ -454,8 +454,9 @@ public class JConsole extends JScrollPane implements
         try {
             String cmd = text.getText(cmdStart, textLength() - cmdStart);
             if (cmd.endsWith("..")) {
+                // remove the two dots
                 cmd = cmd.substring(0, cmd.length()-2);
-                // System.out.println(cmd);
+                // terminate the command with the default method invocation string
                 cmd = cmd + "();";
             }
             return cmd;
@@ -466,6 +467,7 @@ public class JConsole extends JScrollPane implements
         }
     }
 
+    @SuppressWarnings("unused")
     private String getCmd_original() {
         String s = "";
         try {

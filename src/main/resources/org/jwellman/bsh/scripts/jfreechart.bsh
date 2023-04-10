@@ -22,7 +22,8 @@ import org.jfree.chart.renderer.xy.*;
 import org.jfree.chart.renderer.xy.*;
 import org.jfree.data.category.*;
 
-
+// Step 1A
+// Creates a Line/Spline chart in JVD via createVApp() with ChartPanel
 demoTimeSeriesChart()  {
     Color transparent = new Color(255, 255, 255, 0);
     GradientPaint grpCyan = new GradientPaint( 0.0f, 0.0f, Color.cyan, 10.0f, 10.0f, Color.darkGray );
@@ -65,11 +66,15 @@ demoTimeSeriesChart()  {
 }
 
 mypreechart = demoTimeSeriesChart();
+
+// Step 1B
+// To see the decorator, run the following:
 // The following two lines are optional - just decorates with JPreeChart
-JPreeChart pre = new JPreeChart();
+// JPreeChart pre = new JPreeChart();
 // pre.decorate(mypreechart.panel.getChart());
 
 
+// Step 2A - create a pie chart panel
 //piechart() {
 //    demo = PieChartDemo1.createDemoPanel();
 //    
@@ -88,11 +93,14 @@ JPreeChart pre = new JPreeChart();
 //
 //piechart = piechart();
 
-
+// Step 2B - apply preechart styling
 // this works (but throws an ignorable exception)
 //piechart.pre.setFontName("Segoe UI");
 //piechart.pre.decorate(piechart.demo.getChart());
 
+// Step 2C - optionally apply user defined colors to each pie section
+// These colors match preechart so you won't notice a change
+// if you executed step 2B.
 //Color[] paintseq = {
 //        Color.decode("#CD4E3C"), // red
 //        Color.decode("#579340"), // green
@@ -102,12 +110,37 @@ JPreeChart pre = new JPreeChart();
 //        Color.decode("#A87829")  // brown
 //    };
 
-//piechart.plot.setSectionPaint(null);
-piechart.plot.setSectionPaint( 0, paintseq[0] );
-piechart.plot.setSectionPaint( 1, paintseq[1] );
-piechart.plot.setSectionPaint( 2, paintseq[2] );
-piechart.plot.setSectionPaint( 3, paintseq[3] );
+//Well Below (L1-orange)            orange  #F57902
+//Below (L2-yellow)       yellow  #F2C400
+//Meets (L3-lime)                 lime    #8FCE0A
+//Exceeds (L3-felt)               felt    #42774E
+//table-data  tan #EEE6DF
+//    darkblue    #274F73
+//table-grade     #35455C
+//table-primary-header    medslate    #5D6E7C
+//table-secondary-header      #798690
+//table-tertiary-header   lightslate  #818282
+//// corresponding text colors
+//black
+//black
+//white
+//whie
+//#818282
+//#C5D1DB
+//#C5D1DB
+//#C5D1DB
+//#C5D1DB
+//#EEE6DF
 
+
+//piechart.plot.setSectionPaint(null);
+//piechart.plot.setSectionPaint( 0, paintseq[0] );
+//piechart.plot.setSectionPaint( 1, paintseq[1] );
+//piechart.plot.setSectionPaint( 2, paintseq[2] );
+//piechart.plot.setSectionPaint( 3, paintseq[3] );
+
+
+// Step 3A 
 // -------- Apply JPreeChart to the JFreeChartDemo
 //import org.jwellman.jpreechart.*;
 
@@ -227,8 +260,9 @@ myjfreechart = demoJFreeChart();
 //barchart.plot = barchart.chart.getPlot();
 //barchart.plot.setBackgroundPaint(Color.lightGray);
 //barchart.plot.setRangeGridlinePaint(Color.white);
-//import org.jfree.chart.renderer.category.*;
 
+
+//import org.jfree.chart.renderer.category.*; // needed for StandardBarPainter
 //barchart.renderer = barchart.plot.getRenderer();
 //barchart.renderer.setBarPainter(new StandardBarPainter());
 //barchart.renderer.setItemMargin(0.03);

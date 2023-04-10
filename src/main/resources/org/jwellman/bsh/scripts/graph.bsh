@@ -4,7 +4,7 @@
     This script (graph.bsh) is taken from the beanshell website 
     https://beanshell.github.io/examples/graph.html
     
-    It is very slightly modified as the original on
+    It is very slightly modified since the original on
     the website does not run correctly.
     
     -----------------------------------    

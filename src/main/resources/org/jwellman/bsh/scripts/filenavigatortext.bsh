@@ -1,0 +1,32 @@
+// ================================
+// The code below is an implementation of the original version of file
+// navigator that displays text files (*.txt) in the view portion of the
+// user interface.
+//
+// Note that it now allows .bsh files to be recognized as text files
+// so it can be used within JPAD itself!
+// ================================
+
+import org.jwellman.swing_applets.FileNavigator;
+import org.jwellman.swing.jtree.FileNode;
+import org.jwellman.virtualdesktop.DesktopManager;
+import org.jwellman.swing_applets.SwingViewCreator;
+
+ddemo() {
+
+    FileNode.addTextTypes(".bsh"); // Allow beanshell scripts to be viewed as text
+    // C:\dev\workspaces\git\virtualdesktop\src\main\resources\org\jwellman\bsh\scripts
+
+    /** A JPanel extension that contains a directory navigation tree */
+    this.panel = new FileNavigator("C:\\", FileNavigator.TYPE.TEXT );
+
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    //this.iframe = DesktopManager.get().createVApp(this.panel, "File Navigator - Text Viewer");
+    this.iframe = 1;
+    
+    print("Text Viewer demo created...");
+    return this;
+}
+
+jvd.ddemo = ddemo();
+jvd.ddemo.iframe = DesktopManager.get().createVApp(jvd.ddemo.panel, "Demo - File Navigator");

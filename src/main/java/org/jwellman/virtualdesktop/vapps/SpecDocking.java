@@ -11,13 +11,14 @@ import javax.swing.JInternalFrame;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
+import org.jwellman.virtualdesktop.App;
+
 import bibliothek.gui.DockController;
 import bibliothek.gui.DockFrontend;
 import bibliothek.gui.Dockable;
 import bibliothek.gui.dock.DefaultDockable;
 import bibliothek.gui.dock.ScreenDockStation;
 import bibliothek.gui.dock.SplitDockStation;
-import bibliothek.gui.dock.common.CContentArea;
 import bibliothek.gui.dock.common.CControl;
 import bibliothek.gui.dock.common.CLocation;
 import bibliothek.gui.dock.common.DefaultSingleCDockable;
@@ -41,15 +42,9 @@ public class SpecDocking extends VirtualAppSpec {
 
     // TODO 9/3/2022: Instead of using this "independent" JFrame, I could probably also
     // use the jpad JFrame if I figure out an API way of exposing it to the VApps.
-    private static final JFrame externalFrame = new JFrame("Docking Frame");
+    private static final JFrame externalFrame = App.getVSystem();
+//    private static final JFrame externalFrame = new JFrame("Docking Frame");
     
-    // In order to drag/drop between internal frames,
-    // they must all share a controller (therefore it is static)
-	private static CControl control;
-	
-	// Each instance gets its own content area (by API design)
-	private CContentArea content = null;
-	
 	private static final String DEFAULT_TITLE = "Docking Framework";
 
 	public SpecDocking() {
@@ -75,6 +70,7 @@ public class SpecDocking extends VirtualAppSpec {
         case 2: this.version02(frame, desktop); break;
         case 3: this.version03(frame, desktop); break;
         case 4: this.version04(frame, desktop); break;
+        case 5: this.version05(frame, desktop); break;
         }
 
     }
@@ -83,47 +79,29 @@ public class SpecDocking extends VirtualAppSpec {
         SingleCDockable dockable = new DefaultSingleCDockable(title, title, c);        
         control.addDockable( dockable );
         
-        dockable.setLocation( CLocation.base(content).normal() );
+        dockable.setLocation( CLocation.base(dockingcontent).normal() );
         dockable.setVisible( true );
 
     }
     
     /**
-     * This is version 4 (obviously)...
-     * I finally found out how to drag/drop between internal frames;  
-     * Each must get its own "content area" which is created by 
-     * a common controller object.
-     *   
-     * The current implementation is VERY similar to version 2.
+     * Version 5
+     * Simplify version4 so that it uses a "central controller"
      * 
-     * @param frame
+     * @param iframe
      * @param desktop
      */
-    private void version04(JInternalFrame frame, JDesktopPane desktop) {
+    private void version05(JInternalFrame iframe, JDesktopPane desktop) {
 
-        // Setup Docking Controller...
-        if (control == null) {
-            control = new CControl( externalFrame ); // [1]
-            // control = new CControl(); // [1]
-            // control.putProperty( DockTheme.DOCKABLE_MOVING_IMAGE_FACTORY, ScreencaptureMovingImageFactory );
-            
-            this.content = control.getContentArea();
-            
-            // Besides my visual preference for the flat theme,
-            // it also does not use animations (which I also prefer).
-            final ThemeMap themes = control.getThemes();
-            themes.select(ThemeMap.KEY_FLAT_THEME);
- 
-            externalFrame.setSize(300, 500);
-            externalFrame.setLocationRelativeTo(null);
-            externalFrame.setVisible(true);
+        if (counter > 1) {
+            this.dockingcontent = control.createContentArea("ContentArea_" + counter);            
         } else {
-            this.content = control.createContentArea("ContentArea_" + counter);
+            this.dockingcontent = control.getContentArea();            
         }
-        
+
         // Add the Controller content area to the internal frame
-        frame.setLayout(new BorderLayout());
-        frame.add( content, BorderLayout.CENTER );
+        iframe.setLayout(new BorderLayout());
+        iframe.add( dockingcontent, BorderLayout.CENTER );
 
         // This populates the demo app spec.  Others will be "blank"
         if (this.getTitle().equals(DEFAULT_TITLE)) {
@@ -140,10 +118,10 @@ public class SpecDocking extends VirtualAppSpec {
             // Locations cannot be set until:
             // 1) the Controller content area is added to a component
             // 2) the Dockable has been added to the Controller
-            green.setLocation( CLocation.base(content).normal() );
+            green.setLocation( CLocation.base(dockingcontent).normal() );
             green.setVisible( true );
             
-            red.setLocation( CLocation.base(content).minimalNorth(0) );
+            red.setLocation( CLocation.base(dockingcontent).minimalNorth(0) );
             red.setVisible( true );
 
   //          blue.setLocation( CLocation.base(content).minimalNorth(1) );
@@ -153,9 +131,76 @@ public class SpecDocking extends VirtualAppSpec {
         }
         
         SwingUtilities.invokeLater(() -> {
-            frame.pack();
-            frame.setSize(new Dimension(200, 300));
-            frame.setVisible(true);
+            iframe.pack();
+            iframe.setSize(new Dimension(200, 300));
+            iframe.setVisible(true);
+        } );
+
+    }
+
+    private void version04(JInternalFrame iframe, JDesktopPane desktop) {
+
+        // Setup Docking Controller...
+        if (control == null) {
+            control = new CControl( externalFrame ); // [1]
+            // control = new CControl(); // [1]
+            // control.putProperty( DockTheme.DOCKABLE_MOVING_IMAGE_FACTORY, ScreencaptureMovingImageFactory );
+            
+            this.dockingcontent = control.getContentArea();
+            
+            // Besides my visual preference for the flat theme,
+            // it also does not use animations (which I also prefer).
+            final ThemeMap themes = control.getThemes();
+            themes.select(ThemeMap.KEY_FLAT_THEME);
+
+            if (!externalFrame.isVisible()) {
+                // This code is from when I created a separate JFrame
+                // for the CControl object.  it is being kept for archival
+                // purposes but is probably not necessary now that we
+                // use the jpad jframe
+                externalFrame.setSize(300, 500);
+                externalFrame.setLocationRelativeTo(null);
+                externalFrame.setVisible(true);
+            }
+        } else {
+            this.dockingcontent = control.createContentArea("ContentArea_" + counter);
+        }
+        
+        // Add the Controller content area to the internal frame
+        iframe.setLayout(new BorderLayout());
+        iframe.add( dockingcontent, BorderLayout.CENTER );
+
+        // This populates the demo app spec.  Others will be "blank"
+        if (this.getTitle().equals(DEFAULT_TITLE)) {
+            // Create some Dockables...
+            SingleCDockable red = demoDockable("Red_" + counter, Color.red);
+            SingleCDockable blue = demoDockable("Blue_" + counter, Color.blue);
+            SingleCDockable green = demoDockable("Green_" + counter, Color.green);
+                    
+            // Add Dockables to the Controller:
+            control.addDockable( green );
+            control.addDockable( red );
+            control.addDockable( blue );
+
+            // Locations cannot be set until:
+            // 1) the Controller content area is added to a component
+            // 2) the Dockable has been added to the Controller
+            green.setLocation( CLocation.base(dockingcontent).normal() );
+            green.setVisible( true );
+            
+            red.setLocation( CLocation.base(dockingcontent).minimalNorth(0) );
+            red.setVisible( true );
+
+  //          blue.setLocation( CLocation.base(content).minimalNorth(1) );
+            blue.setLocation( CLocation.external( 300, 200, 200, 100 ) ); // [2]
+            blue.setVisible( true );
+            // [2] Note that external will only work if there is a visible JFrame attached.
+        }
+        
+        SwingUtilities.invokeLater(() -> {
+            iframe.pack();
+            iframe.setSize(new Dimension(200, 300));
+            iframe.setVisible(true);
         } );
 
     }

@@ -101,7 +101,9 @@ public class JCXConsole extends JPanel implements Runnable {
                 cmdExecuteActionPerformed(evt);
             }
         });
-        jPanel6.add(cmdExecute, java.awt.BorderLayout.LINE_END);
+        JPanel wrapper = new JPanel();
+        wrapper.add(cmdExecute);
+        jPanel6.add(wrapper, java.awt.BorderLayout.LINE_END);
 
         jPanel7.setLayout(new java.awt.BorderLayout());
 

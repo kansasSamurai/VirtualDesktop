@@ -44,6 +44,7 @@ import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
 import org.jwellman.virtualdesktop.vapps.ActionFactory;
 import org.jwellman.virtualdesktop.vapps.DesktopAction;
 import org.jwellman.virtualdesktop.vapps.SpecBeanShell;
+import org.jwellman.virtualdesktop.vapps.SpecDocking;
 import org.jwellman.virtualdesktop.vapps.SpecHyperSQL;
 import org.jwellman.virtualdesktop.vapps.SpecJCXConsole;
 import org.jwellman.virtualdesktop.vapps.SpecJFreeChart;
@@ -118,6 +119,17 @@ public class App extends JFrame implements ActionListener {
 
     static int count = -1; // just a simple development control variable
 
+    /**
+     * Having direct access to this object as a JFrame is not really
+     * what I want so this will have to be refactored at some point.
+     * 
+     * There are two different use cases that need to be supported when
+     * the factoring occurs:
+     * 1. Return an object whose interface is "the application"
+     * 2. Return the outermost application JFrame
+     * 
+     * @return
+     */
     static public App getVSystem() {
         return app;
     }
@@ -194,6 +206,9 @@ public class App extends JFrame implements ActionListener {
                 appMenu.add(a);
             }
         }
+        
+        // A bit of a hack but this initializes/enables docking
+        SpecDocking.setJFrame(this);
 
     }
 

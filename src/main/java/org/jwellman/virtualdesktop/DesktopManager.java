@@ -14,6 +14,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 import org.jwellman.dsp.DSP;
+import org.jwellman.virtualdesktop.vapps.SpecScriptedObject;
 import org.jwellman.virtualdesktop.vapps.VirtualAppSpec;
 
 import ca.odell.glazedlists.BasicEventList;
@@ -70,7 +71,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 	 * @param newInstance
 	 */
     public void createVApp(Object newInstance) {
-        this.createVApp((VirtualAppSpec)newInstance);
+        this.createVApp_void((VirtualAppSpec)newInstance);
     }
 
     /**
@@ -80,7 +81,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
      * 
      * @param spec
      */
-    public void createVApp(final VirtualAppSpec spec) {
+    public void createVApp_void(final VirtualAppSpec spec) {
 
         if (spec.isInternalFrameProvider()) {
             // TODO I want to move this somehow into the definitive method;
@@ -98,7 +99,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
             spec.populateInternalFrame(frame, desktop);
         } else {
         	System.out.println("createVApp() going to createVApp()");
-            this.createVApp(spec.getContent(), spec.getTitle(), spec.getIcon());
+            this.createVApp(spec);
         }
 
     }
@@ -118,6 +119,25 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
     }
 
     /**
+     * Create a new application.
+     * 
+     * Update(Oct. 2022) Most BSH scripts don't use this version with the icon
+     * but jvdClassBrowser.sh does.
+     * 
+     * Currently (Oct. 2021), this is used by beanshell scripts since they
+     * do not need the formality of creating a VirtualAppSpec object.
+     * 
+     * @param c
+     * @param title
+     * @return
+     */
+    public VirtualAppFrame createVApp(final Container c, final String title, Icon icon) {
+        VirtualAppSpec spec = new SpecScriptedObject(c, title);
+        spec.setIcon(icon);
+        return this.createVApp(spec);
+    }
+
+    /**
      * Create a new application.<br/>
      * !! All overloaded methods lead here !!<p>
      * Currently (Oct. 2021), there is one exception:<br/>  
@@ -131,8 +151,12 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
      * @param icon
      * @return
      */
-    public VirtualAppFrame createVApp(final Container c, final String title, final Icon icon) {
+    public VirtualAppFrame createVApp(final VirtualAppSpec spec) {
 
+        Icon icon = spec.getIcon();
+        String title = spec.getTitle();
+        Container c = spec.getContent();
+        
     	final VirtualAppFrame frame = this.createAppFrame(title); 
         if (icon != null) {
             if (title.equals("BeanShell Class Browser - jvd")) {
@@ -148,7 +172,12 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
             @Override public void run() {
                 try {
                     // final VirtualAppFrame frame = new VirtualAppFrame(title);
-                    frame.setContentPane(c);
+                    if (spec.isDockable()) {
+                        frame.setContentPane(spec.getDockableContent());
+                        spec.addDockable(spec.getContent());
+                    } else {
+                        frame.setContentPane(c);                        
+                    }
 
 //                    if (icon != null) frame.setFrameIcon(icon);
 //                    frame.pack(); // moved to following if/else; see Note [1] below

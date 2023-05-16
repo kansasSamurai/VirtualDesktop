@@ -58,20 +58,34 @@ abstract public class VirtualAppSpec {
             // Besides my visual preference for the flat theme,
             // it also does not use animations (which I also prefer).
             final ThemeMap themes = control.getThemes();
-            themes.select(ThemeMap.KEY_FLAT_THEME);
+//            themes.select(ThemeMap.KEY_FLAT_THEME); // this is my preference
+            themes.select(ThemeMap.KEY_ECLIPSE_THEME); // experimenting with this - I like it; especially with JTattoo LNF
+//            themes.select(ThemeMap.KEY_SMOOTH_THEME); // this is almost like flat except has animations; I don't like the user experience
+//            themes.select(ThemeMap.KEY_BASIC_THEME); // meh
+//            themes.select(ThemeMap.KEY_BUBBLE_THEME); // I like the drag/drop highlighting but HATE the title bar :(
 
         } else {
             System.out.println("Warning:  Tried to reinitialize Docking");
         }
     }
 
+    // This variable and its usage is a hack until I come up with
+    // a better way to manage/organize applets/dockables.
+    private static int duplicateCounter = 1;
+    
     public void addDockable(JComponent c) {
-        // Locations cannot be set until:
+
+    	// Locations cannot be set until:
         // 1) the Controller content area is added to a component
         // see DesktopManager.createVApp()
         
         // 2) the Dockable has been added to the Controller
-        SingleCDockable dockable = new DefaultSingleCDockable(this.getTitle(), this.getTitle(), c);        
+    	String dockid = this.getTitle();
+    	SingleCDockable check = control.getSingleDockable(this.getTitle());
+    	if (check != null) {
+    		dockid = this.getTitle() + duplicateCounter++;
+    	}
+        SingleCDockable dockable = new DefaultSingleCDockable(dockid, this.getTitle(), c);
         control.addDockable( dockable );
         
         // now we can set the location

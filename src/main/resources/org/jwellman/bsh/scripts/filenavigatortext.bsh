@@ -24,7 +24,7 @@ ddemo() {
     //this.iframe = DesktopManager.get().createVApp(this.panel, "File Navigator - Text Viewer");
     this.iframe = 1;
     
-    print("Text Viewer demo created...");
+    print("Text Viewer demo created: " + FileNode.getTextTypes());
     return this;
 }
 

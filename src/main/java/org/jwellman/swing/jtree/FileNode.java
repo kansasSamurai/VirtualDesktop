@@ -2,6 +2,7 @@ package org.jwellman.swing.jtree;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * A node class for JTrees that supports viewing the filesystem.
@@ -16,6 +17,10 @@ import java.util.List;
  * environment and use of the static arrays would not support that
  * and honestly I don't think they should be here in the first place.
  * This type of logic would be better placed outside of this class.
+ * 
+ * TODO I created this class in swing-utils also but have not kept them in sync.
+ * Now that JPAD uses swing-utils, I need to make it use the one from swing-utils.
+ * However, note that JPAD version is most "current" as of APR 2023.
  * 
  * @author rwellman
  *
@@ -49,9 +54,21 @@ public class FileNode extends java.io.File {
     }
 
     public static void addTextTypes(String delimited) {
+		if (textTypes.isEmpty()) setTextTypes(".txt;.csv;.tsv;.xml;.html;.java;.sql");
         setTextTypes(delimited);
     }
 
+    /**
+     * Even though this is a setter, it only adds.<br>
+     * Therefore, for now, app behavior is dependent on the following scenarios:<br>
+     * 1) setTextTypes(), then addTextTypes() :: this would have "expected" behavior
+     * by setting the types ONLY according to the user's list and then adding any extras.<br>
+     * 2) addTextTypes(), then setTextTypes() :: this has "default" behavior
+     * in that it will initialize the list to this interior defined set of types
+     * and then any following set()/add() will only add to the list.<br>
+     * <br>
+     * @param delimited
+     */
     public static void setTextTypes(String delimited) {
     	final String normalized = delimited.toLowerCase();
     	for (String onetype : normalized.split(";")) {
@@ -63,6 +80,11 @@ public class FileNode extends java.io.File {
     	}
     }
     
+    public static String getTextTypes() {
+    	String types = textTypes.stream().collect(Collectors.joining(","));
+    	return types;
+    }
+
     public static void setImageTypes(String delimited) {
     	final String normalized = delimited.toLowerCase();
         for (String onetype : normalized.split(";")) {
@@ -86,7 +108,7 @@ public class FileNode extends java.io.File {
     }
     
 	public boolean isText() {
-		if (textTypes == null) setTextTypes(".txt;.csv;.tsv;.xml;.html;.java");
+		if (textTypes.isEmpty()) setTextTypes(".txt;.csv;.tsv;.xml;.html;.java;.sql");
 
 		final String lowername = this.getName().toLowerCase();
 		for (String tryme : textTypes) {

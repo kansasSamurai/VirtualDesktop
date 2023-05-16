@@ -58,18 +58,28 @@ public class FileSelectorModel implements TreeModel {
      */
     @Override
     public int getChildCount(Object parent) {
-        final FileNode parentNode = (FileNode) parent;
-    	if (parentNode == null) return 0;
-    	
-    	if (directoriesOnly) {    		
-    		return parentNode.listFiles(File::isDirectory).length;
-    	} else {
-            if (   !parentNode.isDirectory()
-                 || parentNode.listFiles() == null) {
-                return 0;
-            }
-            return parentNode.listFiles().length;    		
+    	try {
+            final FileNode parentNode = (FileNode) parent;
+        	if (parentNode == null) return 0;
+        	
+        	if (directoriesOnly) {
+        		// This sometimes throws exception; why?
+        		return parentNode.listFiles(File::isDirectory).length;
+        	} else {
+                if (   !parentNode.isDirectory()
+                     || parentNode.listFiles() == null) {
+                    return 0;
+                }
+                return parentNode.listFiles().length;    		
+        	}
+    		
+    	} catch (Exception e) {
+    		System.out.println("Exception in getChildCount()");
+    		e.printStackTrace();
     	}
+    	
+    	// In case of exception, it gets here so just return zero(0).
+    	return 0;
     }
 
     /**

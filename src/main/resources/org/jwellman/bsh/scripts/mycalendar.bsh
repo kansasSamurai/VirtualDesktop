@@ -175,12 +175,17 @@ class MyCalendar extends JPanel {
 }
 
 /*------- Example... -------
-// 'x' requires dockables.bsh
 
 jvd.calendar = new MyCalendar();
     p = new JPanel(new GridBagLayout());
     p.add(jvd.calendar);
-x.addDockable( "Calendar Demo", p );
+    
+jvd.demo3 = object();
+jvd.demo3.panel = jvd.calendar;
+jvd.demo3.iframe = DesktopManager.get().createVApp(jvd.demo3.panel, "Calendar Demo");
+
+// or... 'x' requires dockables.bsh
+// x.addDockable( "Calendar Demo", p );
 
 // ===== end Example ===== */
 

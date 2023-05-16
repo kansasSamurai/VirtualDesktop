@@ -132,13 +132,17 @@ zz() {
         JButton button = new JButton(file.name);
 
         ImageIcon icon = api.createFileIcon(file);
-        BufferedImage image = api.createScaledImage( icon, 136, 136 );
-        
-        JLabel label = new org.jwellman.swing.jlabel.BackgroundLabel(file, new ImageIcon(image));
-            label.setTransferHandler(transferHandler);
-            label.addMouseListener(mouseAdapter);
-            if (file.name.startsWith("a")) // this line, and/or the next line, are optional
-                new JpadDropTargetListener(label);
+        JLabel label = null;
+        if (icon.getIconHeight() < 136 && icon.getIconWidth() < 136) {
+             label = new org.jwellman.swing.jlabel.BackgroundLabel(file, icon);
+        } else {
+            BufferedImage image = api.createScaledImage( icon, 136, 136 );            
+            label = new org.jwellman.swing.jlabel.BackgroundLabel(file, new ImageIcon(image));
+        }
+        label.setTransferHandler(transferHandler);
+        label.addMouseListener(mouseAdapter);
+        if (file.name.startsWith("a")) // this line, and/or the next line, are optional
+            new JpadDropTargetListener(label);
 
         // Assemble components into the panel...
         panel.add(label, BorderLayout.CENTER);

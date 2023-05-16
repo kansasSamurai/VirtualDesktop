@@ -51,7 +51,10 @@ migdemo() {
     this.panel = new MigDemo();
 
     /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
-    this.iframe = jvd.app.createVApp(this.panel, "MiG Layout Demo");
+    // TODO find/replace all jvd.app.createVapp like below with DesktopManager.get()...
+    // this.iframe = jvd.app.createVApp(this.panel, "MiG Layout Demo");
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    this.iframe = DesktopManager.get().createVApp(this.panel, "MiG Layout Demo");
     
     print("Layout Demo started...");
     return this;

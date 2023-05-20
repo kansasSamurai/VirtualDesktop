@@ -98,7 +98,7 @@ public class App extends JFrame implements ActionListener {
     public static final int LAF_FLATLAF = 8;
     public static final int LAF_SUBSTANCE = 9; // deprecated / not currently used
     public static final int LAF_NAPKIN = 10;
-    public static final int CHOSEN_LAF = LAF_JTATTOO; //LAF_JTATTOO;
+    public static final int CHOSEN_LAF = LAF_SYSTEM; //LAF_JTATTOO;
 
     /**
      * This is only nececessary for a temp dev menu item; can eventually be removed
@@ -364,7 +364,7 @@ public class App extends JFrame implements ActionListener {
                             final String sys = UIManager.getSystemLookAndFeelClassName();
                             UIManager.setLookAndFeel(sys);
                             break;
-                        case 2:
+                        case LAF_WEBLAF:
                             //UIManager.installLookAndFeel("Web", "com.alee.laf.WebLookAndFeel");
                             WebLookAndFeel.install();
                             break;

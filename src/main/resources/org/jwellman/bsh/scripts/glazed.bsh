@@ -85,7 +85,7 @@ demo() {
 
     this.panel = new Glazed();
 
-    this.iframe = jvd.app.createVApp(this.panel, "GlazedLists Demo");
+    this.iframe = DesktopManager.get().createVApp(this.panel, "GlazedLists Demo");
 
     return this;
 }

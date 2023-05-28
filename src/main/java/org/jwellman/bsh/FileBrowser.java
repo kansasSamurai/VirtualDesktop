@@ -471,7 +471,7 @@ public class FileBrowser {
             JLabel label = new JLabel( (String)tableColumn.getHeaderValue() );
             Dimension preferred = label.getPreferredSize();
             // altered 10->14 as per camickr comment.
-            width = (int)preferred.getWidth() + 29; // 14 originally
+            width = (int)preferred.getWidth() + 14; // 14 originally; 29 for WebLAF
         }
         tableColumn.setPreferredWidth(width);
         tableColumn.setMaxWidth(width);
@@ -492,21 +492,24 @@ public class FileBrowser {
     	tree.setEnabled(false);
         progressBar.setVisible(true);
         progressBar.setIndeterminate(true);
-        
-        node.removeAllChildren(); // this allows "refresh" whenever the node is selected; otherwise the jtable gets updated correctly, but not the jtree
-        
+
+        // this allows "refresh" of the jtree whenever the node is selected; 
+        // otherwise the jtable gets updated correctly, but not the jtree
+        node.removeAllChildren(); 
+
         SwingWorker<Void, File> worker = new SwingWorker<Void, File>() {
             int chunkcount = 0;
 
             @Override
             public Void doInBackground() {
-            	
-            	try {
-					Thread.sleep(1500);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+
+// Simulate a long process... allows progress bar to display 
+//            	try {
+//					Thread.sleep(1500);
+//				} catch (InterruptedException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
             	
                 if (file.isDirectory()) {
                     File[] files = fileSystemView.getFiles(file, true); //!!
@@ -515,9 +518,12 @@ public class FileBrowser {
 //                    }
 
                     // This for loop was previously at location [A]
+                    // Moving it here allows "refresh" of the jtable
                     for (File child : files) {
                     	String absolute = child.getAbsolutePath();
-                    	System.out.println(absolute);
+                    		// System.out.println(absolute);
+                    	
+                    	// Do not publish links to directories to the jtree
                         if (child.isDirectory() && !absolute.endsWith(".lnk")) {
                             publish(child);
                         }
@@ -530,7 +536,7 @@ public class FileBrowser {
 
             @Override
             protected void process(List<File> chunks) {
-            	System.out.println("chunks: " + ++chunkcount);
+            	++chunkcount; // System.out.println("chunks: " + chunkcount);
             	Collections.sort(chunks);
                 for (File child : chunks) {
                     node.add(new DefaultMutableTreeNode(child));

@@ -52,3 +52,30 @@ jvd.fdemo = fdemo1();
 // ============== Examples ===============
 // jvd.fdemo.filechooser.getSelectedFile().toString();
 
+// A way to run code on the EDT:
+a() {
+    run() {
+        x = jvd.fdemo.filechooser;
+        x.setControlButtonsAreShown(false);
+        x.revalidate();
+    }
+    return this;
+}
+runnable = a();
+
+SwingUtilities.invokeLater( runnable );
+
+// An equivalent way that avoids creating a variable:
+a() {
+    run() {
+        x = jvd.fdemo.filechooser;
+        x.setControlButtonsAreShown(true);
+        x.revalidate();
+    }
+    return this;
+}
+
+SwingUtilities.invokeLater( a() );
+
+
+

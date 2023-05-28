@@ -166,10 +166,12 @@ bdemo() {
     return this;
 }
 
-jvd.bdemo = bdemo();
-jvd.bdemo.panel.setImageView(zz());
-jvd.bdemo.iframe = DesktopManager.get().createVApp(jvd.bdemo.panel, "File Navigator - Image Viewer");
+x = jvd.apps.imgnav = bdemo();
+x.panel.setImageView(zz());
+x.iframe = DesktopManager.get().createVApp(x.panel, "File Navigator - Image Viewer");
 
 // c:/dev/jpad/files/bckgrnd
-// C:\dev\workspaces\git\virtualdesktop\src\main\resources\org\jwellman\bsh\scripts
+// C:\dev\workspaces\git\virtualdesktop\
+// C:\dev\workspaces\git\virtualdesktop\src\main\resources\
+// C:\dev\workspaces\git\virtualdesktop\src\main\resources\org\jwellman\bsh\scripts\
 

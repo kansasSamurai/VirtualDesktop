@@ -12,6 +12,11 @@
  *  // the bsh.util.ClassBrowser object takes a while to 
  *  // load/instantiate which causes the UI to hang briefly.
  *  // it is low priority but I would like to get it done some day.
+ *  // UPDATE MAY 2023 : the problem is that ClassBrowser.init()
+ *  // has to be done on the EDT based on the way it is written
+ *  // so it pretty much has to "hang" the UI unfortunately.  While
+ *  // it would certainly be "possible" to rewrite BeanShell's 
+ *  // ClassBrowser, it does not appear to be "simple"/quick :(
  ** ================================================================= */
 import bsh.ClassIdentifier;
 import bsh.util.ClassBrowser;
@@ -123,6 +128,9 @@ jvdClassBrowser() {
 }
 
 _JVD() {
+
+	// Convenience to run Swing code on the EDT (Event Dispatching Thread)
+	edt(x) { SwingUtilities.invokeLater(x); }
 
     classpath() {
         ClassLoader cl = ClassLoader.getSystemClassLoader();

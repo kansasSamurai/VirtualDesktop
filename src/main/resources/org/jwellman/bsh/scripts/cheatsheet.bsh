@@ -1,0 +1,50 @@
+
+// ===== How to create/run a runnable
+m() { run() { print("running"); } return this; };
+new Thread(m).run();
+
+// ===== How to run on the EDT
+SwingUtilities.invokeLater(m);
+
+// todo - add method to 'jvd' object that is an alias for SwingUtilities.invokeLater(m);
+// i.e.
+jvd {
+...
+edt(x) { SwingUtilities.invokeLater(x); }
+}
+
+// so you could then run:
+jvd.edt(m);
+
+// ===== How to add a method to a scripted object
+z() {
+
+    this.a = 1;
+    this.b = "b";
+    
+    c() { 
+        print("c()");
+        
+        y() { print("y()"); } 
+        
+        return this; 
+    };
+
+    return this;
+};
+
+z = z();
+
+x() { 
+	x1 = 100; 
+	return this;
+};
+
+x = x();
+
+// Add method from z() to x()
+x.b = z.c();
+// so you can't "run" x.b() directly but you can run x.b.y() = z.c.y()
+x.b.y(); 
+
+

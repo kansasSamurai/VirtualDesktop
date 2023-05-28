@@ -54,8 +54,12 @@ import org.jwellman.virtualdesktop.vapps.SpecXionFM;
 import org.jwellman.virtualdesktop.vswing.VDesktopPane;
 
 import com.alee.laf.WebLookAndFeel;
+import com.formdev.flatlaf.FlatDarculaLaf;
 import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatIntelliJLaf;
 import com.formdev.flatlaf.FlatLightLaf;
+import com.formdev.flatlaf.themes.FlatMacDarkLaf;
+import com.formdev.flatlaf.themes.FlatMacLightLaf;
 import com.jtattoo.plaf.aluminium.AluminiumLookAndFeel;
 
 import ca.odell.glazedlists.swing.DefaultEventListModel;
@@ -98,7 +102,7 @@ public class App extends JFrame implements ActionListener {
     public static final int LAF_FLATLAF = 8;
     public static final int LAF_SUBSTANCE = 9; // deprecated / not currently used
     public static final int LAF_NAPKIN = 10;
-    public static final int CHOSEN_LAF = LAF_JTATTOO; // LAF_JTATTOO;
+    public static final int CHOSEN_LAF = LAF_FLATLAF; // LAF_FLATLAF; // LAF_JTATTOO;
 
     /**
      * This is only nececessary for a temp dev menu item; can eventually be removed
@@ -417,6 +421,10 @@ public class App extends JFrame implements ActionListener {
                         	switch (flatTheme) {
                         	case 1: UIManager.setLookAndFeel( new FlatLightLaf() ); break;
                         	case 2: UIManager.setLookAndFeel( new FlatDarkLaf() ); break;
+                        	case 3: UIManager.setLookAndFeel( new FlatDarculaLaf() ); break;
+                        	case 4: UIManager.setLookAndFeel( new FlatIntelliJLaf() ); break;
+                        	case 5: UIManager.setLookAndFeel( new FlatMacLightLaf() ); break;
+                        	case 6: UIManager.setLookAndFeel( new FlatMacDarkLaf() ); break;
                         	}
 
                         	break;

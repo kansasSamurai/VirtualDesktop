@@ -1,21 +1,34 @@
 package org.jwellman.virtualdesktop.vapps;
 
-import static j2html.TagCreator.*;
+import static j2html.TagCreator.body;
+import static j2html.TagCreator.h1;
+import static j2html.TagCreator.head;
+import static j2html.TagCreator.html;
+import static j2html.TagCreator.p;
+import static j2html.TagCreator.title;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.swing.AbstractAction;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.border.Border;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.eclipse.jetty.server.Handler;
@@ -27,6 +40,9 @@ import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.util.resource.PathResource;
 import org.eclipse.jetty.util.resource.Resource;
+import org.jwellman.swing.layout.FluidConstraint;
+import org.jwellman.swing.layout.FluidLayout;
+import org.jwellman.swing.layout.WrapLayout;
 
 /**
  * 
@@ -37,6 +53,8 @@ public class SpecJetty extends VirtualAppSpec {
 
 	private Server server;
 	private JButton btnStart;
+
+	private JLabel lblName, lblPort;
 	private JTextField txtName, txtPort;
 	
 	public SpecJetty() {
@@ -47,28 +65,149 @@ public class SpecJetty extends VirtualAppSpec {
 	}
 
 	private JPanel createContent() {
-		final JPanel content = new JPanel(new GridLayout(0, 1));
+		final JPanel content = new JPanel();
 
-		// reusable jpanel ref for creating rows
+		lblName = new JLabel("Name: ");
+		txtName = new JTextField("ServerName");
+		// TODO create a keylistener on the textfield to update a tabname
+
+		lblPort = new JLabel("Port: ");
+		txtPort = new JTextField("8080");
+
+		btnStart = new JButton("Start");
+		btnStart.addActionListener(new StartServerAction());
+
+		int version = 4;
+		switch(version) {
+			case 1: layoutPanelsInGrid(content); break;
+			case 2: layoutFluidInBox(content); break;
+			case 3: layoutFluidInBorder(content); break;
+			case 4: layoutFlow(content); break;
+		}
+
+		return content;
+	}
+
+	private void layoutPanelsInGrid(JPanel content) {
+		content.setLayout(new GridLayout(0,1));
+		
 		JPanel row = new JPanel();
 		row.add(new JLabel("Name: "));
 		row.add(txtName = new JTextField("Jetty", 15));
 		content.add(row);
-		// TODO create a keylistener on the textfield to update a tabname
 
 		row = new JPanel();
 		row.add(new JLabel("Port: "));
 		row.add(txtPort = new JTextField("8080", 5));
 		content.add(row);
-
+		
 		row = new JPanel();
 		row.add(btnStart = new JButton("Start"));
 		content.add(row);
-			btnStart.addActionListener(new StartServerAction());
-		
-		return content;
 	}
-	
+
+	private void layoutFlow(JPanel content) {
+		WrapLayout fl = new WrapLayout();
+		content.setLayout(fl);
+
+		// reusable jpanel ref for creating rows
+		JPanel row = new JPanel();
+		row.add(lblName);
+		row.add(txtName);
+		content.add(row);
+
+		row = new JPanel();
+		row.add(lblPort);
+		row.add(txtPort);
+		content.add(row);
+
+		row = new JPanel();
+		row.add(btnStart);
+		content.add(row);
+	}
+
+	private void layoutFluidInBox(JPanel content) {
+		BoxLayout b = new BoxLayout(content, BoxLayout.PAGE_AXIS);
+		content.setLayout(b);
+
+		FluidLayout fluid = new FluidLayout();
+		FluidConstraint clabel = new FluidConstraint(12,4,4,3,2);
+		FluidConstraint ctext = new FluidConstraint(12,8,8,3,2);
+		FluidConstraint cbutton = new FluidConstraint(12,12,12,12,4);
+		
+		// reusable jpanel ref for creating rows
+		JPanel row = panel(); 
+			row.setLayout(fluid);
+		row.add(lblName, clabel);
+		row.add(txtName, ctext);
+		row.add(lblPort, clabel);
+		row.add(txtPort, ctext);
+		row.add(btnStart, cbutton);
+		content.add(row);
+
+		// Add some glue and dummy content to see how it looks
+//		content.add(Box.createVerticalGlue());
+//
+//		row = panel();
+//		row.add(new JButton("dummy"));
+//		content.add(row);		
+//
+//		row = panel();
+//		row.add(new JButton("dummy"));
+//		content.add(row);		
+//
+//		row = panel();
+//		row.add(new JButton("dummy"));
+//		content.add(row);		
+//
+//		row = panel();
+//		row.add(new JButton("dummy"));
+//		content.add(row);		
+//
+//		row = panel();
+//		row.add(new JButton("dummy"));
+//		content.add(row);		
+//
+//		row = panel();
+//		row.add(new JButton("dummy"));
+//		content.add(row);		
+	}
+
+	private void layoutFluidInBorder(JPanel content) {
+		content.setLayout(new BorderLayout());
+
+		FluidLayout fluid = new FluidLayout();
+		FluidConstraint clabel = new FluidConstraint(12,4,4,3,2);
+		FluidConstraint ctext = new FluidConstraint(12,8,8,3,2);
+		FluidConstraint cbutton = new FluidConstraint(12,12,12,12,4);
+		
+		// reusable jpanel ref for creating rows
+		JPanel row = panel(); 
+			row.setLayout(fluid);
+		row.add(lblName, clabel);
+		row.add(txtName, ctext);
+		row.add(lblPort, clabel);
+		row.add(txtPort, ctext);
+		row.add(btnStart, cbutton);
+		content.add(row, BorderLayout.NORTH);
+
+		// Add some dummy content to south
+		row = panel();
+		row.add(new JButton("center"));
+		content.add(row, BorderLayout.CENTER);	
+
+		row = panel();
+		row.add(new JButton("south"));
+		content.add(row, BorderLayout.SOUTH);	
+	}
+
+	private static final Border outline = BorderFactory.createLineBorder(Color.red);
+	private JPanel panel() {
+		JPanel p = new JPanel();
+		p.setBorder(outline);
+		return p;
+	}
+
 	private class StartServerAction extends AbstractAction {
 
 		private static final long serialVersionUID = 1L;
@@ -134,7 +273,7 @@ public class SpecJetty extends VirtualAppSpec {
 	/**
 	 * http://localhost:8080/helloworld
 	 * 
-	 * @author rcwel
+	 * @author rwellman
 	 *
 	 */
 	private class HelloWorld extends AbstractHandler {

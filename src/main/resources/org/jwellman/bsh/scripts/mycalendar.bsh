@@ -180,9 +180,9 @@ jvd.calendar = new MyCalendar();
     p = new JPanel(new GridBagLayout());
     p.add(jvd.calendar);
     
-jvd.demo3 = object();
-jvd.demo3.panel = jvd.calendar;
-jvd.demo3.iframe = DesktopManager.get().createVApp(jvd.demo3.panel, "Calendar Demo");
+x = jvd.demo3 = object();
+x.panel = jvd.calendar;
+x.iframe = DesktopManager.get().createVApp(x.panel, "Calendar Demo");
 
 // or... 'x' requires dockables.bsh
 // x.addDockable( "Calendar Demo", p );

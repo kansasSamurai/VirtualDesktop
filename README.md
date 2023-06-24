@@ -1,3 +1,9 @@
+# branch 'trinity'
+This branch was created from 'master' on 5/15/2023.
+Part of a new strategy to keep branches according to
+where I am doing work and then merging into master.
+DO NOT COMMIT THIS PARAGRAPH INTO 'MASTER' BRANCH.
+
 # VirtualDesktop
 A raw but functional virtual desktop - to be clear, this is not a "remote desktop".
 This is an application like any other... it just provides features that your desktop provides.

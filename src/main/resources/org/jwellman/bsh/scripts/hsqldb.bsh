@@ -79,12 +79,19 @@ hsql() {
 }
 
 hsql = hsql();
+
+// ----------------------------------------
+
+// If the DB wasn't started using spechypersql, then run this:
+// hsql.startServer();
+
 // hsql.conn = hsql.createConnection();
 
 // hsql.insert("INSERT INTO PUBLIC.DRIVELOG ( DRIVE, FREESPACE, DATECREATED ) VALUES ( 'C', 103.5,  CURRENT_TIMESTAMP )");
 
 // z = hsql.select("SELECT * FROM PUBLIC.DRIVELOG ORDER BY DATECREATED");
 
+// ----- This requires xchart.bsh and step 1 from dockables.bsh 
 //xchart = xchart();
 //xchart.chart = xchart.createChart(z, "DATECREATED", "FREESPACE");
 //xchart.jpanel = new XChartPanel(xchart.chart);

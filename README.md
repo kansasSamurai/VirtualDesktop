@@ -51,6 +51,23 @@ has the drawback that one misbehaving tool can
 crash the entire JVM.  Therefore, if you use this
 environment to edit files, be sure that you save often.
 
+## TODO 
+
+### JCXConsole
+
+* common actions:
+    * save to a file
+    * copy to clipboard
+  
+* keep command history (the command itself, the directory, its stdout, its stderr)
+    * where/how to display this?
+        * 'history' button under the 'execute' button?
+        * maybe a new tab just for history? so there would be a tab for 'current' and a tab for 'history'
+            ^^^ I think I like this the best so far
+        * or, a JList ...
+            * underneath the file browser
+  
+
 ## JDK9 and JDK11
 
 Due to the current version of Groovy being used, the Groovy console will throw

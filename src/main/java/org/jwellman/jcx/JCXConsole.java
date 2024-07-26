@@ -19,6 +19,11 @@ import com.jidesoft.swing.FolderChooser;
 
 /**
  * A simple UI/Panel for the JCXEngine.
+ * <p>
+ * The following works but it would be nice to have an option 
+ * where the user doesn't have to type the path to 'bash.exe'
+ * nor the 'cd' portion of the command:
+ * /dev/tools/git/bin/bash.exe -c 'cd /c/dev/workspaces/git/virtualdesktop; pwd; git status'
  *
  * @author Rick Wellman
  */

@@ -45,7 +45,7 @@ icv() {
 jvd.icv = icv();
 jvd.icv.preview.setTransferHandler(new TransferHandler("foreground"));
 
-// DesktopManager.get().createVApp(jvd.icv.panel, "Icon Viewer");
+DesktopManager.get().createVApp(jvd.icv.panel, "Icon Viewer");
 
 // If you want just the label opaque:
 // jvd.icv.preview.setOpaque(true);
@@ -59,6 +59,11 @@ jvd.icv.preview.setTransferHandler(new TransferHandler("foreground"));
    then you can do this... (and also use a colorchooser)
    
    x.addDockable( "Icon Viewer", jvd.icv.panel );
+*/
+
+/* Everything above this is tested and creates an IconViewer
+   which can be used with a colorchooser.bsh to create
+   custom icons.  see jvd.icv.preview.setIcon() below
 */
 
 /*  ========================================

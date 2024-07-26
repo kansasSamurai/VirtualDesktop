@@ -1,3 +1,19 @@
+To write "portable" java apps:
+* Do NOT use a look and feel
+* Do NOT use your own container; i.e. JFrame or JInternalFrame (and JDialog)
+* Rather... use JPanel for EVERYTHING (let the framework put your JPanel in the appropriate container)
+* Do NOT call System.exit() directly !!! (let the framework handle this request)
+* Do NOT use modal/non-modal dialogs directly; use a portable interface.
+* If your app is somehow specific to an OS, then...
+  all such behavior must check for that OS before trying to run.  
+  Either throw an exception or call to the abstract dialog interface.
+  
+Use "services" for:
+* fonts
+* borders < besides caching instances, borders are often dependent on color palette
+* color palette
+
+/////////////////////////////////////////////////
 
 todo: bsh/jpad command and/or vapp that quickly turns bsh scripts to vapps
 the vapp could display a list of files in the correct directory
@@ -110,12 +126,3 @@ todo: possibly allow "sub-applications" to contribute to the desktop menubar/men
 todo: create a class and/or framework jar as demo for how to write a simple app
       i.e. do not extend JFrame 
 
-To write "portable" java apps:
-* Do not use a look and feel
-* Do not use your own container; i.e. JFrame or JInternalFrame (and JDialog)
-* Rather... use JPanel for EVERYTHING (let the framework put your JPanel in the appropriate container)
-* Do not call System.exit() directly !!! (let the framework handle this request)
-* Do not use modal dialogs directly; use a portable interface.
-* If your app is somehow specific to an OS, then
-  all such behavior must check for that OS before trying to run.  
-  Either throw an exception or call to the abstract dialog interface.

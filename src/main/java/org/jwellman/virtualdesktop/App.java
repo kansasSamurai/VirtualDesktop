@@ -98,8 +98,8 @@ public class App extends JFrame implements ActionListener {
     public static final int LAF_NIMBUS = 3;
     public static final int LAF_METAL = 5;
     public static final int LAF_PGS = 6;
-    public static final int LAF_JTATTOO = 7;
-    public static final int LAF_FLATLAF = 8;
+    public static final int LAF_JTATTOO = 7; // definitely like this one - almost modern, somewhat Mac like
+    public static final int LAF_FLATLAF = 8; // definitely like this one - modern but flat (which isn't necessarily bad... just sayin')
     public static final int LAF_SUBSTANCE = 9; // deprecated / not currently used
     public static final int LAF_NAPKIN = 10;
     public static final int CHOSEN_LAF = LAF_FLATLAF; // LAF_FLATLAF; // LAF_JTATTOO;

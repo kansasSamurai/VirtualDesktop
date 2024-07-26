@@ -1,4 +1,7 @@
 
+// ===== update the class browser to a specific class
+bsh % jvd.browser.go2("org.jwellman.virtualdesktop.App");
+
 // ===== How to create/run a runnable
 m() { run() { print("running"); } return this; };
 new Thread(m).run();
@@ -33,14 +36,13 @@ z() {
     return this;
 };
 
-z = z();
-
 x() { 
 	x1 = 100; 
 	return this;
 };
 
 x = x();
+z = z();
 
 // Add method from z() to x()
 x.b = z.c();

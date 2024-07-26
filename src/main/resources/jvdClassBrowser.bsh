@@ -19,7 +19,7 @@
  *  // ClassBrowser, it does not appear to be "simple"/quick :(
  ** ================================================================= */
 import bsh.ClassIdentifier;
-import bsh.util.ClassBrowser;
+import bsh.util.JClassBrowser;
 import org.jwellman.virtualdesktop.App;
 import org.jwellman.virtualdesktop.DesktopManager;
 
@@ -35,7 +35,7 @@ jvdClassBrowser() {
 	bsh.system.icons.eye=
 		new ImageIcon(getResource("/bsh/util/lib/eye.jpg"));
 
-    this.browser = new ClassBrowser( this.interpreter.getClassManager() );
+    this.browser = new JClassBrowser( this.interpreter.getClassManager() );
     this.browser.init();
 
     makeInternalFrame( String name ) {

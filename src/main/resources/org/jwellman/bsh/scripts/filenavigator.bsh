@@ -153,6 +153,131 @@ zz() {
     return this;
 }
 
+zzz() {
+
+    this.mouseAdapter = new JpadMouseAdapter();
+    this.dimFilePreview = new Dimension(149,149);
+    this.transferHandler = new TransferHandler("backgroundFile");
+    
+    createView(Object model, Object api) {
+        File file = (File)model;
+        
+        JPanel panel = new JPanel(new BorderLayout());
+            panel.setMinimumSize(dimFilePreview);
+            panel.setMaximumSize(dimFilePreview);
+            panel.setPreferredSize(dimFilePreview);
+
+        JButton button = new JButton(file.name);
+
+        JLabel label = new org.jwellman.swing.jlabel.BackgroundLabel(file, null);
+        label.setTransferHandler(transferHandler);
+        label.addMouseListener(mouseAdapter);
+        if (file.name.startsWith("a")) // this line, and/or the next line, are optional
+            new JpadDropTargetListener(label);
+
+        // Assemble components into the panel...
+        panel.add(label, BorderLayout.CENTER);
+        panel.add(button, BorderLayout.SOUTH);
+
+        new Thread() {
+            public void run(){
+/* =======================================================
+OK... This *does* work but... it still seems to result in enough of a "lag"
+that the UI still blocks (i.e. the jtree that calls this does not highlight
+the selected node until ALL files have run through this).  For example, if
+you simply remove all the code below, this is acceptably responsive in
+building the UI.  
+                Thread.sleep(1000);
+*/
+                ImageIcon icon = api.createFileIcon(file);
+                    if (icon.getIconHeight() < 136 && icon.getIconWidth() < 136) {
+                        // do nothing, this is the size we want
+                    } else {
+                        BufferedImage image = api.createScaledImage( icon, 136, 136 );            
+                        icon = new ImageIcon(image);
+                    }
+
+                Thread ui = new Thread() {
+                    public void run(){
+                        label.setIcon(icon);
+                    }
+                };
+                SwingUtilities.invokeLater(ui);
+            }
+        }.start();
+      
+
+        return panel;    
+    }
+    
+    
+    return this;
+}
+
+zzzz() {
+
+    this.mouseAdapter = new JpadMouseAdapter();
+    this.dimFilePreview = new Dimension(149,149);
+    this.transferHandler = new TransferHandler("backgroundFile");
+    
+    createView(Object model, Object api) {
+        File file = (File)model;
+        
+        JPanel panel = new JPanel(new BorderLayout());
+            panel.setMinimumSize(dimFilePreview);
+            panel.setMaximumSize(dimFilePreview);
+            panel.setPreferredSize(dimFilePreview);
+
+        JButton button = new JButton(file.name);
+
+        JLabel label = new org.jwellman.swing.jlabel.BackgroundLabel(file, null);
+        label.setTransferHandler(transferHandler);
+        label.addMouseListener(mouseAdapter);
+        if (file.name.startsWith("a")) // this line, and/or the next line, are optional
+            new JpadDropTargetListener(label);
+
+        // Assemble components into the panel...
+        panel.add(label, BorderLayout.CENTER);
+        panel.add(button, BorderLayout.SOUTH);
+
+        // ig := icon generator
+        ig() {
+            public void run(){
+/* =======================================================
+So... this works VERY well, but why?
+A:  It appears that there is substantial overhead incurred by using 
+actual Thread objects (previous version).  This version simply creates
+Runnable objects and passes them back to the ExecutorService via addTask().
+
+*/
+                ImageIcon icon = api.createFileIcon(file);
+                    if (icon.getIconHeight() < 136 && icon.getIconWidth() < 136) {
+                        // do nothing, this is the size we want
+                    } else {
+                        BufferedImage image = api.createScaledImage( icon, 136, 136 );            
+                        icon = new ImageIcon(image);
+                    }
+
+                ui() {
+                    public void run(){
+                        label.setIcon(icon);
+                    }
+
+                    return this;
+                };
+                SwingUtilities.invokeLater(ui());
+            }
+
+            return this;
+        };
+        api.addTask(ig());
+
+        return panel;    
+    }
+
+    return this;
+}
+
 bdemo() {
 
     /** A JPanel extension that contains a directory navigation tree */
@@ -167,10 +292,11 @@ bdemo() {
 }
 
 x = jvd.apps.imgnav = bdemo();
-x.panel.setImageView(zz());
+x.panel.setImageView(zzzz());
 x.iframe = DesktopManager.get().createVApp(x.panel, "File Navigator - Image Viewer");
 
 // c:/dev/jpad/files/bckgrnd
+// C:\Users\rcwel\OneDrive\Graphics\jpad\files\BCKGRND
 // C:\dev\workspaces\git\virtualdesktop\
 // C:\dev\workspaces\git\virtualdesktop\src\main\resources\
 // C:\dev\workspaces\git\virtualdesktop\src\main\resources\org\jwellman\bsh\scripts\

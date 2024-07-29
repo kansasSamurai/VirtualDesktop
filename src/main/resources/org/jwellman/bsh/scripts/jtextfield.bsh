@@ -1,0 +1,34 @@
+// JTextField border 
+
+/*
+This script serves as a good template for prototyping new
+user interfaces while directly using the SpecEmpty vapp.
+*/
+
+import java.awt.geom.*;
+import org.jwellman.virtualdesktop.vapps.*;
+
+demo = object();
+
+x = new SpecEmpty();
+x.setTitle("jvd.demo6");
+DesktopManager.get().createVApp(x);
+
+x = demo.panel = x.getContent();
+x.setLayout(new BorderLayout());
+
+y = new JTextField("put some content here"); x.add(y, BorderLayout.NORTH);
+
+
+jvd.demo6 = demo;
+
+//bsh % import javax.swing.border.*;
+//bsh % b = new TitledBorder("Field Name");
+//bsh % y.setBorder(b);
+//bsh % y.setBorder(b);
+//bsh % [ Editor invoked interpreter.eval()... ]
+//bsh % y.setBorder(b);
+//bsh % y.setBorder(BorderFactory.createEmptyBorder());
+//bsh % y.setBorder(b);
+//bsh % x.revalidate();
+

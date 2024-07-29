@@ -4,10 +4,10 @@ bsh % jvd.browser.go2("org.jwellman.virtualdesktop.App");
 
 // ===== How to create/run a runnable
 m() { run() { print("running"); } return this; };
-new Thread(m).run();
+new Thread(m()).start();
 
 // ===== How to run on the EDT
-SwingUtilities.invokeLater(m);
+SwingUtilities.invokeLater(m());
 
 // todo - add method to 'jvd' object that is an alias for SwingUtilities.invokeLater(m);
 // i.e.

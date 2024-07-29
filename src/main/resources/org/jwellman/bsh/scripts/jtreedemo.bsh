@@ -90,7 +90,7 @@ public class Country implements CountryAware {
 demo() {
 
     this.panel = new TreeDemo();
-    this.iframe = jvd.app.createVApp(this.panel, "JTree Demo");
+    this.iframe = DesktopManager.get().createVApp(this.panel, "Tree Demo");
 
     return this;
 }

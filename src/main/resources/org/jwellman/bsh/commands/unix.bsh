@@ -8,9 +8,48 @@ TODO if second argument (checksum) is a URL, fetch the string from the URL
 import java.io.*;
 import java.security.MessageDigest;
 
+/**
+ * Filter needed by listFiles()
+ */
+public class GlobFilenameFilter implements FilenameFilter {
+
+    private String regexPattern;
+
+    public GlobFilenameFilter(String globPattern) {
+        regexPattern = globPattern.replaceAll("\\?", ".");
+        regexPattern = regexPattern.replaceAll("\\*", ".*");
+    }
+
+    public boolean accept(File dir, String name) {
+        return name.matches(regexPattern);
+    }
+}
+
 unix() {
 
-    void cls() { print("This command is under construction..."); }
+    void cls() { 
+        cls(); // this should invoke the global definition
+    }
+
+    void ls() {
+        this.ls("*");
+    }
+
+    void ls(String glob) {
+        files = this.listFiles(glob);
+
+        for (String file : files) {
+            print(file);
+        }
+    }
+
+    /**
+     * Lists files in the current directory.
+     */
+    public String[] listFiles(String searchPattern) {
+        cwd = new File(bsh.cwd);
+        return cwd.list(new GlobFilenameFilter(searchPattern));
+    }
 
     void verifymd5(String filename, String checksum) {
         print("Calculating checksum... (even 50MB takes several seconds)");

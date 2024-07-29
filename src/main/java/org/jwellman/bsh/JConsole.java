@@ -49,7 +49,15 @@ import javax.swing.text.StyledDocument;
 /**
  * A Swing-based beanshell console with the following improvements:<ul>
  * <li>Ability to set the font</li>
+ * <li>Set text area background to an explicit color, independent of look and feel default</li>
+ * <li>Add a default command to the history for jpad convenience</li>
  * </ul>
+ * 
+ * Note JULY 2024: This is MAINLY a reformatted version of the original.
+ * Which begs the question:  Could this simply be an extension of the original class?
+ * Mostly, the answer is yes.  Unfortunately, because the original class marked
+ * a lot of methods private, then extending the class is made more difficult;
+ * hence, this approach.  
  *
  * @author Rick Wellman
  */

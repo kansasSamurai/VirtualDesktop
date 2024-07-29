@@ -13,16 +13,24 @@ import javax.swing.tree.DefaultTreeModel;
 import org.jwellman.swing.jtree.SwingTreeNode;
 import javax.swing.tree.DefaultMutableTreeNode;
 
-y = object();
-y.panel = new JPanel();
-y.tree = new JTree();
+swingbrowser() {
+    this.tree = new JTree();
+    
+    this.panel = new JPanel();
+    this.panel.setLayout(new BorderLayout());
+    this.panel.add(this.tree, BorderLayout.WEST);
 
-y.panel.setLayout(new BorderLayout());
-y.panel.add(y.tree, BorderLayout.WEST);
+    this.iframe = DesktopManager.get().createVApp(this.panel, "Swing Browser");
 
-x.addDockable( "Demo", y.panel );
+    print("Swing Browser started...");
+    return this;
+}
 
+jvd.swingbrowser = swingbrowser();
+
+//y = jvd.swingbrowser;
 //y.tree.setModel(new DefaultTreeModel(new SwingTreeNode(y.panel), true));
+//y.tree.setModel(new DefaultTreeModel(new SwingTreeNode(treedemo.panel), true));
 
 //y.listener = 
 // new TreeSelectionListener() {

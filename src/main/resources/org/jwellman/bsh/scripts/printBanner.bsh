@@ -1,6 +1,8 @@
 /**
  * The original printBanner command will only print the icon
  * if the Console is the original bsh.JConsole :(
+ *
+ * @author rwellman
  */
 import java.awt.Font;
 import java.awt.Color;
@@ -8,18 +10,23 @@ import javax.swing.ImageIcon;
 
 printBanner() {
 
+    // Create properties for printing the banner
+    // (This is a refactor of the original - though )
+    // (I don't use these properties externally yet? )
+    // (they are here if needed)
     if (this.font == void)
-    this.font = new java.awt.Font("SansSerif", java.awt.Font.BOLD, 12);
+        this.font = new java.awt.Font("SansSerif", java.awt.Font.BOLD, 12);
 
     if (this.icon == void)
-    this.icon = new javax.swing.ImageIcon( getResource("/bsh/util/lib/small_bean_shell.gif"));
+        this.icon = new javax.swing.ImageIcon( getResource("/bsh/util/lib/small_bean_shell.gif"));
 
     if (this.color == void)
-    this.color = new java.awt.Color(20,100,20);
+        this.color = new java.awt.Color(20,100,20);
 
     if (this.bannertext == void)
-    this.bannertext = Interpreter.VERSION + " - by Pat Niemeyer (pat@pat.net)";
+        this.bannertext = Interpreter.VERSION + " - by Pat Niemeyer (pat@pat.net)";
 
+    // This is the same as the original (minus the: bsh.console instanceof JConsole)
     if ( bsh.console != void && Capabilities.haveSwing() ) {
         this.jconsole = bsh.console;
         jconsole.println( this.icon );

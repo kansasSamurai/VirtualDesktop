@@ -1,6 +1,11 @@
-//import org.jwellman.bsh.PanelBrowser;
-//
-//jvd.bdemo = object();
-//x = jvd.bdemo; // for convenience
-//x.panel = new PanelBrowser();
+/**
+ * An interesting file browser proof of concept.
+ * See the class PanelBrowser for more information.
+ */
+import org.jwellman.bsh.PanelBrowser;
+
+jvd.bdemo = object();
+x = jvd.bdemo; // for convenience
+x.panel = new PanelBrowser();
 x.iframe = DesktopManager.get().createVApp(x.panel, "Panel Browser");
+

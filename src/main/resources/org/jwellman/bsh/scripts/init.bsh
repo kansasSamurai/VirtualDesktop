@@ -24,4 +24,8 @@ sourceUTF8("/org/jwellman/bsh/scripts/env.bsh");
 // but they can be overridden via source().
 sourceUTF8("/org/jwellman/bsh/scripts/printBanner.bsh");
 
+if (void == global.jvd) { global.jvd = object(); }
+global.jvd.unix = unix();
+
+// Not only does this clear the console but it reprints the banner now that the banner script is "fixed"
 cls();

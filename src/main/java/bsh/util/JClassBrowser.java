@@ -36,7 +36,9 @@ import bsh.classpath.BshClassPath;
 import bsh.classpath.ClassManagerImpl;
 
 /**
- * Small customizations to BSH ClassBrowser.
+ * Small customizations to BSH ClassBrowser: <br>
+ * (1) sort lists alphabetically <br>
+ * (2) initialize the view in a way that does not block the user interface
  * 
  * @author rwellman
  *
@@ -181,41 +183,6 @@ public class JClassBrowser extends ClassBrowser {
         } ) .start();
     }
 
-    // I won't really use this as a JTree but I do need it 
-    class JPackageTree extends ClassBrowser.PackageTree {
-
-        private static final long serialVersionUID = 1L;
-
-        @SuppressWarnings("rawtypes")
-        JPackageTree(Collection packages) {
-            super(packages);
-        }
-
-        // Override to provide sorted packages
-        @Override
-        @SuppressWarnings("unchecked")
-        protected MutableTreeNode makeNode(@SuppressWarnings("rawtypes") Map map, String nodeName) {
-            // This is the new part to sort
-            final TreeSet<String> sortedset = new TreeSet<>();
-            sortedset.addAll(map.keySet());
-
-            final DefaultMutableTreeNode root = new DefaultMutableTreeNode(nodeName);
-            for (String name : sortedset) {
-                final Map<String, ?> val = (Map<String, ?>) map.get(name);
-                if (val.size() == 0) {
-                    DefaultMutableTreeNode leaf = new DefaultMutableTreeNode(name);
-                    root.add(leaf);
-                } else {
-                    MutableTreeNode node = makeNode(val, name);
-                    root.add(node);
-                }
-            }
-
-            return root;
-        }
-
-    }
-
     // This is a duplicate of the base class code because it is private
     protected JSplitPane splitPane(int orientation, boolean redraw, JComponent c1, JComponent c2) {
         final JSplitPane sp = new JSplitPane(orientation, redraw, c1, c2);
@@ -269,6 +236,46 @@ public class JClassBrowser extends ClassBrowser {
     @Override
     protected Constructor[] getPublicConstructors(Constructor[] constructors) {
         return super.getPublicConstructors(constructors);
+    }
+
+    /**
+     * Customization of the base class that sorts package names.
+     * 
+     * @author rwellman
+     *
+     */
+    class JPackageTree extends ClassBrowser.PackageTree {
+
+        private static final long serialVersionUID = 1L;
+
+        @SuppressWarnings("rawtypes")
+        JPackageTree(Collection packages) {
+            super(packages);
+        }
+
+        // Override to provide sorted packages
+        @Override
+        @SuppressWarnings("unchecked")
+        protected MutableTreeNode makeNode(@SuppressWarnings("rawtypes") Map map, String nodeName) {
+            // This is the new part to sort
+            final TreeSet<String> sortedset = new TreeSet<>();
+            sortedset.addAll(map.keySet());
+
+            final DefaultMutableTreeNode root = new DefaultMutableTreeNode(nodeName);
+            for (String name : sortedset) {
+                final Map<String, ?> val = (Map<String, ?>) map.get(name);
+                if (val.size() == 0) {
+                    DefaultMutableTreeNode leaf = new DefaultMutableTreeNode(name);
+                    root.add(leaf);
+                } else {
+                    MutableTreeNode node = makeNode(val, name);
+                    root.add(node);
+                }
+            }
+
+            return root;
+        }
+
     }
 
 }

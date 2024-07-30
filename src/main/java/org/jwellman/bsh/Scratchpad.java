@@ -14,18 +14,24 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Map;
+import java.util.HashMap;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSplitPane;
+import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
+import javax.swing.border.TitledBorder;
 
 import org.jwellman.dsp.DSP;
 import org.jwellman.dsp.FontAwesomeIconProvider;
@@ -83,6 +89,25 @@ public class Scratchpad {
         d.setSize(300,300);    
         d.setVisible(true);  
     }  
+
+    private void some() {
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.PAGE_AXIS));
+        Border b = new TitledBorder("aa");
+        p.add(Box.createVerticalGlue());
+        
+        JSplitPane sp = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+        sp.setTopComponent(p);
+        sp.setBottomComponent(p);
+        sp.setDividerLocation(0.5);
+        
+        String result = "";
+        result.replaceAll("", "");
+        
+        JTextField tf = new JTextField();
+        Map values = new HashMap();
+        values.put("", tf);
+    }
 
     private static final Font VERDANA = new Font("Verdana", Font.PLAIN, 10);    
     private static final Font VERDANA2 = new Font("Verdana", Font.PLAIN, 14);    

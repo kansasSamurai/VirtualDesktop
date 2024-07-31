@@ -271,17 +271,23 @@ public class TemplateProcessor {
         
         z = this.view;
 
+        // CENTER (text areas)
         sp = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
         sp.setTopComponent(this.template);
         sp.setBottomComponent(this.result);
         sp.setDividerLocation(0.5);
         z.add(sp, BorderLayout.CENTER);
 
+        // EAST (field holder)
         z.add(fieldHolder, BorderLayout.EAST);
 
+        // SOUTH (options and buttons)
         panel = new JPanel(); // flow
+        panel.add(new JLabel("RegExp:"));
+        panel.add(new JTextField("(\\$\\{(.+?)\\})"));
         panel.add(this.btnParse);
         panel.add(this.btnSubstitute);
+        panel.add(new JCheckBox("Remove XML"));
         z.add(panel, BorderLayout.SOUTH);
 
         return this.view;

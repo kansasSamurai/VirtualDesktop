@@ -19,20 +19,21 @@ public class ActionFactory {
 
     public static Class<?>[] registeredApps = {
          SpecBeanShell.class
+         ,SpecJCXConsole.class
+         ,SpecScar.class
+        ,SpecJetty.class
+        ,SpecHyperSQL.class
+        ,SpecHyperSQLClient.class
+        ,SpecJDatePicker.class
+        ,SpecJFreeChart.class
+        ,SpecXChartDemo.class
+        ,SpecVfsFileChooser2.class // this isn't as bad as I originally thought... I was confusing it with XionFM and/or SpecJzy3D below.
+        ,SpecUberDragAndDrop.class
+//      ,SpecXionFM.class // this app is targeted for Linux
         ,SpecDocking.class
         ,SpecJediTerm.class
         ,SpecGroovyConsole.class // newly readded
         ,SpecGroovyGraphics.class
-        ,SpecJetty.class
-        ,SpecHyperSQL.class
-        ,SpecHyperSQLClient.class
-        ,SpecJCXConsole.class
-        ,SpecJDatePicker.class
-        ,SpecVfsFileChooser2.class // this isn't as bad as I originally thought... I was confusing it with XionFM and/or SpecJzy3D below.
-        ,SpecJFreeChart.class
-        ,SpecXChartDemo.class
-//      ,SpecXionFM.class // this app is targeted for Linux
-        ,SpecUberDragAndDrop.class
 //      ,SpecJzy3D.class // this app sucks
     };
 
@@ -68,7 +69,7 @@ public class ActionFactory {
 
                 a = new DesktopAction(labels[i]);
                     a.setDesktopOnly(true);
-                    a.setClazzName("org.jwellman.virtualdesktop.vapps.SpecJCXConsole"); // TODO (clazzs[i]);
+                    a.setClazzName("org.jwellman.virtualdesktop.vapps." + clazzs[i]); // TODO (clazzs[i]);
                     a.putValue(Action.LARGE_ICON_KEY, icon);
                     // a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName());
                     // a.putValue(Action.SHORT_DESCRIPTION, "");

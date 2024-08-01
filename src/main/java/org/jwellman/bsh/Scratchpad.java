@@ -107,6 +107,9 @@ public class Scratchpad {
         JTextField tf = new JTextField();
         Map values = new HashMap();
         values.put("", tf);
+        if (values.isEmpty()) {
+        	
+        }
     }
 
     private static final Font VERDANA = new Font("Verdana", Font.PLAIN, 10);    

@@ -77,6 +77,7 @@ public class FieldHolder extends JPanel {
                 }
 
                 this.innerholder.revalidate();
+                this.innerholder.repaint();
 
                 print("fields: "); print(this.fields);
                 print("values: "); print(this.values);

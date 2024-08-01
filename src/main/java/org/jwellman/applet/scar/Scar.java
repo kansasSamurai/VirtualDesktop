@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -31,6 +32,7 @@ public class Scar {
     private Result result;
     private Template template;
     private FieldHolder fieldHolder;
+    private Grep btnGrep;
     private Parse btnParse;
     private Substitute btnSubstitute;
     private JTextField regex = new JTextField("(#\\{(.+?)\\})");
@@ -51,23 +53,6 @@ public class Scar {
 
         this.fieldHolder.acceptNewTokens(tokens);
 
-    }
-
-    private Map<String, String> getTokens(String input) {
-        final Map<String, String> map = new HashMap<>();
-
-        String patternString = this.regex.getText(); // "(\\$\\{(.+?)\\})";
-        Pattern pattern = Pattern.compile(patternString);
-        Matcher matcher = pattern.matcher(input);
-
-        while (matcher.find()) {
-            String key = matcher.group(1);
-            String value = matcher.group(2);
-            print("found: " + key + " " + value);
-            map.put(key, value);
-        }
-
-        return map;
     }
 
     /**
@@ -107,7 +92,29 @@ public class Scar {
 
     }
 
-    public void init() {
+	public void grep() {
+		// TODO Auto-generated method stub
+		
+	}
+
+    private Map<String, String> getTokens(String input) {
+        final Map<String, String> map = new HashMap<>();
+
+        String patternString = this.regex.getText(); // "(\\$\\{(.+?)\\})";
+        Pattern pattern = Pattern.compile(patternString);
+        Matcher matcher = pattern.matcher(input);
+
+        while (matcher.find()) {
+            String key = matcher.group(1);
+            String value = matcher.group(2);
+            print("found: " + key + " " + value);
+            map.put(key, value);
+        }
+
+        return map;
+    }
+
+	public void init() {
     }
 
     public JPanel createView() {
@@ -115,13 +122,14 @@ public class Scar {
         this.result = new Result(this);
         this.template = new Template(this);
         this.fieldHolder = new FieldHolder(this);
+        this.btnGrep = new Grep(this);
+        	this.btnGrep.addActionListener(this.view);
         this.btnParse = new Parse(this);
             this.btnParse.addActionListener(this.view);
         this.btnSubstitute = new Substitute(this);
             this.btnSubstitute.addActionListener(this.view);
         this.options = new Options();
-        
-        
+
         // CENTER (text areas)
         JSplitPane sp = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 
@@ -137,27 +145,41 @@ public class Scar {
         JSplitPane mainsp = new JSplitPane();
         mainsp.setTopComponent(sp);
 
+        // EAST (field holder)
+        JPanel east = new JPanel(new BorderLayout());
+
+        JPanel panel = new JPanel();
+        panel.add(this.btnParse);
+        panel.add(this.btnGrep);
+        east.add(panel, BorderLayout.NORTH);
+
         scroll = new JScrollPane();
         scroll.getViewport().add(this.fieldHolder);
-        mainsp.setBottomComponent(scroll);
+        east.add(scroll, BorderLayout.CENTER);
+
+        east.add(wrap(this.btnSubstitute), BorderLayout.SOUTH);
+
+        mainsp.setBottomComponent(east);
         mainsp.setDividerLocation(0.5);
         this.view.add(mainsp, BorderLayout.CENTER);
 
-        // EAST (field holder)
-        // moved to splitpane
-        // this.view.add(fieldHolder, BorderLayout.EAST);
-
         // SOUTH (options and buttons)
-        JPanel panel = new JPanel(); // flow
+        panel = new JPanel(); // flow
         panel.add(new JLabel("RegExp:"));
         panel.add(regex );
-        panel.add(this.btnParse);
-        panel.add(this.btnSubstitute);
+//        panel.add(this.btnParse);
+//        panel.add(this.btnSubstitute);
         panel.add(options.Chooser.REMOVE_XML);
         this.view.add(panel, BorderLayout.SOUTH);
 
         return this.view;
     }
 
-}
+	private JPanel wrap(JComponent c) {
+		JPanel p = new JPanel();
+		p.add(c);
 
+		return p;
+	}
+
+}

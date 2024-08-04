@@ -1,17 +1,21 @@
 package org.jwellman.applet.scar;
 
 import java.awt.BorderLayout;
+import java.awt.FlowLayout;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.swing.BoxLayout;
 import javax.swing.JComponent;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
+import javax.swing.border.TitledBorder;
 
 /**
  * Search and Replace (ScAR)
@@ -68,7 +72,9 @@ public class Scar {
 
         if (options.removeXML()) {
             copy = copy.replaceAll("\\<(.+?)\\>", "");
+        }
 
+        if (options.removeBlankLines()) {
             // trim result
             copy = copy.trim();
 
@@ -81,6 +87,11 @@ public class Scar {
 //            copy = copy.replaceAll("^\\s*\\n", "");
 //            copy = copy.replaceAll("^\\s*\\r\\n", "");
 //            copy = copy.replaceAll("^\\s*$", "<blank line>");
+        }
+
+        if (options.autoCopyResult()) {
+            Toolkit.getDefaultToolkit().getSystemClipboard()
+                .setContents(new StringSelection(copy), null);
         }
 
         Map<String,String> tokens = this.fieldHolder.getTokenMap();
@@ -140,46 +151,85 @@ public class Scar {
         scroll = new JScrollPane();
         scroll.getViewport().add(this.result);
         sp.setBottomComponent(scroll);
-        sp.setDividerLocation(0.5);
+        sp.setDividerLocation(0.6);
+        sp.setResizeWeight(0.6);
 
         JSplitPane mainsp = new JSplitPane();
-        mainsp.setTopComponent(sp);
 
         // EAST (field holder)
         JPanel east = new JPanel(new BorderLayout());
 
-        JPanel panel = new JPanel();
-        panel.add(this.btnParse);
-        panel.add(this.btnGrep);
-        east.add(panel, BorderLayout.NORTH);
+        // EAST top
+        JPanel easttop = new JPanel();
+        easttop.setLayout(new BoxLayout(easttop, BoxLayout.PAGE_AXIS));
+        easttop.setBorder(new TitledBorder("Regular Expression"));
+        east.add(easttop, BorderLayout.NORTH);
 
+        // EAST top - regex
+        easttop.add(regex);
+
+        // EAST top - buttons
+        JPanel panel = wrap(this.btnParse);
+        panel.add(this.btnGrep);
+        easttop.add(panel);
+
+        // EAST fields
         scroll = new JScrollPane();
+        scroll.setBorder(new TitledBorder("Fields"));
         scroll.getViewport().add(this.fieldHolder);
         east.add(scroll, BorderLayout.CENTER);
 
-        east.add(wrap(this.btnSubstitute), BorderLayout.SOUTH);
+        // EAST bottom
+        JPanel eastbottom = new JPanel();
+        eastbottom.setLayout(new BoxLayout(eastbottom, BoxLayout.PAGE_AXIS));
+        east.add(eastbottom, BorderLayout.SOUTH);
 
+        eastbottom.add(wrap(this.btnSubstitute));
+
+        panel = boxwrap(leftwrap(options.Chooser.REMOVE_XML));
+        panel.add(leftwrap(options.Chooser.REMOVE_BLANKLINES));
+        panel.add(leftwrap(options.Chooser.AUTO_COPY));
+        panel.setBorder(new TitledBorder("Options"));
+        eastbottom.add(panel);
+
+        // final layout
+        mainsp.setTopComponent(sp);
         mainsp.setBottomComponent(east);
-        mainsp.setDividerLocation(0.5);
+        mainsp.setDividerLocation(0.75);
+        mainsp.setResizeWeight(0.75);
         this.view.add(mainsp, BorderLayout.CENTER);
 
         // SOUTH (options and buttons)
-        panel = new JPanel(); // flow
-        panel.add(new JLabel("RegExp:"));
-        panel.add(regex );
-//        panel.add(this.btnParse);
-//        panel.add(this.btnSubstitute);
-        panel.add(options.Chooser.REMOVE_XML);
-        this.view.add(panel, BorderLayout.SOUTH);
+//        panel = new JPanel(); // flow
+////        panel.add(this.btnParse);
+////        panel.add(this.btnSubstitute);
+//        this.view.add(panel, BorderLayout.SOUTH);
 
         return this.view;
     }
 
-	private JPanel wrap(JComponent c) {
-		JPanel p = new JPanel();
-		p.add(c);
+    // create panel with flowlayout (center)
+    protected JPanel wrap(JComponent c) {
+        JPanel p = new JPanel();
+        p.add(c);
 
-		return p;
-	}
+        return p;
+    }
+
+    // create panel with flowlayout (left)
+    protected JPanel leftwrap(JComponent c) {
+        JPanel p = this.wrap(c);
+        p.setLayout(new FlowLayout(FlowLayout.LEFT));
+
+        return p;
+    }
+
+    protected JPanel boxwrap(JComponent c) {
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.PAGE_AXIS));
+        p.add(c);
+
+        return p;
+    }
 
 }

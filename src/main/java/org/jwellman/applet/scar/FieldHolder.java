@@ -82,11 +82,9 @@ public class FieldHolder extends JPanel {
                 print("fields: "); print(this.fields);
                 print("values: "); print(this.values);
 
-//        SwingUtilities.invokeLater(ui());
-
     }
 
-    public JTextField createField(String label) {
+    protected JTextField createField(String label) {
         JTextField a = new JTextField("value-goes-here");
         a.setBorder(new javax.swing.border.TitledBorder(label));
 

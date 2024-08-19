@@ -89,17 +89,17 @@ public class Scar {
 //            copy = copy.replaceAll("^\\s*$", "<blank line>");
         }
 
-        if (options.autoCopyResult()) {
-            Toolkit.getDefaultToolkit().getSystemClipboard()
-                .setContents(new StringSelection(copy), null);
-        }
-
         Map<String,String> tokens = this.fieldHolder.getTokenMap();
         for (String key : tokens.keySet()) {
             print("replace " + key + " with " + tokens.get(key));
             copy = copy.replace(key, tokens.get(key));
         }
         this.result.setText(copy);
+
+        if (options.autoCopyResult()) {
+            Toolkit.getDefaultToolkit().getSystemClipboard()
+                .setContents(new StringSelection(copy), null);
+        }
 
     }
 

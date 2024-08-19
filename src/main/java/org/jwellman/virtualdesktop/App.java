@@ -417,7 +417,7 @@ public class App extends JFrame implements ActionListener {
                         case LAF_FLATLAF:
                         	System.out.println("LAF := FlatLAF");
 
-                        	int flatTheme = 2;
+                        	int flatTheme = 6;
                         	switch (flatTheme) {
                         	case 1: UIManager.setLookAndFeel( new FlatLightLaf() ); break;
                         	case 2: UIManager.setLookAndFeel( new FlatDarkLaf() ); break;

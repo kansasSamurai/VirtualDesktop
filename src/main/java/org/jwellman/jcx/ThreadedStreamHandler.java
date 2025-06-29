@@ -88,6 +88,8 @@ class ThreadedStreamHandler extends Thread {
 
     @Override
     public void run() {
+        
+        outputBuffer.setLength(0);
 
         // on mac os x 10.5.x, when i run a 'sudo' command, i need to write
         // the admin password out immediately; that's why this code is here.
@@ -100,10 +102,15 @@ class ThreadedStreamHandler extends Thread {
         BufferedReader bufferedReader = null;
         try {
 
-            final InputStreamReader isr = new InputStreamReader(inputStream, "cp850"); // "cp437" works!! as does "cp850"!! 
+            final InputStreamReader isr = new InputStreamReader(inputStream, "cp1252"); // "cp437" works!! as does "cp850"!! 
             // These do not work as "desired" on windows(10):   , "Cp1252"); // "ISO-8859-1"); // "UTF8");
             // The encodings are from the following URL with a hint using the windows 'chcp' command
             // https://docs.oracle.com/javase/8/docs/technotes/guides/intl/encoding.doc.html
+            // Update MAR 2025:  while 437 and 850 do still work ok, it appears that 1252
+            // works best on Windows 11 now <sigh>.  This is all very confusing :(
+            // p.s. After much internet research, I finally learned that the "tree" command in DOS
+            // does not write the same encoding to this stream as it does to the "screen"; thus,
+            // this will never be able to decode the UTF8 stream so tree must always be used with /a option.
             System.out.println("TSH encoding: " + isr.getEncoding() + " : " + inputStream.getClass().getCanonicalName());
             
             bufferedReader = new BufferedReader(isr);
@@ -130,8 +137,10 @@ class ThreadedStreamHandler extends Thread {
     /** Handle each line (from the input stream) */
     protected void lineOut(String line) {
         outputBuffer.append(line).append("\n");
+        // outputBuffer.append("└───hsqldb\n");
+        // System.out.println(line); // only used when comparing output to swing component output
     }
-    
+
     /** This method is only required when sudoIsRequested = true */
     private void doSleep(long millis) {
         try {

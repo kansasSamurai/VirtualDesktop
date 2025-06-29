@@ -19,6 +19,20 @@ public class ThreadedSwingHandler extends ThreadedStreamHandler {
     }
 
     @Override
+    public void run() {
+        super.run();
+
+//        SwingUtilities.invokeLater(new Runnable() {
+//            @Override public void run() {
+//                // redirects data to the text area
+//                textarea.append("===== output buffer =====\n");
+//                textarea.append(outputBuffer.toString());
+//                textarea.append("\n");
+//            }
+//        });
+    }
+
+    @Override
     protected void lineOut(final String line) {
         super.lineOut ( line );
         
@@ -28,7 +42,9 @@ public class ThreadedSwingHandler extends ThreadedStreamHandler {
                 // redirects data to the text area
                 textarea.append(line);
                 textarea.append("\n");
-        
+//                textarea.append("└───hsqldb\n");
+//                textarea.append("│   ├───bin\n");
+
                 // scrolls the text area to the end of data // TODO make this a user option
                 boolean scroll = false;
                 int position = scroll ? textarea.getDocument().getLength() : 0;

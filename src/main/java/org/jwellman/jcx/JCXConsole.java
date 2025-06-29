@@ -31,7 +31,7 @@ public class JCXConsole extends JPanel implements Runnable {
 
 	private static final long serialVersionUID = 1L;
 
-    private static final Font FONT = new Font("Consolas", Font.PLAIN, 16); // "Courier New" "Lucida Console ("Consolas", 0, 16); // "Monospaced
+    private static final Font FONT = new Font("Cascadia Mono", Font.PLAIN, 16); // "Courier New" "Lucida Console ("Consolas", 0, 16); // "Monospaced
 
 	private final List<String> commands = new ArrayList<>();
 

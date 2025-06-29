@@ -35,7 +35,7 @@ public class TimeSeriesTest {
 
         final DateAxis domainAxis = new DateAxis("-Domain-");
         domainAxis.setTickMarkPosition(DateTickMarkPosition.MIDDLE);
-        domainAxis.setDateFormatOverride(new SimpleDateFormat("yyMM"));
+        domainAxis.setDateFormatOverride(new SimpleDateFormat("MMdd"));
         domainAxis.setVerticalTickLabels(false);
         domainAxis.setTickUnit(new DateTickUnit(DateTickUnitType.DAY, 1));
 

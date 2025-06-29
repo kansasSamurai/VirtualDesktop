@@ -471,7 +471,10 @@
         <version>1.0.0-beta-10</version>
     </dependency>
 
-	<!-- https://mvnrepository.com/artifact/org.knowm.xchart/xchart :: Apache :: 10/27/2021 :: 3.8.1 -->
+	<!-- https://mvnrepository.com/artifact/org.knowm.xchart/xchart :: 
+       Apache :: 10/27/2021 :: 3.8.1 
+       Apache :: 05/04/2025 :: 3.8.8
+	 -->
     <dependency>
         <groupId>com.xeiam.xchart</groupId>
         <artifactId>xchart</artifactId>

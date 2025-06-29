@@ -8,11 +8,21 @@ user interfaces while directly using the SpecEmpty vapp.
 import java.awt.geom.*;
 import org.jwellman.virtualdesktop.vapps.*;
 
+// x and y are reusable vars for this script
+
+// Step 1 - Create scripted object and new vapp
 demo = object();
+jvd.demo5 = demo; // create "perm" reference to demo as a jvd property
 
 x = new SpecEmpty();
 x.setTitle("Empty");
 DesktopManager.get().createVApp(x);
+// ---------- end Step 1 --------------------
+
+
+// Step 2 - Create panels for our controls
+// (while "inserting" new objects as properties of the scripted 'demo' object)
+// Note that this does not add anything yet that visually changes the panel
 x = demo.panel = x.getContent();
 x.setLayout(new BorderLayout());
 
@@ -20,8 +30,10 @@ y = demo.pnlKeys = new JPanel ( new GridLayout(2,3) );
     x.add(y, BorderLayout.EAST);
 y = demo.pnlControls = new JPanel( new GridLayout(2,4) );  
     x.add(y, BorderLayout.WEST);
+// ---------- end Step 2 --------------------
 
 
+// Step 3 - create the control panel controls
 x = demo.pnlControls;
 y = new JTextField("x"); x.add(y);
 y = new JTextField("y"); x.add(y);
@@ -32,7 +44,9 @@ y = new JLabel("x pos"); x.add(y);
 y = new JLabel("y pos"); x.add(y);
 y = new JLabel("width"); x.add(y);
 y = new JLabel("height"); x.add(y);
+// ---------- end Step 3 --------------------
 
+// Step 4 - create the keys panel controls
 x = demo.pnlKeys;
 y = new JLabel(""); x.add(y);
 y = new JButton("^"); x.add(y);
@@ -40,7 +54,6 @@ y = new JLabel(""); x.add(y);
 y = new JButton("<"); x.add(y);
 y = new JButton("d"); x.add(y);
 y = new JButton(">"); x.add(y);
+// ---------- end Step 4 --------------------
 
-
-jvd.demo5 = demo;
 

@@ -42,9 +42,14 @@ public class Sandbox2 extends JComponent implements ActionListener {
     private static final Color ledgreen = new Color(0x12FF00);
     private static final Color ledwarning = new Color(0xFFB901);
     
-    private static final Font MONO_LARGE = new Font("Consolas", Font.PLAIN, 14);
     private static final Font MONO_SMALL = new Font("Consolas", Font.BOLD, 12);
-    
+    private static final Font MONO_LARGE = new Font("Consolas", Font.PLAIN, 14);
+
+    // ===== Gradient Background =====
+    private final GradientPaint bgGradient = new GradientPaint(0, 50, darkblue, 112, 50, myblue, true);
+    // ===== Title Sparkle Gradient =====
+    private final GradientPaint titleGradient = new GradientPaint(0, 1, myblue, 112, 1, lightblue, true);
+
     // This is not intended to be made public; a flyweight to simply avoid the overhead of a new object each time.
     private Dimension dimension = new Dimension();
     
@@ -74,11 +79,11 @@ public class Sandbox2 extends JComponent implements ActionListener {
         g2.setFont(this.getFont());
 
         // ===== Gradient Background =====
-        g2.setPaint(new GradientPaint(0, 50, darkblue, 112, 50, myblue, true));
+        g2.setPaint(bgGradient);
         g2.fillRect(0, 0, this.width, this.height);
         
         // ===== Title Sparkle Gradient =====
-        g2.setPaint(new GradientPaint(0, 1, myblue, 112, 1, lightblue, true));
+        g2.setPaint(titleGradient);
         g2.fillRect(0, 6, this.width, 1);
         
         // ===== Date =====

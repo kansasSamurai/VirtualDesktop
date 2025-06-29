@@ -1,0 +1,38 @@
+// Need the imports from xchart.bsh as well
+
+import com.xeiam.xchart.StyleManager.*;
+
+barchart() {
+
+  chart = 1; // actual xchart created by createChart()
+  
+  public Chart createChart() {
+
+    // Create Chart
+    chart = new ChartBuilder().chartType(StyleManager.ChartType.Bar).width(800).height(600).title("XFactor vs. Age").xAxisTitle("Age").yAxisTitle("XFactor").build();
+    chart.addSeries("male", new double[] { 10, 20, 30, 50 }, new double[] { 40, 30, 20, 60 });
+    chart.addSeries("female", new double[] { 10, 20, 30, 40, 50 }, new double[] { 50, 10, 20, 40, 35 });
+
+    chart.getStyleManager().setYAxisMin(5);
+    chart.getStyleManager().setYAxisMax(70);
+
+    return chart;
+  }
+
+  public void createApp(chart) {
+    JPanel p = new XChartPanel(chart);
+    DesktopManager.get().createVApp(p, "barchart demo");    
+  }
+
+    return this;
+}
+
+barchart = barchart();
+
+barchart.chart.getStyleManager().setYAxisMin(0);
+To make it real-time, simply call updateXYSeries on the XYChart instance to update the series data, followed by revalidate() and repaint() on the XChartPanel instance to
+repaint.
+
+// I think these require 3.8.8 (certainly something greater than my current version 2.2.1)
+    Styler styler = chart.getStyler();
+    styler.setChartOrientation(Styler.ChartOrientation.HORIZONTAL);

@@ -51,3 +51,6 @@ jvd.swingbrowser = swingbrowser();
 //};
 //
 //y.tree.addTreeSelectionListener(y.listener);
+
+// after you select a node, you can do things like this:
+print(y.selected);

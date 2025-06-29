@@ -1,0 +1,219 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Launch VirtualDesktop",
+            "request": "launch",
+            "mainClass": "org.jwellman.virtualdesktop.App",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "Debug VirtualDesktop",
+            "request": "launch",
+            "mainClass": "org.jwellman.virtualdesktop.App",
+            "projectName": "VirtualDesktop",
+            "console": "internalConsole"
+        },
+        {
+            "type": "java",
+            "name": "Run VirtualDesktop",
+            "request": "launch",
+            "mainClass": "org.jwellman.virtualdesktop.App",
+            "projectName": "VirtualDesktop",
+            "console": "integratedTerminal"
+        },
+        {
+            "type": "java",
+            "name": "Run All Tests",
+            "request": "launch",
+            "mainClass": "",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
+            "name": "BasicTerminalExample",
+            "request": "launch",
+            "mainClass": "com.jediterm.example.BasicTerminalExample",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "TabbedPaneDemo",
+            "request": "launch",
+            "mainClass": "com.oracle.swingdemo.components.TabbedPaneDemo",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "TextSamplerDemo",
+            "request": "launch",
+            "mainClass": "com.oracle.swingdemo.components.TextSamplerDemo",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "PtyMain",
+            "request": "launch",
+            "mainClass": "ext.com.jediterm.PtyMain",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "CodeSwitcher",
+            "request": "launch",
+            "mainClass": "ext.hsqldb.util.CodeSwitcher",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "DatabaseManager",
+            "request": "launch",
+            "mainClass": "ext.hsqldb.util.DatabaseManager",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "DatabaseManagerSwing",
+            "request": "launch",
+            "mainClass": "ext.hsqldb.util.DatabaseManagerSwing",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "DatabaseManagerSwing2",
+            "request": "launch",
+            "mainClass": "ext.hsqldb.util.DatabaseManagerSwing2",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "MainInvoker",
+            "request": "launch",
+            "mainClass": "ext.hsqldb.util.MainInvoker",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "Transfer",
+            "request": "launch",
+            "mainClass": "ext.hsqldb.util.Transfer",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "fx.Main",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "JFreeChartDemo",
+            "request": "launch",
+            "mainClass": "org.jfree.chart.demo.JFreeChartDemo",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "ClipboardHistory",
+            "request": "launch",
+            "mainClass": "org.jwellman.bsh.ClipboardHistory",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "FileBrowser",
+            "request": "launch",
+            "mainClass": "org.jwellman.bsh.FileBrowser",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "FilesInTheJList",
+            "request": "launch",
+            "mainClass": "org.jwellman.bsh.FilesInTheJList",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "PanelBrowser",
+            "request": "launch",
+            "mainClass": "org.jwellman.bsh.PanelBrowser",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "SCCE",
+            "request": "launch",
+            "mainClass": "org.jwellman.bsh.SCCE",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "DumpTable",
+            "request": "launch",
+            "mainClass": "org.jwellman.dbf.DumpTable",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "BasicDnD",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.BasicDnD",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "SplitPaneDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.SplitPaneDemo",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "ProcessBuilderExample",
+            "request": "launch",
+            "mainClass": "org.jwellman.jcx.ProcessBuilderExample",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "UberHandler",
+            "request": "launch",
+            "mainClass": "org.jwellman.standalone.UberHandler",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "ComponentTree",
+            "request": "launch",
+            "mainClass": "org.jwellman.swing.jtree.ComponentTree",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "App",
+            "request": "launch",
+            "mainClass": "org.jwellman.virtualdesktop.App",
+            "projectName": "VirtualDesktop"
+        },
+        {
+            "type": "java",
+            "name": "DateChart05",
+            "request": "launch",
+            "mainClass": "org.jwellman.xchart.DateChart05",
+            "projectName": "VirtualDesktop"
+        }
+    ]
+}

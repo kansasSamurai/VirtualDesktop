@@ -186,9 +186,11 @@ public class JFreeChartDemo {
 
         // render shapes and lines
         XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer(true, true);
+        /* 1.0.17 (before 1.5.0 upgrade)
         renderer.setBaseShapesVisible(true);
         renderer.setBaseShapesFilled(true);
         renderer.setBaseOutlineStroke(stroke); // set the renderer's stroke        
+		*/
 
         // label the points
         NumberFormat format = NumberFormat.getNumberInstance();
@@ -197,8 +199,10 @@ public class JFreeChartDemo {
                 new StandardXYItemLabelGenerator(
                 StandardXYItemLabelGenerator.DEFAULT_ITEM_LABEL_FORMAT,
                 format, format);
+        /* 1.0.17 (before 1.5.0 upgrade)
         renderer.setBaseItemLabelGenerator(generator);
         renderer.setBaseItemLabelsVisible(true);
+        */
 
         plot.setRenderer(renderer);
 

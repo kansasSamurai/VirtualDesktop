@@ -1,3 +1,61 @@
+import org.jfree.chart.*;
+import org.jfree.chart.ui.*; // needed for runtime manipulation
+import org.jwellman.jfreechart.AnyChartTest;
+// https://www.jootoor.com/shades-of-orange-color-with-names-hex-rgb-cmyk-codes/
+// https://www.codemr.co.uk/case-studies/jfreechart/
+
+demoAnyChart() {
+
+    test = "uninitialized"; 
+
+    createChart() {
+        test = new AnyChartTest();
+        test.createChart();
+        ChartPanel panel = new ChartPanel(test.chart);
+        DesktopManager.get().createVApp(panel, "Stacked Horizontal Bar Chart");
+    }
+
+    return this;
+}
+
+t = demoAnyChart();
+t.createChart(); // see file on hard drive
+um = t.test.upperMarker;
+lm = t.test.lowerMarker;
+plot = t.test.chart.getCategoryPlot();
+
+
+
+
+// upper marker manipulation examples
+um = t.test.upperMarker;
+um.setLabelTextAnchor(TextAnchor.TOP_CENTER); 
+um.setLabelAnchor(RectangleAnchor.TOP_RIGHT); // TOP_RIGHT
+// original settings
+um.setLabelAnchor(RectangleAnchor.TOP); 
+um.setLabelTextAnchor(TextAnchor.TOP_CENTER);
+um.setLabelTextAnchor(TextAnchor.BOTTOM_CENTER);
+
+// lower marker manipulation examples
+lm = t.test.lowerMarker;
+lm.setLabelAnchor(RectangleAnchor.TOP_RIGHT); // TOP_RIGHT
+lm.setLabelTextAnchor(TextAnchor.TOP_CENTER); 
+
+// manipulate the plot/axes
+plot = t.test.chart.getCategoryPlot();
+// remember this is a pct
+plot.getRangeAxis().setUpperMargin(0);
+plot.getRangeAxis().setUpperMargin(0.05);
+plot.getRangeAxis().setLowerMargin(0.05); // << does not seem to have an effect
+plot.getDomainAxis().setUpperMargin(0.4);
+plot.getDomainAxis().setLowerMargin(0.2);
+plot.getRangeAxis().setVisible(true);
+plot.getRangeAxis().setVisible(false);
+plot.getDomainAxis().setVisible(true);
+plot.getDomainAxis().setVisible(false);
+
+
+
 //    -------------------
 //    JFreeChart
 //

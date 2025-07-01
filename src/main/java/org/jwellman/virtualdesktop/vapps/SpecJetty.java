@@ -1,4 +1,5 @@
 package org.jwellman.virtualdesktop.vapps;
+// DO NOT COMMIT - changes are local only due to missing dependency code
 
 import static j2html.TagCreator.body;
 import static j2html.TagCreator.h1;
@@ -42,7 +43,7 @@ import org.eclipse.jetty.util.resource.PathResource;
 import org.eclipse.jetty.util.resource.Resource;
 import org.jwellman.swing.layout.FluidConstraint;
 import org.jwellman.swing.layout.FluidLayout;
-import org.jwellman.swing.layout.WrapLayout;
+//import org.jwellman.swing.layout.WrapLayout;
 
 /**
  * 
@@ -107,8 +108,8 @@ public class SpecJetty extends VirtualAppSpec {
 	}
 
 	private void layoutFlow(JPanel content) {
-		WrapLayout fl = new WrapLayout();
-		content.setLayout(fl);
+//		WrapLayout fl = new WrapLayout();
+//		content.setLayout(fl);
 
 		// reusable jpanel ref for creating rows
 		JPanel row = new JPanel();

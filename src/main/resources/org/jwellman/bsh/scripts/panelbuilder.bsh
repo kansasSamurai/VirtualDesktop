@@ -1,0 +1,102 @@
+
+//JPanel p = new JPanel(new BorderLayout());
+//p.add(new JButton("Panel Builder"), BorderLayout.SOUTH);
+//DesktopManager.get().createVApp(p, "Panel Builder" );
+//
+pb = object();
+
+//pb.button = new JButton("new button");
+//pb.panel = new JPanel();
+//pb.panel.add(pb.button);
+//p.add(pb.panel, BorderLayout.CENTER);
+//p.revalidate();
+
+
+
+
+
+
+// I haven't tested the following yet but it should 
+// be mostly right:
+panelbuilder() {
+
+    void add(container, component) {
+        container.add(component);
+    }
+
+    void add(container, component, constraint) {
+        container.add(component, constraint);
+    }
+
+    return this;
+}
+
+pb = panelbuilder();
+
+
+///////////////////////////////
+
+//import org.jwellman.swing.jpanel.*;
+//
+//p = new DrawingSurface();
+// DesktopManager.get().createVApp(p, "Drawing Surface");
+//import java.awt.geom.*;
+//import org.jfree.chart.ui.Drawable;
+
+p.proxy = new Drawable() {
+
+    a = new GradientPaint(120,20,Color.RED,220, 20,Color.WHITE);
+     STROKE1 = new BasicStroke(1);
+     STROKE15 = new BasicStroke(1.5f);
+     STROKE2 = new BasicStroke(2);
+
+    draw(g2d, area) {
+
+        // redtowhite = new GradientPaint(0,0,Color.RED,100, 0,Color.WHITE);
+        rect  = new RoundRectangle2D.Double(250, 100, 70,60, 25,25);
+        rect1 = new RoundRectangle2D.Double(250, 100, 70,60, 25,25);
+        rect2 = new RoundRectangle2D.Double(250, 180, 70,60, 25,25);
+        rect3 = new RoundRectangle2D.Double(250, 260, 70,60, 25,25);
+        ellipse = new Ellipse2D.Double(10, 100, 80, 100);
+        e2 = new Ellipse2D.Double(120, 100, 100, 50);
+
+
+        // row 1
+        g2d.setPaint(Color.red);
+        g2d.fillRect(30, 20, 50, 50);
+        g2d.fillRect(120, 20, 90, 60);
+        g2d.fillRoundRect(250, 20, 70, 60, 25, 25);
+
+        // row 2
+        g2d.fill( ellipse);
+        // g2d.fillArc(120, 130, 110, 100, 5, 150);
+        // g2d.fillOval(270, 130, 50, 50);
+        // g2d.fill( rect);
+
+        g2d.setStroke(STROKE1);
+        g2d.draw(rect1);
+        
+        g2d.setStroke(STROKE15);
+        g2d.draw(rect2);
+        
+        g2d.setStroke(STROKE2);
+        g2d.draw(rect3);
+        
+        g2d.setPaint(super.a);
+        g2d.fill( e2);        
+    }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

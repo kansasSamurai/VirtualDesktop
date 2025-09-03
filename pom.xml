@@ -41,12 +41,19 @@
         <version>3.6</version>
     </dependency>
 
-	<!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
-	<dependency> <!-- this is apache commons io -->
-	    <groupId>commons-io</groupId>
-	    <artifactId>commons-io</artifactId>
-	    <version>2.6</version>
-	</dependency>
+    <!-- https://mvnrepository.com/artifact/commons-beanutils/commons-beanutils -->
+    <dependency>
+        <groupId>commons-beanutils</groupId>
+        <artifactId>commons-beanutils</artifactId>
+        <version>1.11.0</version>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
+    <dependency> <!-- this is apache commons io -->
+        <groupId>commons-io</groupId>
+        <artifactId>commons-io</artifactId>
+        <version>2.6</version>
+    </dependency>
 
 	<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-compress -->
 	<dependency>
@@ -483,8 +490,8 @@
     </dependency>
 
 	<!-- https://mvnrepository.com/artifact/org.knowm.xchart/xchart :: 
-       Apache :: 10/27/2021 :: 3.8.1 
        Apache :: 05/04/2025 :: 3.8.8
+       Apache :: 10/27/2021 :: 3.8.1 
 	 -->
     <dependency>
         <groupId>com.xeiam.xchart</groupId>

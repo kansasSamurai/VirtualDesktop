@@ -2,6 +2,9 @@
 // ===== update the class browser to a specific class
 bsh % jvd.browser.go2("org.jwellman.virtualdesktop.App");
 
+// ===== How to create an empty scripted object;
+x = object();
+
 // ===== How to create/run a runnable
 m() { run() { print("running"); } return this; };
 new Thread(m()).start();

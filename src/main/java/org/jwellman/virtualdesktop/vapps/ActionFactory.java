@@ -27,6 +27,8 @@ public class ActionFactory {
         ,SpecJDatePicker.class
         ,SpecJFreeChart.class
         ,SpecXChartDemo.class
+        ,SpecXChartBarChart.class
+        ,SpecSVGViewer.class
         ,SpecVfsFileChooser2.class // this isn't as bad as I originally thought... I was confusing it with XionFM and/or SpecJzy3D below.
         ,SpecUberDragAndDrop.class
 //      ,SpecXionFM.class // this app is targeted for Linux

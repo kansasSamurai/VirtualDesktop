@@ -14,6 +14,7 @@ import org.jfree.chart.plot.DefaultDrawingSupplier;
 import org.jfree.chart.plot.DrawingSupplier;
 import org.jfree.chart.plot.Plot;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.category.StandardBarPainter;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.chart.title.LegendTitle;
@@ -26,7 +27,11 @@ import org.jfree.ui.RectangleInsets;
 */
 
 /**
- *
+ * AUG 2025 - JFreeChart has probably had themes for quite a while
+ * and I just realized that this can almost surely be implemented as
+ * an extension to the StandardChartTheme.  In my defense, I did create
+ * this class around 10 years ago so maybe this does predate themes.
+ * 
  * @author rwellman
  */
 public class JPreeChart {
@@ -44,6 +49,8 @@ public class JPreeChart {
     };
 
     public StandardChartTheme theme = (StandardChartTheme)StandardChartTheme.createJFreeTheme();
+    // Prevents the theme properties from being reset on subsequent runs
+    public boolean isThemeInitialized = false;
 
     final public static Color slate = new Color(0x333333); // Color.decode("#333333");
     final public static Color midgray = new Color(0xC0C0C0); // Color.decode("#C0C0C0");
@@ -59,27 +66,35 @@ public class JPreeChart {
         chart.setAntiAlias(true);
         chart.setTextAntiAlias(true);
 
-        theme.setPlotBackgroundPaint(transparent);
-        theme.setChartBackgroundPaint(transparent);
+        if (isThemeInitialized) {
+            // do nothing to the theme if it is marked as initialized
+        } else {
+            theme.setPlotBackgroundPaint(transparent);
+            theme.setChartBackgroundPaint(transparent);
+            theme.setLegendBackgroundPaint(transparent);
 
-        theme.setTitlePaint(slate);
-        theme.setTickLabelPaint(slate);
-        theme.setSubtitlePaint(slate);
-        theme.setRangeGridlinePaint(midgray);
+            theme.setAxisLabelPaint(slate);
+            theme.setAxisOffset(RectangleInsets.ZERO_INSETS);
+            theme.setTitlePaint(slate);
+            theme.setTickLabelPaint(slate);
+            theme.setSubtitlePaint(slate);
+            theme.setLegendItemPaint(slate);
+            theme.setRangeGridlinePaint(midgray);
 
-        theme.setSmallFont(FONTS[0]);
-        theme.setRegularFont(FONTS[0]); // axis labels
-        theme.setLargeFont(FONTS[0]);
-        theme.setExtraLargeFont(FONTS[1]);
+            theme.setSmallFont(FONTS[0]);
+            theme.setRegularFont(FONTS[0]); // axis labels
+            theme.setLargeFont(FONTS[0]);
+            theme.setExtraLargeFont(FONTS[1]);
 
-        theme.setAxisLabelPaint(slate);
-        theme.setAxisOffset(RectangleInsets.ZERO_INSETS);
-        //theme.setBarPainter(new StandardBarPainter());
+            // Not sure if this will blow up if the chart is not a bar chart...
+            theme.setBarPainter(new StandardBarPainter());
 
+            isThemeInitialized = true;
+        }
         theme.apply(chart);
 
+        // Adjust the chart title
         chart.getTitle().setHorizontalAlignment(HorizontalAlignment.CENTER);
-
         final LegendTitle t = chart.getLegend();
         if (t != null) { // Some charts don't have legends (piechart)
             t.setBorder(0, 0, 0, 0);
@@ -87,6 +102,7 @@ public class JPreeChart {
             t.setItemFont(FONTS[0].deriveFont(Font.BOLD));
         }
 
+        // Adjust the plot
         final Plot p = chart.getPlot();
         p.setOutlineVisible(false);
         p.setDrawingSupplier(this.createDrawingSupplier());
@@ -117,10 +133,30 @@ public class JPreeChart {
 
     }
 
+    /** 
+     * Set all painters.
+     * 
+     * A slight exaggeration... sets the text and tick painters
+     * since these are often all the same color and this then
+     * makes it easier to switch between light backgrounds/theme
+     * to dark backgrounds/theme.
+     * 
+     * @param p
+     */
+    public void setAllPainters(Paint p) {
+        theme.setTitlePaint(p);
+        theme.setSubtitlePaint(p);
+        theme.setAxisLabelPaint(p);
+        theme.setTickLabelPaint(p);
+        theme.setRangeGridlinePaint(p);
+        theme.setLegendItemPaint(p);
+    }
+
     public DrawingSupplier createDrawingSupplier() {
 
         double size = 2.0;
         double delta = 1.0; // := size / 2
+
         final Shape[] shapes = new Shape[1];
         shapes[0] = new Ellipse2D.Double(-delta, -delta, size, size);
 
@@ -147,8 +183,10 @@ public class JPreeChart {
         return s;
     }
 
-	public void customizePlot(Plot p) {
-
+    public void customizePlot(Plot p) {
+        // There aren't many properties that abstract Plot class
+        // exposes that would be common for general use cases
+        // (that I can identify as of yet)
     }
 
     public void customizePlot(XYPlot p) {

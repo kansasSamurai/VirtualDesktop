@@ -1,0 +1,330 @@
+//import javax.swing.*;
+//import javax.swing.tree.*;
+//import java.awt.*;
+//import java.awt.event.ActionEvent;
+//import java.awt.event.ActionListener;
+
+public class tcp extends JPanel {
+
+    public JTree tree;
+    public JPanel cardPanel;
+    public CardLayout cardLayout;
+    public Object proxy;
+    
+    // Card names for the CardLayout
+    public static final String WELCOME_CARD = "welcome";
+    public static final String SETTINGS_CARD = "settings";
+    public static final String PROFILE_CARD = "profile";
+    public static final String DOCUMENTS_CARD = "documents";
+    public static final String REPORTS_CARD = "reports";
+    public static final String HELP_CARD = "help";
+    
+    public tcp() {
+        initializeComponents();
+        layoutComponents();
+        setupTreeListener();
+    }
+    
+    public void initializeComponents() {
+        // Create the tree with sample data
+        DefaultMutableTreeNode root = new DefaultMutableTreeNode("Root");
+        DefaultMutableTreeNode settings = new DefaultMutableTreeNode("Settings");
+        DefaultMutableTreeNode profile = new DefaultMutableTreeNode("Profile");
+        DefaultMutableTreeNode documents = new DefaultMutableTreeNode("Documents");
+        DefaultMutableTreeNode reports = new DefaultMutableTreeNode("Reports");
+        DefaultMutableTreeNode help = new DefaultMutableTreeNode("Help");
+        
+        root.add(settings);
+        root.add(profile);
+        root.add(documents);
+        root.add(reports);
+        root.add(help);
+        
+        tree = new JTree(root);
+        tree.setRootVisible(true);
+        tree.expandRow(0); // Expand root by default
+        
+        // Create CardLayout and card panel
+        cardLayout = new CardLayout();
+        cardPanel = new JPanel(cardLayout);
+        
+        // Add cards to the panel
+        cardPanel.add(createWelcomePanel(), WELCOME_CARD);
+        cardPanel.add(createSettingsPanel(), SETTINGS_CARD);
+        cardPanel.add(createProfilePanel(), PROFILE_CARD);
+        cardPanel.add(createDocumentsPanel(), DOCUMENTS_CARD);
+        cardPanel.add(createReportsPanel(), REPORTS_CARD);
+        cardPanel.add(createHelpPanel(), HELP_CARD);
+        
+        // Show welcome panel by default
+        cardLayout.show(cardPanel, WELCOME_CARD);
+    }
+    
+    public void layoutComponents() {
+        setLayout(new BorderLayout());
+        
+        // Add tree to west with scroll pane
+        JScrollPane treeScrollPane = new JScrollPane(tree);
+        treeScrollPane.setPreferredSize(new Dimension(200, 400));
+        add(treeScrollPane, BorderLayout.WEST);
+        
+        // Add card panel to center
+        add(cardPanel, BorderLayout.CENTER);
+    }
+    
+    public void setupTreeListener() {       
+        // the beanshell version of this class defers to the proxy
+        // the proxy is not set in the constructor so this has to be commented out 
+        // tree.addTreeSelectionListener(proxy);
+    }
+    
+    public void showCardForNode(String nodeName) {
+        switch (nodeName) {
+            case "Settings":
+                cardLayout.show(cardPanel, SETTINGS_CARD);
+                break;
+            case "Profile":
+                cardLayout.show(cardPanel, PROFILE_CARD);
+                break;
+            case "Documents":
+                cardLayout.show(cardPanel, DOCUMENTS_CARD);
+                break;
+            case "Reports":
+                cardLayout.show(cardPanel, REPORTS_CARD);
+                break;
+            case "Help":
+                cardLayout.show(cardPanel, HELP_CARD);
+                break;
+            default:
+                cardLayout.show(cardPanel, WELCOME_CARD);
+                break;
+        }
+    }
+    
+    // Create individual panels for each card
+    public JPanel createWelcomePanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        
+        JLabel title = new JLabel("Welcome", SwingConstants.CENTER);
+        title.setFont(new Font("Arial", Font.BOLD, 24));
+        title.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
+        
+        JTextArea content = new JTextArea(
+            "Welcome to the application!\n\n" +
+            "Select a node from the tree on the left to view different panels.\n" +
+            "This demonstrates the CardLayout functionality."
+        );
+        content.setEditable(false);
+        content.setWrapStyleWord(true);
+        content.setLineWrap(true);
+        content.setFont(new Font("Arial", Font.PLAIN, 14));
+        content.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        panel.add(title, BorderLayout.NORTH);
+        panel.add(content, BorderLayout.CENTER);
+        
+        return panel;
+    }
+    
+    public JPanel createSettingsPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(240, 248, 255));
+        
+        JLabel title = new JLabel("Settings", SwingConstants.CENTER);
+        title.setFont(new Font("Arial", Font.BOLD, 20));
+        title.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
+        
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.anchor = GridBagConstraints.WEST;
+        
+        // Theme setting
+        gbc.gridx = 0; gbc.gridy = 0;
+        formPanel.add(new JLabel("Theme:"), gbc);
+        gbc.gridx = 1;
+        JComboBox themeCombo = new JComboBox(new String[]{"Light", "Dark", "Auto"});
+        formPanel.add(themeCombo, gbc);
+        
+        // Notifications setting
+        gbc.gridx = 0; gbc.gridy = 1;
+        formPanel.add(new JLabel("Notifications:"), gbc);
+        gbc.gridx = 1;
+        JCheckBox notificationsCheck = new JCheckBox("Enable notifications");
+        formPanel.add(notificationsCheck, gbc);
+        
+        panel.add(title, BorderLayout.NORTH);
+        panel.add(formPanel, BorderLayout.CENTER);
+        
+        return panel;
+    }
+    
+    public JPanel createProfilePanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(255, 248, 240));
+        
+        JLabel title = new JLabel("User Profile", SwingConstants.CENTER);
+        title.setFont(new Font("Arial", Font.BOLD, 20));
+        title.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
+        
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.anchor = GridBagConstraints.WEST;
+        
+        // Name field
+        gbc.gridx = 0; gbc.gridy = 0;
+        formPanel.add(new JLabel("Name:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        JTextField nameField = new JTextField(15);
+        formPanel.add(nameField, gbc);
+        
+        // Email field
+        gbc.gridx = 0; gbc.gridy = 1; gbc.fill = GridBagConstraints.NONE;
+        formPanel.add(new JLabel("Email:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        JTextField emailField = new JTextField(15);
+        formPanel.add(emailField, gbc);
+        
+        // Save button
+        gbc.gridx = 1; gbc.gridy = 2; gbc.fill = GridBagConstraints.NONE;
+        JButton saveButton = new JButton("Save Profile");
+        formPanel.add(saveButton, gbc);
+        
+        panel.add(title, BorderLayout.NORTH);
+        panel.add(formPanel, BorderLayout.CENTER);
+        
+        return panel;
+    }
+    
+    public JPanel createDocumentsPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(240, 255, 240));
+        
+        JLabel title = new JLabel("Documents", SwingConstants.CENTER);
+        title.setFont(new Font("Arial", Font.BOLD, 20));
+        title.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
+        
+        // Create a simple list of documents
+        String[] documents = {"Document 1.pdf", "Report.docx", "Presentation.pptx", "Spreadsheet.xlsx"};
+        JList docList = new JList(documents);
+        docList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        
+        JScrollPane scrollPane = new JScrollPane(docList);
+        scrollPane.setBorder(BorderFactory.createTitledBorder("Available Documents"));
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        JButton openButton = new JButton("Open");
+        JButton deleteButton = new JButton("Delete");
+        buttonPanel.add(openButton);
+        buttonPanel.add(deleteButton);
+        
+        panel.add(title, BorderLayout.NORTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
+        panel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        return panel;
+    }
+    
+    public JPanel createReportsPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(255, 240, 245));
+        
+        JLabel title = new JLabel("Reports", SwingConstants.CENTER);
+        title.setFont(new Font("Arial", Font.BOLD, 20));
+        title.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
+        
+        JTextArea reportArea = new JTextArea(
+            "Monthly Report Summary\n" +
+            "====================\n\n" +
+            "Total Users: 1,245\n" +
+            "Active Sessions: 892\n" +
+            "Revenue: $45,230\n" +
+            "Growth: +12% from last month\n\n" +
+            "Key Metrics:\n" +
+            "• User engagement up 8%\n" +
+            "• Page load time improved by 15%\n" +
+            "• Customer satisfaction: 94%"
+        );
+        reportArea.setEditable(false);
+        reportArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        reportArea.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        JScrollPane scrollPane = new JScrollPane(reportArea);
+        
+        panel.add(title, BorderLayout.NORTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
+        
+        return panel;
+    }
+    
+    public JPanel createHelpPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(248, 248, 255));
+        
+        JLabel title = new JLabel("Help & Support", SwingConstants.CENTER);
+        title.setFont(new Font("Arial", Font.BOLD, 20));
+        title.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
+        
+        JTextArea helpText = new JTextArea(
+            "How to use this application:\n\n" +
+            "1. Select any node from the tree on the left\n" +
+            "2. The corresponding panel will be displayed here\n" +
+            "3. Each panel contains different functionality\n\n" +
+            "Available sections:\n" +
+            "• Settings - Configure application preferences\n" +
+            "• Profile - Manage user information\n" +
+            "• Documents - View and manage files\n" +
+            "• Reports - Access reports and analytics\n" +
+            "• Help - This help section\n\n" +
+            "For additional support, contact: support@example.com"
+        );
+        helpText.setEditable(false);
+        helpText.setWrapStyleWord(true);
+        helpText.setLineWrap(true);
+        helpText.setFont(new Font("Arial", Font.PLAIN, 14));
+        helpText.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        JScrollPane scrollPane = new JScrollPane(helpText);
+        
+        panel.add(title, BorderLayout.NORTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
+        
+        return panel;
+    }
+
+}
+
+x4 = new tcp();
+DesktopManager.get().createVApp(x4, "x4");
+
+
+////////////////////////
+
+proxy() {
+
+    tcp = 1;
+
+    valueChanged(e) {
+            DefaultMutableTreeNode selectedNode = 
+                (DefaultMutableTreeNode) tcp.tree.getLastSelectedPathComponent();
+
+            if (selectedNode != null) {
+                String nodeName = selectedNode.toString();
+                print(nodeName);
+                tcp.showCardForNode(nodeName);
+                
+            }
+
+    }
+
+    return this;
+}
+
+proxy = proxy();
+proxy.tcp = x4;
+
+x4.tree.addTreeSelectionListener(proxy);
+

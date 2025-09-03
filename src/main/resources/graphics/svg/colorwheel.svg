@@ -1,0 +1,12 @@
+<svg width="24" height="24" viewBox="0 0 24 24">
+  <circle fill="none" stroke="#ddd" stroke-width="2" cx="12" cy="12" r="10"/>
+  <path fill="#ff4444" d="M12 2 A10 10 0 0 1 19.32 6.68 L12 12 Z"/>
+  <path fill="#ffff44" d="M19.32 6.68 A10 10 0 0 1 22 12 L12 12 Z"/>
+  <path fill="#44ff44" d="M22 12 A10 10 0 0 1 19.32 17.32 L12 12 Z"/>
+  <path fill="#44ffff" d="M19.32 17.32 A10 10 0 0 1 12 22 L12 12 Z"/>
+  <path fill="#4444ff" d="M12 22 A10 10 0 0 1 4.68 17.32 L12 12 Z"/>
+  <path fill="#ff44ff" d="M4.68 17.32 A10 10 0 0 1 2 12 L12 12 Z"/>
+  <path fill="#ff8844" d="M2 12 A10 10 0 0 1 4.68 6.68 L12 12 Z"/>
+  <path fill="#ff4488" d="M4.68 6.68 A10 10 0 0 1 12 2 L12 12 Z"/>
+  <circle fill="white" cx="12" cy="12" r="3"/>
+</svg>

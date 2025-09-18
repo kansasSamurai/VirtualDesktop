@@ -35,13 +35,13 @@ import ca.odell.glazedlists.EventList;
  */
 public class DesktopManager implements ListSelectionListener, InternalFrameListener {
 
-	private JDesktopPane desktop;
-	
-	private JList<VirtualAppFrame> observedJList;
-	
-	private EventList<VirtualAppFrame> frames = new BasicEventList<>();
-	
-	private static final String NEWLINE = "\n"; // System.getProperty("line.separator");
+    private JDesktopPane desktop;
+
+    private JList<VirtualAppFrame> observedJList;
+
+    private EventList<VirtualAppFrame> frames = new BasicEventList<>();
+
+    private static final String NEWLINE = "\n"; // System.getProperty("line.separator");
 
 	/**
 	 * private constructor to enforce singleton pattern
@@ -49,9 +49,9 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 	private DesktopManager() {
 		// empty for now
 	}
-	
-	private static DesktopManager SINGLETON;
-	
+
+    private static DesktopManager SINGLETON;
+
 	/**
 	 * Gets the singleton instance of the DesktopManager
 	 * 
@@ -66,7 +66,10 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 	 * Create a new application.
 	 * 
      * Currently (Oct. 2021), this is used solely by 
-     * menu actions and desktop icons.
+     * menu actions and desktop icons.  This is mainly because it is 
+     * the only path that calls createVApp_void() which
+     * is also the only path that "respects" 'internalFrameProvider's such
+     * as HyperSql, GroovyConsole, etc.
 	 * 
 	 * @param newInstance
 	 */
@@ -142,6 +145,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
      * !! All overloaded methods lead here !!<p>
      * Currently (Oct. 2021), there is one exception:<br/>  
      * VirtualAppSpec where internalframeprovider is true.
+     * 
      * <p>
      * This public method allows internal apps to create internal apps/windows.
      * i.e. via beanshell or others 
@@ -156,13 +160,13 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
         Icon icon = spec.getIcon();
         String title = spec.getTitle();
         Container c = spec.getContent();
-        
-    	final VirtualAppFrame frame = this.createAppFrame(title); 
+
+        final VirtualAppFrame frame = this.createAppFrame(title);
         if (icon != null) {
             if (title.equals("BeanShell Class Browser - jvd")) {
-                frame.setFrameIcon(DSP.Icons.getIcon("jpad.bsh_class_browser"));                
+                frame.setFrameIcon(DSP.Icons.getIcon("jpad.bsh_class_browser"));
             } else {
-                frame.setFrameIcon(icon);                            
+                frame.setFrameIcon(icon);
             }
         } else {
             frame.setFrameIcon(DSP.Icons.getIcon("jpad.java"));
@@ -176,12 +180,12 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
                         frame.setContentPane(spec.getDockableContent());
                         spec.addDockable(spec.getContent());
                     } else {
-                        frame.setContentPane(c);                        
+                        frame.setContentPane(c);
                     }
 
 //                    if (icon != null) frame.setFrameIcon(icon);
 //                    frame.pack(); // moved to following if/else; see Note [1] below
-                    
+
                     if ((c.getWidth() * c.getHeight()) != 0) {
                         frame.setSize(c.getWidth(), c.getHeight());
                         System.out.println("JIF setSize()");

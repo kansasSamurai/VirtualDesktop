@@ -15,7 +15,7 @@ import javax.swing.tree.TreePath;
 public class FileSelectorModel implements TreeModel {
 
     private FileNode root;
-    
+
     private boolean directoriesOnly;
 
     /**
@@ -26,7 +26,7 @@ public class FileSelectorModel implements TreeModel {
     }
 
     public FileSelectorModel(String directory, boolean directoriesOnly) {
-    	this.directoriesOnly = directoriesOnly;
+        this.directoriesOnly = directoriesOnly;
         root = new FileNode(directory);
         root.setRoot(true);
     }
@@ -41,12 +41,12 @@ public class FileSelectorModel implements TreeModel {
      */
     @Override
     public Object getChild(Object parent, int index) {
-        final FileNode parentNode = (FileNode) parent;        
-    	if (directoriesOnly) {
-    		return new FileNode(parentNode, parentNode.listFiles(File::isDirectory)[index].getName());    		
-    	} else {
-            return new FileNode(parentNode, parentNode.listFiles()[index].getName());    		
-    	}
+        final FileNode parentNode = (FileNode) parent;
+        if (directoriesOnly) {
+            return new FileNode(parentNode, parentNode.listFiles(File::isDirectory)[index].getName());
+        } else {
+            return new FileNode(parentNode, parentNode.listFiles()[index].getName());
+        }
     }
 
     /**
@@ -58,28 +58,28 @@ public class FileSelectorModel implements TreeModel {
      */
     @Override
     public int getChildCount(Object parent) {
-    	try {
+        try {
             final FileNode parentNode = (FileNode) parent;
-        	if (parentNode == null) return 0;
-        	
-        	if (directoriesOnly) {
-        		// This sometimes throws exception; why?
-        		return parentNode.listFiles(File::isDirectory).length;
-        	} else {
-                if (   !parentNode.isDirectory()
-                     || parentNode.listFiles() == null) {
+            if (parentNode == null)
+                return 0;
+
+            if (directoriesOnly) {
+                // This sometimes throws exception; why?
+                return parentNode.listFiles(File::isDirectory).length;
+            } else {
+                if (!parentNode.isDirectory() || parentNode.listFiles() == null) {
                     return 0;
                 }
-                return parentNode.listFiles().length;    		
-        	}
-    		
-    	} catch (Exception e) {
-    		System.out.println("Exception in getChildCount()");
-    		e.printStackTrace();
-    	}
-    	
-    	// In case of exception, it gets here so just return zero(0).
-    	return 0;
+                return parentNode.listFiles().length;
+            }
+
+        } catch (Exception e) {
+            System.out.println("Exception in getChildCount()");
+            e.printStackTrace();
+        }
+
+        // In case of exception, it gets here so just return zero(0).
+        return 0;
     }
 
     /**
@@ -87,11 +87,12 @@ public class FileSelectorModel implements TreeModel {
      */
     @Override
     public boolean isLeaf(Object node) {
-    	if (directoriesOnly) {    		
-    		return false; // we want ALL directories to appear as "folders" and they ALL *potentially* have children
-    	} else {
+        if (directoriesOnly) {
+            // we want ALL directories to appear as "folders" and they ALL *potentially* have children
+            return false; 
+        } else {
             return (getChildCount(node) == 0);
-    	}
+        }
     }
 
     /**
@@ -102,11 +103,11 @@ public class FileSelectorModel implements TreeModel {
         FileNode parentNode = (FileNode) parent;
         FileNode childNode = (FileNode) child;
 
-    	if (directoriesOnly) {    		
+        if (directoriesOnly) {
             return Arrays.asList(parentNode.listFiles(File::isDirectory)).indexOf(childNode);
-    	} else {
+        } else {
             return Arrays.asList(parentNode.list()).indexOf(childNode.getName());
-    	}
+        }
 
     }
 
@@ -123,5 +124,5 @@ public class FileSelectorModel implements TreeModel {
     @Override
     public void removeTreeModelListener(TreeModelListener l) {
     }
-    
+
 }

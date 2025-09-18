@@ -1,12 +1,11 @@
 /*
-This script creates a JTree that can be used
-for browsing a user interface.  As each node
-is selected, it can be referenced by 'y.selected'.
-
-Mostly this script could be run standalone;
-however, currently it relies on dockables.bsh
-in order to place the user interface in a 
-usable container.
+This script creates a JTree that can be used for browsing a user interface.  
+As each node is selected, it can be referenced by 'y.selected'.
+Note:  It is usually safest and most common to browse JPanel's
+vs JFrame's/JInternalFrame's.  Also, you don't have to place your
+target JPanel into the swingbrowser center panel... it is just available
+if you wish to use it such as building a prototype UI.
+The swingbrowser can browse any JPanel you give it via the treemodel.
 */
 
 // Step 1
@@ -15,6 +14,7 @@ usable container.
 //import javax.swing.tree.DefaultMutableTreeNode;
 //
 //swingbrowser() {
+//    this.ui = 1; // placeholder for optional contents of central panel
 //    this.tree = new JTree();
 //    
 //    this.panel = new JPanel();
@@ -22,6 +22,10 @@ usable container.
 //    this.panel.add(this.tree, BorderLayout.WEST);
 //
 //    this.iframe = DesktopManager.get().createVApp(this.panel, "Swing Browser");
+//
+//    setModel(component) {
+//        super.tree.setModel(new DefaultTreeModel(new SwingTreeNode(component), true));
+//    }
 //
 //    print("Swing Browser started...");
 //    return this;
@@ -103,6 +107,12 @@ public class SwingComponentsPanel extends JPanel {
 
 
 }
+
+y.ui = new SwingComponentsPanel();
+y.panel.add(y.ui, BorderLayout.CENTER);
+y.setModel(y.ui);
+
+
 
 
 

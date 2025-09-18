@@ -57,8 +57,7 @@ import javax.swing.tree.TreePath;
 /**
 A basic File Browser.  
 
-Requires 1.6+ for the Desktop & SwingWorker
-classes, amongst other minor things.
+Requires 1.6+ for the Desktop & SwingWorker classes, amongst other minor things.
 
 Includes support classes FileTableModel & FileTreeCellRenderer.
 
@@ -105,9 +104,9 @@ public class FileBrowser {
 
     /** Directory listing */
     private JTable table;
-    
+
     private JProgressBar progressBar;
-    
+
     /** Table model for File[]. */
     private FileTableModel fileTableModel;
 
@@ -115,9 +114,9 @@ public class FileBrowser {
     private List<RowSorter.SortKey> sortKeys = new ArrayList<>();
 
     private ListSelectionListener listSelectionListener;
-    
+
     private boolean cellSizesSet = false;
-    
+
     private int rowIconPadding = 6;
 
     /* File controls. */
@@ -410,53 +409,55 @@ public class FileBrowser {
     private void setTableData(final File[] files) {
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-				if (fileTableModel == null) {
-					fileTableModel = new FileTableModel();
-					table.setModel(fileTableModel);
+                if (fileTableModel == null) {
+                    fileTableModel = new FileTableModel();
+                    table.setModel(fileTableModel);
 
-	                if (!cellSizesSet) {
-	                    Icon icon = fileSystemView.getSystemIcon(files[0]);
+                    if (!cellSizesSet) {
+                        Icon icon = fileSystemView.getSystemIcon(files[0]);
 
-	                    // size adjustment to better account for icons
-	                    int h = 32; int version = 1;
-	                    switch(version) {
-	                    case 1:
-		                    h = icon.getIconHeight() + rowIconPadding; // << this isn't very good; first icon is often a directory with a smaller height
-	                    	break;
-	                    case 2:
-	                    	h = 64;
-	                    	break;
-	                    default:
-	                    	h = 32;
-	                    }
-	                    table.setRowHeight( h + rowIconPadding );
-	                    table.setRowMargin(1);
-	                    table.getColumnModel().setColumnMargin(0);
-	                    table.setShowGrid(false);
+                        // size adjustment to better account for icons
+                        int h = 32;
+                        int version = 1;
+                        switch (version) {
+                        case 1:
+                            h = icon.getIconHeight() + rowIconPadding; 
+                            // ^^ this isn't very good; first icon is often a directory with a smaller height
+                            break;
+                        case 2:
+                            h = 64;
+                            break;
+                        default:
+                            h = 32;
+                        }
+                        table.setRowHeight(h + rowIconPadding);
+                        table.setRowMargin(1);
+                        table.getColumnModel().setColumnMargin(0);
+                        table.setShowGrid(false);
 //	                    table.setIntercellSpacing(new Dimension(0,0));
 //	                    table.setCellSelectionEnabled(false);
 //	                    table.setRowSelectionAllowed(true);
 //	                    table.setColumnSelectionAllowed(false);
 
-	                    setColumnWidth(0,-1);
-	                    setColumnWidth(4,60);
-	                    table.getColumnModel().getColumn(4).setMaxWidth(120);
-	                    setColumnWidth(3,-1);
-	                    setColumnWidth(5,-1);
-	                    setColumnWidth(6,-1);
-	                    setColumnWidth(7,-1);
-	                    setColumnWidth(8,-1);
-	                    setColumnWidth(9,-1);
+                        setColumnWidth(0, -1);
+                        setColumnWidth(4, 60);
+                        table.getColumnModel().getColumn(4).setMaxWidth(120);
+                        setColumnWidth(3, -1);
+                        setColumnWidth(5, -1);
+                        setColumnWidth(6, -1);
+                        setColumnWidth(7, -1);
+                        setColumnWidth(8, -1);
+                        setColumnWidth(9, -1);
 
-	                    cellSizesSet = true;
-	                }
-	                
-	                // Hide the pathname column
-					TableColumnModel tcm = table.getColumnModel();
-					tcm.removeColumn(tcm.getColumn(2));
-				}
+                        cellSizesSet = true;
+                    }
 
-				table.getSelectionModel().removeListSelectionListener(listSelectionListener);
+                    // Hide the pathname column
+                    TableColumnModel tcm = table.getColumnModel();
+                    tcm.removeColumn(tcm.getColumn(2));
+                }
+
+                table.getSelectionModel().removeListSelectionListener(listSelectionListener);
                 fileTableModel.setFiles(files);
                 table.getSelectionModel().addListSelectionListener(listSelectionListener);
                 
@@ -481,21 +482,21 @@ public class FileBrowser {
     /** Add the files that are contained within the directory of this node.
     Thanks to Hovercraft Full Of Eels for the SwingWorker fix. */
     private void showChildren(final DefaultMutableTreeNode node) {
-        
-    	final File file = (File) node.getUserObject();
-    	
-    	if (file.isDirectory() && !file.canRead()) {
-    		this.showErrorMessage("The directory's READ property is FALSE.", "INVALID RIGHTS");
-    		return;
-    	}
 
-    	tree.setEnabled(false);
+        final File file = (File) node.getUserObject();
+
+        if (file.isDirectory() && !file.canRead()) {
+            this.showErrorMessage("The directory's READ property is FALSE.", "INVALID RIGHTS");
+            return;
+        }
+
+        tree.setEnabled(false);
         progressBar.setVisible(true);
         progressBar.setIndeterminate(true);
 
-        // this allows "refresh" of the jtree whenever the node is selected; 
+        // this allows "refresh" of the jtree whenever the node is selected;
         // otherwise the jtable gets updated correctly, but not the jtree
-        node.removeAllChildren(); 
+        node.removeAllChildren();
 
         SwingWorker<Void, File> worker = new SwingWorker<Void, File>() {
             int chunkcount = 0;

@@ -14,11 +14,12 @@ import org.jwellman.swing_applets.SwingViewCreator;
 
 ddemo() {
 
+    FileNode.addTextTypes(".md"); // Allow markdown files
     FileNode.addTextTypes(".bsh"); // Allow beanshell scripts to be viewed as text
-    // C:\dev\workspaces\git\virtualdesktop\src\main\resources\org\jwellman\bsh\scripts
+    // C:/dev/workspaces/git/virtualdesktop/src/main/resources/org/jwellman/bsh/scripts
 
     /** A JPanel extension that contains a directory navigation tree */
-    this.panel = new FileNavigator("C:\\", FileNavigator.TYPE.TEXT );
+    this.panel = new FileNavigator("C:/dev/workspaces/git/virtualdesktop/src/main/resources/org/jwellman/bsh/scripts", FileNavigator.TYPE.TEXT );
 
     /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
     //this.iframe = DesktopManager.get().createVApp(this.panel, "File Navigator - Text Viewer");

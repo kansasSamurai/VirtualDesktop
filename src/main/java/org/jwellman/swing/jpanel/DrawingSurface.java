@@ -5,6 +5,9 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.geom.Ellipse2D;
+import java.awt.geom.Ellipse2D.Double;
+import java.awt.geom.Path2D;
+import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
 
@@ -64,6 +67,11 @@ public class DrawingSurface extends JPanel implements Drawable {
         g2d.fillOval(270, 130, 50, 50);
 
         g2d.fill( new RoundRectangle2D.Double(10, 100, 0,60, 25,25));
+
+        ///////////////////////////////////
+        Double halo = new Ellipse2D.Double(100-25-10, 0-10, 50+20, 50+20);
+        Point2D c = new Point2D.Double(halo.getCenterX(), halo.getCenterY());
+
     }
 
     @Override

@@ -90,6 +90,366 @@ p.proxy = new Drawable() {
 
 
 
+//control() {
+//
+//    drawGrid = true; // when false, paint background with colorBackground
+//    drawHalo = true; // when true, draw the halo
+//    barBackground = new Color(0xD0D4D5);
+//    colorBackground = Color.white; // not yet used
+//    spacing = 80; // space between centers of bars
+//    horizontal = true; // horizontal bars or vertical
+//
+//    font = new Font("Segoe UI", Font.BOLD, 12);
+//    labelFont = new Font("Segoe UI", Font.BOLD, 20);
+//    labelOffset = 15;
+//    // grid settings
+//    width = 900;
+//    height = 500;
+//    gridSize = 20;
+//
+//    return this;
+//}
+//control = control();
+
+//import java.awt.font.FontRenderContext;
+
+
+p.proxy = new Drawable() {
+
+    bar() {
+        max = 300;
+        width = 100;
+        height = 50;
+
+        // x and y might eventually be useful but in the current demo, they are not used
+        // x = 0; y = 0;
+        value = "350";
+        label = "2020";
+        
+        dark = new Color(0x26CCD0);
+        light = new Color(0x4DD2D9);
+        cthru = new Color(46, 204, 211, 64);
+        bkgrd = new Color(46, 204, 211, 32);
+        shadow = new Color(0, 0, 0, 32);
+
+        return this;
+    }
+    
+
+    /* Note: As with Java2D screen coordinates, bars start at 0,0
+     *  which is either the bottom left (vertical bar) or 
+     *  top left (horizontal bar).
+     * 
+     * This bar logic is drawn horizontal so "width" actually corresponds to "visual height".
+     */
+    drawBar(g2d, area, bar, btnpoint) {
+
+        var inset = 5; // inset of actual bar; applies to both sides
+        var height = bar.height-(inset*2); // height of the colored bar
+        var midheight = bar.height / 2; // centerline
+        var width = bar.width * 2; // scale for this particular bar
+
+        var cap = new Ellipse2D.Double(bar.width-25, 0, 50, 50);
+        var capsh = new Ellipse2D.Double(bar.width-25-3, 0, 50, 50);
+        var halo = new Ellipse2D.Double(bar.width-25-10, 0-10, 50+20, 50+20);
+
+        var bwidth = 40; var bradius = bwidth / 2;
+        var button = new Ellipse2D.Double(bar.max - bradius, (bar.height/2)-(40/2), bwidth, bwidth);
+
+        // Layer 0 / bar background
+        g2d.setPaint(control.barBackground);
+        g2d.fillRect(0, 0, bar.max, bar.height);
+        g2d.fillArc(bar.max-25, 0, 50, 50, 270, 180); // endcap
+
+        // Layer 2 / bars
+        // Create the GradientPaint object
+        // GradientPaint gradientPaint = new GradientPaint(startX, startY, color1, endX, endY, color2);
+        var g1 = new GradientPaint(0, 0+inset, bar.dark, 0, midheight, bar.light);
+        var g2 = new GradientPaint(0, midheight, bar.light, 0, bar.height+inset, bar.dark);
+
+        // g2d.setPaint(bar.dark);
+        g2d.setPaint(g1);
+        g2d.fillRect(0, 0+inset, width, midheight-inset);
+        g2d.setPaint(g2);
+        g2d.fillRect(0, midheight, width, midheight-inset);
+
+        // Layer 5 / button
+        g2d.setPaint(Color.lightGray); 
+        g2d.fill(button);
+
+        // button text (value)
+        if (control.horizontal) {
+            // we can just paint text here because we're already horizontal
+            g2d.setPaint(Color.black); // (control.barBackground);
+            g2d.setFont(control.font);
+            drawCenteredStringPrecise(g2d, bar.value, bar.max, bar.height/2);        
+        } else {
+            // we can just paint text here because we're already horizontal
+            g2d.setPaint(bar.dark);
+            g2d.setFont(control.font);
+            drawCenteredStringPrecise(g2d, bar.value, bar.width, bar.height/2);        
+        }
+    }
+
+    drawBar_works(g2d, area, bar, btnpoint) {
+
+        cap = new Ellipse2D.Double(bar.width-25, 0, 50, 50);
+        capsh = new Ellipse2D.Double(bar.width-25-3, 0, 50, 50);
+        halo = new Ellipse2D.Double(bar.width-25-10, 0-10, 50+20, 50+20);
+        button = new Ellipse2D.Double(bar.width-40/2, (bar.height/2)-(40/2), 40, 40);
+
+        // Layer 0 / bar background
+        g2d.setPaint(bar.bkgrd);
+        g2d.fillRect(0, 0, bar.max, bar.height);
+        g2d.fillArc(bar.max-25, 0, 50, 50, 270, 180);
+        
+        // Layer 1 / halo
+        if (control.drawHalo) {
+            g2d.setPaint(bar.cthru);
+            g2d.fill(halo);
+        }
+
+        // Layer 2 / bars
+        g2d.setPaint(bar.dark);
+        g2d.fillRect(0, 0, bar.width, bar.height);
+
+        g2d.setPaint(bar.light);
+        g2d.fillRect(0,0+(bar.height/2),bar.width, bar.height/2);
+
+        // Layer 3 / shadow
+        g2d.setPaint(bar.shadow);
+        g2d.fill(capsh);
+
+        // Layer 4 / cap
+        g2d.setPaint(bar.light);
+        g2d.fill(cap);
+
+        // Layer 5 / button
+        g2d.setPaint(Color.white); // TODO  bar.button
+        g2d.fill(button);
+
+        // label Text
+        g2d.setPaint(Color.white);
+        g2d.setFont(control.labelFont);
+        drawLeftCenteredStringPrecise(g2d, bar.label, 0+control.labelOffset, bar.height/2);        
+
+        // Button Text (always horizontal)
+//        Point2D c = new Point2D.Double(halo.getCenterX(), halo.getCenterY());
+//        Point2D abs = g2d.getTransform().inverseTransform(c, null);
+//        print(abs.getX()); print(abs.getY());
+
+        if (control.horizontal) {
+            // we can just paint text here because we're already horizontal
+            g2d.setPaint(bar.dark);
+            g2d.setFont(control.font);
+            drawCenteredStringPrecise(g2d, bar.value, bar.width, bar.height/2);        
+        } else {
+            // capture the data necessary to draw the text later...            
+            btnpoint.value = bar.value;
+            btnpoint.color = bar.dark;
+            btnpoint.point = new Point2D.Double();
+            captureCurrentPosition(g2d, bar.width, bar.height/2, btnpoint.point);
+        }
+        
+    }
+
+    // private Point2D 
+    captureCurrentPosition(Graphics2D g2d, double localX, double localY, Point2D dest) {
+        // Create a point in local coordinates
+        Point2D localPoint = new Point2D.Double(localX, localY);
+        
+        // Transform it to world coordinates
+        Point2D worldPoint = (dest != null) ? dest : new Point2D.Double();
+        g2d.getTransform().transform(localPoint, dest);
+        
+        return worldPoint;
+    }
+
+    draw(g2d, area) {
+
+        if (control.drawGrid) {
+            g2d.setPaint(Color.darkGray);
+            
+            // Draw horizontal lines
+            for (int y = 0; y < control.height; y += control.gridSize) {
+                g2d.drawLine(0, y, control.width, y);
+            }
+    
+            // Draw vertical lines
+            for (int x = 0; x < control.width; x += control.gridSize) {
+                g2d.drawLine(x, 0, x, control.height);
+            }
+            
+        } else {
+            g2d.setPaint(Color.white);
+            g2d.fillRect(0, 0, control.width, control.height);            
+        }
+
+
+        var bar = bar();
+        bar.max=600;
+
+        var textPoints = new ArrayList(); // actually now more than just points; i.e. {point, color, ...}
+
+        var palette = parseColors("#A7565B, #CD9E7F, #EFC898, #C5D27C, #99B288, #5F7E73, #70A4B8, #4D748D, #5E5492, #7B4D86");
+        var p2 = parseColors("#DF8274, #F7B796, #FBD4A8, #DDED8F, #AEDC8D, #7EB0A2, #81C5E3, #6FA2C6, #8172D0, #A75BB3");
+        int ci = 0; // current index of palette(color)
+
+        bar.x = 50; bar.y = 150; bar.width = 130; bar.value = "410"; bar.label = "2019";
+        bar.dark = palette[ci]; // new Color(0x95BCDD);
+        bar.light = p2[ci++]; // new Color(0x9FC2DE);
+        bar.cthru = new Color(149, 188, 221, 64);
+        bar.bkgrd = new Color(149, 188, 221, 32);
+        if (control.horizontal) {
+            g2d.translate(50, 50);
+        } else {
+            // translate the origin FIRST
+            g2d.translate(50, 600);
+            // ... then, set the rotation
+            g2d.rotate(-Math.PI/2);
+        }
+        worldPoint = object();
+        textPoints.add(worldPoint);
+        drawBar(g2d, area, bar, worldPoint);
+
+        bar.x = 50; bar.y = 150; bar.width = 100; bar.value = "350"; bar.label = "2020";
+//        bar.dark = new Color(0x26CCD0);
+//        bar.light = new Color(0x4DD2D9);
+        bar.dark = palette[ci]; // new Color(0x95BCDD);
+        bar.light = p2[ci++]; // new Color(0x9FC2DE);
+        bar.cthru = new Color(46, 204, 211, 64);
+        bar.bkgrd = new Color(46, 204, 211, 32);
+        g2d.translate(0, control.spacing);
+        worldPoint = object();
+        textPoints.add(worldPoint);
+        drawBar(g2d, area, bar, worldPoint);
+
+        bar.x = 50; bar.y = 150; bar.width = 200; bar.value = "700"; bar.label = "2021";
+//        bar.dark = new Color(0x28B0D8);
+//        bar.light = new Color(0x3AB6DC);
+        bar.dark = palette[ci]; // new Color(0x95BCDD);
+        bar.light = p2[ci++]; // new Color(0x9FC2DE);
+        bar.cthru = new Color(91, 170, 239, 64);
+        bar.bkgrd = new Color(91, 170, 239, 32);
+        g2d.translate(0, control.spacing);
+        worldPoint = object();
+        textPoints.add(worldPoint);
+        drawBar(g2d, area, bar, worldPoint);
+
+        bar.x = 50; bar.y = 150; bar.width = 150; bar.value = "525"; bar.label = "2022";
+//        bar.dark = new Color(0x499FEC);
+//        bar.light = new Color(0x5BAAEF);
+        bar.dark = palette[ci]; // new Color(0x95BCDD);
+        bar.light = p2[ci++]; // new Color(0x9FC2DE);
+        bar.cthru = new Color(73, 159, 236, 64);
+        bar.bkgrd = new Color(73, 159, 236, 32);
+        g2d.translate(0, control.spacing);
+        worldPoint = object();
+        textPoints.add(worldPoint);
+        drawBar(g2d, area, bar, worldPoint);
+
+        bar.x = 50; bar.y = 150; bar.width = 250; bar.value = "875"; bar.label = "2023";
+//        bar.dark = new Color(0x959FDA);
+//        bar.light = new Color(0x9FA9DE);
+        bar.dark = palette[ci]; // new Color(0x95BCDD);
+        bar.light = p2[ci++]; // new Color(0x9FC2DE);
+        bar.cthru = new Color(149, 159, 218, 64);
+        bar.bkgrd = new Color(149, 159, 218, 32);
+        g2d.translate(0, control.spacing);
+        worldPoint = object();
+        textPoints.add(worldPoint);
+        drawBar(g2d, area, bar, worldPoint);
+
+        // Draw all the button labels
+// only do this for certain types of bars
+//        if (! control.horizontal) {
+//            g2d.setFont(control.font);
+//            g2d.setTransform(new AffineTransform());
+//            for (tpoint : textPoints) {
+//                g2d.setPaint(tpoint.color);
+//                drawCenteredStringPrecise(g2d, tpoint.value, tpoint.point.getX().intValue(), tpoint.point.getY().intValue());
+//            }
+//        }
+    
+    }
+
+    // returns an array of Color[] objects
+    parseColors(String colorString) {
+        if (colorString == null || colorString.trim().isEmpty()) {
+            return new Color[0];
+        }
+        
+        // Split by comma and trim whitespace
+        String[] hexColors = colorString.split(",");
+        Color[] colors = new Color[hexColors.length];
+        
+        for (int i = 0; i < hexColors.length; i++) {
+            colors[i] = parseHexColor(hexColors[i].trim());
+        }
+        
+        return colors;
+    }
+
+    // returns a Color object
+    parseHexColor(String hexColor) {
+        if (hexColor == null) {
+            throw new IllegalArgumentException("Color string cannot be null");
+        }
+        
+        String hex = hexColor.trim();
+        
+        // Remove # if present
+        if (hex.startsWith("#")) {
+            hex = hex.substring(1);
+        }
+        
+        // Validate format
+        if (!hex.matches("^[0-9A-Fa-f]{3}$") && !hex.matches("^[0-9A-Fa-f]{6}$")) {
+            throw new IllegalArgumentException("Invalid hex color format: " + hexColor);
+        }
+        
+        // Handle 3-digit format (#RGB -> #RRGGBB)
+        if (hex.length() == 3) {
+            String r = hex.substring(0, 1);
+            String g = hex.substring(1, 2);
+            String b = hex.substring(2, 3);
+            hex = r + r + g + g + b + b;
+        }
+        
+        try {
+            // Parse RGB components
+            int rgb = Integer.parseInt(hex, 16);
+            return new Color(rgb);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid hex color format: " + hexColor, e);
+        }
+    }
+
+    drawLeftCenteredStringPrecise(Graphics2D g2d, String text, int x, int y) {
+        FontRenderContext frc = g2d.getFontRenderContext();
+        Rectangle2D bounds = g2d.getFont().getStringBounds(text, frc);
+        int textX = x; // (int) (x - bounds.getWidth() / 2);
+        int textY = (int) (y - bounds.getHeight() / 2 - bounds.getY());
+        g2d.drawString(text, textX, textY);
+    }
+
+    drawCenteredStringPrecise(Graphics2D g2d, String text, int x, int y) {
+        FontRenderContext frc = g2d.getFontRenderContext();
+        Rectangle2D bounds = g2d.getFont().getStringBounds(text, frc);
+        int textX = (int) (x - bounds.getWidth() / 2);
+        int textY = (int) (y - bounds.getHeight() / 2 - bounds.getY());
+        g2d.drawString(text, textX, textY);
+    }
+
+}
+
+
+
+
+
+
+
+
 
 
 

@@ -471,8 +471,7 @@ jfc() {
     dataset.addValue(300, "Laptops", "May");
 
     // Create a Random object
-    // Create a Random object
-    random = new Random();
+    var random = new Random();
 
     // Generate a random integer within the specified range
     // The formula is: random.nextInt(max - min + 1) + min
@@ -497,7 +496,7 @@ jfc() {
         dataset);
 
     // Create a new TextTitle for the subtitle
-    subtitle = new TextTitle("This is a subtitle", 
+    var subtitle = new TextTitle("This is a subtitle", 
                                        new Font("SansSerif", Font.PLAIN, 24), 
                                        Color.DARK_GRAY, 
                                        RectangleEdge.TOP, 
@@ -507,7 +506,7 @@ jfc() {
     
     // Add the subtitle to the chart
     chart.addSubtitle(subtitle);
-    
+
     // Next, a ChartPanel object is essential for displaying our chart within a Swing component. 
     ChartPanel chartPanel = new ChartPanel(chart);
     // put the chart (via the chartpanel) on the desktop
@@ -515,7 +514,7 @@ jfc() {
 
     // Closure/object to create the chart editor and put it on the desktop
     createUI() {
-        p = new JFCEditor(chart);
+        var p = new JFCEditor(chart);
         DesktopManager.get().createVApp(p, "jfc" );
 
         return this;
@@ -523,22 +522,25 @@ jfc() {
 
     // Closure/object to create some usable painters
     createPainters() {
-        stdbarpainter = new org.jfree.chart.renderer.category.StandardBarPainter();
+        var stdbarpainter = new org.jfree.chart.renderer.category.StandardBarPainter();
         return this;
     }
 
     // Create the user interface (for the editor)
-    container = createUI();
+    var container = createUI();
 
     // Create utility objects to be used ad hoc
-    pre = new JPreeChart();
-    painters = createPainters();
+    var pre = new JPreeChart();
+    var painters = createPainters();
 
     return this;
 }
 jfc = jfc();
 
 //jfc.pre.decorate(jfc.chart);
+//jfc.pre.setAllPainters(Color.white);
+//jfc.pre.decorate(jfc.chart);
+
 //jfc.addDataset("monkeys");
 //jfc.addDataset("gorillas");
 //jfc.addDataset("bears");
@@ -546,13 +548,17 @@ jfc = jfc();
 
 
 //r = jfc.chart.categoryPlot.renderer;
+//r.setItemMargin(0.05);
 //r.setSeriesPaint(0, paint[1]);
 //r.setSeriesPaint(1, paint[2]);
-//r.setItemMargin(0.05);
+
+//jfc.chart.legend.setPosition(RectangleEdge.TOP);
 
 
-
-
+// Not sure **when** I would use this but it does work:
+//import org.jfree.chart.labels.*;
+//generator = new StandardCategorySeriesLabelGenerator("a:{0}");
+//r.setLegendItemLabelGenerator(generator);
 
 
 

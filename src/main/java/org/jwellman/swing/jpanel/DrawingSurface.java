@@ -6,7 +6,6 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Ellipse2D.Double;
-import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
@@ -30,6 +29,8 @@ import org.jfree.chart.ui.Drawable;
  *
  */
 public class DrawingSurface extends JPanel implements Drawable {
+
+    private static final long serialVersionUID = 1L;
 
     // Expose a proxy for beanshell.
     public Object proxy;
@@ -70,6 +71,7 @@ public class DrawingSurface extends JPanel implements Drawable {
 
         ///////////////////////////////////
         Double halo = new Ellipse2D.Double(100-25-10, 0-10, 50+20, 50+20);
+        @SuppressWarnings("unused")
         Point2D c = new Point2D.Double(halo.getCenterX(), halo.getCenterY());
 
     }

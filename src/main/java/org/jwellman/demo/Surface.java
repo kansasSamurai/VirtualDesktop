@@ -8,7 +8,7 @@ import java.awt.image.BufferedImage;
 
 import javax.swing.JPanel;
 
-class Surface extends JPanel {
+public class Surface extends JPanel {
 
     private final int rules[] = {
             AlphaComposite.SRC,
@@ -21,12 +21,49 @@ class Surface extends JPanel {
             AlphaComposite.DST_OUT,
             AlphaComposite.SRC_OVER,
             AlphaComposite.DST_OVER,
-            AlphaComposite.CLEAR
+            AlphaComposite.CLEAR,
+            AlphaComposite.XOR 
     };
 
     private static final long serialVersionUID = 1L;
 
     private void doDrawing(Graphics g) {
+
+        Graphics2D g2d = (Graphics2D) g.create();
+
+        for (int x = 20, y = 20, i = 0; i < rules.length; x += 60, i++) {
+
+            BufferedImage buffImg = new BufferedImage(60, 60, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D gbi = buffImg.createGraphics();
+
+            // Destination is black
+            gbi.setPaint(Color.black);
+            gbi.fillRect(0, 15, 40, 40);
+            gbi.setPaint(Color.red);
+            gbi.drawRect(0, 15, 40, 40);
+
+            // Note:  This was re-written to compare against the following
+            // post on Oracle docs; the results do not seem to match:
+            // https://docs.oracle.com/javase/tutorial/2d/advanced/compositing.html
+
+            // Apply the composite - any further painting is considered the "source"
+            gbi.setComposite(AlphaComposite.getInstance(rules[i], 0.8f));
+
+            // Source(yellow) is the "new" stuff drawn "onto" the existing "destination"
+            gbi.setPaint(Color.yellow);
+            gbi.fillOval(15, 0, 40, 40);
+            gbi.setPaint(Color.green);
+            gbi.drawRect(15, 0, 40, 40);
+
+            g2d.drawImage(buffImg, x, y, null);
+            gbi.dispose();
+        }
+
+        g2d.dispose();
+    }
+
+    @SuppressWarnings("unused")
+    private void doDrawing_posted(Graphics g) {
 
         Graphics2D g2d = (Graphics2D) g.create();
 

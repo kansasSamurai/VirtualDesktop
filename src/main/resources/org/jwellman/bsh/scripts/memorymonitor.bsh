@@ -1,0 +1,51 @@
+/**
+ * The Apache Batik project comes with a nice memory monitor component
+ * but it is not quite written such that it can be "simply" dropped into
+ * an existing application.  However, this script captures the fairly
+ * trivial steps to adapt it to a simple JPanel container.
+ *
+ * a) Unfortunately, the top level class used by Batik is the MemoryMonitor
+ *      class which extends the JFrame class.  Fortunately, the "real"
+ *      components which make up the user interface are public and we **can**
+ *      utilize these.  
+ * 1) The easiest class to use/utilize is the "Panel" class which contains
+ *      both the Usage(bar graph) and History(line graph) sub-components.
+ *      Therefore, we can simply create a new Panel object and put it in
+ *      whatever user interface we want.
+ * 2) However... the code that actually starts the memory monitoring is 
+ *      currently embedded in the MemoryMonitor class.  Therefore, we have
+ *      to extract that code and use it in our implementation:
+        <code>
+            RepaintThread t = mm.mem.getRepaintThread();
+            if (!t.isAlive()) {
+                t.start();
+            } else {
+                t.safeResume();
+            }
+        </code> 
+ */
+
+
+import org.jwellman.swing.thirdparty.*;
+
+bmm() {
+
+    // The pseudo JFrame that we don't really care about but need to get to the Panel
+    var mm = new BetterMemoryMonitor();
+
+    // This is the widget we care about...
+    var panel = mm.getMemoryMonitor();
+
+    // Put the widget in a container and create a vapp...
+    var p = new JPanel(new BorderLayout());
+    p.add(panel, BorderLayout.NORTH);
+    DesktopManager.get().createVApp(p, "Memory Monitor" );
+
+    // Start monitoring memory...
+    // mm.start();
+
+    return this;
+}
+
+bmm = bmm();
+

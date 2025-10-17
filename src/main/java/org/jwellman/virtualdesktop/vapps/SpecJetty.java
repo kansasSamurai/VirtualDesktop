@@ -1,28 +1,22 @@
 package org.jwellman.virtualdesktop.vapps;
-// DO NOT COMMIT - changes are local only due to missing dependency code
 
-import static j2html.TagCreator.body;
-import static j2html.TagCreator.h1;
-import static j2html.TagCreator.head;
-import static j2html.TagCreator.html;
-import static j2html.TagCreator.p;
-import static j2html.TagCreator.title;
+import static j2html.TagCreator.*;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.io.IOException;
+import java.lang.reflect.Member;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.stream.Stream;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -32,7 +26,6 @@ import javax.swing.JTextField;
 import javax.swing.border.Border;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
@@ -43,6 +36,8 @@ import org.eclipse.jetty.util.resource.PathResource;
 import org.eclipse.jetty.util.resource.Resource;
 import org.jwellman.swing.layout.FluidConstraint;
 import org.jwellman.swing.layout.FluidLayout;
+
+import j2html.tags.DomContent;
 //import org.jwellman.swing.layout.WrapLayout;
 
 /**
@@ -265,52 +260,124 @@ public class SpecJetty extends VirtualAppSpec {
 
         // Add the ResourceHandler to the server.
         HandlerList handlers = new HandlerList();
-        handlers.setHandlers(new Handler[]{resourceHandler, new HelloWorld(), new DefaultHandler()});
+        handlers.addHandler(resourceHandler);
+        handlers.addHandler(new Api());
+        handlers.addHandler(new HelloWorld());
+        handlers.addHandler(new DefaultHandler());
+        // handlers.setHandlers(new Handler[]{resourceHandler, new HelloWorld(), new DefaultHandler()});
         server.setHandler(handlers);
 
         return server;
     }
 
-	/**
-	 * http://localhost:8080/helloworld
-	 * 
-	 * @author rwellman
-	 *
-	 */
-	private class HelloWorld extends AbstractHandler {
-		
-	    @Override
-	    public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) 
-	    		throws IOException, ServletException {
-	    	
-	        // Declare response encoding and types
-	        response.setContentType("text/html; charset=utf-8");
+    /**
+     * http://localhost:8080/helloworld
+     * 
+     * @author rwellman
+     *
+     */
+    private class HelloWorld extends AbstractHandler {
 
-	        // Write back response
-	        // This was originally just the following...
-	        // response.getWriter().println("<h1>Hello Jetty User</h1>");
-	        
-	        // ... but I incorporated the j2html API to produce this:
-	        response.getWriter().println(
-		        html(
-		        	    head(
-		        	        title("Hello World")
-		        	        //, link().withRel("stylesheet").withHref("/css/main.css")
-		        	    ),
-		        	    body(
-		        	    	h1("Hello Jetty User")
-		        	    	,p("Your request was served at: " + java.time.LocalDateTime.now())
-		        	    )
-		        	).render()
+        @Override
+        public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response)
+                throws IOException, ServletException {
+
+            // Declare response encoding and types
+            response.setContentType("text/html; charset=utf-8");
+
+            // Write back response
+            // This was originally just the following...
+            // response.getWriter().println("<h1>Hello Jetty User</h1>");
+
+            // ... but I incorporated the j2html API to produce this:
+            response.getWriter().println(
+                html(
+                    head(
+                        title("Hello World")
+                        //, link().withRel("stylesheet").withHref("/css/main.css")
+                    ),
+                    body(
+                        h1("Hello Jetty User")
+                        ,p("Your request was served at: " + java.time.LocalDateTime.now())
+                    )
+                ).render()
 	        );
 
-	        // Declare response status code
-	        response.setStatus(HttpServletResponse.SC_OK);
-	        
-	        // Inform jetty that this request has now been handled
-	        baseRequest.setHandled(true);
-	    }
-	    
-	} // end class HelloWorld
-	
+            // Declare response status code
+            response.setStatus(HttpServletResponse.SC_OK);
+
+            // Inform jetty that this request has now been handled
+            baseRequest.setHandled(true);
+        }
+
+    } // end class HelloWorld
+
+    /**
+     * As adapted from the following resources:
+     * https://thetechstack.net/generating-static-pages-with-J2HTML/
+     * https://gist.github.com/kpradeep12/cf61fe3889c51d404e8d576d4a9069ee
+     * 
+     *
+     */
+    private class Api extends AbstractHandler {
+
+        @Override
+        public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response)
+                throws IOException, ServletException {
+            // Declare response encoding and types
+            response.setContentType("text/html; charset=utf-8");
+            response.setStatus(HttpServletResponse.SC_OK);
+
+            // Write back response
+            String clazz = request.getParameter("class");
+            try {
+                response.getWriter().println(content(Class.forName(clazz)));
+            } catch (ClassNotFoundException e) {
+                response.getWriter().println(error("Class not found: " + e.getMessage()));
+            }
+
+            // Inform jetty that this request has now been handled
+            baseRequest.setHandled(true);
+        }
+
+        private String error(String msg) {
+            return html(
+                    head(
+                            title("Error"),
+                            link().withRel("stylesheet").withHref("https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css")
+                    ),
+                    body(attrs(".container"),
+                            h2(attrs(".text-center"), "Error"),
+                            p(msg)
+                    )
+            ).render();
+        }
+
+        private String content(Class<?> clazz) {
+            return html(
+                    head(
+                            title(clazz.getCanonicalName()),
+                            link().withRel("stylesheet").withHref("https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css")
+                    ),
+                    body(attrs(".container"),
+                            h2(attrs(".text-center"), clazz.getCanonicalName()),
+                            membersList("Fields", clazz.getDeclaredFields()),
+                            membersList("Constructors", clazz.getDeclaredConstructors()),
+                            membersList("Methods", clazz.getDeclaredMethods())
+                    )
+            ).render();
+        }
+
+        private DomContent membersList(String header, Member[] members) {
+            return div(
+                        h5(header),
+                        ul(
+                            Stream.of(members)
+                                    .map(member -> li(member.toString()))
+                                    .toArray(DomContent[]::new)
+                        )
+                );
+        }
+    }
+
 }

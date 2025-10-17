@@ -1,6 +1,7 @@
 package org.jwellman.demo;
 
 import java.awt.AlphaComposite;
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -8,6 +9,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.WindowAdapter;
@@ -39,7 +41,7 @@ public class Composite extends JApplet implements ItemListener {
     private static final long serialVersionUID = 1L;
 
     // Initializes the layout of the components.
-    public void init() {
+    public void init_original() {
         GridBagLayout layOut = new GridBagLayout();
         getContentPane().setLayout(layOut);
 
@@ -105,11 +107,64 @@ public class Composite extends JApplet implements ItemListener {
         validate();
     }
 
-/*
- * Detects a change in either of the Choice components.  Resets the variable corresponding
- * to the Choice whose state is changed.  Invokes changeRule in CompPanel with the current
- * alpha and composite rules.
-*/
+    public void init() {
+        getContentPane().setLayout(new BorderLayout());
+
+        JPanel north = new JPanel(new GridLayout(2,2));
+        this.add(north, BorderLayout.NORTH);
+
+        Font newFont = getFont().deriveFont(Font.BOLD);
+
+        alphaLabel = new JLabel();
+        alphaLabel.setText("Alphas");
+        alphaLabel.setFont(newFont);
+        alphaLabel.setHorizontalAlignment(JLabel.CENTER);
+        north.add(alphaLabel);
+
+        rulesLabel = new JLabel();
+        rulesLabel.setText("Rules");
+        rulesLabel.setFont(newFont);
+        rulesLabel.setHorizontalAlignment(JLabel.CENTER);
+        north.add(rulesLabel);
+
+        alphas = new JComboBox<>();
+        alphas.addItem("1.0");
+        alphas.addItem("0.90");
+        alphas.addItem("0.80");
+        alphas.addItem("0.70");
+        alphas.addItem("0.60");
+        alphas.addItem("0.50");
+        alphas.addItem("0.40");
+        alphas.addItem("0.30");
+        alphas.addItem("0.20");
+        alphas.addItem("0.10");
+        alphas.addItem("0.0");
+        alphas.addItemListener(this);
+        north.add(alphas);
+
+        rules = new JComboBox<>();
+        rules.addItem("SRC");
+        rules.addItem("DST_IN");
+        rules.addItem("DST_OUT");
+        rules.addItem("DST_OVER");
+        rules.addItem("SRC_IN");
+        rules.addItem("SRC_OVER");
+        rules.addItem("SRC_OUT");
+        rules.addItem("CLEAR");
+        rules.addItemListener(this);
+        north.add(rules);
+
+        comp = new CompPanel();
+        this.add(comp, BorderLayout.CENTER);
+
+        validate();
+    }
+
+    /*
+     * Detects a change in either of the Choice components.  Resets the variable corresponding
+     * to the Choice whose state is changed.  Invokes changeRule in CompPanel with the current
+     * alpha and composite rules.
+    */
     public void itemStateChanged(ItemEvent e){
         if ( e.getStateChange() != ItemEvent.SELECTED ) {
             return;
@@ -141,8 +196,8 @@ public class Composite extends JApplet implements ItemListener {
 
 class CompPanel extends JPanel {
 
-    float alpha = 1.0f;
-    AlphaComposite ac = AlphaComposite.getInstance(AlphaComposite.SRC);
+    private float alpha = 1.0f;
+    private AlphaComposite ac = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha);
     private Color srcColor = new Color(0.0f, 0.0f, 1.0f, 1.0f);
     private Color dstColor = new Color(1.0f, 0.0f, 0.0f, 1.0f);
 
@@ -195,8 +250,10 @@ class CompPanel extends JPanel {
         // Draws the rectangle and ellipse into the buffered image.
         gbi.setColor(srcColor);
         gbi.fill(new Rectangle2D.Double(rectx, recty, 150, 100));
-        gbi.setComposite(ac);
+
         gbi.setColor(dstColor);
+        gbi.drawRect(rectx+rectx/2,recty+recty/2,150,100);
+        gbi.setComposite(ac);
         gbi.fill(new Ellipse2D.Double(rectx+rectx/2,recty+recty/2,150,100));
 
         // Draws the buffered image.

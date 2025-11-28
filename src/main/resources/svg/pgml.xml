@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE pgml SYSTEM "pgml.dtd">
+<pgml description="org.tigris.gef.base.Diagram"
+      name="junk"
+>
+  <group name="LAYER_NULL.0"
+       description="org.argouml.sandbox.FigCustomNode[50, 50, 100, 50]"
+       href="1"
+       shown="1"
+       fill="1"
+       fillcolor="255 255 255"
+       stroke="1"
+       strokecolor="0 0 0"
+  >
+    <private>
+      enclosingFig="LAYER_NULL.0"
+    </private>
+    <rectangle name="LAYER_NULL.0.0"
+      x="50"
+      y="50"
+      width="100"
+      height="50"
+      fill="1"
+      fillcolor="192 192 192"
+      stroke="1"
+      strokecolor="0 0 255"
+    />
+    <ellipse name="LAYER_NULL.0.1"
+      x="75"
+      y="75"
+      rx="20"
+      ry="20"
+      fill="1"
+      fillcolor="255 255 255"
+      stroke="1"
+      strokecolor="0 0 0"
+    />
+    <ellipse name="LAYER_NULL.0.2"
+      x="125"
+      y="75"
+      rx="20"
+      ry="20"
+      fill="1"
+      fillcolor="255 255 255"
+      stroke="1"
+      strokecolor="0 0 0"
+    />
+  </group>
+  <group name="LAYER_NULL.1"
+       description="org.argouml.sandbox.FigCustomNode[200, 50, 100, 50]"
+       href="1"
+       shown="1"
+       fill="1"
+       fillcolor="255 255 255"
+       stroke="1"
+       strokecolor="0 0 0"
+  >
+    <private>
+      enclosingFig="LAYER_NULL.1"
+    </private>
+    <rectangle name="LAYER_NULL.1.0"
+      x="200"
+      y="50"
+      width="100"
+      height="50"
+      fill="1"
+      fillcolor="192 192 192"
+      stroke="1"
+      strokecolor="0 0 255"
+    />
+    <ellipse name="LAYER_NULL.1.1"
+      x="225"
+      y="75"
+      rx="20"
+      ry="20"
+      fill="1"
+      fillcolor="255 255 255"
+      stroke="1"
+      strokecolor="0 0 0"
+    />
+    <ellipse name="LAYER_NULL.1.2"
+      x="275"
+      y="75"
+      rx="20"
+      ry="20"
+      fill="1"
+      fillcolor="255 255 255"
+      stroke="1"
+      strokecolor="0 0 0"
+    />
+  </group>
+</pgml>

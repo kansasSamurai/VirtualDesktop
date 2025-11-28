@@ -29,9 +29,11 @@ import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -41,6 +43,11 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.border.AbstractBorder;
 import javax.swing.border.Border;
+
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 /**
  * Complete diagram tool using JLayeredPane with grid, layers, and drag-and-drop
@@ -117,6 +124,56 @@ public class LayeredDiagramTool extends JFrame {
         JButton deleteBtn = new JButton("Delete Selected");
         deleteBtn.addActionListener(e -> diagramPane.deleteSelected());
         toolBar.add(deleteBtn);
+
+        toolBar.addSeparator();
+
+        JButton saveBtn = new JButton("Save Diagram");
+        saveBtn.addActionListener(e -> saveDiagram());
+        toolBar.add(saveBtn);
+
+        JButton loadBtn = new JButton("Load Diagram");
+        loadBtn.addActionListener(e -> loadDiagram());
+        toolBar.add(loadBtn);
+    
+    }
+
+    private void saveDiagram() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Save Diagram");
+        fileChooser.setSelectedFile(new java.io.File("diagram.json"));
+
+        int result = fileChooser.showSaveDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            java.io.File file = fileChooser.getSelectedFile();
+            try {
+                diagramPane.saveDiagram(file);
+                JOptionPane.showMessageDialog(this, "Diagram saved successfully!", "Save Complete",
+                        JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error saving diagram: " + ex.getMessage(), "Save Error",
+                        JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    private void loadDiagram() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Load Diagram");
+
+        int result = fileChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            java.io.File file = fileChooser.getSelectedFile();
+            try {
+                diagramPane.loadDiagram(file);
+                JOptionPane.showMessageDialog(this, "Diagram loaded successfully!", "Load Complete",
+                        JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error loading diagram: " + ex.getMessage(), "Load Error",
+                        JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
+            }
+        }
     }
 
     private void createLayerPanel() {
@@ -224,7 +281,99 @@ class DiagramLayeredPane extends JLayeredPane {
         // Enable event dispatching for proper mouse handling
         setFocusable(true);
     }
-    
+
+    /**
+     * Save diagram to JSON file
+     */
+    public void saveDiagram(java.io.File file) throws Exception {
+        DiagramData diagram = new DiagramData();
+        diagram.setGridSize(gridSize);
+        diagram.setSnapToGrid(snapToGrid);
+        diagram.setActiveLayer(activeLayer);
+        
+        // Organize components by layer
+        Map<Integer, java.util.List<ComponentData>> layerMap = new HashMap<>();
+        
+        for (Component comp : getComponents()) {
+            if (comp == gridPanel) continue;
+            
+            Integer layer = getLayer(comp);
+            ComponentData data = null;
+            
+            if (comp instanceof DiagramShape) {
+                data = new ShapeData((DiagramShape) comp);
+            } else if (comp instanceof DiagramText) {
+                data = new TextData((DiagramText) comp);
+            }
+            
+            if (data != null) {
+                layerMap.computeIfAbsent(layer, k -> new java.util.ArrayList<>()).add(data);
+            }
+        }
+        
+        // Create layer data objects
+        java.util.List<LayerData> layers = new java.util.ArrayList<>();
+        for (Map.Entry<Integer, java.util.List<ComponentData>> entry : layerMap.entrySet()) {
+            LayerData layerData = new LayerData();
+            layerData.setLayerDepth(entry.getKey());
+            layerData.setVisible(isLayerVisible(entry.getKey()));
+            layerData.setComponents(entry.getValue());
+            layers.add(layerData);
+        }
+
+        diagram.setLayers(layers);
+
+        // Write to JSON file using Jackson
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        mapper.writeValue(file, diagram);
+    }
+
+    /**
+     * Load diagram from JSON file
+     */
+    public void loadDiagram(java.io.File file) throws Exception {
+        // Clear existing diagram
+        Component[] components = getComponents();
+        for (Component comp : components) {
+            if (comp != gridPanel) {
+                remove(comp);
+            }
+        }
+
+        // Read from JSON file using Jackson
+        ObjectMapper mapper = new ObjectMapper();
+        DiagramData diagram = mapper.readValue(file, DiagramData.class);
+
+        // Restore diagram settings
+        gridSize = diagram.getGridSize();
+        snapToGrid = diagram.isSnapToGrid();
+        activeLayer = diagram.getActiveLayer();
+
+        // Restore layers and components
+        for (LayerData layerData : diagram.getLayers()) {
+            Integer layer = layerData.getLayerDepth();
+            setLayerVisible(layer, layerData.isVisible());
+
+            for (ComponentData componentData : layerData.getComponents()) {
+                JComponent component = null;
+
+                if (componentData instanceof ShapeData) {
+                    component = ((ShapeData) componentData).createComponent();
+                } else if (componentData instanceof TextData) {
+                    component = ((TextData) componentData).createComponent();
+                }
+
+                if (component != null) {
+                    addDiagramComponent(component, layer);
+                }
+            }
+        }
+
+        revalidate();
+        repaint();
+    }
+
     public Integer getActiveLayer() {
         return activeLayer;
     }
@@ -599,6 +748,23 @@ class DiagramShape extends JComponent {
         this.fillColor = color;
         repaint();
     }
+
+    public Enum<ShapeType> getShapeType() {
+        return this.type;
+    }
+
+    public Color getFillColor() {
+        return this.fillColor;
+    }
+
+    public Color getBorderColor() {
+        return this.borderColor;
+    }
+
+    public void setBorderColor(Color color) {
+        this.borderColor = color;
+    }
+
 }
 
 /**
@@ -1106,4 +1272,226 @@ class ResizeHandler extends MouseAdapter {
         
         return bounds;
     }
+
+}
+
+//============================================================================
+//JSON Data Classes for Serialization
+//============================================================================
+
+/**
+* Root diagram data structure
+*/
+class DiagramData {
+ private int gridSize;
+ private boolean snapToGrid;
+ private int activeLayer;
+ private java.util.List<LayerData> layers;
+ 
+ public int getGridSize() { return gridSize; }
+ public void setGridSize(int gridSize) { this.gridSize = gridSize; }
+ 
+ public boolean isSnapToGrid() { return snapToGrid; }
+ public void setSnapToGrid(boolean snapToGrid) { this.snapToGrid = snapToGrid; }
+ 
+ public int getActiveLayer() { return activeLayer; }
+ public void setActiveLayer(int activeLayer) { this.activeLayer = activeLayer; }
+ 
+ public java.util.List<LayerData> getLayers() { return layers; }
+ public void setLayers(java.util.List<LayerData> layers) { this.layers = layers; }
+}
+
+/**
+* Layer data structure
+*/
+class LayerData {
+ private int layerDepth;
+ private boolean visible;
+ private java.util.List<ComponentData> components;
+ 
+ public int getLayerDepth() { return layerDepth; }
+ public void setLayerDepth(int layerDepth) { this.layerDepth = layerDepth; }
+ 
+ public boolean isVisible() { return visible; }
+ public void setVisible(boolean visible) { this.visible = visible; }
+ 
+ public java.util.List<ComponentData> getComponents() { return components; }
+ public void setComponents(java.util.List<ComponentData> components) { this.components = components; }
+}
+
+/**
+* Base class for component data with polymorphic JSON serialization
+*/
+@JsonTypeInfo(
+ use = JsonTypeInfo.Id.NAME,
+ include = JsonTypeInfo.As.PROPERTY,
+ property = "type"
+)
+@JsonSubTypes({
+ @JsonSubTypes.Type(value = ShapeData.class, name = "shape"),
+ @JsonSubTypes.Type(value = TextData.class, name = "text")
+})
+abstract class ComponentData {
+    private int x;
+    private int y;
+    private int width;
+    private int height;
+
+    public int getX() {
+        return x;
+    }
+
+    public void setX(int x) {
+        this.x = x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public void setY(int y) {
+        this.y = y;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
+    public abstract JComponent createComponent();
+
+    protected void setBounds(Rectangle bounds) {
+        this.x = bounds.x;
+        this.y = bounds.y;
+        this.width = bounds.width;
+        this.height = bounds.height;
+    }
+
+    protected Rectangle getBounds() {
+        return new Rectangle(x, y, width, height);
+    }
+
+    protected String colorToHex(Color color) {
+        return String.format("#%02X%02X%02X%02X", color.getRed(), color.getGreen(), color.getBlue(), color.getAlpha());
+    }
+
+    protected Color hexToColor(String hex) {
+        if (hex.length() == 9) { // #RRGGBBAA
+            return new Color(Integer.parseInt(hex.substring(1, 3), 16), Integer.parseInt(hex.substring(3, 5), 16),
+                    Integer.parseInt(hex.substring(5, 7), 16), Integer.parseInt(hex.substring(7, 9), 16));
+        } else { // #RRGGBB
+            return Color.decode(hex);
+        }
+    }
+
+}
+
+/**
+* Shape component data
+*/
+class ShapeData extends ComponentData {
+
+    private String shapeType;
+    private String fillColor;
+    private String borderColor;
+
+    // Default constructor required for Jackson
+    public ShapeData() {
+    }
+
+    public ShapeData(DiagramShape shape) {
+        setBounds(shape.getBounds());
+        this.shapeType = shape.getShapeType().name();
+        this.fillColor = colorToHex(shape.getFillColor());
+        this.borderColor = colorToHex(shape.getBorderColor());
+    }
+
+    public String getShapeType() {
+        return shapeType;
+    }
+
+    public void setShapeType(String shapeType) {
+        this.shapeType = shapeType;
+    }
+
+    public String getFillColor() {
+        return fillColor;
+    }
+
+    public void setFillColor(String fillColor) {
+        this.fillColor = fillColor;
+    }
+
+    public String getBorderColor() {
+        return borderColor;
+    }
+
+    public void setBorderColor(String borderColor) {
+        this.borderColor = borderColor;
+    }
+
+    @Override
+    public JComponent createComponent() {
+        DiagramShape shape = new DiagramShape(ShapeType.valueOf(shapeType));
+        shape.setBounds(getBounds());
+        shape.setFillColor(hexToColor(fillColor));
+        shape.setBorderColor(hexToColor(borderColor));
+        return shape;
+    }
+
+}
+
+/**
+* Text component data
+*/
+class TextData extends ComponentData {
+
+    private String text;
+    private String backgroundColor;
+
+    // Default constructor required for Jackson
+    public TextData() {
+    }
+
+    public TextData(DiagramText textComp) {
+        setBounds(textComp.getBounds());
+        this.text = textComp.getText();
+        this.backgroundColor = colorToHex(textComp.getBackground());
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public void setText(String text) {
+        this.text = text;
+    }
+
+    public String getBackgroundColor() {
+        return backgroundColor;
+    }
+
+    public void setBackgroundColor(String backgroundColor) {
+        this.backgroundColor = backgroundColor;
+    }
+
+    @Override
+    public JComponent createComponent() {
+        DiagramText textComp = new DiagramText(text);
+        textComp.setBounds(getBounds());
+        textComp.setBackground(hexToColor(backgroundColor));
+        return textComp;
+    }
+
 }

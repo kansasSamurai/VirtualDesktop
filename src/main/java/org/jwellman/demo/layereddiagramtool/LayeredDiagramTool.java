@@ -28,13 +28,17 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JColorChooser;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
@@ -422,7 +426,13 @@ class DiagramLayeredPane extends JLayeredPane {
         component.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                selectComponent(component);
+                if (e.getButton() == MouseEvent.BUTTON1) {
+                    selectComponent(component);
+                } else if (e.getButton() == MouseEvent.BUTTON3) {
+                    // Right-click - show popup menu
+                    selectComponent(component);
+                    showComponentPopupMenu(component, e.getX(), e.getY());
+                }
             }
         });
         
@@ -435,8 +445,114 @@ class DiagramLayeredPane extends JLayeredPane {
         repaint();
     }
     
+    /**
+     * Show popup menu for a component
+     */
+    private void showComponentPopupMenu(JComponent component, int x, int y) {
+        JPopupMenu popupMenu = new JPopupMenu();
+        
+        // Move to Layer submenu
+        JMenu moveToLayerMenu = new JMenu("Move to Layer");
+        
+        Integer currentLayer = getLayer(component);
+        
+        // Add menu items for each layer
+        addLayerMenuItem(moveToLayerMenu, component, SELECTION_LAYER, "Selection Layer", currentLayer);
+        addLayerMenuItem(moveToLayerMenu, component, CONNECTION_LAYER, "Connection Layer", currentLayer);
+        addLayerMenuItem(moveToLayerMenu, component, TEXT_LAYER, "Text Layer", currentLayer);
+        addLayerMenuItem(moveToLayerMenu, component, SHAPE_LAYER, "Shape Layer", currentLayer);
+        addLayerMenuItem(moveToLayerMenu, component, BACKGROUND_LAYER, "Background Layer", currentLayer);
+        
+        popupMenu.add(moveToLayerMenu);
+        
+        popupMenu.addSeparator();
+        
+        // Bring Forward / Send Back
+        JMenuItem bringForwardItem = new JMenuItem("Bring Forward");
+        bringForwardItem.addActionListener(e -> {
+            setLayer(component, currentLayer + 1);
+            repaint();
+        });
+        popupMenu.add(bringForwardItem);
+        
+        JMenuItem sendBackItem = new JMenuItem("Send Back");
+        sendBackItem.addActionListener(e -> {
+            if (currentLayer > GRID_LAYER + 1) {
+                setLayer(component, currentLayer - 1);
+                repaint();
+            }
+        });
+        sendBackItem.setEnabled(currentLayer > GRID_LAYER + 1);
+        popupMenu.add(sendBackItem);
+        
+        popupMenu.addSeparator();
+        
+        // Change Color (for shapes only)
+        if (component instanceof DiagramShape) {
+            JMenuItem changeFillColorItem = new JMenuItem("Change Fill Color...");
+            changeFillColorItem.addActionListener(e -> {
+                DiagramShape shape = (DiagramShape) component;
+                Color newColor = JColorChooser.showDialog(this, "Choose Fill Color", shape.getFillColor());
+                if (newColor != null) {
+                    shape.setFillColor(newColor);
+                }
+            });
+            popupMenu.add(changeFillColorItem);
+            
+            JMenuItem changeBorderColorItem = new JMenuItem("Change Border Color...");
+            changeBorderColorItem.addActionListener(e -> {
+                DiagramShape shape = (DiagramShape) component;
+                Color newColor = JColorChooser.showDialog(this, "Choose Border Color", shape.getBorderColor());
+                if (newColor != null) {
+                    shape.setBorderColor(newColor);
+                }
+            });
+            popupMenu.add(changeBorderColorItem);
+            
+            popupMenu.addSeparator();
+        }
+        
+        // Delete
+        JMenuItem deleteItem = new JMenuItem("Delete");
+        deleteItem.addActionListener(e -> {
+            remove(component);
+            if (selectedComponent == component) {
+                selectedComponent = null;
+            }
+            revalidate();
+            repaint();
+        });
+        popupMenu.add(deleteItem);
+        
+        // Show popup menu at component location
+        popupMenu.show(component, x, y);
+    }
+
+    /**
+     * Add a layer menu item with current layer indicator
+     */
+    private void addLayerMenuItem(JMenu menu, JComponent component, Integer targetLayer, String layerName,
+            Integer currentLayer) {
+        JMenuItem item = new JMenuItem(layerName);
+
+        // Add checkmark if this is the current layer
+        if (targetLayer.equals(currentLayer)) {
+            item.setText("✓ " + layerName);
+            item.setEnabled(false);
+        }
+
+        item.addActionListener(e -> {
+            setLayer(component, targetLayer);
+            component.setVisible(isLayerVisible(targetLayer));
+            repaint();
+        });
+
+        menu.add(item);
+    }
+
     private void selectComponent(Component comp) {
-        if (comp == selectedComponent) return;
+        if (comp == selectedComponent)
+            return;
 
         deselectAll();
         selectedComponent = comp;
@@ -554,7 +670,7 @@ class DiagramLayeredPane extends JLayeredPane {
             this.gridSize = gridSize;
             setOpaque(false); // Transparent background
         }
-        
+
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);

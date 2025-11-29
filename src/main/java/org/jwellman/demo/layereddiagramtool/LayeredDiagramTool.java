@@ -516,7 +516,22 @@ class DiagramLayeredPane extends JLayeredPane {
 
             popupMenu.addSeparator();
         }
-        
+
+        // Change Text Color (for text-aware components)
+        if (component instanceof DiagramTextAware) {
+            JMenuItem changeTextColorItem = new JMenuItem("Change Text Color...");
+            changeTextColorItem.addActionListener(e -> {
+                DiagramTextAware textAware = (DiagramTextAware) component;
+                Color newColor = JColorChooser.showDialog(this, "Choose Text Color", textAware.getTextColor());
+                if (newColor != null) {
+                    textAware.setTextColor(newColor);
+                }
+            });
+            popupMenu.add(changeTextColorItem);
+
+            popupMenu.addSeparator();
+        }
+
         // Delete
         JMenuItem deleteItem = new JMenuItem("Delete");
         deleteItem.addActionListener(e -> {
@@ -810,6 +825,20 @@ interface DiagramColorable {
 }
 
 /**
+ * Interface for diagram components that support text properties
+ */
+interface DiagramTextAware {
+    String getFontName();
+    void setFontName(String fontName);
+    int getFontSize();
+    void setFontSize(int fontSize);
+    int getFontStyle();
+    void setFontStyle(int fontStyle);
+    Color getTextColor();
+    void setTextColor(Color color);
+}
+
+/**
  * Custom shape component for diagram
  */
 enum ShapeType {
@@ -906,14 +935,21 @@ class DiagramShape extends JComponent implements DiagramColorable {
 /**
  * Text component for diagram (now draggable and resizable)
  */
-class DiagramText extends JPanel implements DiagramColorable {
+class DiagramText extends JPanel implements DiagramColorable, DiagramTextAware {
 
-    private JTextField textField;
+    private Color textColor;
     private Color fillColor;
     private Color borderColor;
 
+    private int fontSize;
+    private int fontStyle;
+    private String fontName;
+
+    private JTextField textField;
+
     private static final long serialVersionUID = 1L;
 
+    @SuppressWarnings("unused")
     private static final Font DEFAULT_FONT = new Font("Segoe UI", Font.BOLD, 16);
 
     @SuppressWarnings("unused")
@@ -925,11 +961,18 @@ class DiagramText extends JPanel implements DiagramColorable {
         // Initialize colors
         this.fillColor = new Color(255, 255, 255, 200);
         this.borderColor = new Color(70, 130, 180);
+        this.textColor = Color.BLACK;
+
+        // Initialize font properties
+        this.fontName = "Segoe UI";
+        this.fontSize = 16;
+        this.fontStyle = Font.BOLD;
 
         setOpaque(false); // Make transparent so we can paint custom background
-        
+
         textField = new JTextField(initialText);
-        textField.setFont(DEFAULT_FONT);
+        textField.setFont(new Font(fontName, fontStyle, fontSize));
+        textField.setForeground(textColor);
         textField.setBorder(null);
         // textField.setBorder(DEFAULT_BORDER);
         textField.setOpaque(false);
@@ -1014,6 +1057,57 @@ class DiagramText extends JPanel implements DiagramColorable {
     @Override
     public void setBorderColor(Color color) {
         this.borderColor = color;
+        repaint();
+    }
+
+    @Override
+    public String getFontName() {
+        return fontName;
+    }
+
+    @Override
+    public void setFontName(String fontName) {
+        this.fontName = fontName;
+        updateTextFieldFont();
+    }
+
+    @Override
+    public int getFontSize() {
+        return fontSize;
+    }
+
+    @Override
+    public void setFontSize(int fontSize) {
+        this.fontSize = fontSize;
+        updateTextFieldFont();
+    }
+
+    @Override
+    public int getFontStyle() {
+        return fontStyle;
+    }
+
+    @Override
+    public void setFontStyle(int fontStyle) {
+        this.fontStyle = fontStyle;
+        updateTextFieldFont();
+    }
+
+    @Override
+    public Color getTextColor() {
+        return textColor;
+    }
+
+    @Override
+    public void setTextColor(Color color) {
+        this.textColor = color;
+        textField.setForeground(color);
+        repaint();
+    }
+
+    private void updateTextFieldFont() {
+        textField.setFont(new Font(fontName, fontStyle, fontSize));
+        revalidate();
         repaint();
     }
 }
@@ -1639,6 +1733,10 @@ class TextData extends ComponentData {
     private String text;
     private String fillColor;
     private String borderColor = "#707070FF"; // default
+    private String fontName;
+    private int fontSize;
+    private int fontStyle;
+    private String textColor;
 
     // Default constructor required for Jackson
     public TextData() {
@@ -1649,6 +1747,10 @@ class TextData extends ComponentData {
         this.text = textComp.getText();
         this.fillColor = colorToHex(textComp.getFillColor());
         this.borderColor = colorToHex(textComp.getBorderColor());
+        this.fontName = textComp.getFontName();
+        this.fontSize = textComp.getFontSize();
+        this.fontStyle = textComp.getFontStyle();
+        this.textColor = colorToHex(textComp.getTextColor());
     }
 
     public String getText() {
@@ -1675,12 +1777,48 @@ class TextData extends ComponentData {
         this.borderColor = borderColor;
     }
 
+    public String getFontName() {
+        return fontName;
+    }
+
+    public void setFontName(String fontName) {
+        this.fontName = fontName;
+    }
+
+    public int getFontSize() {
+        return fontSize;
+    }
+
+    public void setFontSize(int fontSize) {
+        this.fontSize = fontSize;
+    }
+
+    public int getFontStyle() {
+        return fontStyle;
+    }
+
+    public void setFontStyle(int fontStyle) {
+        this.fontStyle = fontStyle;
+    }
+
+    public String getTextColor() {
+        return textColor;
+    }
+
+    public void setTextColor(String textColor) {
+        this.textColor = textColor;
+    }
+
     @Override
     public JComponent createComponent() {
         DiagramText textComp = new DiagramText(text);
         textComp.setBounds(getBounds());
         textComp.setFillColor(hexToColor(fillColor));
         textComp.setBorderColor(hexToColor(borderColor));
+        textComp.setFontName(fontName);
+        textComp.setFontSize(fontSize);
+        textComp.setFontStyle(fontStyle);
+        textComp.setTextColor(Color.black); //(hexToColor(textColor));
         return textComp;
     }
 

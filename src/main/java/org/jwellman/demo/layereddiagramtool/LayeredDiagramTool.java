@@ -56,7 +56,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 /**
  * Complete diagram tool using JLayeredPane with grid, layers, and drag-and-drop
  */
-public class LayeredDiagramTool extends JFrame {
+public class LayeredDiagramTool extends JPanel {
 
     private JPanel layerPanel;
     private JToolBar toolBar;
@@ -65,10 +65,6 @@ public class LayeredDiagramTool extends JFrame {
     private static final long serialVersionUID = 1L;
 
     public LayeredDiagramTool() {
-        setTitle("JLayeredPane Diagram Tool");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1200, 800);
-
         createDiagramPane();
         createToolBar();
         createLayerPanel();
@@ -77,8 +73,6 @@ public class LayeredDiagramTool extends JFrame {
         add(toolBar, BorderLayout.NORTH);
         add(new JScrollPane(diagramPane), BorderLayout.CENTER);
         add(layerPanel, BorderLayout.EAST);
-
-        setLocationRelativeTo(null);
     }
 
     private void createDiagramPane() {
@@ -234,7 +228,18 @@ public class LayeredDiagramTool extends JFrame {
     
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            new LayeredDiagramTool().setVisible(true);
+            // Create the JFrame
+            JFrame frame = new JFrame("JLayeredPane Diagram Tool");
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setSize(1200, 800);
+
+            // Create and add the panel
+            LayeredDiagramTool panel = new LayeredDiagramTool();
+            frame.add(panel);
+
+            // Display the frame
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
         });
     }
 }

@@ -10,7 +10,15 @@ This is in the proof-of-concept stage but provides personal utility, particularl
 
 ## Build System
 
-This is a Maven project (Java 8).
+This is a Maven project targeting **Java 8**.
+
+**IMPORTANT**: Java 8 compatibility is a key design goal due to legacy dependencies. Do not introduce Java 9+ language features or APIs.
+
+### Roadmap: Dual Version Strategy
+
+Future plans include maintaining two parallel versions:
+1. **Java 8 compatible** - Maintains compatibility with legacy dependencies
+2. **Java 9+ compatible** - Leverages modern Java features (targeting current Java releases)
 
 ### Building the Project
 

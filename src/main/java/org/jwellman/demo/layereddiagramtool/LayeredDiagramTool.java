@@ -491,29 +491,29 @@ class DiagramLayeredPane extends JLayeredPane {
         popupMenu.add(sendBackItem);
         
         popupMenu.addSeparator();
-        
-        // Change Color (for shapes only)
-        if (component instanceof DiagramShape) {
+
+        // Change Color (for colorable components)
+        if (component instanceof DiagramColorable) {
             JMenuItem changeFillColorItem = new JMenuItem("Change Fill Color...");
             changeFillColorItem.addActionListener(e -> {
-                DiagramShape shape = (DiagramShape) component;
-                Color newColor = JColorChooser.showDialog(this, "Choose Fill Color", shape.getFillColor());
+                DiagramColorable colorable = (DiagramColorable) component;
+                Color newColor = JColorChooser.showDialog(this, "Choose Fill Color", colorable.getFillColor());
                 if (newColor != null) {
-                    shape.setFillColor(newColor);
+                    colorable.setFillColor(newColor);
                 }
             });
             popupMenu.add(changeFillColorItem);
-            
+
             JMenuItem changeBorderColorItem = new JMenuItem("Change Border Color...");
             changeBorderColorItem.addActionListener(e -> {
-                DiagramShape shape = (DiagramShape) component;
-                Color newColor = JColorChooser.showDialog(this, "Choose Border Color", shape.getBorderColor());
+                DiagramColorable colorable = (DiagramColorable) component;
+                Color newColor = JColorChooser.showDialog(this, "Choose Border Color", colorable.getBorderColor());
                 if (newColor != null) {
-                    shape.setBorderColor(newColor);
+                    colorable.setBorderColor(newColor);
                 }
             });
             popupMenu.add(changeBorderColorItem);
-            
+
             popupMenu.addSeparator();
         }
         
@@ -800,13 +800,23 @@ class DragHandler extends MouseAdapter {
 }
 
 /**
+ * Interface for diagram components that support fill and border colors
+ */
+interface DiagramColorable {
+    Color getFillColor();
+    void setFillColor(Color color);
+    Color getBorderColor();
+    void setBorderColor(Color color);
+}
+
+/**
  * Custom shape component for diagram
  */
 enum ShapeType {
     RECTANGLE, CIRCLE, TRIANGLE
 }
 
-class DiagramShape extends JComponent {
+class DiagramShape extends JComponent implements DiagramColorable {
 
     private ShapeType type;
     private Color fillColor;
@@ -864,26 +874,31 @@ class DiagramShape extends JComponent {
                 break;
         }
     }
-    
-    public void setFillColor(Color color) {
-        this.fillColor = color;
-        repaint();
-    }
 
     public Enum<ShapeType> getShapeType() {
         return this.type;
     }
 
+    @Override
     public Color getFillColor() {
         return this.fillColor;
     }
 
+    @Override
+    public void setFillColor(Color color) {
+        this.fillColor = color;
+        repaint();
+    }
+
+    @Override
     public Color getBorderColor() {
         return this.borderColor;
     }
 
+    @Override
     public void setBorderColor(Color color) {
         this.borderColor = color;
+        repaint();
     }
 
 }
@@ -891,11 +906,12 @@ class DiagramShape extends JComponent {
 /**
  * Text component for diagram (now draggable and resizable)
  */
-class DiagramText extends JPanel {
+class DiagramText extends JPanel implements DiagramColorable {
 
     private JTextField textField;
-//    private ResizeHandler resizeHandler;
-    
+    private Color fillColor;
+    private Color borderColor;
+
     private static final long serialVersionUID = 1L;
 
     private static final Font DEFAULT_FONT = new Font("Segoe UI", Font.BOLD, 16);
@@ -905,10 +921,16 @@ class DiagramText extends JPanel {
 
     public DiagramText(String initialText) {
         setLayout(new BorderLayout());
-        setBackground(new Color(255, 255, 255, 200));
+
+        // Initialize colors
+        this.fillColor = new Color(255, 255, 255, 200);
+        this.borderColor = new Color(70, 130, 180);
+
+        setOpaque(false); // Make transparent so we can paint custom background
         
         textField = new JTextField(initialText);
         textField.setFont(DEFAULT_FONT);
+        textField.setBorder(null);
         // textField.setBorder(DEFAULT_BORDER);
         textField.setOpaque(false);
         textField.setHorizontalAlignment(JTextField.CENTER);
@@ -943,20 +965,56 @@ class DiagramText extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
-        
-        // Draw border when selected
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                            RenderingHints.VALUE_ANTIALIAS_ON);
+
+        int width = getWidth();
+        int height = getHeight();
+
+        // Draw fill color
+        g2d.setColor(fillColor);
+        g2d.fillRoundRect(0, 0, width, height, 5, 5);
+
+        // Draw border
+        g2d.setColor(borderColor);
+        g2d.setStroke(new BasicStroke(2));
+        g2d.drawRoundRect(0, 0, width - 1, height - 1, 5, 5);
+
+        // Draw selection overlay when selected
         if (getBorder() instanceof ResizeBorder) {
-            g2d.setColor(new Color(100, 150, 255, 50));
-            g2d.fillRect(0, 0, getWidth(), getHeight());
+            g2d.setColor(new Color(100, 150, 255, 30));
+            g2d.fillRect(0, 0, width, height);
         }
     }
     
     public String getText() {
         return textField.getText();
     }
-    
+
     public void setText(String text) {
         textField.setText(text);
+    }
+
+    @Override
+    public Color getFillColor() {
+        return fillColor;
+    }
+
+    @Override
+    public void setFillColor(Color color) {
+        this.fillColor = color;
+        repaint();
+    }
+
+    @Override
+    public Color getBorderColor() {
+        return borderColor;
+    }
+
+    @Override
+    public void setBorderColor(Color color) {
+        this.borderColor = color;
+        repaint();
     }
 }
 
@@ -1579,7 +1637,8 @@ class ShapeData extends ComponentData {
 class TextData extends ComponentData {
 
     private String text;
-    private String backgroundColor;
+    private String fillColor;
+    private String borderColor = "#707070FF"; // default
 
     // Default constructor required for Jackson
     public TextData() {
@@ -1588,7 +1647,8 @@ class TextData extends ComponentData {
     public TextData(DiagramText textComp) {
         setBounds(textComp.getBounds());
         this.text = textComp.getText();
-        this.backgroundColor = colorToHex(textComp.getBackground());
+        this.fillColor = colorToHex(textComp.getFillColor());
+        this.borderColor = colorToHex(textComp.getBorderColor());
     }
 
     public String getText() {
@@ -1599,19 +1659,28 @@ class TextData extends ComponentData {
         this.text = text;
     }
 
-    public String getBackgroundColor() {
-        return backgroundColor;
+    public String getFillColor() {
+        return fillColor;
     }
 
-    public void setBackgroundColor(String backgroundColor) {
-        this.backgroundColor = backgroundColor;
+    public void setFillColor(String fillColor) {
+        this.fillColor = fillColor;
+    }
+
+    public String getBorderColor() {
+        return borderColor;
+    }
+
+    public void setBorderColor(String borderColor) {
+        this.borderColor = borderColor;
     }
 
     @Override
     public JComponent createComponent() {
         DiagramText textComp = new DiagramText(text);
         textComp.setBounds(getBounds());
-        textComp.setBackground(hexToColor(backgroundColor));
+        textComp.setFillColor(hexToColor(fillColor));
+        textComp.setBorderColor(hexToColor(borderColor));
         return textComp;
     }
 

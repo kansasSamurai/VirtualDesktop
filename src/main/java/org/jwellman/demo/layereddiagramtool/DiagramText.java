@@ -192,7 +192,7 @@ public class DiagramText extends JPanel implements DiagramColorable, DiagramText
 
     private void updateTextFieldFont() {
         // only change font if all fields are valid
-        if (fontName != null && fontStyle != 0 && fontSize != 0) {
+        if (fontName != null && fontStyle >= 0 && fontSize != 0) {
             textField.setFont(new Font(fontName, fontStyle, fontSize));
             revalidate();
             repaint();

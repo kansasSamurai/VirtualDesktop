@@ -15,6 +15,7 @@ import java.awt.Point;
 import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.Window;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -497,7 +498,8 @@ class DiagramLayeredPane extends JLayeredPane {
             JMenuItem changeFillColorItem = new JMenuItem("Change Fill Color...");
             changeFillColorItem.addActionListener(e -> {
                 DiagramColorable colorable = (DiagramColorable) component;
-                Color newColor = JColorChooser.showDialog(this, "Choose Fill Color", colorable.getFillColor());
+                Window parentWindow = SwingUtilities.getWindowAncestor(this);
+                Color newColor = JColorChooser.showDialog(parentWindow, "Choose Fill Color", colorable.getFillColor());
                 if (newColor != null) {
                     colorable.setFillColor(newColor);
                 }
@@ -507,7 +509,8 @@ class DiagramLayeredPane extends JLayeredPane {
             JMenuItem changeBorderColorItem = new JMenuItem("Change Border Color...");
             changeBorderColorItem.addActionListener(e -> {
                 DiagramColorable colorable = (DiagramColorable) component;
-                Color newColor = JColorChooser.showDialog(this, "Choose Border Color", colorable.getBorderColor());
+                Window parentWindow = SwingUtilities.getWindowAncestor(this);
+                Color newColor = JColorChooser.showDialog(parentWindow, "Choose Border Color", colorable.getBorderColor());
                 if (newColor != null) {
                     colorable.setBorderColor(newColor);
                 }
@@ -522,7 +525,8 @@ class DiagramLayeredPane extends JLayeredPane {
             JMenuItem changeTextColorItem = new JMenuItem("Change Text Color...");
             changeTextColorItem.addActionListener(e -> {
                 DiagramTextAware textAware = (DiagramTextAware) component;
-                Color newColor = JColorChooser.showDialog(this, "Choose Text Color", textAware.getTextColor());
+                Window parentWindow = SwingUtilities.getWindowAncestor(this);
+                Color newColor = JColorChooser.showDialog(parentWindow, "Choose Text Color", textAware.getTextColor());
                 if (newColor != null) {
                     textAware.setTextColor(newColor);
                 }

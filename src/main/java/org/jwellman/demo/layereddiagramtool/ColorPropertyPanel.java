@@ -37,10 +37,37 @@ public class ColorPropertyPanel extends JPanel {
     private JToggleButton textColorButton;
     private ButtonGroup colorTargetGroup;
     private JPanel colorSwatchPanel;
-    private List<Color> recentColors;
+    private List<Color> userColors;
 
     private static final int SWATCH_SIZE = 24;
-    private static final int MAX_RECENT_COLORS = 20;
+
+    // First row: 10 predefined colors (vibrant colors)
+    private static final Color[] PREDEFINED_COLORS = {
+        new Color(255, 0, 0),      // Red
+        new Color(255, 127, 0),    // Orange
+        new Color(255, 255, 0),    // Yellow
+        new Color(0, 255, 0),      // Green
+        new Color(0, 255, 255),    // Cyan
+        new Color(0, 0, 255),      // Blue
+        new Color(127, 0, 255),    // Purple
+        new Color(255, 0, 255),    // Magenta
+        new Color(127, 255, 0),    // Lime
+        new Color(139, 69, 19)     // Brown
+    };
+
+    // Second row: 10 shades of grey from black to white
+    private static final Color[] GREY_SHADES = {
+        new Color(0, 0, 0),        // Black
+        new Color(28, 28, 28),
+        new Color(57, 57, 57),
+        new Color(85, 85, 85),
+        new Color(113, 113, 113),
+        new Color(142, 142, 142),
+        new Color(170, 170, 170),
+        new Color(198, 198, 198),
+        new Color(227, 227, 227),
+        new Color(255, 255, 255)   // White
+    };
 
     private static final long serialVersionUID = 1L;
 
@@ -48,10 +75,7 @@ public class ColorPropertyPanel extends JPanel {
      * Creates a new color property panel
      */
     public ColorPropertyPanel() {
-        this.recentColors = new ArrayList<>();
-
-        // Initialize with some default colors
-        initializeDefaultColors();
+        this.userColors = new ArrayList<>();
 
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
@@ -80,18 +104,6 @@ public class ColorPropertyPanel extends JPanel {
         } else {
             textColorButton.setVisible(false);
         }
-    }
-
-    private void initializeDefaultColors() {
-        // Add some common colors to start with
-        recentColors.add(Color.BLACK);
-        recentColors.add(Color.WHITE);
-        recentColors.add(Color.RED);
-        recentColors.add(Color.GREEN);
-        recentColors.add(Color.BLUE);
-        recentColors.add(Color.YELLOW);
-        recentColors.add(Color.ORANGE);
-        recentColors.add(Color.GRAY);
     }
 
     private void createColorControls() {
@@ -128,7 +140,8 @@ public class ColorPropertyPanel extends JPanel {
         JPanel swatchContainerPanel = new JPanel(new BorderLayout());
         swatchContainerPanel.add(new JLabel("Colors:"), BorderLayout.NORTH);
 
-        colorSwatchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 2));
+        colorSwatchPanel = new JPanel();
+        colorSwatchPanel.setLayout(new BoxLayout(colorSwatchPanel, BoxLayout.Y_AXIS));
         colorSwatchPanel.setBorder(BorderFactory.createEtchedBorder());
         updateColorSwatches();
 
@@ -145,7 +158,9 @@ public class ColorPropertyPanel extends JPanel {
     private void updateColorSwatches() {
         colorSwatchPanel.removeAll();
 
-        for (Color color : recentColors) {
+        // Create first row for predefined colors
+        JPanel predefinedRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 2));
+        for (Color color : PREDEFINED_COLORS) {
             ColorSwatch swatch = new ColorSwatch(color, SWATCH_SIZE);
             swatch.addMouseListener(new MouseAdapter() {
                 @Override
@@ -153,24 +168,69 @@ public class ColorPropertyPanel extends JPanel {
                     applyColor(color);
                 }
             });
-            colorSwatchPanel.add(swatch);
+            predefinedRow.add(swatch);
+        }
+        colorSwatchPanel.add(predefinedRow);
+
+        // Create second row for grey shades
+        JPanel greyRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 2));
+        for (Color color : GREY_SHADES) {
+            ColorSwatch swatch = new ColorSwatch(color, SWATCH_SIZE);
+            swatch.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    applyColor(color);
+                }
+            });
+            greyRow.add(swatch);
+        }
+        colorSwatchPanel.add(greyRow);
+
+        // Create rows for user-defined colors (10 per row)
+        int userColorCount = userColors.size();
+        for (int i = 0; i < userColorCount; i += 10) {
+            JPanel userRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 2));
+            int endIndex = Math.min(i + 10, userColorCount);
+            for (int j = i; j < endIndex; j++) {
+                Color color = userColors.get(j);
+                ColorSwatch swatch = new ColorSwatch(color, SWATCH_SIZE);
+                swatch.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        applyColor(color);
+                    }
+                });
+                userRow.add(swatch);
+            }
+            colorSwatchPanel.add(userRow);
         }
 
         colorSwatchPanel.revalidate();
         colorSwatchPanel.repaint();
     }
 
-    private void addRecentColor(Color color) {
-        // Remove if already exists
-        recentColors.remove(color);
-
-        // Add to front
-        recentColors.add(0, color);
-
-        // Limit size
-        if (recentColors.size() > MAX_RECENT_COLORS) {
-            recentColors.remove(recentColors.size() - 1);
+    private void addUserColor(Color color) {
+        // Don't add if it already exists in predefined colors
+        for (Color predefined : PREDEFINED_COLORS) {
+            if (predefined.equals(color)) {
+                return;
+            }
         }
+
+        // Don't add if it already exists in grey shades
+        for (Color grey : GREY_SHADES) {
+            if (grey.equals(color)) {
+                return;
+            }
+        }
+
+        // Don't add if it already exists in user colors
+        if (userColors.contains(color)) {
+            return;
+        }
+
+        // Add to user colors
+        userColors.add(color);
 
         updateColorSwatches();
     }
@@ -195,7 +255,7 @@ public class ColorPropertyPanel extends JPanel {
             "Choose Color",
             currentColor);
         if (newColor != null) {
-            addRecentColor(newColor);
+            addUserColor(newColor);
             applyColor(newColor);
         }
     }

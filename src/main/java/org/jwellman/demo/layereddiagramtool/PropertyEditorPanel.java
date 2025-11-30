@@ -12,6 +12,7 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
+import javax.swing.JToggleButton;
 
 /**
  * Property editor panel for editing component properties
@@ -25,7 +26,9 @@ public class PropertyEditorPanel extends JPanel {
     private JComboBox<String> fontNameCombo;
     private JSlider fontSizeSlider;
     private JLabel fontSizeLabel;
-    private JComboBox<String> fontStyleCombo;
+    private JToggleButton plainButton;
+    private JToggleButton boldButton;
+    private JToggleButton italicButton;
     private JPanel fontPropertiesPanel;
 
     private static final long serialVersionUID = 1L;
@@ -81,14 +84,41 @@ public class PropertyEditorPanel extends JPanel {
         fontPropertiesPanel.add(fontSizePanel);
         fontPropertiesPanel.add(Box.createVerticalStrut(5));
 
-        // Font Style
+        // Font Style (toggle buttons)
         JPanel fontStylePanel = new JPanel(new BorderLayout(5, 5));
         fontStylePanel.add(new JLabel("Style:"), BorderLayout.WEST);
 
-        String[] styles = {"Plain", "Bold", "Italic", "Bold+Italic"};
-        fontStyleCombo = new JComboBox<>(styles);
-        fontStyleCombo.addActionListener(e -> updateFontStyle());
-        fontStylePanel.add(fontStyleCombo, BorderLayout.CENTER);
+        JPanel styleButtonsPanel = new JPanel();
+        styleButtonsPanel.setLayout(new BoxLayout(styleButtonsPanel, BoxLayout.X_AXIS));
+
+        plainButton = new JToggleButton("Plain");
+        boldButton = new JToggleButton("Bold");
+        italicButton = new JToggleButton("Italic");
+
+        // Add action listeners to handle Plain/Bold mutual exclusivity
+        plainButton.addActionListener(e -> {
+            if (plainButton.isSelected()) {
+                boldButton.setSelected(false);
+            }
+            updateFontStyle();
+        });
+
+        boldButton.addActionListener(e -> {
+            if (boldButton.isSelected()) {
+                plainButton.setSelected(false);
+            }
+            updateFontStyle();
+        });
+
+        italicButton.addActionListener(e -> updateFontStyle());
+
+        styleButtonsPanel.add(plainButton);
+        styleButtonsPanel.add(Box.createHorizontalStrut(3));
+        styleButtonsPanel.add(boldButton);
+        styleButtonsPanel.add(Box.createHorizontalStrut(3));
+        styleButtonsPanel.add(italicButton);
+
+        fontStylePanel.add(styleButtonsPanel, BorderLayout.CENTER);
         fontPropertiesPanel.add(fontStylePanel);
     }
 
@@ -127,7 +157,9 @@ public class PropertyEditorPanel extends JPanel {
         // Temporarily disable listeners to prevent triggering updates while loading
         java.awt.event.ActionListener[] fontNameListeners = fontNameCombo.getActionListeners();
         javax.swing.event.ChangeListener[] fontSizeListeners = fontSizeSlider.getChangeListeners();
-        java.awt.event.ActionListener[] fontStyleListeners = fontStyleCombo.getActionListeners();
+        java.awt.event.ActionListener[] plainListeners = plainButton.getActionListeners();
+        java.awt.event.ActionListener[] boldListeners = boldButton.getActionListeners();
+        java.awt.event.ActionListener[] italicListeners = italicButton.getActionListeners();
 
         for (java.awt.event.ActionListener listener : fontNameListeners) {
             fontNameCombo.removeActionListener(listener);
@@ -135,8 +167,14 @@ public class PropertyEditorPanel extends JPanel {
         for (javax.swing.event.ChangeListener listener : fontSizeListeners) {
             fontSizeSlider.removeChangeListener(listener);
         }
-        for (java.awt.event.ActionListener listener : fontStyleListeners) {
-            fontStyleCombo.removeActionListener(listener);
+        for (java.awt.event.ActionListener listener : plainListeners) {
+            plainButton.removeActionListener(listener);
+        }
+        for (java.awt.event.ActionListener listener : boldListeners) {
+            boldButton.removeActionListener(listener);
+        }
+        for (java.awt.event.ActionListener listener : italicListeners) {
+            italicButton.removeActionListener(listener);
         }
 
         // Load values
@@ -146,16 +184,14 @@ public class PropertyEditorPanel extends JPanel {
         fontSizeSlider.setValue(fontSize);
         fontSizeLabel.setText("Size: " + fontSize);
 
+        // Set toggle button states based on font style
         int style = textComponent.getFontStyle();
-        if (style == Font.PLAIN) {
-            fontStyleCombo.setSelectedIndex(0);
-        } else if (style == Font.BOLD) {
-            fontStyleCombo.setSelectedIndex(1);
-        } else if (style == Font.ITALIC) {
-            fontStyleCombo.setSelectedIndex(2);
-        } else if (style == (Font.BOLD | Font.ITALIC)) {
-            fontStyleCombo.setSelectedIndex(3);
-        }
+        boolean isBold = (style & Font.BOLD) != 0;
+        boolean isItalic = (style & Font.ITALIC) != 0;
+
+        plainButton.setSelected(!isBold && !isItalic);
+        boldButton.setSelected(isBold);
+        italicButton.setSelected(isItalic);
 
         // Re-add listeners
         for (java.awt.event.ActionListener listener : fontNameListeners) {
@@ -164,8 +200,14 @@ public class PropertyEditorPanel extends JPanel {
         for (javax.swing.event.ChangeListener listener : fontSizeListeners) {
             fontSizeSlider.addChangeListener(listener);
         }
-        for (java.awt.event.ActionListener listener : fontStyleListeners) {
-            fontStyleCombo.addActionListener(listener);
+        for (java.awt.event.ActionListener listener : plainListeners) {
+            plainButton.addActionListener(listener);
+        }
+        for (java.awt.event.ActionListener listener : boldListeners) {
+            boldButton.addActionListener(listener);
+        }
+        for (java.awt.event.ActionListener listener : italicListeners) {
+            italicButton.addActionListener(listener);
         }
     }
 
@@ -190,15 +232,23 @@ public class PropertyEditorPanel extends JPanel {
     private void updateFontStyle() {
         if (selectedComponent instanceof DiagramText) {
             DiagramText textComponent = (DiagramText) selectedComponent;
-            int selectedIndex = fontStyleCombo.getSelectedIndex();
-            int style;
+            int style = Font.PLAIN;
 
-            switch (selectedIndex) {
-                case 0: style = Font.PLAIN; break;
-                case 1: style = Font.BOLD; break;
-                case 2: style = Font.ITALIC; break;
-                case 3: style = Font.BOLD | Font.ITALIC; break;
-                default: style = Font.PLAIN;
+            // Compute style from toggle button states
+            if (boldButton.isSelected()) {
+                style = Font.BOLD;
+            }
+
+            if (italicButton.isSelected()) {
+                style |= Font.ITALIC;
+            }
+
+            // If neither Bold nor Italic is selected, ensure Plain is selected
+            if (!boldButton.isSelected() && !italicButton.isSelected()) {
+                style = Font.PLAIN;
+                if (!plainButton.isSelected()) {
+                    plainButton.setSelected(true);
+                }
             }
 
             textComponent.setFontStyle(style);

@@ -55,6 +55,7 @@ public class LayeredDiagramTool extends JPanel {
     private JPanel layerPanel;
     private JToolBar toolBar;
     private DiagramLayeredPane diagramPane;
+    private boolean modified = false;
 
     private static final long serialVersionUID = 1L;
 
@@ -67,6 +68,9 @@ public class LayeredDiagramTool extends JPanel {
         add(toolBar, BorderLayout.NORTH);
         add(new JScrollPane(diagramPane), BorderLayout.CENTER);
         add(layerPanel, BorderLayout.EAST);
+
+        // Set up modification listener
+        diagramPane.setModificationListener(() -> setModified(true));
     }
 
     private void createDiagramPane() {
@@ -139,6 +143,7 @@ public class LayeredDiagramTool extends JPanel {
             java.io.File file = fileChooser.getSelectedFile();
             try {
                 diagramPane.saveDiagram(file);
+                setModified(false); // Clear modified flag after successful save
                 JOptionPane.showMessageDialog(this, "Diagram saved successfully!", "Save Complete",
                         JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
@@ -150,6 +155,11 @@ public class LayeredDiagramTool extends JPanel {
     }
 
     private void loadDiagram() {
+        // Check for unsaved changes before loading
+        if (!checkUnsavedChanges()) {
+            return; // User cancelled
+        }
+
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Load Diagram");
 
@@ -158,6 +168,7 @@ public class LayeredDiagramTool extends JPanel {
             java.io.File file = fileChooser.getSelectedFile();
             try {
                 diagramPane.loadDiagram(file);
+                setModified(false); // Clear modified flag after successful load
                 JOptionPane.showMessageDialog(this, "Diagram loaded successfully!", "Load Complete",
                         JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
@@ -219,17 +230,73 @@ public class LayeredDiagramTool extends JPanel {
         text.setBounds(100, 100, 150, 30);
         diagramPane.addDiagramComponent(text, diagramPane.getActiveLayer());
     }
-    
+
+    /**
+     * Check if the diagram has been modified since last save/load
+     */
+    public boolean isModified() {
+        return modified;
+    }
+
+    /**
+     * Set the modified flag
+     */
+    public void setModified(boolean modified) {
+        this.modified = modified;
+    }
+
+    /**
+     * Check for unsaved changes and prompt user if needed
+     * @return true if it's safe to proceed (no changes or user confirmed), false if user cancelled
+     */
+    public boolean checkUnsavedChanges() {
+        if (modified) {
+            int option = JOptionPane.showConfirmDialog(
+                this,
+                "You have unsaved changes. Do you want to save before closing?",
+                "Unsaved Changes",
+                JOptionPane.YES_NO_CANCEL_OPTION,
+                JOptionPane.WARNING_MESSAGE
+            );
+
+            if (option == JOptionPane.YES_OPTION) {
+                // User wants to save
+                saveDiagram();
+                // Return true only if save was successful (modified flag was cleared)
+                return !modified;
+            } else if (option == JOptionPane.NO_OPTION) {
+                // User doesn't want to save, proceed with closing
+                return true;
+            } else {
+                // User cancelled
+                return false;
+            }
+        }
+        return true; // No modifications, safe to proceed
+    }
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             // Create the JFrame
             JFrame frame = new JFrame("JLayeredPane Diagram Tool");
-            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE); // Don't exit immediately
             frame.setSize(1200, 800);
 
             // Create and add the panel
             LayeredDiagramTool panel = new LayeredDiagramTool();
             frame.add(panel);
+
+            // Add window listener to check for unsaved changes before closing
+            frame.addWindowListener(new java.awt.event.WindowAdapter() {
+                @Override
+                public void windowClosing(java.awt.event.WindowEvent e) {
+                    if (panel.checkUnsavedChanges()) {
+                        frame.dispose();
+                        System.exit(0);
+                    }
+                    // If checkUnsavedChanges returns false, do nothing (user cancelled)
+                }
+            });
 
             // Display the frame
             frame.setLocationRelativeTo(null);
@@ -259,7 +326,8 @@ class DiagramLayeredPane extends JLayeredPane {
     private Component selectedComponent = null;
     private Integer activeLayer = SHAPE_LAYER;
     private Map<Integer, Boolean> layerVisibility = new HashMap<>();
-    
+    private Runnable modificationListener;
+
     private static final long serialVersionUID = 1L;
 
     public DiagramLayeredPane() {
@@ -391,17 +459,34 @@ class DiagramLayeredPane extends JLayeredPane {
     
     public void setLayerVisible(Integer layer, boolean visible) {
         layerVisibility.put(layer, visible);
-        
+
         // Update visibility of all components in this layer
         for (Component comp : getComponents()) {
             if ( layer.equals(this.getLayer(comp)) ) {
                 comp.setVisible(visible);
             }
         }
-        
+
         repaint();
+        notifyModified();
     }
-    
+
+    /**
+     * Set the modification listener
+     */
+    public void setModificationListener(Runnable listener) {
+        this.modificationListener = listener;
+    }
+
+    /**
+     * Notify that the diagram has been modified
+     */
+    public void notifyModified() {
+        if (modificationListener != null) {
+            modificationListener.run();
+        }
+    }
+
     private void setupMouseListeners() {
         // Click on empty space to deselect
         addMouseListener(new MouseAdapter() {
@@ -436,12 +521,13 @@ class DiagramLayeredPane extends JLayeredPane {
         });
         
         add(component, layer);
-        
+
         // Set visibility based on layer visibility
         component.setVisible(isLayerVisible(layer));
-        
+
         revalidate();
         repaint();
+        notifyModified();
     }
     
     /**
@@ -471,19 +557,21 @@ class DiagramLayeredPane extends JLayeredPane {
         bringForwardItem.addActionListener(e -> {
             setLayer(component, currentLayer + 1);
             repaint();
+            notifyModified();
         });
         popupMenu.add(bringForwardItem);
-        
+
         JMenuItem sendBackItem = new JMenuItem("Send Back");
         sendBackItem.addActionListener(e -> {
             if (currentLayer > GRID_LAYER + 1) {
                 setLayer(component, currentLayer - 1);
                 repaint();
+                notifyModified();
             }
         });
         sendBackItem.setEnabled(currentLayer > GRID_LAYER + 1);
         popupMenu.add(sendBackItem);
-        
+
         popupMenu.addSeparator();
 
         // Change Color (for colorable components)
@@ -495,6 +583,7 @@ class DiagramLayeredPane extends JLayeredPane {
                 Color newColor = JColorChooser.showDialog(parentWindow, "Choose Fill Color", colorable.getFillColor());
                 if (newColor != null) {
                     colorable.setFillColor(newColor);
+                    notifyModified();
                 }
             });
             popupMenu.add(changeFillColorItem);
@@ -506,6 +595,7 @@ class DiagramLayeredPane extends JLayeredPane {
                 Color newColor = JColorChooser.showDialog(parentWindow, "Choose Border Color", colorable.getBorderColor());
                 if (newColor != null) {
                     colorable.setBorderColor(newColor);
+                    notifyModified();
                 }
             });
             popupMenu.add(changeBorderColorItem);
@@ -522,6 +612,7 @@ class DiagramLayeredPane extends JLayeredPane {
                 Color newColor = JColorChooser.showDialog(parentWindow, "Choose Text Color", textAware.getTextColor());
                 if (newColor != null) {
                     textAware.setTextColor(newColor);
+                    notifyModified();
                 }
             });
             popupMenu.add(changeTextColorItem);
@@ -538,6 +629,7 @@ class DiagramLayeredPane extends JLayeredPane {
             }
             revalidate();
             repaint();
+            notifyModified();
         });
         popupMenu.add(deleteItem);
         
@@ -562,6 +654,7 @@ class DiagramLayeredPane extends JLayeredPane {
             setLayer(component, targetLayer);
             component.setVisible(isLayerVisible(targetLayer));
             repaint();
+            notifyModified();
         });
 
         menu.add(item);
@@ -618,35 +711,40 @@ class DiagramLayeredPane extends JLayeredPane {
             selectedComponent = null;
             revalidate();
             repaint();
+            notifyModified();
         }
     }
-    
+
     public void bringSelectedForward() {
         if (selectedComponent != null) {
             Integer currentLayer = getLayer(selectedComponent);
             setLayer(selectedComponent, currentLayer + 1);
             repaint();
+            notifyModified();
         }
     }
-    
+
     public void sendSelectedBack() {
         if (selectedComponent != null) {
             Integer currentLayer = getLayer(selectedComponent);
             if (currentLayer > GRID_LAYER + 1) {
                 setLayer(selectedComponent, currentLayer - 1);
                 repaint();
+                notifyModified();
             }
         }
     }
-    
+
     public void setShowGrid(boolean show) {
         this.showGrid = show;
         gridPanel.setVisible(show);
         repaint();
+        notifyModified();
     }
-    
+
     public void setSnapToGrid(boolean snap) {
         this.snapToGrid = snap;
+        notifyModified();
     }
     
     public boolean isSnapToGrid() {
@@ -801,12 +899,13 @@ class DragHandler extends MouseAdapter {
         // Final snap on release
 //        if (layeredPane.isSnapToGrid()) {
 //            Point loc = comp.getLocation();
-//            comp.setLocation(layeredPane.snapToGrid(loc.x), 
+//            comp.setLocation(layeredPane.snapToGrid(loc.x),
 //                           layeredPane.snapToGrid(loc.y));
 //        }
-//        
+//
 
         layeredPane.repaint();
+        layeredPane.notifyModified();
     }
 
 }
@@ -1097,6 +1196,9 @@ class ResizeHandler extends MouseAdapter {
 
     @Override
     public void mouseReleased(MouseEvent e) {
+        if (isResizing) {
+            layeredPane.notifyModified();
+        }
         turnOffResizing(); // isResizing = false;
         resizeDirection = ResizeDirection.NONE;
     }

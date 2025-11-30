@@ -1,13 +1,24 @@
 package org.jwellman.demo.layereddiagramtool;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Graphics;
 import java.awt.GraphicsEnvironment;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JColorChooser;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -31,19 +42,48 @@ public class PropertyEditorPanel extends JPanel {
     private JToggleButton italicButton;
     private JPanel fontPropertiesPanel;
 
+    // Color property controls
+    private JToggleButton fillColorButton;
+    private JToggleButton borderColorButton;
+    private JToggleButton textColorButton;
+    private ButtonGroup colorTargetGroup;
+    private JPanel colorSwatchPanel;
+    private JPanel colorPropertiesPanel;
+    private List<Color> recentColors;
+
+    private static final int SWATCH_SIZE = 24;
+    private static final int MAX_RECENT_COLORS = 20;
+
     private static final long serialVersionUID = 1L;
 
     public PropertyEditorPanel(DiagramLayeredPane diagramPane) {
         this.diagramPane = diagramPane;
+        this.recentColors = new ArrayList<>();
+
+        // Initialize with some default colors
+        initializeDefaultColors();
 
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createTitledBorder("Properties"));
 
-        // Create font properties panel
+        // Create property panels
         createFontPropertiesPanel();
+        createColorPropertiesPanel();
 
         // Initially show "No selection" message
         showNoSelectionMessage();
+    }
+
+    private void initializeDefaultColors() {
+        // Add some common colors to start with
+        recentColors.add(Color.BLACK);
+        recentColors.add(Color.WHITE);
+        recentColors.add(Color.RED);
+        recentColors.add(Color.GREEN);
+        recentColors.add(Color.BLUE);
+        recentColors.add(Color.YELLOW);
+        recentColors.add(Color.ORANGE);
+        recentColors.add(Color.GRAY);
     }
 
     private void createFontPropertiesPanel() {
@@ -122,6 +162,128 @@ public class PropertyEditorPanel extends JPanel {
         fontPropertiesPanel.add(fontStylePanel);
     }
 
+    private void createColorPropertiesPanel() {
+        colorPropertiesPanel = new JPanel();
+        colorPropertiesPanel.setLayout(new BoxLayout(colorPropertiesPanel, BoxLayout.Y_AXIS));
+
+        // Color target selection buttons
+        JPanel colorTargetPanel = new JPanel(new BorderLayout(5, 5));
+        colorTargetPanel.add(new JLabel("Apply to:"), BorderLayout.WEST);
+
+        JPanel targetButtonsPanel = new JPanel();
+        targetButtonsPanel.setLayout(new BoxLayout(targetButtonsPanel, BoxLayout.X_AXIS));
+
+        fillColorButton = new JToggleButton("Fill");
+        borderColorButton = new JToggleButton("Border");
+        textColorButton = new JToggleButton("Text");
+
+        colorTargetGroup = new ButtonGroup();
+        colorTargetGroup.add(fillColorButton);
+        colorTargetGroup.add(borderColorButton);
+        colorTargetGroup.add(textColorButton);
+
+        // Default to Fill
+        fillColorButton.setSelected(true);
+
+        targetButtonsPanel.add(fillColorButton);
+        targetButtonsPanel.add(Box.createHorizontalStrut(3));
+        targetButtonsPanel.add(borderColorButton);
+        targetButtonsPanel.add(Box.createHorizontalStrut(3));
+        targetButtonsPanel.add(textColorButton);
+
+        colorTargetPanel.add(targetButtonsPanel, BorderLayout.CENTER);
+        colorPropertiesPanel.add(colorTargetPanel);
+        colorPropertiesPanel.add(Box.createVerticalStrut(5));
+
+        // Color swatch panel
+        JPanel swatchContainerPanel = new JPanel(new BorderLayout());
+        swatchContainerPanel.add(new JLabel("Colors:"), BorderLayout.NORTH);
+
+        colorSwatchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 2));
+        colorSwatchPanel.setBorder(BorderFactory.createEtchedBorder());
+        updateColorSwatches();
+
+        swatchContainerPanel.add(colorSwatchPanel, BorderLayout.CENTER);
+        colorPropertiesPanel.add(swatchContainerPanel);
+        colorPropertiesPanel.add(Box.createVerticalStrut(5));
+
+        // More Colors button
+        JButton moreColorsButton = new JButton("More Colors...");
+        moreColorsButton.addActionListener(e -> chooseCustomColor());
+        colorPropertiesPanel.add(moreColorsButton);
+    }
+
+    private void updateColorSwatches() {
+        colorSwatchPanel.removeAll();
+
+        for (Color color : recentColors) {
+            ColorSwatch swatch = new ColorSwatch(color);
+            swatch.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    applyColor(color);
+                }
+            });
+            colorSwatchPanel.add(swatch);
+        }
+
+        colorSwatchPanel.revalidate();
+        colorSwatchPanel.repaint();
+    }
+
+    private void addRecentColor(Color color) {
+        // Remove if already exists
+        recentColors.remove(color);
+
+        // Add to front
+        recentColors.add(0, color);
+
+        // Limit size
+        if (recentColors.size() > MAX_RECENT_COLORS) {
+            recentColors.remove(recentColors.size() - 1);
+        }
+
+        updateColorSwatches();
+    }
+
+    private void chooseCustomColor() {
+        Color currentColor = Color.WHITE;
+
+        // Get current color based on selected target
+        if (selectedComponent instanceof DiagramColorable) {
+            DiagramColorable colorable = (DiagramColorable) selectedComponent;
+            if (fillColorButton.isSelected()) {
+                currentColor = colorable.getFillColor();
+            } else if (borderColorButton.isSelected()) {
+                currentColor = colorable.getBorderColor();
+            } else if (textColorButton.isSelected() && selectedComponent instanceof DiagramText) {
+                currentColor = ((DiagramText) selectedComponent).getTextColor();
+            }
+        }
+
+        Color newColor = JColorChooser.showDialog(this, "Choose Color", currentColor);
+        if (newColor != null) {
+            addRecentColor(newColor);
+            applyColor(newColor);
+        }
+    }
+
+    private void applyColor(Color color) {
+        if (selectedComponent instanceof DiagramColorable) {
+            DiagramColorable colorable = (DiagramColorable) selectedComponent;
+
+            if (fillColorButton.isSelected()) {
+                colorable.setFillColor(color);
+            } else if (borderColorButton.isSelected()) {
+                colorable.setBorderColor(color);
+            } else if (textColorButton.isSelected() && selectedComponent instanceof DiagramText) {
+                ((DiagramText) selectedComponent).setTextColor(color);
+            }
+
+            diagramPane.notifyModified();
+        }
+    }
+
     private void showNoSelectionMessage() {
         removeAll();
         JLabel messageLabel = new JLabel("No component selected");
@@ -139,6 +301,25 @@ public class PropertyEditorPanel extends JPanel {
         repaint();
     }
 
+    private void showColorProperties() {
+        removeAll();
+        add(colorPropertiesPanel, BorderLayout.NORTH);
+        revalidate();
+        repaint();
+    }
+
+    private void showFontAndColorProperties() {
+        removeAll();
+        JPanel combinedPanel = new JPanel();
+        combinedPanel.setLayout(new BoxLayout(combinedPanel, BoxLayout.Y_AXIS));
+        combinedPanel.add(fontPropertiesPanel);
+        combinedPanel.add(Box.createVerticalStrut(10));
+        combinedPanel.add(colorPropertiesPanel);
+        add(combinedPanel, BorderLayout.NORTH);
+        revalidate();
+        repaint();
+    }
+
     public void setSelectedComponent(Component component) {
         this.selectedComponent = component;
 
@@ -147,7 +328,13 @@ public class PropertyEditorPanel extends JPanel {
         } else if (component instanceof DiagramText) {
             DiagramText textComponent = (DiagramText) component;
             loadFontProperties(textComponent);
-            showFontProperties();
+            // Show text color button for DiagramText
+            textColorButton.setVisible(true);
+            showFontAndColorProperties();
+        } else if (component instanceof DiagramColorable) {
+            // Hide text color button for shapes
+            textColorButton.setVisible(false);
+            showColorProperties();
         } else {
             showNoSelectionMessage();
         }
@@ -253,6 +440,57 @@ public class PropertyEditorPanel extends JPanel {
 
             textComponent.setFontStyle(style);
             diagramPane.notifyModified();
+        }
+    }
+
+    /**
+     * Inner class for rendering color swatches
+     */
+    private class ColorSwatch extends JPanel {
+        private Color color;
+        private boolean hovered = false;
+
+        private static final long serialVersionUID = 1L;
+
+        public ColorSwatch(Color color) {
+            this.color = color;
+            setPreferredSize(new Dimension(SWATCH_SIZE, SWATCH_SIZE));
+            setMinimumSize(new Dimension(SWATCH_SIZE, SWATCH_SIZE));
+            setMaximumSize(new Dimension(SWATCH_SIZE, SWATCH_SIZE));
+
+            // Add mouse listener for hover effect
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    hovered = true;
+                    repaint();
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    hovered = false;
+                    repaint();
+                }
+            });
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+
+            // Fill with color
+            g.setColor(color);
+            g.fillRect(2, 2, SWATCH_SIZE - 4, SWATCH_SIZE - 4);
+
+            // Draw border
+            if (hovered) {
+                g.setColor(Color.BLUE);
+                g.drawRect(1, 1, SWATCH_SIZE - 3, SWATCH_SIZE - 3);
+                g.drawRect(0, 0, SWATCH_SIZE - 1, SWATCH_SIZE - 1);
+            } else {
+                g.setColor(Color.GRAY);
+                g.drawRect(1, 1, SWATCH_SIZE - 3, SWATCH_SIZE - 3);
+            }
         }
     }
 }

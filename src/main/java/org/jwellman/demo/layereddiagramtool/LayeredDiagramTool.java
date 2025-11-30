@@ -10,7 +10,6 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Polygon;
 import java.awt.Rectangle;
@@ -44,7 +43,6 @@ import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
-import javax.swing.border.AbstractBorder;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -1021,63 +1019,6 @@ class LayerControlPanel extends JPanel {
 }
 
 /**
- * Custom border that shows resize handles
- */
-class ResizeBorder extends AbstractBorder {
-
-    @SuppressWarnings("unused")
-    private JComponent component;
-
-    private static final int HANDLE_SIZE = 8;
-
-    private static final Insets INSETS = new Insets(3, 3, 3, 3);
-
-    private static final long serialVersionUID = 1L;
-
-    public ResizeBorder(JComponent component) {
-        this.component = component;
-    }
-
-    @Override
-    public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
-        Graphics2D g2d = (Graphics2D) g;
-
-        // Draw border
-        g2d.setColor(Color.BLUE);
-        g2d.setStroke(new BasicStroke(2));
-        g2d.drawRect(x + 1, y + 1, width - 2, height - 2);
-
-        // Draw resize handles
-        g2d.setColor(Color.WHITE);
-        g2d.fillRect(x - HANDLE_SIZE/2, y - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE); // NW
-        g2d.fillRect(x + width - HANDLE_SIZE/2, y - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE); // NE
-        g2d.fillRect(x - HANDLE_SIZE/2, y + height - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE); // SW
-        g2d.fillRect(x + width - HANDLE_SIZE/2, y + height - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE); // SE
-        g2d.fillRect(x + width/2 - HANDLE_SIZE/2, y - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE); // N
-        g2d.fillRect(x + width/2 - HANDLE_SIZE/2, y + height - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE); // S
-        g2d.fillRect(x - HANDLE_SIZE/2, y + height/2 - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE); // W
-        g2d.fillRect(x + width - HANDLE_SIZE/2, y + height/2 - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE); // E
-
-        // Draw handle borders
-        g2d.setColor(Color.BLUE);
-        g2d.setStroke(new BasicStroke(1));
-        g2d.drawRect(x - HANDLE_SIZE/2, y - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE);
-        g2d.drawRect(x + width - HANDLE_SIZE/2, y - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE);
-        g2d.drawRect(x - HANDLE_SIZE/2, y + height - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE);
-        g2d.drawRect(x + width - HANDLE_SIZE/2, y + height - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE);
-        g2d.drawRect(x + width/2 - HANDLE_SIZE/2, y - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE);
-        g2d.drawRect(x + width/2 - HANDLE_SIZE/2, y + height - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE);
-        g2d.drawRect(x - HANDLE_SIZE/2, y + height/2 - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE);
-        g2d.drawRect(x + width - HANDLE_SIZE/2, y + height/2 - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE);
-    }
-    
-    @Override
-    public Insets getBorderInsets(Component c) {
-        return INSETS;
-    }
-}
-
-/**
  * Handles resizing of components with resize handles
  */
 class ResizeHandler extends MouseAdapter {
@@ -1256,57 +1197,86 @@ class ResizeHandler extends MouseAdapter {
 //============================================================================
 
 /**
-* Root diagram data structure
-*/
+ * Root diagram data structure
+ */
 class DiagramData {
- private int gridSize;
- private boolean snapToGrid;
- private int activeLayer;
- private java.util.List<LayerData> layers;
- 
- public int getGridSize() { return gridSize; }
- public void setGridSize(int gridSize) { this.gridSize = gridSize; }
- 
- public boolean isSnapToGrid() { return snapToGrid; }
- public void setSnapToGrid(boolean snapToGrid) { this.snapToGrid = snapToGrid; }
- 
- public int getActiveLayer() { return activeLayer; }
- public void setActiveLayer(int activeLayer) { this.activeLayer = activeLayer; }
- 
- public java.util.List<LayerData> getLayers() { return layers; }
- public void setLayers(java.util.List<LayerData> layers) { this.layers = layers; }
+    private int gridSize;
+    private boolean snapToGrid;
+    private int activeLayer;
+    private java.util.List<LayerData> layers;
+
+    public int getGridSize() {
+        return gridSize;
+    }
+
+    public void setGridSize(int gridSize) {
+        this.gridSize = gridSize;
+    }
+
+    public boolean isSnapToGrid() {
+        return snapToGrid;
+    }
+
+    public void setSnapToGrid(boolean snapToGrid) {
+        this.snapToGrid = snapToGrid;
+    }
+
+    public int getActiveLayer() {
+        return activeLayer;
+    }
+
+    public void setActiveLayer(int activeLayer) {
+        this.activeLayer = activeLayer;
+    }
+
+    public java.util.List<LayerData> getLayers() {
+        return layers;
+    }
+
+    public void setLayers(java.util.List<LayerData> layers) {
+        this.layers = layers;
+    }
 }
 
 /**
-* Layer data structure
-*/
+ * Layer data structure
+ */
 class LayerData {
- private int layerDepth;
- private boolean visible;
- private java.util.List<ComponentData> components;
- 
- public int getLayerDepth() { return layerDepth; }
- public void setLayerDepth(int layerDepth) { this.layerDepth = layerDepth; }
- 
- public boolean isVisible() { return visible; }
- public void setVisible(boolean visible) { this.visible = visible; }
- 
- public java.util.List<ComponentData> getComponents() { return components; }
- public void setComponents(java.util.List<ComponentData> components) { this.components = components; }
+    private int layerDepth;
+    private boolean visible;
+    private java.util.List<ComponentData> components;
+
+    public int getLayerDepth() {
+        return layerDepth;
+    }
+
+    public void setLayerDepth(int layerDepth) {
+        this.layerDepth = layerDepth;
+    }
+
+    public boolean isVisible() {
+        return visible;
+    }
+
+    public void setVisible(boolean visible) {
+        this.visible = visible;
+    }
+
+    public java.util.List<ComponentData> getComponents() {
+        return components;
+    }
+
+    public void setComponents(java.util.List<ComponentData> components) {
+        this.components = components;
+    }
 }
 
 /**
-* Base class for component data with polymorphic JSON serialization
-*/
-@JsonTypeInfo(
- use = JsonTypeInfo.Id.NAME,
- include = JsonTypeInfo.As.PROPERTY,
- property = "type"
-)
-@JsonSubTypes({
- @JsonSubTypes.Type(value = ShapeData.class, name = "shape"),
- @JsonSubTypes.Type(value = TextData.class, name = "text")
-})
+ * Base class for component data with polymorphic JSON serialization
+ */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonSubTypes({ @JsonSubTypes.Type(value = ShapeData.class, name = "shape"),
+        @JsonSubTypes.Type(value = TextData.class, name = "text") })
 abstract class ComponentData {
     private int x;
     private int y;
@@ -1374,8 +1344,8 @@ abstract class ComponentData {
 }
 
 /**
-* Shape component data
-*/
+ * Shape component data
+ */
 class ShapeData extends ComponentData {
 
     private String shapeType;
@@ -1429,8 +1399,8 @@ class ShapeData extends ComponentData {
 }
 
 /**
-* Text component data
-*/
+ * Text component data
+ */
 class TextData extends ComponentData {
 
     private String fillColor;
@@ -1523,7 +1493,7 @@ class TextData extends ComponentData {
         textComp.setFontName(fontName);
         textComp.setFontSize(fontSize);
         textComp.setFontStyle(fontStyle);
-        textComp.setTextColor(Color.black); //(hexToColor(textColor));
+        textComp.setTextColor(Color.black); // (hexToColor(textColor));
         return textComp;
     }
 

@@ -1102,13 +1102,16 @@ class DiagramText extends JPanel implements DiagramColorable, DiagramTextAware {
     public void setTextColor(Color color) {
         this.textColor = color;
         textField.setForeground(color);
-        repaint();
+        // repaint(); AI added this but it is probably not necessary; keeping via comment
     }
 
     private void updateTextFieldFont() {
-        textField.setFont(new Font(fontName, fontStyle, fontSize));
-        revalidate();
-        repaint();
+        // only change font if all fields are valid
+        if (fontName != null && fontStyle != 0 && fontSize != 0) {
+            textField.setFont(new Font(fontName, fontStyle, fontSize));
+            revalidate();
+            repaint();
+        }
     }
 }
 
@@ -1730,12 +1733,14 @@ class ShapeData extends ComponentData {
 */
 class TextData extends ComponentData {
 
-    private String text;
     private String fillColor;
     private String borderColor = "#707070FF"; // default
-    private String fontName;
-    private int fontSize;
-    private int fontStyle;
+
+    private int fontSize = 16;
+    private int fontStyle = Font.BOLD;
+    private String fontName = "Segoe UI";
+
+    private String text;
     private String textColor;
 
     // Default constructor required for Jackson

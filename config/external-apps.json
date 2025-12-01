@@ -1,0 +1,32 @@
+{
+  "externalApps": [
+    {
+      "name": "Notepad",
+      "command": "notepad.exe",
+      "icon": "org/jwellman/virtualdesktop/images/global_ui/document176",
+      "desktopOnly": true,
+      "waitForCompletion": false
+    },
+    {
+      "name": "Calculator",
+      "command": "calc.exe",
+      "icon": "org/jwellman/virtualdesktop/images/global_ui/calculator29",
+      "desktopOnly": true,
+      "waitForCompletion": false
+    },
+    {
+      "name": "Command Prompt",
+      "command": "cmd.exe",
+      "icon": "org/jwellman/virtualdesktop/images/global_ui/console1",
+      "desktopOnly": true,
+      "waitForCompletion": false
+    },
+    {
+      "name": "Paint",
+      "command": "mspaint.exe",
+      "icon": "org/jwellman/virtualdesktop/images/global_ui/paintbrush9",
+      "desktopOnly": true,
+      "waitForCompletion": false
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import javax.swing.Icon;
 import javax.swing.JDesktopPane;
 import javax.swing.JInternalFrame;
 import javax.swing.JList;
+import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.event.InternalFrameEvent;
 import javax.swing.event.InternalFrameListener;
@@ -14,6 +15,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 import org.jwellman.dsp.DSP;
+import org.jwellman.virtualdesktop.vapps.LaunchAware;
 import org.jwellman.virtualdesktop.vapps.SpecScriptedObject;
 import org.jwellman.virtualdesktop.vapps.VirtualAppSpec;
 
@@ -64,16 +66,18 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 
 	/**
 	 * Create a new application.
-	 * 
-     * Currently (Oct. 2021), this is used solely by 
-     * menu actions and desktop icons.  This is mainly because it is 
+	 *
+     * Currently (Oct. 2021), this is used solely by
+     * menu actions and desktop icons.  This is mainly because it is
      * the only path that calls createVApp_void() which
      * is also the only path that "respects" 'internalFrameProvider's such
      * as HyperSql, GroovyConsole, etc.
-	 * 
+	 *
 	 * @param newInstance
 	 */
     public void createVApp(Object newInstance) {
+
+        // Handle internal vapps as usual
         this.createVApp_void((VirtualAppSpec)newInstance);
     }
 
@@ -180,7 +184,11 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
                         frame.setContentPane(spec.getDockableContent());
                         spec.addDockable(spec.getContent());
                     } else {
-                        frame.setContentPane(c);
+                        if (c == null) {
+                            frame.setContentPane(new JPanel());
+                        } else {
+                            frame.setContentPane(c);
+                        }
                     }
 
 //                    if (icon != null) frame.setFrameIcon(icon);
@@ -204,6 +212,18 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
                 }
             }
         });
+
+        // Check if this is an external application
+        // TODO launch this in a separate thread
+        if (spec instanceof LaunchAware) {
+            try {
+                ((LaunchAware) spec).launch();
+                System.out.println("Launched external app: " + spec.getTitle());
+            } catch (Exception ex) {
+                System.err.println("Failed to launch external app: " + spec.getTitle());
+                ex.printStackTrace();
+            }
+        }
 
         return frame;
 

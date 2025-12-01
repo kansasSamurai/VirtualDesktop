@@ -1,5 +1,7 @@
 package org.jwellman.virtualdesktop.vapps;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.Action;
@@ -8,6 +10,7 @@ import org.apache.batik.transcoder.TranscoderException;
 import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
 import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.VIcon;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * This class is responsible for creating all desktop actions
@@ -38,6 +41,8 @@ public class ActionFactory {
         ,SpecGroovyGraphics.class
 //      ,SpecJzy3D.class // this app sucks
     };
+
+    private static final ObjectMapper mapper = new ObjectMapper();
 
     private static final List<DesktopAction> listOfActions = new ArrayList<>();
 
@@ -83,6 +88,79 @@ public class ActionFactory {
             }
         }
 
+        // Load external applications from configuration file
+        loadExternalApps();
+
+    }
+
+    /**
+     * Loads external application definitions from a JSON configuration file.
+     * If the file doesn't exist or cannot be read, this method fails silently.
+     */
+    private static void loadExternalApps() {
+        File configFile = new File("config/external-apps.json");
+
+        if (!configFile.exists()) {
+            System.out.println("External apps config file not found: " + configFile.getAbsolutePath());
+            System.out.println("Skipping external app loading. Create this file to define external applications.");
+            return;
+        }
+
+        try {
+            ExternalAppsConfig config = mapper.readValue(configFile, ExternalAppsConfig.class);
+
+            for (ExternalAppConfig appConfig : config.getExternalApps()) {
+                registerExternalApp(appConfig);
+            }
+
+            System.out.println("Loaded " + config.getExternalApps().size() + " external app(s) from configuration");
+
+        } catch (IOException ex) {
+            System.err.println("Failed to load external apps configuration: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Registers an external application as a desktop action
+     * @param appConfig the external app configuration
+     */
+    private static void registerExternalApp(ExternalAppConfig appConfig) {
+        try {
+            // Create the action
+            ExternalAppAction action = new ExternalAppAction(
+                appConfig.getName(),
+                appConfig.getCommand(),
+                appConfig.getWorkingDir(),
+                appConfig.isWaitForCompletion()
+            );
+            action.setClazzName("org.jwellman.virtualdesktop.vapps.ExternalAppSpec");
+
+            // Set desktop-only flag
+            action.setDesktopOnly(appConfig.isDesktopOnly());
+
+            // Load icon if specified
+            if (appConfig.getIcon() != null && !appConfig.getIcon().isEmpty()) {
+                try {
+                    Icon icon = VIcon.createSVGIcon(appConfig.getIcon(), 64, 64);
+                    action.putValue(Action.LARGE_ICON_KEY, icon);
+                } catch (Exception ex) {
+                    System.err.println("Failed to load icon for " + appConfig.getName() + ": " + ex.getMessage());
+                    // Use default icon
+                    Icon defaultIcon = VIcon.createSVGIcon("org/jwellman/virtualdesktop/images/global_ui/add196", 64, 64);
+                    action.putValue(Action.LARGE_ICON_KEY, defaultIcon);
+                }
+            }
+
+            action.putValue(Action.NAME, appConfig.getName());
+
+            // Add to list of actions
+            getListOfActions().add(action);
+
+        } catch (Exception ex) {
+            System.err.println("Failed to register external app: " + appConfig.getName());
+            ex.printStackTrace();
+        }
     }
 
     /**

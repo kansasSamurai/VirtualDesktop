@@ -88,6 +88,15 @@ public class LEDBars extends JComponent implements ActionListener, MouseListener
 
         // 1000 / 5 is "five steps/frame per second (1000 ms)"
         this.timer = new Timer(1000 / 20, this);
+        /*
+         * I originally designed this with 5 frames/sec.
+         * Ultimately, it depends on the use of this component but I will say that 
+         * with 5 components using the "false animation" it looks better at 20 frames/sec.
+         * Lower update rates are probably okay in a real world scenario
+         * (i.e. the source values update slowly) and/or when there are only
+         * one or two components grouped together.
+         * This is not yet a component property but will be eventually.
+         */
         timer.setInitialDelay(0);
         timer.start();
 

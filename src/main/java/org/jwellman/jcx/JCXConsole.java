@@ -243,6 +243,16 @@ public class JCXConsole extends JPanel implements Runnable {
 	        // .append(SystemUtils.IS_OS_LINUX ? "pwd; " : null)
 	        // .append(commandline.getText());
         commands.add(commandline.getText()); // b.toString()
+        // TODO Note: When executing a Java program via ProcessBuilder and encountering a "Could not find or load main class" error, despite the same command working from the command line, the issue often stems from how ProcessBuilder handles arguments, particularly those containing spaces or special characters, like the classpath.
+        // Specifically, if the classpath value includes double quotes to handle spaces (e.g., -cp "path with spaces"), ProcessBuilder might pass these quotes literally to the java command, causing it to misinterpret the classpath. The java command, when executed directly in a shell, typically has its arguments parsed by the shell, which removes these quotes before passing the actual path to java. ProcessBuilder, however, does not perform this shell-like parsing by default.
+        // To resolve this, the quotes around the classpath value must be removed when constructing the command arguments for ProcessBuilder. Instead of passing the entire quoted string as a single argument, the classpath should be provided as a single argument without the encapsulating quotes.
+        // I should probably try to parse the command line and break it up into 
+        // individual strings before adding to "commands".  I could then prompt
+        // the user for some action if something is surrounded by double quotes.
+        // e.g. The following is how to start a java process using process builder:
+        // java -cp *;lafs/* org.jwellman.foundation.LAFDiscovery
+        // Note that from the command line it usually has quotes:
+        // java -cp "*;lafs/*" org.jwellman.foundation.LAFDiscovery
 
         // execute the command
         try {

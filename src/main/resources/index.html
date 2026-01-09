@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phone Number Collection Form</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 40px 0;
+        }
+        .form-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .info-text {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .consent-box {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #0d6efd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-container">
+            <h2 class="mb-4">Phone Number Submission</h2>
+            
+            <form>
+                <div class="mb-4">
+                    <label for="phoneNumber" class="form-label">Mobile Phone Number <span class="text-danger">*</span></label>
+                    <input type="tel" class="form-control form-control-lg" id="phoneNumber" placeholder="(555) 123-4567">
+                    <div class="form-text">Please enter your 10-digit mobile phone number</div>
+                </div>
+
+                <div class="consent-box">
+                    <h6 class="mb-3">SMS Consent & Privacy Notice</h6>
+                    <p class="info-text mb-2">
+                        <strong>Verification:</strong> By providing your phone number, you consent to receive a one-time verification code via SMS to confirm your number.
+                    </p>
+                    <p class="info-text mb-2">
+                        <strong>Messaging Frequency:</strong> Message frequency varies. You may receive service updates, notifications, and promotional messages.
+                    </p>
+                    <p class="info-text mb-2">
+                        <strong>Opt-Out:</strong> You can opt out at any time by replying STOP to any message. Reply HELP for assistance.
+                    </p>
+                    <p class="info-text mb-2">
+                        <strong>Rates:</strong> Message and data rates may apply depending on your carrier plan.
+                    </p>
+                    <p class="info-text mb-0">
+                        <strong>Privacy:</strong> Your phone number will be stored securely and used only for the purposes described. We will not sell or share your information with third parties without your consent. View our <a href="#">Privacy Policy</a> and <a href="#">Terms of Service</a> for more details.
+                    </p>
+                </div>
+
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" id="consent">
+                    <label class="form-check-label" for="consent">
+                        I agree to receive SMS messages and have read the terms above <span class="text-danger">*</span>
+                    </label>
+                </div>
+
+                <div class="alert alert-info" role="alert">
+                    <small>
+                        <strong>TCPA Compliance:</strong> By submitting this form, you authorize us to contact you via SMS for transactional and informational purposes. Your consent is not a condition of purchase.
+                    </small>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg w-100">Submit Phone Number</button>
+            </form>
+
+            <div class="mt-4 text-center">
+                <small class="text-muted">
+                    Carriers are not liable for delayed or undelivered messages. 
+                    Supported carriers include major U.S. carriers.
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

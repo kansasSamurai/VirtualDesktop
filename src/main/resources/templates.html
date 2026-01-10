@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Renderer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px 0;
+        }
+        .container {
+            max-width: 1400px;
+        }
+        textarea {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .output-box {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 20px;
+            min-height: 200px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .error-box {
+            background-color: #f8d7da;
+            border: 1px solid #f5c2c7;
+            color: #842029;
+        }
+        .example-btn {
+            margin-top: 10px;
+        }
+        .help-text {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .tab-content {
+            min-height: 500px;
+        }
+        #gridEditor {
+            overflow-x: auto;
+        }
+        .grid-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .grid-table th,
+        .grid-table td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            min-width: 120px;
+        }
+        .grid-table th {
+            background-color: #e9ecef;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        .grid-table input {
+            width: 100%;
+            border: none;
+            padding: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        .grid-table input:focus {
+            outline: 2px solid #0d6efd;
+        }
+        .grid-controls {
+            margin-bottom: 15px;
+        }
+        .btn-sm-custom {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+        <div id="successToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toastMessage">
+                    Success!
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1 class="mb-4">Template Renderer</h1>
+        
+        <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="template-tab" data-bs-toggle="tab" data-bs-target="#template-pane" type="button" role="tab">Template</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="json-tab" data-bs-toggle="tab" data-bs-target="#json-pane" type="button" role="tab">JSON Data</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="grid-tab" data-bs-toggle="tab" data-bs-target="#grid-pane" type="button" role="tab">Grid Editor</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="output-tab" data-bs-toggle="tab" data-bs-target="#output-pane" type="button" role="tab">Output</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="mainTabContent">
+            <!-- Template Tab -->
+            <div class="tab-pane fade show active" id="template-pane" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Template</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="help-text">
+                            Use placeholders like <code>{{name}}</code> or <code>{{user.email}}</code> for nested properties.
+                            Use <code>{{#each arrayName}}...{{/each}}</code> for array iteration.
+                        </p>
+                        <textarea id="templateInput" class="form-control" rows="20" placeholder="Enter your template here...">Hello {{name}}!
+
+Welcome to {{company}}. Your account details:
+- Email: {{user.email}}
+- Role: {{user.role}}
+- ID: {{user.id}}
+
+Your subscription is {{status}}.</textarea>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-secondary example-btn" onclick="loadExample1()">Example 1</button>
+                            <button class="btn btn-sm btn-secondary example-btn" onclick="loadExample2()">Example 2</button>
+                            <button class="btn btn-sm btn-secondary example-btn" onclick="loadExample3()">Example 3 (Array)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- JSON Tab -->
+            <div class="tab-pane fade" id="json-pane" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">JSON Data</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="help-text">
+                            Enter valid JSON object with your data values.
+                        </p>
+                        <textarea id="jsonInput" class="form-control" rows="20" placeholder='{"key": "value"}'>{
+  "name": "John Doe",
+  "company": "Acme Corp",
+  "status": "active",
+  "user": {
+    "email": "john@example.com",
+    "role": "Administrator",
+    "id": 12345
+  }
+}</textarea>
+                        <div class="mt-3">
+                            <button class="btn btn-primary" onclick="syncGridToJson()">Sync from Grid →</button>
+                            <button class="btn btn-secondary" onclick="syncJsonToGrid()">← Sync to Grid</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid Editor Tab -->
+            <div class="tab-pane fade" id="grid-pane" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Grid Editor (for Array Data)</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="help-text">
+                            Edit array data in a spreadsheet-like grid. This will be saved as an array in your JSON data.
+                        </p>
+                        
+                        <div class="grid-controls">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-3">
+                                    <label for="arrayPropertyName" class="form-label">JSON Property Name:</label>
+                                    <input type="text" id="arrayPropertyName" class="form-control" value="params" placeholder="e.g., params, items, users">
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="numColumns" class="form-label">Columns:</label>
+                                    <input type="number" id="numColumns" class="form-control" value="4" min="1" max="20">
+                                </div>
+                                <div class="col-md-7">
+                                    <button class="btn btn-primary" onclick="initializeGrid()">Initialize Grid</button>
+                                    <button class="btn btn-success" onclick="addGridRow()">+ Add Row</button>
+                                    <button class="btn btn-warning" onclick="pasteFromExcel()">Paste from Excel</button>
+                                    <button class="btn btn-info" onclick="syncGridToJson()">Update JSON →</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="gridEditor"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Output Tab -->
+            <div class="tab-pane fade" id="output-pane" role="tabpanel">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Output</h5>
+                        <button class="btn btn-sm btn-success" onclick="copyOutputToClipboard()">📋 Copy to Clipboard</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="output" class="output-box">
+                            Click "Render Template" to see the result...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center my-4">
+            <button class="btn btn-primary btn-lg" onclick="renderTemplate()">Render Template</button>
+            <button class="btn btn-outline-secondary btn-lg" onclick="clearAll()">Clear All</button>
+        </div>
+
+        <div class="mt-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Features & Syntax</h6>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        <li><strong>Simple placeholders:</strong> <code>{{variableName}}</code></li>
+                        <li><strong>Nested objects:</strong> <code>{{object.property}}</code> or <code>{{object.nested.value}}</code></li>
+                        <li><strong>Array access:</strong> <code>{{items.0}}</code> or <code>{{users.1.name}}</code></li>
+                        <li><strong>Array iteration:</strong> <code>{{#each arrayName}}...{{/each}}</code></li>
+                        <li><strong>Inside loops:</strong> Access properties with <code>{{fieldkey}}</code> or <code>{{this.fieldkey}}</code></li>
+                        <li><strong>Loop helpers:</strong> <code>{{@index}}</code>, <code>{{@first}}</code>, <code>{{@last}}</code></li>
+                        <li><strong>Grid Editor:</strong> Edit array data in a spreadsheet format, then sync to JSON</li>
+                        <li>Missing values will show as <code>[undefined]</code></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let gridData = [];
+        let columnHeaders = [];
+
+        // Helper function to show toast notifications
+        function showToast(message) {
+            const toastElement = document.getElementById('successToast');
+            const toastBody = document.getElementById('toastMessage');
+            toastBody.textContent = message;
+            
+            const toast = new bootstrap.Toast(toastElement, {
+                autohide: true,
+                delay: 2500
+            });
+            toast.show();
+        }
+
+        function renderTemplate() {
+            const templateInput = document.getElementById('templateInput').value;
+            const jsonInput = document.getElementById('jsonInput').value;
+            const outputDiv = document.getElementById('output');
+
+            try {
+                // Parse JSON
+                const data = JSON.parse(jsonInput);
+                
+                // Render template
+                const result = processTemplate(templateInput, data);
+                
+                // Display result
+                outputDiv.className = 'output-box';
+                outputDiv.textContent = result;
+                
+                // Switch to output tab
+                const outputTab = new bootstrap.Tab(document.getElementById('output-tab'));
+                outputTab.show();
+                
+            } catch (error) {
+                // Display error
+                outputDiv.className = 'output-box error-box';
+                outputDiv.textContent = 'Error: ' + error.message;
+                
+                // Switch to output tab
+                const outputTab = new bootstrap.Tab(document.getElementById('output-tab'));
+                outputTab.show();
+            }
+        }
+
+        function processTemplate(template, data) {
+            // First, process {{#each}} loops
+            template = processLoops(template, data);
+            
+            // Then replace all {{placeholder}} with corresponding values from data
+            return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
+                // Trim whitespace from the path
+                path = path.trim();
+                
+                // Navigate through nested properties
+                const value = getNestedValue(data, path);
+                
+                // Return the value or a placeholder for undefined
+                return value !== undefined ? value : '[undefined]';
+            });
+        }
+
+        function processLoops(template, data) {
+            // Match {{#each arrayPath}}...{{/each}} blocks
+            const loopRegex = /\{\{#each\s+([^}]+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
+            
+            return template.replace(loopRegex, (match, arrayPath, loopContent) => {
+                arrayPath = arrayPath.trim();
+                
+                // Get the array from data
+                const array = getNestedValue(data, arrayPath);
+                
+                // Check if it's actually an array
+                if (!Array.isArray(array)) {
+                    return '[Error: ' + arrayPath + ' is not an array]';
+                }
+                
+                // Process each item in the array
+                let result = '';
+                array.forEach((item, index) => {
+                    // Replace {{this.property}} or {{property}} with values from current item
+                    let itemContent = loopContent.replace(/\{\{(this\.)?([^}]+)\}\}/g, (m, thisPrefix, prop) => {
+                        prop = prop.trim();
+                        
+                        // Special variables
+                        if (prop === '@index') return index;
+                        if (prop === '@first') return index === 0 ? 'true' : 'false';
+                        if (prop === '@last') return index === array.length - 1 ? 'true' : 'false';
+                        
+                        // Get value from current item
+                        const value = getNestedValue(item, prop);
+                        return value !== undefined ? value : '[undefined]';
+                    });
+                    
+                    result += itemContent;
+                });
+                
+                return result;
+            });
+        }
+
+        function getNestedValue(obj, path) {
+            // Split the path by dots and navigate through the object
+            const keys = path.split('.');
+            let result = obj;
+            
+            for (let key of keys) {
+                if (result === null || result === undefined) {
+                    return undefined;
+                }
+                result = result[key];
+            }
+            
+            return result;
+        }
+
+        function clearAll() {
+            document.getElementById('templateInput').value = '';
+            document.getElementById('jsonInput').value = '';
+            document.getElementById('output').className = 'output-box';
+            document.getElementById('output').textContent = 'Click "Render Template" to see the result...';
+            gridData = [];
+            columnHeaders = [];
+            document.getElementById('gridEditor').innerHTML = '';
+        }
+
+        function initializeGrid() {
+            const numColumns = parseInt(document.getElementById('numColumns').value);
+            
+            // Initialize column headers
+            columnHeaders = [];
+            for (let i = 0; i < numColumns; i++) {
+                columnHeaders.push('column' + (i + 1));
+            }
+            
+            // Initialize with one empty row
+            gridData = [{}];
+            columnHeaders.forEach(header => {
+                gridData[0][header] = '';
+            });
+            
+            renderGrid();
+        }
+
+        function renderGrid() {
+            const container = document.getElementById('gridEditor');
+            
+            if (gridData.length === 0 || columnHeaders.length === 0) {
+                container.innerHTML = '<p class="text-muted">Click "Initialize Grid" to start editing data.</p>';
+                return;
+            }
+            
+            let html = '<table class="grid-table"><thead><tr>';
+            
+            // Header row with editable column names
+            html += '<th style="width: 50px;">#</th>';
+            columnHeaders.forEach((header, index) => {
+                html += `<th><input type="text" value="${header}" onchange="updateColumnHeader(${index}, this.value)" placeholder="Column ${index + 1}"></th>`;
+            });
+            html += '<th style="width: 80px;">Actions</th>';
+            html += '</tr></thead><tbody>';
+            
+            // Data rows
+            gridData.forEach((row, rowIndex) => {
+                html += `<tr><td>${rowIndex + 1}</td>`;
+                columnHeaders.forEach(header => {
+                    const value = row[header] || '';
+                    html += `<td><input type="text" value="${value}" onchange="updateGridCell(${rowIndex}, '${header}', this.value)"></td>`;
+                });
+                html += `<td><button class="btn btn-sm btn-danger btn-sm-custom" onclick="deleteGridRow(${rowIndex})">Delete</button></td>`;
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function updateColumnHeader(index, newName) {
+            const oldName = columnHeaders[index];
+            columnHeaders[index] = newName;
+            
+            // Update all rows with new column name
+            gridData.forEach(row => {
+                if (oldName in row) {
+                    row[newName] = row[oldName];
+                    delete row[oldName];
+                }
+            });
+            
+            renderGrid();
+        }
+
+        function updateGridCell(rowIndex, columnName, value) {
+            gridData[rowIndex][columnName] = value;
+        }
+
+        function addGridRow() {
+            const newRow = {};
+            columnHeaders.forEach(header => {
+                newRow[header] = '';
+            });
+            gridData.push(newRow);
+            renderGrid();
+        }
+
+        function deleteGridRow(rowIndex) {
+            gridData.splice(rowIndex, 1);
+            renderGrid();
+        }
+
+        function syncGridToJson() {
+            const propertyName = document.getElementById('arrayPropertyName').value.trim();
+            
+            if (!propertyName) {
+                alert('Please enter a property name for the array.');
+                return;
+            }
+            
+            try {
+                // Parse existing JSON
+                let jsonData = {};
+                const jsonInput = document.getElementById('jsonInput').value.trim();
+                if (jsonInput) {
+                    jsonData = JSON.parse(jsonInput);
+                }
+                
+                // Add/update the array property
+                jsonData[propertyName] = gridData;
+                
+                // Update JSON textarea
+                document.getElementById('jsonInput').value = JSON.stringify(jsonData, null, 2);
+                
+                showToast('Grid data synced to JSON successfully!');
+            } catch (error) {
+                alert('Error syncing to JSON: ' + error.message);
+            }
+        }
+
+        function syncJsonToGrid() {
+            const propertyName = document.getElementById('arrayPropertyName').value.trim();
+            
+            if (!propertyName) {
+                alert('Please enter a property name to sync from.');
+                return;
+            }
+            
+            try {
+                const jsonData = JSON.parse(document.getElementById('jsonInput').value);
+                
+                if (!jsonData[propertyName]) {
+                    alert('Property "' + propertyName + '" not found in JSON data.');
+                    return;
+                }
+                
+                if (!Array.isArray(jsonData[propertyName])) {
+                    alert('Property "' + propertyName + '" is not an array.');
+                    return;
+                }
+                
+                const arrayData = jsonData[propertyName];
+                
+                if (arrayData.length === 0) {
+                    alert('Array is empty.');
+                    return;
+                }
+                
+                // Extract column headers from first object
+                columnHeaders = Object.keys(arrayData[0]);
+                gridData = arrayData;
+                
+                renderGrid();
+                showToast('JSON data synced to grid successfully!');
+            } catch (error) {
+                alert('Error syncing from JSON: ' + error.message);
+            }
+        }
+
+        function pasteFromExcel() {
+            const text = prompt('Paste your Excel data here (tab-separated):');
+            
+            if (!text) return;
+            
+            try {
+                const lines = text.trim().split('\n');
+                const headers = lines[0].split('\t');
+                
+                // Update column headers
+                columnHeaders = headers.map((h, i) => h.trim() || 'column' + (i + 1));
+                
+                // Parse data rows
+                gridData = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split('\t');
+                    const row = {};
+                    columnHeaders.forEach((header, index) => {
+                        row[header] = values[index] ? values[index].trim() : '';
+                    });
+                    gridData.push(row);
+                }
+                
+                renderGrid();
+                showToast('Excel data pasted successfully!');
+            } catch (error) {
+                alert('Error parsing Excel data: ' + error.message);
+            }
+        }
+
+        function loadExample1() {
+            document.getElementById('templateInput').value = `Hello {{name}}!
+
+Welcome to {{company}}. Your account details:
+- Email: {{user.email}}
+- Role: {{user.role}}
+- ID: {{user.id}}
+
+Your subscription is {{status}}.`;
+
+            document.getElementById('jsonInput').value = `{
+  "name": "John Doe",
+  "company": "Acme Corp",
+  "status": "active",
+  "user": {
+    "email": "john@example.com",
+    "role": "Administrator",
+    "id": 12345
+  }
+}`;
+        }
+
+        function loadExample2() {
+            document.getElementById('templateInput').value = `Invoice #{{invoice.number}}
+Date: {{invoice.date}}
+
+Bill To:
+{{customer.name}}
+{{customer.address}}
+{{customer.city}}, {{customer.state}} {{customer.zip}}
+
+Items:
+1. {{items.0.name}} - \${{items.0.price}}
+2. {{items.1.name}} - \${{items.1.price}}
+
+Total: \${{total}}`;
+
+            document.getElementById('jsonInput').value = `{
+  "invoice": {
+    "number": "INV-001",
+    "date": "2024-01-15"
+  },
+  "customer": {
+    "name": "Jane Smith",
+    "address": "123 Main St",
+    "city": "Springfield",
+    "state": "IL",
+    "zip": "62701"
+  },
+  "items": [
+    {
+      "name": "Widget A",
+      "price": "29.99"
+    },
+    {
+      "name": "Widget B",
+      "price": "49.99"
+    }
+  ],
+  "total": "79.98"
+}`;
+        }
+
+        function loadExample3() {
+            document.getElementById('templateInput').value = `Parameters List:
+
+{{#each params}}
+Field Key: {{fieldkey}}
+Display Value: {{displayvalue}}
+AP ID: {{apid}}
+State ID: {{stateid}}
+Index: {{@index}}
+---
+{{/each}}
+
+Total parameters: {{params.length}}`;
+
+            document.getElementById('jsonInput').value = `{
+  "params": [
+    { "fieldkey": "username", "displayvalue": "User Name", "apid": "NULL", "stateid": "NULL" },
+    { "fieldkey": "email", "displayvalue": "Email Address", "apid": "AP123", "stateid": "ST456" },
+    { "fieldkey": "phone", "displayvalue": "Phone Number", "apid": "NULL", "stateid": "ST789" },
+    { "fieldkey": "address", "displayvalue": "Street Address", "apid": "AP999", "stateid": "NULL" },
+    { "fieldkey": "city", "displayvalue": "City", "apid": "NULL", "stateid": "NULL" }
+  ]
+}`;
+            
+            // Also load into grid
+            document.getElementById('arrayPropertyName').value = 'params';
+            syncJsonToGrid();
+        }
+
+        function copyOutputToClipboard() {
+            const outputDiv = document.getElementById('output');
+            const text = outputDiv.textContent;
+            
+            // Use the modern Clipboard API
+            navigator.clipboard.writeText(text).then(() => {
+                // Visual feedback
+                outputDiv.style.backgroundColor = '#d1e7dd';
+                outputDiv.style.borderColor = '#badbcc';
+                
+                setTimeout(() => {
+                    outputDiv.style.backgroundColor = '';
+                    outputDiv.style.borderColor = '';
+                }, 300);
+                
+                // Show toast notification
+                showToast('Output copied to clipboard!');
+            }).catch(err => {
+                // Fallback for older browsers
+                alert('Failed to copy to clipboard: ' + err.message);
+            });
+        }
+    </script>
+</body>
+</html>

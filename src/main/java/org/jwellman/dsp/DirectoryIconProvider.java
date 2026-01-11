@@ -22,6 +22,11 @@ import org.jwellman.virtualdesktop.desktop.VIcon;
  * Resource paths follow the VIcon convention - no file extension in the path.
  * For example: "org/jwellman/virtualdesktop/images/global_ui/home156"
  * </p>
+ *  - Implements the IconProvider interface
+ *  - Tries SVG first via VIcon.createSVGIcon()
+ *  - Falls back to PNG, JPG, GIF in that order
+ *  - Scales raster images to the requested size
+ *  - Handles missing resources gracefully with logging
  *
  * @author Rick Wellman
  */

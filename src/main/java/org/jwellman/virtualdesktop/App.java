@@ -31,6 +31,7 @@ import javax.swing.plaf.metal.MetalLookAndFeel;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 
 import org.jwellman.dsp.DSP;
+import org.jwellman.dsp.DirectoryIconProvider;
 import org.jwellman.dsp.FontAwesomeIconProvider;
 import org.jwellman.dsp.icons.IconSpecifier;
 import org.jwellman.swing.plaf.metal.MetalThemeManager ;
@@ -326,6 +327,7 @@ public class App extends JFrame implements ActionListener {
 
     private static void createTheme() {
         DSP.Icons.registerProvider("FontAwesome", new FontAwesomeIconProvider());
+        DSP.Icons.registerProvider("Directory", new DirectoryIconProvider());
 
         // TODO create something like DSP.Theme for color definitions (I think I have some previous notes somewhere)
         Color iconColor = Color.lightGray;

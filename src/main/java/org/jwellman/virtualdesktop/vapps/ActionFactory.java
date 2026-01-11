@@ -4,12 +4,14 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
 import javax.swing.Action;
 import javax.swing.Icon;
-import org.apache.batik.transcoder.TranscoderException;
+
+import org.jwellman.dsp.DirectoryIconProvider;
+import org.jwellman.dsp.icons.IconSpecifier;
 import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
-import org.jwellman.virtualdesktop.desktop.VException;
-import org.jwellman.virtualdesktop.desktop.VIcon;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -46,6 +48,8 @@ public class ActionFactory {
 
     private static final List<DesktopAction> listOfActions = new ArrayList<>();
 
+    private static final DirectoryIconProvider iconProvider = new DirectoryIconProvider();
+
     public static void initDesktop() {
 
         DesktopAction a = null; // reusable
@@ -54,14 +58,11 @@ public class ActionFactory {
             a = new DesktopAction(clazz.getSimpleName());
             getListOfActions().add(a);
 
-            try {
-                a.putValue(Action.SMALL_ICON, VIcon.createSVGIcon("org/jwellman/virtualdesktop/images/global_ui/home156", 16, 16));
-                a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName()); // i.e. org.jwellman.virtualdesktop.vapps.SpecJCXConsole
+            Icon icon = iconProvider.getIcon(new IconSpecifier("Directory", "org/jwellman/virtualdesktop/images/global_ui/home156", 16, null, null, null));
+            a.putValue(Action.SMALL_ICON, icon);
+            a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName()); // i.e. org.jwellman.virtualdesktop.vapps.SpecJCXConsole
 //            a.putValue(Action.SHORT_DESCRIPTION, "");
 //            a.putValue(Action.MNEMONIC_KEY, "");
-            } catch (TranscoderException ex) {
-                throw new VException("", ex);
-            }
 
         }
 
@@ -71,21 +72,16 @@ public class ActionFactory {
         String iconpath = "org/jwellman/virtualdesktop/images/global_ui/";
 
         for (int i=0; i < labels.length; i++) {
-            try {
-                final Icon icon = VIcon.createSVGIcon(iconpath + icons[i]);
+            final Icon icon = iconProvider.getIcon(new IconSpecifier("Directory", iconpath + icons[i], 48, null, null, null));
 
-                a = new DesktopAction(labels[i]);
-                    a.setDesktopOnly(true);
-                    a.setClazzName("org.jwellman.virtualdesktop.vapps." + clazzs[i]); // TODO (clazzs[i]);
-                    a.putValue(Action.LARGE_ICON_KEY, icon);
-                    // a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName());
-                    // a.putValue(Action.SHORT_DESCRIPTION, "");
-                    // a.putValue(Action.MNEMONIC_KEY, "");
-                getListOfActions().add(a);
-
-            } catch (TranscoderException ex) {
-                throw new VException("", ex);
-            }
+            a = new DesktopAction(labels[i]);
+                a.setDesktopOnly(true);
+                a.setClazzName("org.jwellman.virtualdesktop.vapps." + clazzs[i]); // TODO (clazzs[i]);
+                a.putValue(Action.LARGE_ICON_KEY, icon);
+                // a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName());
+                // a.putValue(Action.SHORT_DESCRIPTION, "");
+                // a.putValue(Action.MNEMONIC_KEY, "");
+            getListOfActions().add(a);
         }
 
         // Load external applications from configuration file
@@ -141,18 +137,19 @@ public class ActionFactory {
 
             // Load icon if specified
             if (appConfig.getIcon() != null && !appConfig.getIcon().isEmpty()) {
-                try {
-                    Icon icon = VIcon.createSVGIcon(appConfig.getIcon(), 48, 48);
-                    action.putValue(Action.LARGE_ICON_KEY, icon);
-                    icon = VIcon.createSVGIcon(appConfig.getIcon(), 16, 16);
-                    action.putValue(Action.SMALL_ICON, icon);
-                } catch (Exception ex) {
-                    System.err.println("Failed to load icon for " + appConfig.getName() + ": " + ex.getMessage());
+                Icon largeIcon = iconProvider.getIcon(new IconSpecifier("Directory", appConfig.getIcon(), 48, null, null, null));
+                Icon smallIcon = iconProvider.getIcon(new IconSpecifier("Directory", appConfig.getIcon(), 16, null, null, null));
+
+                if (largeIcon != null) {
+                    action.putValue(Action.LARGE_ICON_KEY, largeIcon);
+                    action.putValue(Action.SMALL_ICON, smallIcon);
+                } else {
+                    System.err.println("Failed to load icon for " + appConfig.getName() + ": " + appConfig.getIcon());
                     // Use default icon
-                    Icon defaultIcon = VIcon.createSVGIcon("org/jwellman/virtualdesktop/images/global_ui/winking18", 48, 48);
-                    action.putValue(Action.LARGE_ICON_KEY, defaultIcon);
-                    defaultIcon = VIcon.createSVGIcon("org/jwellman/virtualdesktop/images/global_ui/winking18", 16, 16);
-                    action.putValue(Action.SMALL_ICON, defaultIcon);
+                    Icon defaultLargeIcon = iconProvider.getIcon(new IconSpecifier("Directory", "org/jwellman/virtualdesktop/images/global_ui/winking18", 48, null, null, null));
+                    Icon defaultSmallIcon = iconProvider.getIcon(new IconSpecifier("Directory", "org/jwellman/virtualdesktop/images/global_ui/winking18", 16, null, null, null));
+                    action.putValue(Action.LARGE_ICON_KEY, defaultLargeIcon);
+                    action.putValue(Action.SMALL_ICON, defaultSmallIcon);
                 }
             }
 

@@ -56,8 +56,8 @@ public class ActionFactory {
             getListOfActions().add(a);
 
             // Get icon from DSP.Icons registry (auto-discovered in App.createTheme())
-            // Using size-suffixed key for 16x16 icon
-            Icon icon = DSP.Icons.getIcon("home156-16");
+            // Using semantic size key for small icons
+            Icon icon = DSP.Icons.getIcon("home156-small");
             a.putValue(Action.SMALL_ICON, icon);
             a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName()); // i.e. org.jwellman.virtualdesktop.vapps.SpecJCXConsole
 //            a.putValue(Action.SHORT_DESCRIPTION, "");
@@ -71,8 +71,8 @@ public class ActionFactory {
 
         for (int i=0; i < labels.length; i++) {
             // Get icon from DSP.Icons registry (auto-discovered in App.createTheme())
-            // Using size-suffixed key for 48x48 icon
-            final Icon icon = DSP.Icons.getIcon(icons[i] + "-48");
+            // Using semantic size key for large icons (desktop shortcuts)
+            final Icon icon = DSP.Icons.getIcon(icons[i] + "-large");
 
             a = new DesktopAction(labels[i]);
                 a.setDesktopOnly(true);
@@ -138,9 +138,9 @@ public class ActionFactory {
             // Load icon if specified
             final String iconValue = appConfig.getIcon();
             if (iconValue != null && !iconValue.isEmpty()) {
-                // Get icons from DSP.Icons registry using size-suffixed keys
-                Icon largeIcon = DSP.Icons.getIcon(iconValue + "-48");
-                Icon smallIcon = DSP.Icons.getIcon(iconValue + "-16");
+                // Get icons from DSP.Icons registry using semantic size keys
+                Icon largeIcon = DSP.Icons.getIcon(iconValue + "-large");
+                Icon smallIcon = DSP.Icons.getIcon(iconValue + "-small");
 
                 if (largeIcon != null && smallIcon != null) {
                     action.putValue(Action.LARGE_ICON_KEY, largeIcon);
@@ -149,8 +149,8 @@ public class ActionFactory {
                     System.err.println("Icon not found in registry for " + appConfig.getName() + ": " + iconValue);
                     System.err.println("Make sure the icon is in the auto-discovered directory or manually registered.");
                     // Use default icon
-                    Icon defaultLargeIcon = DSP.Icons.getIcon("winking18-48");
-                    Icon defaultSmallIcon = DSP.Icons.getIcon("winking18-16");
+                    Icon defaultLargeIcon = DSP.Icons.getIcon("winking18-large");
+                    Icon defaultSmallIcon = DSP.Icons.getIcon("winking18-small");
                     if (defaultLargeIcon != null && defaultSmallIcon != null) {
                         action.putValue(Action.LARGE_ICON_KEY, defaultLargeIcon);
                         action.putValue(Action.SMALL_ICON, defaultSmallIcon);

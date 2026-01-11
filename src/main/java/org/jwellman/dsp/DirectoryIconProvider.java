@@ -15,6 +15,7 @@ import org.apache.batik.transcoder.TranscoderException;
 import org.jwellman.dsp.icons.IconProvider;
 import org.jwellman.dsp.icons.IconSpecifier;
 import org.jwellman.virtualdesktop.desktop.VIcon;
+import org.jwellman.virtualdesktop.theme.IconSize;
 
 /**
  * IconProvider implementation that loads icons from a specific classpath resource directory.
@@ -181,12 +182,57 @@ public class DirectoryIconProvider implements IconProvider {
      * (the IconProvider will handle format preference during getIcon()).
      * </p>
      * <p>
-     * Each icon is registered at each specified size with keys like: "home156-16", "home156-48", etc.
+     * Each icon is registered with BOTH semantic keys (e.g., "home156-small") and
+     * pixel-based keys (e.g., "home156-16") for backward compatibility during migration.
      * </p>
      *
      * @param providerName the provider name to use in IconSpecifier (typically "Directory")
-     * @param sizes array of sizes to register each icon at (e.g., {16, 48})
+     * @param sizes array of semantic icon sizes to register each icon at
      */
+    public void discoverAndRegisterIcons(String providerName, IconSize... sizes) {
+        try {
+            Set<String> discoveredIconNames = new HashSet<>();
+            discoverIconsRecursive(baseDirectory, "", discoveredIconNames);
+
+            System.out.println("DirectoryIconProvider: Discovered " + discoveredIconNames.size() + " unique icons in " + baseDirectory);
+
+            // Register each discovered icon at each size with DSP.Icons
+            int registrationCount = 0;
+            for (String iconName : discoveredIconNames) {
+                for (IconSize semanticSize : sizes) {
+                    // Get pixel size from ThemeManager
+                    int pixels = org.jwellman.virtualdesktop.theme.ThemeManager.getIconSizePixels(semanticSize);
+
+                    // Register with semantic key: "home156-small"
+                    String semanticKey = iconName + "-" + semanticSize.toThemeKey();
+                    IconSpecifier semanticSpec = new IconSpecifier(providerName, iconName, pixels, null, null, null);
+                    DSP.Icons.register(semanticKey, semanticSpec);
+                    registrationCount++;
+
+                    // Also register with pixel key for backward compatibility: "home156-16"
+                    String pixelKey = iconName + "-" + pixels;
+                    IconSpecifier pixelSpec = new IconSpecifier(providerName, iconName, pixels, null, null, null);
+                    DSP.Icons.register(pixelKey, pixelSpec);
+                    registrationCount++;
+                }
+            }
+            System.out.println("DirectoryIconProvider: Registered " + registrationCount + " icon/size combinations (semantic + pixel keys)");
+
+        } catch (Exception ex) {
+            System.err.println("Error during icon discovery: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Legacy method for backward compatibility during migration.
+     * Registers icons with pixel-based sizes only.
+     *
+     * @param providerName the provider name
+     * @param sizes array of pixel sizes
+     * @deprecated Use {@link #discoverAndRegisterIcons(String, IconSize...)} instead
+     */
+    @Deprecated
     public void discoverAndRegisterIcons(String providerName, int... sizes) {
         try {
             Set<String> discoveredIconNames = new HashSet<>();

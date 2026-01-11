@@ -1,0 +1,41 @@
+{
+  "name": "dark",
+  "displayName": "Dark Theme",
+  "description": "Dark color scheme for reduced eye strain",
+  "version": "1.0.0",
+  "extends": "default",
+
+  "palette": {
+    "blue50": "#0D47A1",
+    "blue100": "#1976D2",
+    "blue500": "#2196F3",
+    "blue700": "#42A5F5",
+    "blue900": "#64B5F6",
+
+    "gray50": "#212121",
+    "gray100": "#424242",
+    "gray300": "#616161",
+    "gray500": "#9E9E9E",
+    "gray700": "#BDBDBD",
+    "gray900": "#E0E0E0",
+
+    "red500": "#EF5350",
+    "orange500": "#FFA726",
+    "green500": "#66BB6A",
+    "yellow500": "#FFEE58",
+
+    "white": "#FFFFFF",
+    "black": "#000000",
+    "transparent": "rgba(0,0,0,0)"
+  },
+
+  "colors": {
+    "background": {
+      "desktop": "blue900",
+      "window": "gray50",
+      "panel": "gray100",
+      "menubar": "gray100",
+      "toolbar": "gray50"
+    }
+  }
+}

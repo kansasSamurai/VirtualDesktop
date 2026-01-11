@@ -326,15 +326,20 @@ public class App extends JFrame implements ActionListener {
     }
 
     private static void createTheme() {
+        // Initialize ThemeManager first - loads user's preferred theme from preferences.json
+        org.jwellman.virtualdesktop.theme.ThemeManager.getInstance().initialize();
+
         DSP.Icons.registerProvider("FontAwesome", new FontAwesomeIconProvider());
 
         // Create and configure DirectoryIconProvider for the global UI icons
         DirectoryIconProvider directoryProvider = new DirectoryIconProvider("org/jwellman/virtualdesktop/images/global_ui");
         DSP.Icons.registerProvider("Directory", directoryProvider);
 
-        // Auto-discover and register all icons in the directory at common sizes
-        // Icons will be registered with size-suffixed keys: "home156-16", "home156-48", etc.
-        directoryProvider.discoverAndRegisterIcons("Directory", 16, 48);
+        // Auto-discover and register all icons using semantic sizes from the active theme
+        // Icons will be registered with both semantic keys ("home156-small") and pixel keys ("home156-16") for backward compatibility
+        directoryProvider.discoverAndRegisterIcons("Directory",
+            org.jwellman.virtualdesktop.theme.IconSize.SMALL,
+            org.jwellman.virtualdesktop.theme.IconSize.LARGE);
 
         // TODO create something like DSP.Theme for color definitions (I think I have some previous notes somewhere)
         Color iconColor = Color.lightGray;

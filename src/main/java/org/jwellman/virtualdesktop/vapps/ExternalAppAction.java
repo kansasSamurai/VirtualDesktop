@@ -55,7 +55,9 @@ public class ExternalAppAction extends DesktopAction {
         );
 
         // Set icon if available
-        if (getValue(LARGE_ICON_KEY) != null) {
+        if (getValue(SMALL_ICON) != null) {
+            spec.setIcon((javax.swing.Icon) getValue(SMALL_ICON));
+        } else if (getValue(LARGE_ICON_KEY) != null) {
             spec.setIcon((javax.swing.Icon) getValue(LARGE_ICON_KEY));
         }
 

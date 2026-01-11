@@ -10,21 +10,21 @@
     {
       "name": "Calculator",
       "command": "calc.exe",
-      "icon": "org/jwellman/virtualdesktop/images/global_ui/calculator29",
+      "icon": "org/jwellman/virtualdesktop/images/global_ui/signal49",
       "desktopOnly": true,
       "waitForCompletion": false
     },
     {
       "name": "Command Prompt",
       "command": "cmd.exe",
-      "icon": "org/jwellman/virtualdesktop/images/global_ui/console1",
+      "icon": "org/jwellman/virtualdesktop/images/global_ui/laptop123",
       "desktopOnly": true,
       "waitForCompletion": false
     },
     {
       "name": "Paint",
       "command": "mspaint.exe",
-      "icon": "org/jwellman/virtualdesktop/images/global_ui/paintbrush9",
+      "icon": "org/jwellman/virtualdesktop/images/global_ui/palette7",
       "desktopOnly": true,
       "waitForCompletion": false
     }

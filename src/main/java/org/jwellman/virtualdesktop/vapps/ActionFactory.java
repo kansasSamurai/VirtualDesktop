@@ -142,13 +142,17 @@ public class ActionFactory {
             // Load icon if specified
             if (appConfig.getIcon() != null && !appConfig.getIcon().isEmpty()) {
                 try {
-                    Icon icon = VIcon.createSVGIcon(appConfig.getIcon(), 64, 64);
+                    Icon icon = VIcon.createSVGIcon(appConfig.getIcon(), 48, 48);
                     action.putValue(Action.LARGE_ICON_KEY, icon);
+                    icon = VIcon.createSVGIcon(appConfig.getIcon(), 16, 16);
+                    action.putValue(Action.SMALL_ICON, icon);
                 } catch (Exception ex) {
                     System.err.println("Failed to load icon for " + appConfig.getName() + ": " + ex.getMessage());
                     // Use default icon
-                    Icon defaultIcon = VIcon.createSVGIcon("org/jwellman/virtualdesktop/images/global_ui/add196", 64, 64);
+                    Icon defaultIcon = VIcon.createSVGIcon("org/jwellman/virtualdesktop/images/global_ui/winking18", 48, 48);
                     action.putValue(Action.LARGE_ICON_KEY, defaultIcon);
+                    defaultIcon = VIcon.createSVGIcon("org/jwellman/virtualdesktop/images/global_ui/winking18", 16, 16);
+                    action.putValue(Action.SMALL_ICON, defaultIcon);
                 }
             }
 

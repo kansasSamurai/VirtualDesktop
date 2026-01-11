@@ -327,7 +327,14 @@ public class App extends JFrame implements ActionListener {
 
     private static void createTheme() {
         DSP.Icons.registerProvider("FontAwesome", new FontAwesomeIconProvider());
-        DSP.Icons.registerProvider("Directory", new DirectoryIconProvider());
+
+        // Create and configure DirectoryIconProvider for the global UI icons
+        DirectoryIconProvider directoryProvider = new DirectoryIconProvider("org/jwellman/virtualdesktop/images/global_ui");
+        DSP.Icons.registerProvider("Directory", directoryProvider);
+
+        // Auto-discover and register all icons in the directory at common sizes
+        // Icons will be registered with size-suffixed keys: "home156-16", "home156-48", etc.
+        directoryProvider.discoverAndRegisterIcons("Directory", 16, 48);
 
         // TODO create something like DSP.Theme for color definitions (I think I have some previous notes somewhere)
         Color iconColor = Color.lightGray;

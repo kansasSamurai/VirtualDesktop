@@ -8,8 +8,7 @@ import java.util.List;
 import javax.swing.Action;
 import javax.swing.Icon;
 
-import org.jwellman.dsp.DirectoryIconProvider;
-import org.jwellman.dsp.icons.IconSpecifier;
+import org.jwellman.dsp.DSP;
 import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -48,8 +47,6 @@ public class ActionFactory {
 
     private static final List<DesktopAction> listOfActions = new ArrayList<>();
 
-    private static final DirectoryIconProvider iconProvider = new DirectoryIconProvider();
-
     public static void initDesktop() {
 
         DesktopAction a = null; // reusable
@@ -58,7 +55,9 @@ public class ActionFactory {
             a = new DesktopAction(clazz.getSimpleName());
             getListOfActions().add(a);
 
-            Icon icon = iconProvider.getIcon(new IconSpecifier("Directory", "org/jwellman/virtualdesktop/images/global_ui/home156", 16, null, null, null));
+            // Get icon from DSP.Icons registry (auto-discovered in App.createTheme())
+            // Using size-suffixed key for 16x16 icon
+            Icon icon = DSP.Icons.getIcon("home156-16");
             a.putValue(Action.SMALL_ICON, icon);
             a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName()); // i.e. org.jwellman.virtualdesktop.vapps.SpecJCXConsole
 //            a.putValue(Action.SHORT_DESCRIPTION, "");
@@ -69,10 +68,11 @@ public class ActionFactory {
         String[] labels = {"Home",    "Calendar",    "Office Writer", "Trash"};
         String[] icons =  {"home156", "calendar168", "document176",   "rubbish1"};
         String[] clazzs = {"SpecJCXConsole", "SpecJCXConsole", "SpecJCXConsole", "SpecJCXConsole"};
-        String iconpath = "org/jwellman/virtualdesktop/images/global_ui/";
 
         for (int i=0; i < labels.length; i++) {
-            final Icon icon = iconProvider.getIcon(new IconSpecifier("Directory", iconpath + icons[i], 48, null, null, null));
+            // Get icon from DSP.Icons registry (auto-discovered in App.createTheme())
+            // Using size-suffixed key for 48x48 icon
+            final Icon icon = DSP.Icons.getIcon(icons[i] + "-48");
 
             a = new DesktopAction(labels[i]);
                 a.setDesktopOnly(true);
@@ -136,20 +136,25 @@ public class ActionFactory {
             action.setDesktopOnly(appConfig.isDesktopOnly());
 
             // Load icon if specified
-            if (appConfig.getIcon() != null && !appConfig.getIcon().isEmpty()) {
-                Icon largeIcon = iconProvider.getIcon(new IconSpecifier("Directory", appConfig.getIcon(), 48, null, null, null));
-                Icon smallIcon = iconProvider.getIcon(new IconSpecifier("Directory", appConfig.getIcon(), 16, null, null, null));
+            final String iconValue = appConfig.getIcon();
+            if (iconValue != null && !iconValue.isEmpty()) {
+                // Get icons from DSP.Icons registry using size-suffixed keys
+                Icon largeIcon = DSP.Icons.getIcon(iconValue + "-48");
+                Icon smallIcon = DSP.Icons.getIcon(iconValue + "-16");
 
-                if (largeIcon != null) {
+                if (largeIcon != null && smallIcon != null) {
                     action.putValue(Action.LARGE_ICON_KEY, largeIcon);
                     action.putValue(Action.SMALL_ICON, smallIcon);
                 } else {
-                    System.err.println("Failed to load icon for " + appConfig.getName() + ": " + appConfig.getIcon());
+                    System.err.println("Icon not found in registry for " + appConfig.getName() + ": " + iconValue);
+                    System.err.println("Make sure the icon is in the auto-discovered directory or manually registered.");
                     // Use default icon
-                    Icon defaultLargeIcon = iconProvider.getIcon(new IconSpecifier("Directory", "org/jwellman/virtualdesktop/images/global_ui/winking18", 48, null, null, null));
-                    Icon defaultSmallIcon = iconProvider.getIcon(new IconSpecifier("Directory", "org/jwellman/virtualdesktop/images/global_ui/winking18", 16, null, null, null));
-                    action.putValue(Action.LARGE_ICON_KEY, defaultLargeIcon);
-                    action.putValue(Action.SMALL_ICON, defaultSmallIcon);
+                    Icon defaultLargeIcon = DSP.Icons.getIcon("winking18-48");
+                    Icon defaultSmallIcon = DSP.Icons.getIcon("winking18-16");
+                    if (defaultLargeIcon != null && defaultSmallIcon != null) {
+                        action.putValue(Action.LARGE_ICON_KEY, defaultLargeIcon);
+                        action.putValue(Action.SMALL_ICON, defaultSmallIcon);
+                    }
                 }
             }
 

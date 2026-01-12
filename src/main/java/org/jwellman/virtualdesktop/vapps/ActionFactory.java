@@ -144,8 +144,31 @@ public class ActionFactory {
                 iconKey = defaultIcon;
             }
 
-            Icon smallIcon = DSP.Icons.getIcon(iconKey + "-small");
-            Icon largeIcon = DSP.Icons.getIcon(iconKey + "-large");
+            Icon smallIcon = null;
+            Icon largeIcon = null;
+
+            // Try to load requested icon, fallback to add196 if not found
+            try {
+                smallIcon = DSP.Icons.getIcon(iconKey + "-small");
+            } catch (Exception ex) {
+                System.err.println("Icon not found: " + iconKey + "-small, using fallback add196-small");
+                try {
+                    smallIcon = DSP.Icons.getIcon("add196-small");
+                } catch (Exception ex2) {
+                    System.err.println("Fallback icon add196-small also not found");
+                }
+            }
+
+            try {
+                largeIcon = DSP.Icons.getIcon(iconKey + "-large");
+            } catch (Exception ex) {
+                System.err.println("Icon not found: " + iconKey + "-large, using fallback add196-large");
+                try {
+                    largeIcon = DSP.Icons.getIcon("add196-large");
+                } catch (Exception ex2) {
+                    System.err.println("Fallback icon add196-large also not found");
+                }
+            }
 
             if (smallIcon != null) {
                 action.putValue(Action.SMALL_ICON, smallIcon);
@@ -178,7 +201,19 @@ public class ActionFactory {
                 iconKey = defaultIcon;
             }
 
-            Icon largeIcon = DSP.Icons.getIcon(iconKey + "-large");
+            Icon largeIcon = null;
+
+            // Try to load requested icon, fallback to add196 if not found
+            try {
+                largeIcon = DSP.Icons.getIcon(iconKey + "-large");
+            } catch (Exception ex) {
+                System.err.println("Icon not found: " + iconKey + "-large, using fallback add196-large");
+                try {
+                    largeIcon = DSP.Icons.getIcon("add196-large");
+                } catch (Exception ex2) {
+                    System.err.println("Fallback icon add196-large also not found");
+                }
+            }
 
             DesktopAction action = new DesktopAction(shortcut.getLabel());
             action.setDesktopOnly(true);

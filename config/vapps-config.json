@@ -57,7 +57,7 @@
             {
               "class": "org.jwellman.virtualdesktop.vapps.SpecSVGViewer",
               "title": "SVG Viewer",
-              "icon": "picture194",
+              "icon": "add196",
               "enabled": true,
               "desktopOnly": false
             }
@@ -71,14 +71,14 @@
             {
               "class": "org.jwellman.virtualdesktop.vapps.SpecDocking",
               "title": "Docking Demo",
-              "icon": "window122",
+              "icon": "landscape12",
               "enabled": true,
               "desktopOnly": false
             },
             {
               "class": "org.jwellman.virtualdesktop.vapps.SpecUberDragAndDrop",
               "title": "Drag & Drop Demo",
-              "icon": "interface114",
+              "icon": "landscape12",
               "enabled": true,
               "desktopOnly": false
             }
@@ -94,14 +94,14 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecHyperSQL",
           "title": "HyperSQL Manager",
-          "icon": "database70",
+          "icon": "download171",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecHyperSQLClient",
           "title": "HyperSQL Client",
-          "icon": "database70",
+          "icon": "download171",
           "enabled": true,
           "desktopOnly": false
         }
@@ -129,7 +129,7 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecXChartBarChart",
           "title": "XChart Bar Chart",
-          "icon": "bar-chart158",
+          "icon": "signal49",
           "enabled": true,
           "desktopOnly": false
         }
@@ -150,7 +150,7 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecVfsFileChooser2",
           "title": "VFS File Chooser",
-          "icon": "folder196",
+          "icon": "briefcase58",
           "enabled": true,
           "desktopOnly": false
         },

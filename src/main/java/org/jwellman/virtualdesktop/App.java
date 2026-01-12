@@ -44,6 +44,9 @@ import org.jwellman.virtualdesktop.desktopmgr.VAppListCellRenderer;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
 import org.jwellman.virtualdesktop.vapps.ActionFactory;
 import org.jwellman.virtualdesktop.vapps.DesktopAction;
+import org.jwellman.virtualdesktop.vapps.MenuGroup;
+import org.jwellman.virtualdesktop.vapps.VappConfig;
+import org.jwellman.virtualdesktop.vapps.VappsConfig;
 import org.jwellman.virtualdesktop.vapps.SpecBeanShell;
 import org.jwellman.virtualdesktop.vapps.SpecDocking;
 import org.jwellman.virtualdesktop.vapps.SpecHyperSQL;
@@ -196,20 +199,16 @@ public class App extends JFrame implements ActionListener {
         // and overall, there needs to be a "layout manager" for the desktop
         int x = 10; int y = -70;
 
+        // Build hierarchical menu structure
+        buildVAppsMenu();
+
+        // Add desktop shortcuts
         for (DesktopAction a : ActionFactory.getListOfActions()) {
-            /* TODO Currently this is coded so that it is either
-               on the desktop or in the menu.  I do not have a current
-               working example, but there can probably be both so
-               this implementation will have to change.
-             */
             if (a.isDesktopOnly()) {
                 final Icon icon = (Icon) a.getValue(Action.LARGE_ICON_KEY);
                 final String label = (String) a.getValue(Action.NAME);
                 final VShortcut vs = new VShortcut(a, label, icon, x, y+=80);
                 desktop.add(vs);
-            } else {
-                //m = new JMenuItem(a);
-                appMenu.add(a);
             }
         }
         
@@ -311,6 +310,92 @@ public class App extends JFrame implements ActionListener {
      */
     protected void quit() {
         System.exit(0);
+    }
+
+    /**
+     * Build the VApps menu structure. If a configuration is loaded, builds hierarchical
+     * menus. Otherwise falls back to flat menu structure.
+     */
+    private void buildVAppsMenu() {
+        VappsConfig config = ActionFactory.getVappsConfig();
+
+        if (config == null) {
+            // Legacy mode - flat menu
+            buildFlatVAppsMenu();
+            return;
+        }
+
+        // Build hierarchical menu from config
+        for (MenuGroup menuGroup : config.getMenuStructure()) {
+            JMenu topLevelMenu = createMenuFromGroup(menuGroup);
+            appMenu.add(topLevelMenu);
+        }
+    }
+
+    /**
+     * Create a JMenu from a MenuGroup configuration
+     * @param group the menu group configuration
+     * @return a JMenu populated with vapps and subgroups
+     */
+    private JMenu createMenuFromGroup(MenuGroup group) {
+        JMenu menu = new JMenu(group.getLabel());
+
+        // Set mnemonic if specified
+        if (group.getMnemonic() != null && !group.getMnemonic().isEmpty()) {
+            menu.setMnemonic(group.getMnemonic().charAt(0));
+        }
+
+        // Add vapps at this level (non-desktopOnly)
+        for (DesktopAction action : ActionFactory.getListOfActions()) {
+            if (!action.isDesktopOnly()) {
+                String actionClass = (String) action.getValue(Action.ACTION_COMMAND_KEY);
+                if (actionClass == null) {
+                    actionClass = action.getClazzName();
+                }
+
+                // Check if this action belongs to this menu group
+                if (belongsToMenuGroup(actionClass, group)) {
+                    menu.add(action);
+                }
+            }
+        }
+
+        // Recursively add subgroups
+        if (group.isGroupType()) {
+            for (MenuGroup subgroup : group.getGroups()) {
+                JMenu submenu = createMenuFromGroup(subgroup);
+                menu.add(submenu);
+            }
+        }
+
+        return menu;
+    }
+
+    /**
+     * Check if an action class belongs to a menu group
+     * @param actionClass the fully qualified class name
+     * @param group the menu group to check
+     * @return true if the action belongs to this group
+     */
+    private boolean belongsToMenuGroup(String actionClass, MenuGroup group) {
+        // Check vapps at this level
+        for (VappConfig vappConfig : group.getVapps()) {
+            if (vappConfig.getClassName().equals(actionClass)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Legacy fallback - builds a flat menu structure with all non-desktop actions
+     */
+    private void buildFlatVAppsMenu() {
+        for (DesktopAction a : ActionFactory.getListOfActions()) {
+            if (!a.isDesktopOnly()) {
+                appMenu.add(a);
+            }
+        }
     }
 
     /**

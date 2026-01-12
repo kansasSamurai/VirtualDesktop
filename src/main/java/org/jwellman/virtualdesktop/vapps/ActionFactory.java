@@ -48,46 +48,184 @@ public class ActionFactory {
 
     private static final List<DesktopAction> listOfActions = new ArrayList<>();
 
-    public static void initDesktop() {
+    private static VappsConfig vappsConfig = null;
 
-        DesktopAction a = null; // reusable
+    /**
+     * Get the loaded vapps configuration
+     * @return the vapps configuration, or null if not loaded
+     */
+    public static VappsConfig getVappsConfig() {
+        return vappsConfig;
+    }
+
+    public static void initDesktop() {
+        // Load vapps from config (with fallback to hardcoded)
+        loadVappsConfig();
+
+        // Load external applications from configuration file
+        loadExternalApps();
+    }
+
+    /**
+     * Loads vapps from JSON configuration file or falls back to hardcoded registrations
+     */
+    private static void loadVappsConfig() {
+        File configFile = new File("config/vapps-config.json");
+
+        if (!configFile.exists()) {
+            System.out.println("VApps config file not found: " + configFile.getAbsolutePath());
+            System.out.println("Using hardcoded vapp registrations (legacy mode)");
+            loadHardcodedApps();
+            return;
+        }
+
+        try {
+            vappsConfig = mapper.readValue(configFile, VappsConfig.class);
+            System.out.println("Loaded VApps configuration version " + vappsConfig.getVersion());
+
+            // Process menu vapps
+            for (MenuGroup menuGroup : vappsConfig.getMenuStructure()) {
+                processMenuGroup(menuGroup, vappsConfig.getDefaultIcon());
+            }
+
+            // Process desktop shortcuts
+            for (DesktopShortcut shortcut : vappsConfig.getDesktopShortcuts()) {
+                if (shortcut.isEnabled()) {
+                    registerDesktopShortcut(shortcut, vappsConfig.getDefaultIcon());
+                }
+            }
+
+        } catch (IOException ex) {
+            System.err.println("Failed to load vapps configuration: " + ex.getMessage());
+            ex.printStackTrace();
+            System.err.println("Falling back to hardcoded vapp registrations");
+            loadHardcodedApps();
+        }
+    }
+
+    /**
+     * Recursively process a menu group and register all vapps within it
+     * @param group the menu group to process
+     * @param defaultIcon the default icon key to use if vapp has none
+     */
+    private static void processMenuGroup(MenuGroup group, String defaultIcon) {
+        // Process vapps at this level
+        for (VappConfig vappConfig : group.getVapps()) {
+            if (vappConfig.isEnabled()) {
+                registerVapp(vappConfig, defaultIcon);
+            }
+        }
+
+        // Recursively process nested groups
+        for (MenuGroup subgroup : group.getGroups()) {
+            processMenuGroup(subgroup, defaultIcon);
+        }
+    }
+
+    /**
+     * Register a vapp from configuration
+     * @param vappConfig the vapp configuration
+     * @param defaultIcon the default icon key to use if vapp has none
+     */
+    private static void registerVapp(VappConfig vappConfig, String defaultIcon) {
+        try {
+            // Determine title
+            String title = vappConfig.getTitle();
+            if (title == null || title.isEmpty()) {
+                Class<?> clazz = Class.forName(vappConfig.getClassName());
+                title = clazz.getSimpleName();
+            }
+
+            DesktopAction action = new DesktopAction(title);
+
+            // Set icon
+            String iconKey = vappConfig.getIcon();
+            if (iconKey == null || iconKey.isEmpty()) {
+                iconKey = defaultIcon;
+            }
+
+            Icon smallIcon = DSP.Icons.getIcon(iconKey + "-small");
+            Icon largeIcon = DSP.Icons.getIcon(iconKey + "-large");
+
+            if (smallIcon != null) {
+                action.putValue(Action.SMALL_ICON, smallIcon);
+            }
+            if (largeIcon != null) {
+                action.putValue(Action.LARGE_ICON_KEY, largeIcon);
+            }
+
+            action.putValue(Action.ACTION_COMMAND_KEY, vappConfig.getClassName());
+            action.setDesktopOnly(vappConfig.isDesktopOnly());
+
+            getListOfActions().add(action);
+
+        } catch (ClassNotFoundException ex) {
+            System.err.println("Failed to register vapp: " + vappConfig.getClassName());
+            System.err.println("Class not found - check that the class name is correct");
+            ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Register a desktop shortcut from configuration
+     * @param shortcut the desktop shortcut configuration
+     * @param defaultIcon the default icon key to use if shortcut has none
+     */
+    private static void registerDesktopShortcut(DesktopShortcut shortcut, String defaultIcon) {
+        try {
+            String iconKey = shortcut.getIcon();
+            if (iconKey == null || iconKey.isEmpty()) {
+                iconKey = defaultIcon;
+            }
+
+            Icon largeIcon = DSP.Icons.getIcon(iconKey + "-large");
+
+            DesktopAction action = new DesktopAction(shortcut.getLabel());
+            action.setDesktopOnly(true);
+            action.setClazzName(shortcut.getClassName());
+
+            if (largeIcon != null) {
+                action.putValue(Action.LARGE_ICON_KEY, largeIcon);
+            }
+
+            getListOfActions().add(action);
+
+        } catch (Exception ex) {
+            System.err.println("Failed to register desktop shortcut: " + shortcut.getLabel());
+            ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Fallback method that loads vapps using the hardcoded registeredApps array
+     * This preserves legacy behavior when no config file is present
+     */
+    private static void loadHardcodedApps() {
+        DesktopAction a = null;
 
         for (Class<?> clazz : registeredApps) {
             a = new DesktopAction(clazz.getSimpleName());
             getListOfActions().add(a);
 
-            // Get icon from DSP.Icons registry (auto-discovered in App.createTheme())
-            // Using semantic size key for small icons
             Icon icon = DSP.Icons.getIcon("home156-small");
             a.putValue(Action.SMALL_ICON, icon);
-            a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName()); // i.e. org.jwellman.virtualdesktop.vapps.SpecJCXConsole
-//            a.putValue(Action.SHORT_DESCRIPTION, "");
-//            a.putValue(Action.MNEMONIC_KEY, "");
-
+            a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName());
         }
 
-        String[] labels = {"Home",    "Calendar",    "Office Writer", "Trash"};
-        String[] icons =  {"home156", "calendar168", "document176",   "rubbish1"};
+        // Hardcoded desktop shortcuts
+        String[] labels = {"Home", "Calendar", "Office Writer", "Trash"};
+        String[] icons = {"home156", "calendar168", "document176", "rubbish1"};
         String[] clazzs = {"SpecJCXConsole", "SpecJCXConsole", "SpecJCXConsole", "SpecJCXConsole"};
 
-        for (int i=0; i < labels.length; i++) {
-            // Get icon from DSP.Icons registry (auto-discovered in App.createTheme())
-            // Using semantic size key for large icons (desktop shortcuts)
+        for (int i = 0; i < labels.length; i++) {
             final Icon icon = DSP.Icons.getIcon(icons[i] + "-large");
 
             a = new DesktopAction(labels[i]);
-                a.setDesktopOnly(true);
-                a.setClazzName("org.jwellman.virtualdesktop.vapps." + clazzs[i]); // TODO (clazzs[i]);
-                a.putValue(Action.LARGE_ICON_KEY, icon);
-                // a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName());
-                // a.putValue(Action.SHORT_DESCRIPTION, "");
-                // a.putValue(Action.MNEMONIC_KEY, "");
+            a.setDesktopOnly(true);
+            a.setClazzName("org.jwellman.virtualdesktop.vapps." + clazzs[i]);
+            a.putValue(Action.LARGE_ICON_KEY, icon);
             getListOfActions().add(a);
         }
-
-        // Load external applications from configuration file
-        loadExternalApps();
-
     }
 
     /**

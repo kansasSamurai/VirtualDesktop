@@ -1068,6 +1068,24 @@ Phase 1 Requirements (Current Implementation)
  - ⏳ Hot-Swap Support - User controls implementation timing due to complexity
  - ⏳ SVG Color Replacement - Future enhancement, lower priority
  
- 
+-----------------------
+
+# Theme Selector Vapp
+
+  - SpecThemeSelector - Full-featured theme selection UI with:
+    - List of available themes
+    - Theme details display (name, description, version, inheritance)
+    - Icon size preview with actual icons
+    - Apply button that saves preference
+    - Restart reminder message
+
+## How It Works (Phase 1)
+
+  1. User opens SpecThemeSelector vapp from application menu
+  2. Selects a theme and clicks "Apply Theme"
+  3. Theme preference saved to config/preferences.json
+  4. User restarts VirtualDesktop
+  5. ThemeManager loads the selected theme on startup
+  6. All icons are registered with theme-specific sizes
 
   

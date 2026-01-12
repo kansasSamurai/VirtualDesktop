@@ -40,6 +40,7 @@ public class ActionFactory {
         ,SpecJediTerm.class
         ,SpecGroovyConsole.class // newly readded
         ,SpecGroovyGraphics.class
+        ,SpecThemeSelector.class // Theme selection vapp
 //      ,SpecJzy3D.class // this app sucks
     };
 

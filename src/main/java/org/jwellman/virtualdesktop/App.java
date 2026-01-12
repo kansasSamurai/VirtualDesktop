@@ -339,7 +339,10 @@ public class App extends JFrame implements ActionListener {
         // Icons will be registered with both semantic keys ("home156-small") and pixel keys ("home156-16") for backward compatibility
         directoryProvider.discoverAndRegisterIcons("Directory",
             org.jwellman.virtualdesktop.theme.IconSize.SMALL,
-            org.jwellman.virtualdesktop.theme.IconSize.LARGE);
+            org.jwellman.virtualdesktop.theme.IconSize.MENU,
+            org.jwellman.virtualdesktop.theme.IconSize.TOOLBAR,
+            org.jwellman.virtualdesktop.theme.IconSize.LARGE,
+            org.jwellman.virtualdesktop.theme.IconSize.XLARGE);
 
         // TODO create something like DSP.Theme for color definitions (I think I have some previous notes somewhere)
         Color iconColor = Color.lightGray;

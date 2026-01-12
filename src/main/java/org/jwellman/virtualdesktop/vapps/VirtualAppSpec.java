@@ -12,12 +12,15 @@ import javax.swing.JFrame;
 import javax.swing.JInternalFrame;
 import javax.swing.JPanel;
 
-import bibliothek.gui.dock.common.CContentArea;
-import bibliothek.gui.dock.common.CControl;
-import bibliothek.gui.dock.common.CLocation;
-import bibliothek.gui.dock.common.DefaultSingleCDockable;
-import bibliothek.gui.dock.common.SingleCDockable;
-import bibliothek.gui.dock.common.theme.ThemeMap;
+import org.jwellman.virtualdesktop.docking.Dockable;
+import org.jwellman.virtualdesktop.docking.DockableLocation;
+import org.jwellman.virtualdesktop.docking.DockingException;
+import org.jwellman.virtualdesktop.docking.DockingService;
+import org.jwellman.virtualdesktop.docking.DockingServiceFactory;
+import org.jwellman.virtualdesktop.docking.DockingTheme;
+import org.jwellman.virtualdesktop.docking.DockingWorkspace;
+import org.jwellman.virtualdesktop.docking.impl.DockingServiceImpl;
+import org.jwellman.virtualdesktop.docking.spi.DockingProvider;
 
 /**
  *
@@ -40,30 +43,33 @@ abstract public class VirtualAppSpec {
     
 /* ==============================================
  * begin docking feature ...
- * Note: docking features might be better placed inside 
+ * Note: docking features might be better placed inside
  * VirtualAppFrame and/or vapps/DesktopManager.
  * ============================================== */
-    // Each instance gets its own content area (by API design)
-    protected CContentArea dockingcontent = null;
-    
+    // Each instance gets its own workspace (by API design)
+    protected DockingWorkspace workspace = null;
+
     // In order to drag/drop between internal frames,
-    // they must all share a controller (therefore it is static)
-    protected static CControl control;
+    // they must all share a service (therefore it is static)
+    protected static DockingService dockingService = DockingServiceFactory.getInstance();
 
     public static void setJFrame(JFrame frame) {
-        // Setup Docking Controller...
-        if (control == null) {
-            control = new CControl( frame );
+        // Setup Docking Service...
+        if (!dockingService.isInitialized()) {
+            try {
+                dockingService.initialize(frame);
 
-            // Besides my visual preference for the flat theme,
-            // it also does not use animations (which I also prefer).
-            final ThemeMap themes = control.getThemes();
-//            themes.select(ThemeMap.KEY_FLAT_THEME); // this is my preference
-            themes.select(ThemeMap.KEY_ECLIPSE_THEME); // experimenting with this - I like it; especially with JTattoo LNF
-//            themes.select(ThemeMap.KEY_SMOOTH_THEME); // this is almost like flat except has animations; I don't like the user experience
-//            themes.select(ThemeMap.KEY_BASIC_THEME); // meh
-//            themes.select(ThemeMap.KEY_BUBBLE_THEME); // I like the drag/drop highlighting but HATE the title bar :(
+                // Besides my visual preference for the flat theme,
+                // it also does not use animations (which I also prefer).
+                // DockingTheme.FLAT - this is my preference
+                dockingService.setTheme(DockingTheme.ECLIPSE); // experimenting with this - I like it; especially with JTattoo LNF
+                // DockingTheme.SMOOTH - this is almost like flat except has animations; I don't like the user experience
+                // DockingTheme.BASIC - meh
+                // DockingTheme.BUBBLE - I like the drag/drop highlighting but HATE the title bar :(
 
+            } catch (DockingException e) {
+                throw new RuntimeException("Failed to initialize docking service", e);
+            }
         } else {
             System.out.println("Warning:  Tried to reinitialize Docking");
         }
@@ -72,26 +78,38 @@ abstract public class VirtualAppSpec {
     // This variable and its usage is a hack until I come up with
     // a better way to manage/organize applets/dockables.
     private static int duplicateCounter = 1;
-    
+
     public void addDockable(JComponent c) {
-
-    	// Locations cannot be set until:
-        // 1) the Controller content area is added to a component
+        // Locations cannot be set until:
+        // 1) the service workspace is added to a component
         // see DesktopManager.createVApp()
-        
-        // 2) the Dockable has been added to the Controller
-    	String dockid = this.getTitle();
-    	SingleCDockable check = control.getSingleDockable(this.getTitle());
-    	if (check != null) {
-    		dockid = this.getTitle() + duplicateCounter++;
-    	}
-        SingleCDockable dockable = new DefaultSingleCDockable(dockid, this.getTitle(), c);
-        control.addDockable( dockable );
-        
-        // now we can set the location
-        dockable.setLocation( CLocation.base(dockingcontent).normal() );
-        dockable.setVisible( true );
 
+        // 2) the Dockable has been added to the workspace
+        try {
+            String dockid = this.getTitle();
+
+            // Check for duplicates
+            if (workspace != null && workspace.hasDockable(this.getTitle())) {
+                dockid = this.getTitle() + duplicateCounter++;
+            }
+
+            // Get provider for builder
+            DockingProvider provider = ((DockingServiceImpl) dockingService).getProvider();
+
+            // Build and add dockable
+            Dockable dockable = provider.createDockableBuilder()
+                .withId(dockid)
+                .withTitle(this.getTitle())
+                .withComponent(c)
+                .withLocation(DockableLocation.normalIn(workspace))
+                .withVisible(true)
+                .build();
+
+            workspace.addDockable(dockable);
+
+        } catch (DockingException e) {
+            throw new RuntimeException("Failed to add dockable", e);
+        }
     }
 
     // Note:  there is some docking code in setContent();
@@ -182,21 +200,21 @@ abstract public class VirtualAppSpec {
      * @param content the content to set
      */
     public void setContent(JPanel content) {
-        this.content = content; 
-        if (this.dockingcontent == null) {
-            String dockid = this.getTitle() == null ? "FIXME" : this.getTitle();
-            
-            // create a control area with unique name (there may be better algorithms)
-            boolean added = false; int counter = 1;
+        this.content = content;
+        if (this.workspace == null) {
+            String workspaceId = this.getTitle() == null ? "FIXME" : this.getTitle();
+
+            // create a workspace with unique name (there may be better algorithms)
+            boolean created = false; int counter = 1;
             do {
                 try {
-                    this.dockingcontent = control.createContentArea(dockid);
-                    added = true;
-                } catch (Exception e) {
-                    dockid += dockid + "-" + counter++;
+                    this.workspace = dockingService.createWorkspace(workspaceId);
+                    created = true;
+                } catch (DockingException e) {
+                    workspaceId = workspaceId + "-" + counter++;
                 }
-                
-            } while (!added && counter < 100);
+
+            } while (!created && counter < 100);
             // the limit on counter is just to prevent endless loops
             // it is not a great solution and if the loop counter hits, the app probably won't work right
         }
@@ -236,7 +254,7 @@ abstract public class VirtualAppSpec {
     }
 
     public Container getDockableContent() {
-        return this.dockingcontent;
+        return this.workspace != null ? this.workspace.getContainer() : null;
     }
 
 }

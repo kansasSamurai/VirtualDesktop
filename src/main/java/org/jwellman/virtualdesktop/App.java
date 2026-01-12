@@ -52,6 +52,7 @@ import org.jwellman.virtualdesktop.vapps.SpecJFreeChart;
 import org.jwellman.virtualdesktop.vapps.SpecUberDragAndDrop;
 import org.jwellman.virtualdesktop.vapps.SpecXChartDemo;
 import org.jwellman.virtualdesktop.vapps.SpecXionFM;
+import org.jwellman.virtualdesktop.vapps.VirtualAppSpec;
 import org.jwellman.virtualdesktop.vswing.VDesktopPane;
 
 import com.alee.laf.WebLookAndFeel;
@@ -212,8 +213,9 @@ public class App extends JFrame implements ActionListener {
             }
         }
         
-        // A bit of a hack but this initializes/enables docking
-        SpecDocking.setJFrame(this);
+        // Initialize the docking service
+        // Note: This could also be done via SpecDocking.setJFrame(this) for backward compatibility
+        VirtualAppSpec.setJFrame(this);
 
     }
 

@@ -3,67 +3,94 @@
   "defaultIcon": "home156",
   "menuStructure": [
     {
+      "type": "group",
+      "label": "Tools",
+      "mnemonic": "T",
+      "groups": [
+        {
+          "type": "flat",
+          "label": "Scripting",
+          "mnemonic": "S",
+          "vapps": [
+            {
+              "class": "org.jwellman.virtualdesktop.vapps.SpecBeanShell",
+              "title": "BeanShell Console",
+              "icon": "laptop123",
+              "enabled": true,
+              "desktopOnly": false
+            },
+            {
+              "class": "org.jwellman.virtualdesktop.vapps.SpecGroovyConsole",
+              "title": "Groovy Console",
+              "icon": "laptop123",
+              "enabled": true,
+              "desktopOnly": false
+            },
+            {
+              "class": "org.jwellman.virtualdesktop.vapps.SpecJCXConsole",
+              "title": "JCX Console",
+              "icon": "laptop123",
+              "enabled": true,
+              "desktopOnly": false
+            },
+            {
+              "class": "org.jwellman.virtualdesktop.vapps.SpecJediTerm",
+              "title": "JediTerm Terminal",
+              "icon": "laptop123",
+              "enabled": true,
+              "desktopOnly": false
+            }
+          ]
+        },
+        {
+          "type": "flat",
+          "label": "Graphics",
+          "mnemonic": "G",
+          "vapps": [
+            {
+              "class": "org.jwellman.virtualdesktop.vapps.SpecGroovyGraphics",
+              "title": "Groovy Graphics",
+              "icon": "palette7",
+              "enabled": true,
+              "desktopOnly": false
+            },
+            {
+              "class": "org.jwellman.virtualdesktop.vapps.SpecSVGViewer",
+              "title": "SVG Viewer",
+              "icon": "add196",
+              "enabled": true,
+              "desktopOnly": false
+            }
+          ]
+        },
+        {
+          "type": "flat",
+          "label": "Development",
+          "mnemonic": "D",
+          "vapps": [
+            {
+              "class": "org.jwellman.virtualdesktop.vapps.SpecDocking",
+              "title": "Docking Demo",
+              "icon": "landscape12",
+              "enabled": true,
+              "desktopOnly": false
+            },
+            {
+              "class": "org.jwellman.virtualdesktop.vapps.SpecUberDragAndDrop",
+              "title": "Drag & Drop Demo",
+              "icon": "landscape12",
+              "enabled": true,
+              "desktopOnly": false
+            }
+          ]
+        }
+      ]
+    },
+    {
       "type": "flat",
-      "label": "VApps",
-      "mnemonic": "V",
-      "groups": [],
+      "label": "Database",
+      "mnemonic": "D",
       "vapps": [
-        {
-          "class": "org.jwellman.virtualdesktop.vapps.SpecBeanShell",
-          "title": "BeanShell Console",
-          "icon": "laptop123",
-          "enabled": true,
-          "desktopOnly": false
-        },
-        {
-          "class": "org.jwellman.virtualdesktop.vapps.SpecGroovyConsole",
-          "title": "Groovy Console",
-          "icon": "laptop123",
-          "enabled": true,
-          "desktopOnly": false
-        },
-        {
-          "class": "org.jwellman.virtualdesktop.vapps.SpecJCXConsole",
-          "title": "JCX Console",
-          "icon": "laptop123",
-          "enabled": true,
-          "desktopOnly": false
-        },
-        {
-          "class": "org.jwellman.virtualdesktop.vapps.SpecJediTerm",
-          "title": "JediTerm Terminal",
-          "icon": "laptop123",
-          "enabled": true,
-          "desktopOnly": false
-        },
-        {
-          "class": "org.jwellman.virtualdesktop.vapps.SpecGroovyGraphics",
-          "title": "Groovy Graphics",
-          "icon": "palette7",
-          "enabled": true,
-          "desktopOnly": false
-        },
-        {
-          "class": "org.jwellman.virtualdesktop.vapps.SpecSVGViewer",
-          "title": "SVG Viewer",
-          "icon": "add196",
-          "enabled": true,
-          "desktopOnly": false
-        },
-        {
-          "class": "org.jwellman.virtualdesktop.vapps.SpecDocking",
-          "title": "Docking Demo",
-          "icon": "landscape12",
-          "enabled": true,
-          "desktopOnly": false
-        },
-        {
-          "class": "org.jwellman.virtualdesktop.vapps.SpecUberDragAndDrop",
-          "title": "Drag & Drop Demo",
-          "icon": "landscape12",
-          "enabled": true,
-          "desktopOnly": false
-        },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecHyperSQL",
           "title": "HyperSQL Manager",
@@ -77,7 +104,14 @@
           "icon": "download171",
           "enabled": true,
           "desktopOnly": false
-        },
+        }
+      ]
+    },
+    {
+      "type": "flat",
+      "label": "Charts",
+      "mnemonic": "C",
+      "vapps": [
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecJFreeChart",
           "title": "JFreeChart Demo",
@@ -98,7 +132,14 @@
           "icon": "signal49",
           "enabled": true,
           "desktopOnly": false
-        },
+        }
+      ]
+    },
+    {
+      "type": "flat",
+      "label": "Utilities",
+      "mnemonic": "U",
+      "vapps": [
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecJDatePicker",
           "title": "Date Picker",

@@ -36,7 +36,6 @@ import org.jwellman.dsp.FontAwesomeIconProvider;
 import org.jwellman.dsp.icons.IconSpecifier;
 import org.jwellman.swing.plaf.metal.MetalThemeManager ;
 //import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
-//import static org.jwellman.virtualdesktop.App.registeredApps;
 import org.jwellman.virtualdesktop.desktop.VActionLNF;
 import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.VShortcut;
@@ -108,25 +107,6 @@ public class App extends JFrame implements ActionListener {
     public static final int LAF_SUBSTANCE = 9; // deprecated / not currently used
     public static final int LAF_NAPKIN = 10;
     public static final int CHOSEN_LAF = LAF_FLATLAF; // LAF_FLATLAF; // LAF_JTATTOO;
-
-    /**
-     * This is only nececessary for a temp dev menu item; can eventually be removed
-     * Even now, I could probably use ActionFactory registeredApps instead.
-     */
-    @SuppressWarnings("rawtypes")
-    static Class[] registeredApps = {
-        SpecBeanShell.class
-        ,SpecJCXConsole.class
-        ,SpecHyperSQL.class
-        ,SpecJFreeChart.class
-        ,SpecXChartDemo.class
-        ,SpecXionFM.class
-        ,SpecUberDragAndDrop.class
-//        ,SpecXionFM.class // this app is targeted for Linux
-//        ,SpecJzy3D.class // this app sucks
-    };
-
-    static int count = -1; // just a simple development control variable
 
     /**
      * Having direct access to this object as a JFrame is not really
@@ -275,14 +255,9 @@ public class App extends JFrame implements ActionListener {
      */
     @Override public void actionPerformed(ActionEvent e) {
         if ("new".equals(e.getActionCommand())) {
-            try {
-             // TODO This is just temporary; need to implement a real feature
-                DesktopManager.get().createVApp( registeredApps[(++count % registeredApps.length)].newInstance() );
-            } catch (InstantiationException ex) {
-                Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (IllegalAccessException ex) {
-                Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            // TODO: This temporary menu item is no longer functional after config-based system
+            // Consider implementing a proper "New" feature or remove this menu item
+            System.out.println("New menu item - feature not implemented");
         } else if ("exit".equals(e.getActionCommand())) {
             quit();
         } else {
@@ -313,15 +288,13 @@ public class App extends JFrame implements ActionListener {
     }
 
     /**
-     * Build the VApps menu structure. If a configuration is loaded, builds hierarchical
-     * menus. Otherwise falls back to flat menu structure.
+     * Build the VApps menu structure from configuration.
      */
     private void buildVAppsMenu() {
         VappsConfig config = ActionFactory.getVappsConfig();
 
         if (config == null) {
-            // Legacy mode - flat menu
-            buildFlatVAppsMenu();
+            System.err.println("ERROR: No VApps configuration loaded - cannot build menu");
             return;
         }
 
@@ -385,17 +358,6 @@ public class App extends JFrame implements ActionListener {
             }
         }
         return false;
-    }
-
-    /**
-     * Legacy fallback - builds a flat menu structure with all non-desktop actions
-     */
-    private void buildFlatVAppsMenu() {
-        for (DesktopAction a : ActionFactory.getListOfActions()) {
-            if (!a.isDesktopOnly()) {
-                appMenu.add(a);
-            }
-        }
     }
 
     /**

@@ -21,29 +21,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public class ActionFactory {
 
-    public static Class<?>[] registeredApps = {
-         SpecBeanShell.class
-         ,SpecJCXConsole.class
-         ,SpecScar.class
-        ,SpecJetty.class
-        ,SpecHyperSQL.class
-        ,SpecHyperSQLClient.class
-        ,SpecJDatePicker.class
-        ,SpecJFreeChart.class
-        ,SpecXChartDemo.class
-        ,SpecXChartBarChart.class
-        ,SpecSVGViewer.class
-        ,SpecVfsFileChooser2.class // this isn't as bad as I originally thought... I was confusing it with XionFM and/or SpecJzy3D below.
-        ,SpecUberDragAndDrop.class
-//      ,SpecXionFM.class // this app is targeted for Linux
-        ,SpecDocking.class
-        ,SpecJediTerm.class
-        ,SpecGroovyConsole.class // newly readded
-        ,SpecGroovyGraphics.class
-        ,SpecThemeSelector.class // Theme selection vapp
-//      ,SpecJzy3D.class // this app sucks
-    };
-
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private static final List<DesktopAction> listOfActions = new ArrayList<>();
@@ -67,16 +44,15 @@ public class ActionFactory {
     }
 
     /**
-     * Loads vapps from JSON configuration file or falls back to hardcoded registrations
+     * Loads vapps from JSON configuration file. The config file is mandatory.
      */
     private static void loadVappsConfig() {
         File configFile = new File("config/vapps-config.json");
 
         if (!configFile.exists()) {
-            System.out.println("VApps config file not found: " + configFile.getAbsolutePath());
-            System.out.println("Using hardcoded vapp registrations (legacy mode)");
-            loadHardcodedApps();
-            return;
+            System.err.println("ERROR: VApps config file not found: " + configFile.getAbsolutePath());
+            System.err.println("ERROR: The configuration file is mandatory. Please create config/vapps-config.json");
+            throw new RuntimeException("Required configuration file not found: config/vapps-config.json");
         }
 
         try {
@@ -96,10 +72,9 @@ public class ActionFactory {
             }
 
         } catch (IOException ex) {
-            System.err.println("Failed to load vapps configuration: " + ex.getMessage());
+            System.err.println("ERROR: Failed to load vapps configuration: " + ex.getMessage());
             ex.printStackTrace();
-            System.err.println("Falling back to hardcoded vapp registrations");
-            loadHardcodedApps();
+            throw new RuntimeException("Failed to load required configuration file", ex);
         }
     }
 
@@ -228,38 +203,6 @@ public class ActionFactory {
         } catch (Exception ex) {
             System.err.println("Failed to register desktop shortcut: " + shortcut.getLabel());
             ex.printStackTrace();
-        }
-    }
-
-    /**
-     * Fallback method that loads vapps using the hardcoded registeredApps array
-     * This preserves legacy behavior when no config file is present
-     */
-    private static void loadHardcodedApps() {
-        DesktopAction a = null;
-
-        for (Class<?> clazz : registeredApps) {
-            a = new DesktopAction(clazz.getSimpleName());
-            getListOfActions().add(a);
-
-            Icon icon = DSP.Icons.getIcon("home156-small");
-            a.putValue(Action.SMALL_ICON, icon);
-            a.putValue(Action.ACTION_COMMAND_KEY, clazz.getCanonicalName());
-        }
-
-        // Hardcoded desktop shortcuts
-        String[] labels = {"Home", "Calendar", "Office Writer", "Trash"};
-        String[] icons = {"home156", "calendar168", "document176", "rubbish1"};
-        String[] clazzs = {"SpecJCXConsole", "SpecJCXConsole", "SpecJCXConsole", "SpecJCXConsole"};
-
-        for (int i = 0; i < labels.length; i++) {
-            final Icon icon = DSP.Icons.getIcon(icons[i] + "-large");
-
-            a = new DesktopAction(labels[i]);
-            a.setDesktopOnly(true);
-            a.setClazzName("org.jwellman.virtualdesktop.vapps." + clazzs[i]);
-            a.putValue(Action.LARGE_ICON_KEY, icon);
-            getListOfActions().add(a);
         }
     }
 

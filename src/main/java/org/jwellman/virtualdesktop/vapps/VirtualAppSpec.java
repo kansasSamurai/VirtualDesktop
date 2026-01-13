@@ -36,6 +36,7 @@ abstract public class VirtualAppSpec {
     protected int height = 0;
     protected int width = 0;
     protected boolean internalFrameProvider = false;
+    private String dockableId = null; // Track this instance's dockable ID for cleanup
 
     protected VirtualAppSpec() {
         // Intentionally Empty
@@ -75,9 +76,8 @@ abstract public class VirtualAppSpec {
         }
     }
 
-    // This variable and its usage is a hack until I come up with
-    // a better way to manage/organize applets/dockables.
-    private static int duplicateCounter = 1;
+    // Track all dockable IDs globally to prevent duplicates across all workspaces
+    private static final java.util.Set<String> usedDockableIds = new java.util.HashSet<String>();
 
     public void addDockable(JComponent c) {
         // Locations cannot be set until:
@@ -88,10 +88,15 @@ abstract public class VirtualAppSpec {
         try {
             String dockid = this.getTitle();
 
-            // Check for duplicates
-            if (workspace != null && workspace.hasDockable(this.getTitle())) {
-                dockid = this.getTitle() + duplicateCounter++;
+            // Generate unique ID if needed (global check across all workspaces)
+            int counter = 1;
+            while (usedDockableIds.contains(dockid)) {
+                dockid = this.getTitle() + "-" + counter++;
             }
+
+            // Register this ID as used
+            usedDockableIds.add(dockid);
+            this.dockableId = dockid; // Store for cleanup
 
             // Get provider for builder
             DockingProvider provider = ((DockingServiceImpl) dockingService).getProvider();
@@ -109,6 +114,20 @@ abstract public class VirtualAppSpec {
 
         } catch (DockingException e) {
             throw new RuntimeException("Failed to add dockable", e);
+        }
+    }
+
+    /**
+     * Release the dockable ID when this vapp is closed.
+     * Should be called from frame close handlers to allow ID reuse.
+     */
+    public void releaseDockableId() {
+        if (this.dockableId != null) {
+            usedDockableIds.remove(this.dockableId);
+            if (workspace != null) {
+                workspace.removeDockable(this.dockableId);
+            }
+            this.dockableId = null;
         }
     }
 

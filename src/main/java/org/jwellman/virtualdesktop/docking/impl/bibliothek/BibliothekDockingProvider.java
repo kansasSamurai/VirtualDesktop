@@ -134,4 +134,14 @@ public class BibliothekDockingProvider implements DockingProvider {
     CControl getControl() {
         return control;
     }
+
+    /**
+     * Get the native CControl instance for demo/testing purposes.
+     * This breaks abstraction but is needed for legacy demo code.
+     *
+     * @return the native CControl
+     */
+    public CControl getNativeControl() {
+        return control;
+    }
 }

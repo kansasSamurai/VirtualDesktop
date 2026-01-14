@@ -79,6 +79,13 @@
           "desktopOnly": false
         },
         {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecCSVDemo",
+          "title": "CSV Demo",
+          "icon": "download171",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
           "class": "org.jwellman.virtualdesktop.vapps.SpecJFreeChart",
           "title": "JFreeChart Demo",
           "icon": "stats9",

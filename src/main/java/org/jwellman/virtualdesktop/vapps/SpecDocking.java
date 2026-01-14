@@ -12,8 +12,8 @@ import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
 import org.jwellman.virtualdesktop.App;
-import org.jwellman.virtualdesktop.docking.DockingProvider;
-import org.jwellman.virtualdesktop.docking.DockingServiceImpl;
+import org.jwellman.virtualdesktop.docking.impl.DockingServiceImpl;
+import org.jwellman.virtualdesktop.docking.spi.DockingProvider;
 
 import bibliothek.gui.DockController;
 import bibliothek.gui.DockFrontend;

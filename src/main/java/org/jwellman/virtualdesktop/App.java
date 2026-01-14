@@ -300,8 +300,14 @@ public class App extends JFrame implements ActionListener {
 
         // Build hierarchical menu from config
         for (MenuGroup menuGroup : config.getMenuStructure()) {
-            JMenu topLevelMenu = createMenuFromGroup(menuGroup);
-            appMenu.add(topLevelMenu);
+            if (menuGroup.isInlineType()) {
+                // Inline type: add vapps directly to appMenu without creating submenu
+                addVappsToMenu(appMenu, menuGroup);
+            } else {
+                // Regular type: create submenu
+                JMenu topLevelMenu = createMenuFromGroup(menuGroup);
+                appMenu.add(topLevelMenu);
+            }
         }
     }
 
@@ -318,20 +324,8 @@ public class App extends JFrame implements ActionListener {
             menu.setMnemonic(group.getMnemonic().charAt(0));
         }
 
-        // Add vapps at this level (non-desktopOnly)
-        for (DesktopAction action : ActionFactory.getListOfActions()) {
-            if (!action.isDesktopOnly()) {
-                String actionClass = (String) action.getValue(Action.ACTION_COMMAND_KEY);
-                if (actionClass == null) {
-                    actionClass = action.getClazzName();
-                }
-
-                // Check if this action belongs to this menu group
-                if (belongsToMenuGroup(actionClass, group)) {
-                    menu.add(action);
-                }
-            }
-        }
+        // Add vapps at this level using helper method
+        addVappsToMenu(menu, group);
 
         // Recursively add subgroups
         if (group.isGroupType()) {
@@ -358,6 +352,28 @@ public class App extends JFrame implements ActionListener {
             }
         }
         return false;
+    }
+
+    /**
+     * Add vapps from a MenuGroup directly to a target menu
+     * @param targetMenu the menu to add items to
+     * @param group the menu group containing vapps to add
+     */
+    private void addVappsToMenu(JMenu targetMenu, MenuGroup group) {
+        // Add vapps at this level (non-desktopOnly)
+        for (DesktopAction action : ActionFactory.getListOfActions()) {
+            if (!action.isDesktopOnly()) {
+                String actionClass = (String) action.getValue(Action.ACTION_COMMAND_KEY);
+                if (actionClass == null) {
+                    actionClass = action.getClazzName();
+                }
+
+                // Check if this action belongs to this menu group
+                if (belongsToMenuGroup(actionClass, group)) {
+                    targetMenu.add(action);
+                }
+            }
+        }
     }
 
     /**

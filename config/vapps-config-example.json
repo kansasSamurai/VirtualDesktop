@@ -3,9 +3,9 @@
   "defaultIcon": "home156",
   "menuStructure": [
     {
-      "type": "inline",
-      "label": "",
-      "mnemonic": "",
+      "type": "flat",
+      "label": "VApps",
+      "mnemonic": "V",
       "groups": [],
       "vapps": [
         {

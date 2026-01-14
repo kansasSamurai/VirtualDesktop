@@ -13,7 +13,7 @@ import java.util.List;
 public class MenuGroup {
 
     @JsonProperty("type")
-    private String type = "flat"; // "group" or "flat"
+    private String type = "flat"; // "inline", "flat", or "group"
 
     @JsonProperty("label")
     private String label;
@@ -80,5 +80,15 @@ public class MenuGroup {
      */
     public boolean isGroupType() {
         return "group".equalsIgnoreCase(type);
+    }
+
+    /**
+     * Check if this menu group should add items directly to parent menu
+     * without creating a submenu wrapper
+     *
+     * @return true if type is "inline"
+     */
+    public boolean isInlineType() {
+        return "inline".equalsIgnoreCase(type);
     }
 }

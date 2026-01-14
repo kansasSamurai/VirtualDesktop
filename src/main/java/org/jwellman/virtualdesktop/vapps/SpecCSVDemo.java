@@ -44,6 +44,12 @@ public class SpecCSVDemo extends VirtualAppSpec {
         try {
             Class.forName(DRIVER);
             conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+
+            // Enable TEXT TABLE file access
+            Statement stmt = conn.createStatement();
+            stmt.execute("SET DATABASE TEXT TABLE DEFAULTS 'allow_full_path=true'");
+            stmt.close();
+
             log("Database connection established (file-based: data/csvdemo)");
             log("Note: Database files will be created in data/ directory\n");
         } catch (Exception e) {
@@ -186,19 +192,26 @@ public class SpecCSVDemo extends VirtualAppSpec {
             log("✓ TEXT TABLE created");
 
             // Link to CSV file
-            String absolutePath = lastCsvFile.getAbsolutePath().replace("\\", "/");
-            String sourceSql = "SET TABLE products_text SOURCE '" +
-                    absolutePath + ";ignore_first=true;encoding=UTF-8;fs=,;vs=\";qc=\"'";
+            // Use just the filename since CSV and DB are in same directory
+            String csvFileName = lastCsvFile.getName();
+            String sourceSql = "SET TABLE products_text SOURCE \"" +
+                    csvFileName + ";ignore_first=true;encoding=UTF-8;fs=,\"";
             stmt.execute(sourceSql);
-            log("✓ Linked to CSV file\n");
+            log("✓ Linked to CSV file: " + csvFileName + "\n");
 
             // Query the TEXT TABLE
             log("Querying TEXT TABLE (reads directly from CSV):");
             ResultSet rs = stmt.executeQuery(
-                    "SELECT category, COUNT(*) as count, AVG(price) as avg_price " +
+                    "SELECT category, COUNT(*) as item_count, AVG(price) as avg_price " +
                     "FROM products_text " +
                     "GROUP BY category " +
                     "ORDER BY category");
+/* Plain text for manual testing:
+SELECT category, COUNT(*) as item_count, AVG(price) as avg_price 
+FROM products_text 
+GROUP BY category 
+ORDER BY category
+ */
 
             log(String.format("%-20s %8s %12s", "Category", "Count", "Avg Price"));
             log(String.format("%-20s %8s %12s", "--------", "-----", "---------"));
@@ -206,7 +219,7 @@ public class SpecCSVDemo extends VirtualAppSpec {
             while (rs.next()) {
                 log(String.format("%-20s %8d %12.2f",
                         rs.getString("category"),
-                        rs.getInt("count"),
+                        rs.getInt("item_count"),
                         rs.getDouble("avg_price")));
             }
 

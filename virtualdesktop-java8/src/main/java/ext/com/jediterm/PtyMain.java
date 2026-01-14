@@ -11,21 +11,28 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.jediterm.pty.PtyProcessTtyConnector;
-import com.jediterm.terminal.LoggingTtyConnector;
-import com.jediterm.terminal.TtyConnector;
-import com.jediterm.terminal.ui.UIUtil;
-import com.pty4j.PtyProcess;
+//import com.google.common.collect.Lists;
+//import com.google.common.collect.Maps;
+//import com.jediterm.pty.PtyProcessTtyConnector;
+//import com.jediterm.terminal.LoggingTtyConnector;
+//import com.jediterm.terminal.TtyConnector;
+//import com.jediterm.terminal.ui.UIUtil;
+//import com.pty4j.PtyProcess;
 
 /**
  * Extends the local extension of AbstractTerminalFrame
  * 
  * @author rwellman
  */
-public class PtyMain extends AbstractTerminalFrame {
+public class PtyMain // extends AbstractTerminalFrame 
+{
 
+    public static void main(final String[] arg) {
+        
+    }
+
+/*  This requires java11 so comment code in version8 project; eventually delete this class.
+ 
   @Override
   public TtyConnector createTtyConnector() {
     try {
@@ -88,5 +95,6 @@ public class PtyMain extends AbstractTerminalFrame {
       super.write(bytes);
     }
   }
-  
+*/
+
 }

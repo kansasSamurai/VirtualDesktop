@@ -18,8 +18,8 @@ public class SpecJediTerm extends AbstractExternalApp implements Runnable {
     }
 
     public void run() {
-        //BasicTerminalExample.main(null);
-        PtyMain.main(null);        
+        // BasicTerminalExample.main(null);
+        PtyMain.main(null);
     }
-    
+
 }

@@ -79,6 +79,16 @@
             padding: 0.25rem 0.5rem;
             font-size: 0.875rem;
         }
+        .saved-template-item {
+            display: inline-block;
+            margin: 4px;
+        }
+        .saved-templates-container {
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            min-height: 40px;
+        }
     </style>
 </head>
 <body>
@@ -132,6 +142,18 @@ Welcome to {{company}}. Your account details:
 - ID: {{user.id}}
 
 Your subscription is {{status}}.</textarea>
+                        <div class="mt-3">
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <input type="text" id="templateName" class="form-control" placeholder="Template name...">
+                                </div>
+                                <div class="col-md-8">
+                                    <button class="btn btn-primary" onclick="saveTemplate()">💾 Save Template</button>
+                                    <button class="btn btn-danger" onclick="clearSavedTemplates()">🗑️ Clear All Saved</button>
+                                </div>
+                            </div>
+                            <div id="savedTemplates" class="mt-3"></div>
+                        </div>
                         <div class="mt-2">
                             <button class="btn btn-sm btn-secondary example-btn" onclick="loadExample1()">Example 1</button>
                             <button class="btn btn-sm btn-secondary example-btn" onclick="loadExample2()">Example 2</button>
@@ -250,6 +272,103 @@ Your subscription is {{status}}.</textarea>
     <script>
         let gridData = [];
         let columnHeaders = [];
+        let savedTemplates = {};
+
+        // Load saved templates from localStorage on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            loadSavedTemplatesFromStorage();
+            renderSavedTemplates();
+        });
+
+        function loadSavedTemplatesFromStorage() {
+            const stored = localStorage.getItem('savedTemplates');
+            if (stored) {
+                try {
+                    savedTemplates = JSON.parse(stored);
+                } catch (e) {
+                    savedTemplates = {};
+                }
+            }
+        }
+
+        function saveSavedTemplatesToStorage() {
+            localStorage.setItem('savedTemplates', JSON.stringify(savedTemplates));
+        }
+
+        function saveTemplate() {
+            const name = document.getElementById('templateName').value.trim();
+            const template = document.getElementById('templateInput').value;
+            
+            if (!name) {
+                alert('Please enter a name for the template.');
+                return;
+            }
+            
+            if (!template) {
+                alert('Template is empty. Please enter some template text first.');
+                return;
+            }
+            
+            savedTemplates[name] = template;
+            saveSavedTemplatesToStorage();
+            renderSavedTemplates();
+            
+            // Clear the name input
+            document.getElementById('templateName').value = '';
+            
+            showToast('Template "' + name + '" saved!');
+        }
+
+        function loadTemplate(name) {
+            if (savedTemplates[name]) {
+                document.getElementById('templateInput').value = savedTemplates[name];
+                showToast('Template "' + name + '" loaded!');
+            }
+        }
+
+        function deleteTemplate(name) {
+            if (confirm('Are you sure you want to delete the template "' + name + '"?')) {
+                delete savedTemplates[name];
+                saveSavedTemplatesToStorage();
+                renderSavedTemplates();
+                showToast('Template "' + name + '" deleted!');
+            }
+        }
+
+        function clearSavedTemplates() {
+            if (Object.keys(savedTemplates).length === 0) {
+                alert('No saved templates to clear.');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to delete ALL saved templates? This cannot be undone.')) {
+                savedTemplates = {};
+                saveSavedTemplatesToStorage();
+                renderSavedTemplates();
+                showToast('All saved templates cleared!');
+            }
+        }
+
+        function renderSavedTemplates() {
+            const container = document.getElementById('savedTemplates');
+            
+            if (Object.keys(savedTemplates).length === 0) {
+                container.innerHTML = '<div class="saved-templates-container text-muted"><small>No saved templates yet. Enter a name above and click "Save Template".</small></div>';
+                return;
+            }
+            
+            let html = '<div class="saved-templates-container"><strong>Saved Templates:</strong><br>';
+            
+            for (const name in savedTemplates) {
+                html += `<div class="saved-template-item">
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadTemplate('${name.replace(/'/g, "\\'")}')">📄 ${name}</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteTemplate('${name.replace(/'/g, "\\'")}')">×</button>
+                </div>`;
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
 
         // Helper function to show toast notifications
         function showToast(message) {

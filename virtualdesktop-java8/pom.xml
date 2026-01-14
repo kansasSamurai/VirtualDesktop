@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.jwellman</groupId>
+    <artifactId>virtualdesktop-parent</artifactId>
+    <version>2.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>virtualdesktop-java8</artifactId>
+  <packaging>jar</packaging>
+
+  <name>VirtualDesktop Java 8</name>
+  <description>VirtualDesktop application - Java 8 compatible version</description>
+
+  <dependencies>
+    <!-- Internal -->
+    <dependency>
+      <groupId>org.jwellman</groupId>
+      <artifactId>virtualdesktop-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jwellman</groupId>
+      <artifactId>swing-utils</artifactId>
+    </dependency>
+
+    <!-- Apache Commons -->
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>commons-beanutils</groupId>
+      <artifactId>commons-beanutils</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-text</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-exec</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-collections4</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-vfs2-project</artifactId>
+      <type>pom</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-email</artifactId>
+    </dependency>
+
+    <!-- Graphics/XML -->
+    <dependency>
+      <groupId>org.apache.xmlgraphics</groupId>
+      <artifactId>batik-rasterizer</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.xmlgraphics</groupId>
+      <artifactId>batik-swing</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>xml-apis</groupId>
+      <artifactId>xml-apis</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>xml-apis</groupId>
+      <artifactId>xml-apis-ext</artifactId>
+    </dependency>
+
+    <!-- JSON/XML -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.thoughtworks.xstream</groupId>
+      <artifactId>xstream</artifactId>
+    </dependency>
+
+    <!-- Scripting -->
+    <dependency>
+      <groupId>org.codehaus.groovy</groupId>
+      <artifactId>groovy-all</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.gant</groupId>
+      <artifactId>gant_groovy2.3</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.groovy-contrib</groupId>
+      <artifactId>graphicsbuilder</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.kordamp</groupId>
+      <artifactId>jsilhouette</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.beanshell</groupId>
+      <artifactId>bsh</artifactId>
+    </dependency>
+
+    <!-- UI/Swing -->
+    <dependency>
+      <groupId>org.swinglabs</groupId>
+      <artifactId>swingx-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.swinglabs</groupId>
+      <artifactId>swingx</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.swinglabs</groupId>
+      <artifactId>swing-layout</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.swinglabs</groupId>
+      <artifactId>jxlayer</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.jidesoft</groupId>
+      <artifactId>jide-oss</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.miglayout</groupId>
+      <artifactId>miglayout-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.miglayout</groupId>
+      <artifactId>miglayout-swing</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.glazedlists</groupId>
+      <artifactId>glazedlists</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fifesoft</groupId>
+      <artifactId>rsyntaxtextarea</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jdesktop</groupId>
+      <artifactId>beansbinding</artifactId>
+    </dependency>
+
+    <!-- Docking -->
+    <dependency>
+      <groupId>org.dockingframes</groupId>
+      <artifactId>docking-frames-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.dockingframes</groupId>
+      <artifactId>docking-frames-common</artifactId>
+    </dependency>
+
+    <!-- Icon Fonts -->
+    <dependency>
+      <groupId>com.github.jiconfont</groupId>
+      <artifactId>jiconfont-swing</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.github.jiconfont</groupId>
+      <artifactId>jiconfont-font_awesome</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.github.jiconfont</groupId>
+      <artifactId>jiconfont-google_material_design_icons</artifactId>
+    </dependency>
+
+    <!-- Terminal -->
+    <dependency>
+      <groupId>org.jetbrains.jediterm</groupId>
+      <artifactId>jediterm-pty</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jetbrains.pty4j</groupId>
+      <artifactId>pty4j</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.googlecode.lanterna</groupId>
+      <artifactId>lanterna</artifactId>
+    </dependency>
+
+    <!-- Images -->
+    <dependency>
+      <groupId>com.github.imcdonagh</groupId>
+      <artifactId>image4j</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>net.coobird.gui.simpleimageviewer4j</groupId>
+      <artifactId>simpleimageviewer4j</artifactId>
+    </dependency>
+
+    <!-- Look and Feel -->
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>net.sourceforge.napkinlaf</groupId>
+      <artifactId>napkinlaf</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.mgarin</groupId>
+      <artifactId>weblaf</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.jtattoo</groupId>
+      <artifactId>JTattoo</artifactId>
+    </dependency>
+
+    <!-- Calendar -->
+    <dependency>
+      <groupId>com.toedter</groupId>
+      <artifactId>jcalendar</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jdatepicker</groupId>
+      <artifactId>jdatepicker</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.github.lgooddatepicker</groupId>
+      <artifactId>LGoodDatePicker</artifactId>
+    </dependency>
+
+    <!-- Charting -->
+    <dependency>
+      <groupId>org.jfree</groupId>
+      <artifactId>jfreechart</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jfree</groupId>
+      <artifactId>jfreesvg</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.xeiam.xchart</groupId>
+      <artifactId>xchart</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.xeiam.xchart</groupId>
+      <artifactId>xchart-demo</artifactId>
+    </dependency>
+
+    <!-- Web -->
+    <dependency>
+      <groupId>com.j2html</groupId>
+      <artifactId>j2html</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-servlet</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>javax.help</groupId>
+      <artifactId>javahelp</artifactId>
+    </dependency>
+
+    <!-- Database -->
+    <dependency>
+      <groupId>org.hsqldb</groupId>
+      <artifactId>hsqldb</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.microsoft.sqlserver</groupId>
+      <artifactId>mssql-jdbc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>ca.krasnay</groupId>
+      <artifactId>sqlbuilder</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>net.sf.opencsv</groupId>
+      <artifactId>opencsv</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>nl.knaw.dans.common</groupId>
+      <artifactId>dans-dbf-lib</artifactId>
+    </dependency>
+
+    <!-- Other -->
+    <dependency>
+      <groupId>com.github.fracpete</groupId>
+      <artifactId>vfsjfilechooser2</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <!-- Not test scope - includes Replay for interactive testing -->
+    </dependency>
+  </dependencies>
+
+  <!-- Local repository path adjusted for child module -->
+  <repositories>
+    <repository>
+      <id>virtualdesktop_project.local</id>
+      <name>virtualdesktop_project</name>
+      <url>file:///${project.basedir}/../repo/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
+</project>

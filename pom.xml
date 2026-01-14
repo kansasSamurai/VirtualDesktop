@@ -1,624 +1,566 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <name>VirtualDesktop</name>
+  <groupId>org.jwellman</groupId>
+  <artifactId>virtualdesktop-parent</artifactId>
+  <version>2.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>VirtualDesktop Parent</name>
   <url>https://github.com/kansasSamurai/VirtualDesktop</url>
 
-  <groupId>org.jwellman</groupId>
-  <artifactId>VirtualDesktop</artifactId>
-  <version>1.0-SNAPSHOT</version>
-  <packaging>jar</packaging>
+  <modules>
+    <module>virtualdesktop-core</module>
+    <module>virtualdesktop-java8</module>
+    <!-- <module>virtualdesktop-java9</module> -->
+    <module>virtualdesktop-dist</module>
+  </modules>
 
   <properties>
+    <!-- Build Properties -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
+
+    <!-- Apache Commons Versions -->
+    <commons-lang.version>2.6</commons-lang.version>
+    <commons-lang3.version>3.6</commons-lang3.version>
+    <commons-beanutils.version>1.11.0</commons-beanutils.version>
+    <commons-io.version>2.6</commons-io.version>
+    <commons-compress.version>1.20</commons-compress.version>
+    <commons-text.version>1.8</commons-text.version>
+    <commons-exec.version>1.3</commons-exec.version>
+    <commons-collections4.version>4.1</commons-collections4.version>
+    <commons-vfs2.version>2.2</commons-vfs2.version>
+    <commons-email.version>1.5</commons-email.version>
+
+    <!-- Graphics/XML Versions -->
+    <batik.version>1.7</batik.version>
+    <xml-apis.version>1.3.04</xml-apis.version>
+
+    <!-- JSON/XML Versions -->
+    <jackson.version>2.15.2</jackson.version>
+    <xstream.version>1.4.7</xstream.version>
+
+    <!-- Scripting Versions -->
+    <groovy.version>2.3.0</groovy.version>
+    <gant.version>1.9.11</gant.version>
+    <graphicsbuilder.version>0.6.1</graphicsbuilder.version>
+    <jsilhouette.version>0.2</jsilhouette.version>
+    <beanshell.version>2.0b5</beanshell.version>
+
+    <!-- UI/Swing Versions -->
+    <swingx-core.version>1.6.2-2</swingx-core.version>
+    <swingx.version>1.6.1</swingx.version>
+    <swing-layout.version>1.0.3</swing-layout.version>
+    <jxlayer.version>3.0.4</jxlayer.version>
+    <jide-oss.version>3.6.18</jide-oss.version>
+    <miglayout.version>5.0</miglayout.version>
+    <glazedlists.version>1.11.0</glazedlists.version>
+    <rsyntaxtextarea.version>2.6.1</rsyntaxtextarea.version>
+    <beansbinding.version>1.2.1</beansbinding.version>
+
+    <!-- Docking Versions -->
+    <docking-frames.version>1.1.3</docking-frames.version>
+
+    <!-- Icon Font Versions -->
+    <jiconfont.version>1.0.0</jiconfont.version>
+    <jiconfont-fontawesome.version>4.7.0.0</jiconfont-fontawesome.version>
+    <jiconfont-material.version>2.2.0.0</jiconfont-material.version>
+
+    <!-- Terminal Versions -->
+    <jediterm.version>2.33</jediterm.version>
+    <pty4j.version>0.8.2</pty4j.version>
+    <lanterna.version>3.0.1</lanterna.version>
+
+    <!-- Image Versions -->
+    <image4j.version>0.7.2</image4j.version>
+    <simpleimageviewer4j.version>0.1.0</simpleimageviewer4j.version>
+
+    <!-- Look and Feel Versions -->
+    <flatlaf.version>3.1.1</flatlaf.version>
+    <napkinlaf.version>1.2</napkinlaf.version>
+    <weblaf.version>1.27</weblaf.version>
+    <jtattoo.version>1.6.11</jtattoo.version>
+
+    <!-- Calendar Versions -->
+    <jcalendar.version>1.4</jcalendar.version>
+    <jdatepicker.version>1.3.4</jdatepicker.version>
+    <lgooddatepicker.version>10.3.1</lgooddatepicker.version>
+
+    <!-- Charting Versions -->
+    <jfreechart.version>1.5.0</jfreechart.version>
+    <jfreesvg.version>3.3</jfreesvg.version>
+    <xchart.version>2.2.1</xchart.version>
+
+    <!-- Web Versions -->
+    <j2html.version>1.4.0</j2html.version>
+    <jetty.version>9.4.25.v20191220</jetty.version>
+    <javahelp.version>2.0.05</javahelp.version>
+
+    <!-- Database Versions -->
+    <hsqldb.version>2.3.0</hsqldb.version>
+    <mysql-connector.version>5.1.49</mysql-connector.version>
+    <mssql-jdbc.version>6.1.0.jre7</mssql-jdbc.version>
+    <sqlbuilder.version>1.2</sqlbuilder.version>
+    <opencsv.version>2.1</opencsv.version>
+    <dans-dbf-lib.version>1.0.0-beta-10</dans-dbf-lib.version>
+
+    <!-- Other Versions -->
+    <vfsjfilechooser2.version>0.2.8</vfsjfilechooser2.version>
+    <guava.version>30.1-jre</guava.version>
+    <jetbrains-annotations.version>16.0.2</jetbrains-annotations.version>
+    <log4j.version>1.2.16</log4j.version>
+    <junit.version>4.11</junit.version>
+    <swing-utils.version>0.0.2-SNAPSHOT</swing-utils.version>
   </properties>
 
-<!-- jline seemed problematic and difficult to integrate; break into a separate jar -->
-
-  <dependencies>
-<!--
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>3.8.1</version>
-      <scope>test</scope>
-    </dependency>
-
--->
-    <dependency>
-        <groupId>commons-lang</groupId>
-        <artifactId>commons-lang</artifactId>
-        <version>2.6</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
-    <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-lang3</artifactId>
-        <version>3.6</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/commons-beanutils/commons-beanutils -->
-    <dependency>
-        <groupId>commons-beanutils</groupId>
-        <artifactId>commons-beanutils</artifactId>
-        <version>1.11.0</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
-    <dependency> <!-- this is apache commons io -->
-        <groupId>commons-io</groupId>
-        <artifactId>commons-io</artifactId>
-        <version>2.6</version>
-    </dependency>
-
-	<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-compress -->
-	<dependency>
-	    <groupId>org.apache.commons</groupId>
-	    <artifactId>commons-compress</artifactId>
-	    <version>1.20</version>
-	</dependency>
-
-	<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-text -->
-	<dependency>
-	    <groupId>org.apache.commons</groupId>
-	    <artifactId>commons-text</artifactId>
-	    <version>1.8</version>
-	</dependency>
-
-    <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-exec -->
-    <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-exec</artifactId>
-        <version>1.3</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-collections4 -->
-    <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-collections4</artifactId>
-        <version>4.1</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-vfs2-project -->
-    <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-vfs2-project</artifactId>
-        <version>2.2</version>
-        <type>pom</type>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-email -->
-    <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-email</artifactId>
-        <version>1.5</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-imaging
-    <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-imaging</artifactId>
-        <version>1.0-SNAPSHOT</version>
-    </dependency>
-    -->
-
-    <dependency>
-        <groupId>org.apache.xmlgraphics</groupId>
-        <artifactId>batik-rasterizer</artifactId>
-        <version>1.7</version>
-    </dependency>
-
-    <dependency>
-        <groupId>org.apache.xmlgraphics</groupId>
-        <artifactId>batik-swing</artifactId>
-        <version>1.7</version>
-    </dependency>
-
-    <dependency>
-        <groupId>com.fasterxml.jackson.core</groupId>
-        <artifactId>jackson-databind</artifactId>
-        <version>2.15.2</version>
-    </dependency>
-
-    <dependency>
+  <dependencyManagement>
+    <dependencies>
+      <!-- Internal Modules -->
+      <dependency>
+        <groupId>org.jwellman</groupId>
+        <artifactId>virtualdesktop-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.jwellman</groupId>
         <artifactId>swing-utils</artifactId>
-        <version>0.0.2-SNAPSHOT</version>
-    </dependency>
-    
-    <dependency>
-        <groupId>org.codehaus.groovy</groupId>
-        <artifactId>groovy-all</artifactId>
-        <version>2.3.0</version>
-    </dependency>
+        <version>${swing-utils.version}</version>
+      </dependency>
 
-    <!-- https://mvnrepository.com/artifact/org.codehaus.gant/gant_groovy2.3 -->
-    <dependency>
-        <groupId>org.codehaus.gant</groupId>
-        <artifactId>gant_groovy2.3</artifactId>
-        <version>1.9.11</version>
-    </dependency>
+      <!-- Apache Commons -->
+      <dependency>
+        <groupId>commons-lang</groupId>
+        <artifactId>commons-lang</artifactId>
+        <version>${commons-lang.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>${commons-lang3.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-beanutils</groupId>
+        <artifactId>commons-beanutils</artifactId>
+        <version>${commons-beanutils.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-io</groupId>
+        <artifactId>commons-io</artifactId>
+        <version>${commons-io.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-compress</artifactId>
+        <version>${commons-compress.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-text</artifactId>
+        <version>${commons-text.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-exec</artifactId>
+        <version>${commons-exec.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-collections4</artifactId>
+        <version>${commons-collections4.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-vfs2-project</artifactId>
+        <version>${commons-vfs2.version}</version>
+        <type>pom</type>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-email</artifactId>
+        <version>${commons-email.version}</version>
+      </dependency>
 
-    <!-- this is only necessary for groovy poc graphics scripts; i.e. not necessary for a build -->
-    <!-- TODO add to project repo -->
-    <dependency>
-        <groupId>org.codehaus.groovy-contrib</groupId>
-        <artifactId>graphicsbuilder</artifactId>
-        <version>0.6.1</version>
-    </dependency>
-
-    <!-- this is only necessary for groovy poc graphics scripts; i.e. not necessary for a build -->
-    <!-- TODO add to project repo -->
-    <dependency>
-        <groupId>org.kordamp</groupId>
-        <artifactId>jsilhouette</artifactId>
-        <version>0.2</version>
-    </dependency>
-
-    <!-- SwingLabs inclusion was on purpose though nothing "currently"
-         utilizes it.  It actually has many useful Swing components
-         and utilties for good UIs.  TODO create some beanshell scripts
-         that demonstrate these features.
-    -->
-    <dependency>
-        <groupId>org.swinglabs</groupId>
-        <artifactId>swingx-core</artifactId>
-        <version>1.6.2-2</version>
-    </dependency>
-
-    <dependency>
-        <groupId>org.swinglabs</groupId>
-        <artifactId>swingx</artifactId>
-        <version>1.6.1</version>
-    </dependency>
-
-    <dependency>
-        <groupId>org.swinglabs</groupId>
-        <artifactId>swing-layout</artifactId>
-        <version>1.0.3</version>
-    </dependency>
-
-    <dependency>
-        <groupId>org.swinglabs</groupId>
-        <artifactId>jxlayer</artifactId>
-        <version>3.0.4</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/com.jidesoft/jide-common
-         3.6.18 < Current version
-         3.6.4  < superceded on 11/11/2018 (this may need to be reverted; do some tests)
-    -->
-    <dependency>
-      <groupId>com.jidesoft</groupId>
-      <artifactId>jide-oss</artifactId>
-      <version>3.6.18</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/com.jidesoft/jide-common
-    11/11/2018:  I'm not currently sure but I think that jide-common
-    is superceded/included in jide-oss above
-    <dependency>
-        <groupId>com.jidesoft</groupId>
-        <artifactId>jide-common</artifactId>
-        <version>3.5.15</version>
-    </dependency>
-    -->
-
-    <!-- Version 1.1.3 is *not* in maven central, 1.1.2p6a is.
-    https://mvnrepository.com/artifact/org.dockingframes/docking-frames-common -->
-    <dependency>
-        <groupId>org.dockingframes</groupId>
-        <artifactId>docking-frames-core</artifactId>
-        <version>1.1.3</version>
-    </dependency>
-
-    <!-- Version 1.1.3 is *not* in maven central, 1.1.2p6a is.
-    https://mvnrepository.com/artifact/org.dockingframes/docking-frames-common -->
-    <dependency>
-        <groupId>org.dockingframes</groupId>
-        <artifactId>docking-frames-common</artifactId>
-        <version>1.1.3</version>
-    </dependency>
-
-    <dependency>
-        <groupId>com.github.jiconfont</groupId>
-        <artifactId>jiconfont-swing</artifactId>
-        <version>1.0.0</version>
-    </dependency>
-    
-    <dependency>
-        <groupId>com.github.jiconfont</groupId>
-        <artifactId>jiconfont-font_awesome</artifactId>
-        <version>4.7.0.0</version>
-    </dependency>
-    
-    <dependency>
-        <groupId>com.github.jiconfont</groupId>
-        <artifactId>jiconfont-google_material_design_icons</artifactId>
-        <version>2.2.0.0</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/org.jetbrains.jediterm/jediterm-pty
-    Note: I had to manually download/install this from bintray; I could not get the repo entry to work :( 
-    -->
-    <dependency>
-        <groupId>org.jetbrains.jediterm</groupId>
-        <artifactId>jediterm-pty</artifactId>
-        <version>2.33</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/...
-    This is required for jediterm 
-    -->
-    <dependency>
-        <groupId>org.jetbrains</groupId>
-        <artifactId>annotations</artifactId>
-        <version>16.0.2</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/com.google.guava/guava
-    This is required for jediterm 
-    -->
-    <dependency>
-        <groupId>com.google.guava</groupId>
-        <artifactId>guava</artifactId>
-        <version>30.1-jre</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/org.jetbrains.pty4j/pty4j 
-    This is required for jediterm 
-    If not including the local version of PtyMain, scope can be 'runtime'
-    -->
-    <dependency>
-        <groupId>org.jetbrains.pty4j</groupId>
-        <artifactId>pty4j</artifactId>
-        <version>0.8.2</version>
-    </dependency>
-
-	<!-- https://mvnrepository.com/artifact/com.github.imcdonagh/image4j -->
-	<dependency>
-	    <groupId>com.github.imcdonagh</groupId>
-	    <artifactId>image4j</artifactId>
-	    <version>0.7.2</version>
-	</dependency>
-
-    <dependency>
-        <groupId>net.coobird.gui.simpleimageviewer4j</groupId>
-        <artifactId>simpleimageviewer4j</artifactId>
-        <version>0.1.0</version>
-    </dependency>
-
-    <dependency>
+      <!-- Graphics/XML -->
+      <dependency>
+        <groupId>org.apache.xmlgraphics</groupId>
+        <artifactId>batik-rasterizer</artifactId>
+        <version>${batik.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.xmlgraphics</groupId>
+        <artifactId>batik-swing</artifactId>
+        <version>${batik.version}</version>
+      </dependency>
+      <dependency>
         <groupId>xml-apis</groupId>
         <artifactId>xml-apis</artifactId>
-        <version>1.3.04</version>
-    </dependency>
-
-    <dependency>
+        <version>${xml-apis.version}</version>
+      </dependency>
+      <dependency>
         <groupId>xml-apis</groupId>
         <artifactId>xml-apis-ext</artifactId>
-        <version>1.3.04</version>
-    </dependency>
+        <version>${xml-apis.version}</version>
+      </dependency>
 
-    <!--
-        TODO https://github.com/beanshell/beanshell update to 2.0b6
-        version 2.0b5 works; rollback if necessary
-    <dependency>
+      <!-- JSON/XML -->
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.thoughtworks.xstream</groupId>
+        <artifactId>xstream</artifactId>
+        <version>${xstream.version}</version>
+      </dependency>
+
+      <!-- Scripting -->
+      <dependency>
+        <groupId>org.codehaus.groovy</groupId>
+        <artifactId>groovy-all</artifactId>
+        <version>${groovy.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.gant</groupId>
+        <artifactId>gant_groovy2.3</artifactId>
+        <version>${gant.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.groovy-contrib</groupId>
+        <artifactId>graphicsbuilder</artifactId>
+        <version>${graphicsbuilder.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.kordamp</groupId>
+        <artifactId>jsilhouette</artifactId>
+        <version>${jsilhouette.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.beanshell</groupId>
         <artifactId>bsh</artifactId>
-        <version>2.0b5</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache-extras.beanshell</groupId>
-      <artifactId>bsh</artifactId>
-      <version>2.0b6</version>
-    </dependency>
-    -->
-    <dependency>
-        <groupId>org.beanshell</groupId>
-        <artifactId>bsh</artifactId>
-        <version>2.0b5</version>
-    </dependency>
+        <version>${beanshell.version}</version>
+      </dependency>
 
-    <!-- https://mvnrepository.com/artifact/com.googlecode.lanterna/lanterna -->
-    <dependency>
-        <groupId>com.googlecode.lanterna</groupId>
-        <artifactId>lanterna</artifactId>
-        <version>3.0.1</version>
-    </dependency>
-
-    <!-- UPGRADING TO 1.5.0 FROM 1.0.17
-    	 ONLY LOCALLY TO TEST AnyChartTest.java 
-         I can probably upgrade the project to that version but just 
-         keep in mind that my existing code was written against an older version.
-    -->
-	<dependency>
-		<groupId>org.jfree</groupId>
-		<artifactId>jfreechart</artifactId>
-		<version>1.5.0</version>
-	</dependency>
-
-	<dependency>
-		<groupId>org.jfree</groupId>
-		<artifactId>jfreesvg</artifactId>
-		<version>3.3</version>
-	</dependency>
-
-    <dependency>
-        <groupId>org.jdesktop</groupId>
-        <artifactId>beansbinding</artifactId>
-        <version>1.2.1</version>
-    </dependency>
-
-	<!-- https://mvnrepository.com/artifact/com.j2html/j2html -->
-	<dependency>
-	    <groupId>com.j2html</groupId>
-	    <artifactId>j2html</artifactId>
-	    <version>1.4.0</version>
-	</dependency>
-
-	<!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-server -->
-	<dependency>
-	    <groupId>org.eclipse.jetty</groupId>
-	    <artifactId>jetty-server</artifactId>
-	    <version>9.4.25.v20191220</version>
-        <classifier></classifier>
-	</dependency>
-
-	<!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-servlet -->
-	<dependency>
-	    <groupId>org.eclipse.jetty</groupId>
-	    <artifactId>jetty-servlet</artifactId>
-	    <version>9.4.25.v20191220</version>
-	</dependency>
-
-	<!-- https://mvnrepository.com/artifact/javax.help/javahelp -->
-	<dependency>
-	    <groupId>javax.help</groupId>
-	    <artifactId>javahelp</artifactId>
-	    <version>2.0.05</version>
-	</dependency>
-
-	<!-- https://mvnrepository.com/artifact/com.formdev/flatlaf 
-	testing 3.1.1 from 0.18 -->
-	<dependency>
-	    <groupId>com.formdev</groupId>
-	    <artifactId>flatlaf</artifactId>
-	    <version>3.1.1</version>
-	</dependency>
-
-    <!-- This is not in maven central -->
-    <dependency>
-        <groupId>net.sourceforge.napkinlaf</groupId>
-        <artifactId>napkinlaf</artifactId>
-        <version>1.2</version>
-    </dependency>
-
-    <dependency>
-        <groupId>com.mgarin</groupId>
-        <artifactId>weblaf</artifactId>
-        <version>1.27</version>
-    </dependency>
-
-        <!-- This is currently only necessary for weblaf (though I may keep) -->
-        <dependency>
-            <groupId>com.thoughtworks.xstream</groupId>
-            <artifactId>xstream</artifactId>
-            <version>1.4.7</version>
-        </dependency>
-
-    <dependency>
-        <groupId>com.jtattoo</groupId>
-        <artifactId>JTattoo</artifactId>
-        <version>1.6.11</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/org.java.net.substance/substance 
-    ## While this is a professional and well written look and feel, it had
-    ## some small (but admittedly subjective) issues so I don't really want
-    ## to bloat my dependencies with it at this time.  The issues were:
-    ## * The animations looked good but not so much as to provide real "value"
-    ##   and they seemed to affect performance on my laptop.
-    ## * Again, while this LAF looks good, it does not really add any aesthetic
-    ##   value over those that I already use.  
-    ## * Finally, the author of this LAF has moved onto a new Java9+ LAF...
-    ##   hopefully by the time I get this project to Java9 I would want to
-    ##   opt for his newer project.
-    <dependency>
-        <groupId>org.java.net.substance</groupId>
-        <artifactId>substance</artifactId>
-        <version>6.0</version>
-    </dependency>
-    -->
-
-    <!-- meh
-    <dependency>
-       <groupId>com.seaglasslookandfeel</groupId>
-       <artifactId>seaglasslookandfeel</artifactId>
-       <version>0.2.1</version>
-    </dependency>
-    -->
-
-    <!-- This look and feel is only incrementally better than Metal..., so meh
-    <dependency>
-            <groupId>com.github.arnabk</groupId>
-            <artifactId>pgslookandfeel</artifactId>
-            <version>1.1.4</version>
-    </dependency>
-    -->
-
-    <!-- ===== Calendar Component ========================================= -->
-    <!-- ===== At least one calendar component will be mandatory; -->
-    <!-- ===== currently evaluating: jcalendar, jdatepicker, LGoodDatePicker, ... -->
-
-    <!-- https://mvnrepository.com/artifact/com.toedter/jcalendar -->
-    <dependency>
-        <groupId>com.toedter</groupId>
-        <artifactId>jcalendar</artifactId>
-        <version>1.4</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/org.jdatepicker/jdatepicker -->
-    <dependency>
-        <groupId>org.jdatepicker</groupId>
-        <artifactId>jdatepicker</artifactId>
-        <version>1.3.4</version>
-    </dependency>
-
-	<!-- https://mvnrepository.com/artifact/com.github.lgooddatepicker/LGoodDatePicker -->
-	<dependency>
-	    <groupId>com.github.lgooddatepicker</groupId>
-	    <artifactId>LGoodDatePicker</artifactId>
-	    <version>10.3.1</version>
-	</dependency>
-
-    <dependency>
-        <groupId>com.glazedlists</groupId>
-        <artifactId>glazedlists</artifactId>
-        <version>1.11.0</version>
-    </dependency>
-
-    <dependency>
-        <groupId>com.github.fracpete</groupId>
-        <artifactId>vfsjfilechooser2</artifactId>
-        <version>0.2.8</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/nl.knaw.dans.common/dans-dbf-lib -->
-    <dependency>
-        <groupId>nl.knaw.dans.common</groupId>
-        <artifactId>dans-dbf-lib</artifactId>
-        <version>1.0.0-beta-10</version>
-    </dependency>
-
-	<!-- https://mvnrepository.com/artifact/org.knowm.xchart/xchart :: 
-       Apache :: 05/04/2025 :: 3.8.8
-       Apache :: 10/27/2021 :: 3.8.1 
-	 -->
-    <dependency>
-        <groupId>com.xeiam.xchart</groupId>
-        <artifactId>xchart</artifactId>
-        <version>2.2.1</version>
-    </dependency>
-
-    <dependency>
-        <groupId>com.xeiam.xchart</groupId>
-        <artifactId>xchart-demo</artifactId>
-        <version>2.2.1</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/com.miglayout/miglayout-core -->
-    <dependency>
+      <!-- UI/Swing -->
+      <dependency>
+        <groupId>org.swinglabs</groupId>
+        <artifactId>swingx-core</artifactId>
+        <version>${swingx-core.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.swinglabs</groupId>
+        <artifactId>swingx</artifactId>
+        <version>${swingx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.swinglabs</groupId>
+        <artifactId>swing-layout</artifactId>
+        <version>${swing-layout.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.swinglabs</groupId>
+        <artifactId>jxlayer</artifactId>
+        <version>${jxlayer.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.jidesoft</groupId>
+        <artifactId>jide-oss</artifactId>
+        <version>${jide-oss.version}</version>
+      </dependency>
+      <dependency>
         <groupId>com.miglayout</groupId>
         <artifactId>miglayout-core</artifactId>
-        <version>5.0</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/com.miglayout/miglayout-swing -->
-    <dependency>
+        <version>${miglayout.version}</version>
+      </dependency>
+      <dependency>
         <groupId>com.miglayout</groupId>
         <artifactId>miglayout-swing</artifactId>
-        <version>5.0</version>
-    </dependency>
+        <version>${miglayout.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.glazedlists</groupId>
+        <artifactId>glazedlists</artifactId>
+        <version>${glazedlists.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fifesoft</groupId>
+        <artifactId>rsyntaxtextarea</artifactId>
+        <version>${rsyntaxtextarea.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jdesktop</groupId>
+        <artifactId>beansbinding</artifactId>
+        <version>${beansbinding.version}</version>
+      </dependency>
 
-    <dependency>
+      <!-- Docking -->
+      <dependency>
+        <groupId>org.dockingframes</groupId>
+        <artifactId>docking-frames-core</artifactId>
+        <version>${docking-frames.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.dockingframes</groupId>
+        <artifactId>docking-frames-common</artifactId>
+        <version>${docking-frames.version}</version>
+      </dependency>
+
+      <!-- Icon Fonts -->
+      <dependency>
+        <groupId>com.github.jiconfont</groupId>
+        <artifactId>jiconfont-swing</artifactId>
+        <version>${jiconfont.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.jiconfont</groupId>
+        <artifactId>jiconfont-font_awesome</artifactId>
+        <version>${jiconfont-fontawesome.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.jiconfont</groupId>
+        <artifactId>jiconfont-google_material_design_icons</artifactId>
+        <version>${jiconfont-material.version}</version>
+      </dependency>
+
+      <!-- Terminal -->
+      <dependency>
+        <groupId>org.jetbrains.jediterm</groupId>
+        <artifactId>jediterm-pty</artifactId>
+        <version>${jediterm.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jetbrains</groupId>
+        <artifactId>annotations</artifactId>
+        <version>${jetbrains-annotations.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jetbrains.pty4j</groupId>
+        <artifactId>pty4j</artifactId>
+        <version>${pty4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.googlecode.lanterna</groupId>
+        <artifactId>lanterna</artifactId>
+        <version>${lanterna.version}</version>
+      </dependency>
+
+      <!-- Images -->
+      <dependency>
+        <groupId>com.github.imcdonagh</groupId>
+        <artifactId>image4j</artifactId>
+        <version>${image4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.coobird.gui.simpleimageviewer4j</groupId>
+        <artifactId>simpleimageviewer4j</artifactId>
+        <version>${simpleimageviewer4j.version}</version>
+      </dependency>
+
+      <!-- Look and Feel -->
+      <dependency>
+        <groupId>com.formdev</groupId>
+        <artifactId>flatlaf</artifactId>
+        <version>${flatlaf.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.sourceforge.napkinlaf</groupId>
+        <artifactId>napkinlaf</artifactId>
+        <version>${napkinlaf.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.mgarin</groupId>
+        <artifactId>weblaf</artifactId>
+        <version>${weblaf.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.jtattoo</groupId>
+        <artifactId>JTattoo</artifactId>
+        <version>${jtattoo.version}</version>
+      </dependency>
+
+      <!-- Calendar -->
+      <dependency>
+        <groupId>com.toedter</groupId>
+        <artifactId>jcalendar</artifactId>
+        <version>${jcalendar.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jdatepicker</groupId>
+        <artifactId>jdatepicker</artifactId>
+        <version>${jdatepicker.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.lgooddatepicker</groupId>
+        <artifactId>LGoodDatePicker</artifactId>
+        <version>${lgooddatepicker.version}</version>
+      </dependency>
+
+      <!-- Charting -->
+      <dependency>
+        <groupId>org.jfree</groupId>
+        <artifactId>jfreechart</artifactId>
+        <version>${jfreechart.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jfree</groupId>
+        <artifactId>jfreesvg</artifactId>
+        <version>${jfreesvg.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.xeiam.xchart</groupId>
+        <artifactId>xchart</artifactId>
+        <version>${xchart.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.xeiam.xchart</groupId>
+        <artifactId>xchart-demo</artifactId>
+        <version>${xchart.version}</version>
+      </dependency>
+
+      <!-- Web -->
+      <dependency>
+        <groupId>com.j2html</groupId>
+        <artifactId>j2html</artifactId>
+        <version>${j2html.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-server</artifactId>
-        <version>9.4.3.v20170317</version>
-    </dependency>
-
-    <dependency>
+        <version>${jetty.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-servlet</artifactId>
-        <version>9.4.3.v20170317</version>
-    </dependency>
+        <version>${jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.help</groupId>
+        <artifactId>javahelp</artifactId>
+        <version>${javahelp.version}</version>
+      </dependency>
 
-    <!-- ===== Database Features ========================================= -->
-
-    <dependency>
+      <!-- Database -->
+      <dependency>
         <groupId>org.hsqldb</groupId>
         <artifactId>hsqldb</artifactId>
-        <version>2.3.0</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
-    <dependency>
+        <version>${hsqldb.version}</version>
+      </dependency>
+      <dependency>
         <groupId>mysql</groupId>
         <artifactId>mysql-connector-java</artifactId>
-        <version>5.1.49</version>
-        <scope>runtime</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>ca.krasnay</groupId>
-      <artifactId>sqlbuilder</artifactId>
-      <version>1.2</version>
-    </dependency>
-
-    <dependency>
-        <groupId>log4j</groupId>
-        <artifactId>log4j</artifactId>
-        <version>1.2.16</version>
-    </dependency>
-
-    <dependency>
-        <groupId>net.sf.opencsv</groupId>
-        <artifactId>opencsv</artifactId>
-        <version>2.1</version>
-    </dependency>
-
-    <dependency>
-      <groupId>com.fifesoft</groupId>
-      <artifactId>rsyntaxtextarea</artifactId>
-      <version>2.6.1</version>
-    </dependency>
-
-    <dependency>
+        <version>${mysql-connector.version}</version>
+      </dependency>
+      <dependency>
         <groupId>com.microsoft.sqlserver</groupId>
         <artifactId>mssql-jdbc</artifactId>
-      <version>6.1.0.jre7</version>
-    </dependency>
+        <version>${mssql-jdbc.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>ca.krasnay</groupId>
+        <artifactId>sqlbuilder</artifactId>
+        <version>${sqlbuilder.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.sf.opencsv</groupId>
+        <artifactId>opencsv</artifactId>
+        <version>${opencsv.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>nl.knaw.dans.common</groupId>
+        <artifactId>dans-dbf-lib</artifactId>
+        <version>${dans-dbf-lib.version}</version>
+      </dependency>
 
-    <dependency>
+      <!-- Other -->
+      <dependency>
+        <groupId>com.github.fracpete</groupId>
+        <artifactId>vfsjfilechooser2</artifactId>
+        <version>${vfsjfilechooser2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${guava.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>log4j</groupId>
+        <artifactId>log4j</artifactId>
+        <version>${log4j.version}</version>
+      </dependency>
+      <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
-        <version>4.11</version>
-        <!--<scope>test</scope> do not limit scope to test as the lib embbed Replay, i.e. tools to ease non regression tests for interactive features-->
-    </dependency>
+        <version>${junit.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
-  </dependencies>
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.11.0</version>
+          <configuration>
+            <source>${maven.compiler.source}</source>
+            <target>${maven.compiler.target}</target>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.3.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>3.5.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>3.6.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>3.1.0</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
 
   <repositories>
+    <!-- Required for commons-imaging if needed in future -->
+    <repository>
+      <id>apache.snapshots</id>
+      <name>Apache Development Snapshot Repository</name>
+      <url>https://repository.apache.org/content/repositories/snapshots/</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
 
-      <!-- required for commons-imaging -->
-      <repository>
-          <id>apache.snapshots</id>
-          <name>Apache Development Snapshot Repository</name>
-          <url>https://repository.apache.org/content/repositories/snapshots/</url>
-          <releases>
-              <enabled>false</enabled>
-          </releases>
-          <snapshots>
-              <enabled>true</enabled>
-          </snapshots>
-      </repository>
-
-      <repository>
-          <id>virtualdesktop_project.local</id>
-          <name>virtualdesktop_project</name>
-          <url>file:\\\${project.basedir}\repo\</url>
-            <releases>
-              <enabled>true</enabled>
-            </releases>
-            <snapshots>
-              <enabled>false</enabled>
-            </snapshots>
-      </repository>
-
+    <!-- Local project repository for non-central JARs -->
+    <repository>
+      <id>virtualdesktop_project.local</id>
+      <name>virtualdesktop_project</name>
+      <url>file:///${project.basedir}/repo/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
   </repositories>
 
 </project>

@@ -1,7 +1,5 @@
 package org.jwellman.virtualdesktop.vapps;
 
-import java.awt.Dimension;
-
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import org.jwellman.standalone.UberHandler;
@@ -18,8 +16,9 @@ public class SpecUberDragAndDrop extends VirtualAppSpec {
 
         this.setTitle("DragAndDrop Demo");
 
-        final JTextArea jta = new JTextArea();
-        jta.setPreferredSize(new Dimension(300, 100));
+        final JTextArea jta = new JTextArea(10, 40);
+        jta.setLineWrap(true);
+        jta.setWrapStyleWord(true);
 
         final UberHandler uh = new UberHandler();
         jta.setTransferHandler(uh);

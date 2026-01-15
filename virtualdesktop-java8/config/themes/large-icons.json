@@ -1,0 +1,15 @@
+{
+  "name": "large-icons",
+  "displayName": "Large Icons",
+  "description": "Larger icon sizes for better visibility",
+  "version": "1.0.0",
+  "extends": "default",
+
+  "iconSizes": {
+    "small": 24,
+    "menu": 20,
+    "toolbar": 32,
+    "large": 64,
+    "xlarge": 96
+  }
+}

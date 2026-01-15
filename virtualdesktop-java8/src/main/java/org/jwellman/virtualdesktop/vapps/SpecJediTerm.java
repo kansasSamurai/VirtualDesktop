@@ -1,25 +1,48 @@
 package org.jwellman.virtualdesktop.vapps;
 
-import javax.swing.SwingUtilities;
+import java.awt.BorderLayout;
+import java.awt.Font;
 
-import ext.com.jediterm.PtyMain;
+import javax.swing.BorderFactory;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 
 /**
- * 
- * @author rwellman
+ * Placeholder for JediTerm terminal emulator.
  *
+ * The JediTerm library requires Java 11+ and is not compatible
+ * with the Java 8 build of VirtualDesktop. See the virtualdesktop-java9
+ * module for the full implementation.
+ *
+ * @author rwellman
  */
-public class SpecJediTerm extends AbstractExternalApp implements Runnable {
+public class SpecJediTerm extends VirtualAppSpec {
 
     public SpecJediTerm() {
-        super("JEDI Terminal");
+        super();
 
-        SwingUtilities.invokeLater( this );
+        this.setTitle("JEDI Terminal");
+        this.setContent(createPlaceholderPanel());
     }
 
-    public void run() {
-        // BasicTerminalExample.main(null);
-        PtyMain.main(null);
+    private JPanel createPlaceholderPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel label = new JLabel(
+            "<html><center>" +
+            "<b>JEDI Terminal</b><br><br>" +
+            "This feature requires Java 11+<br><br>" +
+            "See the <i>virtualdesktop-java9</i> module<br>" +
+            "for the full terminal implementation." +
+            "</center></html>",
+            SwingConstants.CENTER
+        );
+        label.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+
+        panel.add(label, BorderLayout.CENTER);
+        return panel;
     }
 
 }

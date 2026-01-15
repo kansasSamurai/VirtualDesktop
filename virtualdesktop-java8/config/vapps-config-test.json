@@ -1,0 +1,207 @@
+{
+  "version": "1.0.0",
+  "defaultIcon": "home156",
+  "menuStructure": [
+    {
+      "type": "group",
+      "label": "Tools",
+      "mnemonic": "T",
+      "groups": [
+        {
+          "type": "flat",
+          "label": "Scripting",
+          "mnemonic": "S",
+          "vapps": [
+            {
+              "class": "org.jwellman.virtualdesktop.vapps.SpecBeanShell",
+              "title": "BeanShell Console",
+              "icon": "laptop123",
+              "enabled": true,
+              "desktopOnly": false
+            },
+            {
+              "class": "org.jwellman.virtualdesktop.vapps.SpecGroovyConsole",
+              "title": "Groovy Console",
+              "icon": "laptop123",
+              "enabled": true,
+              "desktopOnly": false
+            },
+            {
+              "class": "org.jwellman.virtualdesktop.vapps.SpecJCXConsole",
+              "title": "JCX Console",
+              "icon": "laptop123",
+              "enabled": true,
+              "desktopOnly": false
+            },
+            {
+              "class": "org.jwellman.virtualdesktop.vapps.SpecJediTerm",
+              "title": "JediTerm Terminal",
+              "icon": "laptop123",
+              "enabled": true,
+              "desktopOnly": false
+            }
+          ]
+        },
+        {
+          "type": "flat",
+          "label": "Graphics",
+          "mnemonic": "G",
+          "vapps": [
+            {
+              "class": "org.jwellman.virtualdesktop.vapps.SpecGroovyGraphics",
+              "title": "Groovy Graphics",
+              "icon": "palette7",
+              "enabled": true,
+              "desktopOnly": false
+            },
+            {
+              "class": "org.jwellman.virtualdesktop.vapps.SpecSVGViewer",
+              "title": "SVG Viewer",
+              "icon": "add196",
+              "enabled": true,
+              "desktopOnly": false
+            }
+          ]
+        },
+        {
+          "type": "flat",
+          "label": "Development",
+          "mnemonic": "D",
+          "vapps": [
+            {
+              "class": "org.jwellman.virtualdesktop.vapps.SpecDocking",
+              "title": "Docking Demo",
+              "icon": "landscape12",
+              "enabled": true,
+              "desktopOnly": false
+            },
+            {
+              "class": "org.jwellman.virtualdesktop.vapps.SpecUberDragAndDrop",
+              "title": "Drag & Drop Demo",
+              "icon": "landscape12",
+              "enabled": true,
+              "desktopOnly": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "flat",
+      "label": "Database",
+      "mnemonic": "D",
+      "vapps": [
+        {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecHyperSQL",
+          "title": "HyperSQL Manager",
+          "icon": "download171",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecHyperSQLClient",
+          "title": "HyperSQL Client",
+          "icon": "download171",
+          "enabled": true,
+          "desktopOnly": false
+        }
+      ]
+    },
+    {
+      "type": "flat",
+      "label": "Charts",
+      "mnemonic": "C",
+      "vapps": [
+        {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecJFreeChart",
+          "title": "JFreeChart Demo",
+          "icon": "stats9",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecXChartDemo",
+          "title": "XChart Demo",
+          "icon": "stats9",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecXChartBarChart",
+          "title": "XChart Bar Chart",
+          "icon": "signal49",
+          "enabled": true,
+          "desktopOnly": false
+        }
+      ]
+    },
+    {
+      "type": "flat",
+      "label": "Utilities",
+      "mnemonic": "U",
+      "vapps": [
+        {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecJDatePicker",
+          "title": "Date Picker",
+          "icon": "calendar168",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecVfsFileChooser2",
+          "title": "VFS File Chooser",
+          "icon": "briefcase58",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecScar",
+          "title": "SCAR",
+          "icon": "home156",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecJetty",
+          "title": "Jetty Server",
+          "icon": "internet56",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecThemeSelector",
+          "title": "Theme Selector",
+          "icon": "palette7",
+          "enabled": true,
+          "desktopOnly": false
+        }
+      ]
+    }
+  ],
+  "desktopShortcuts": [
+    {
+      "class": "org.jwellman.virtualdesktop.vapps.SpecJCXConsole",
+      "label": "Home",
+      "icon": "home156",
+      "enabled": true
+    },
+    {
+      "class": "org.jwellman.virtualdesktop.vapps.SpecJDatePicker",
+      "label": "Calendar",
+      "icon": "calendar168",
+      "enabled": true
+    },
+    {
+      "class": "org.jwellman.virtualdesktop.vapps.SpecBeanShell",
+      "label": "Office Writer",
+      "icon": "document176",
+      "enabled": true
+    },
+    {
+      "class": "org.jwellman.virtualdesktop.vapps.SpecJCXConsole",
+      "label": "Trash",
+      "icon": "rubbish1",
+      "enabled": true
+    }
+  ]
+}

@@ -1,0 +1,326 @@
+/*
+// RegEx Prototype - supercedes regex.bsh
+
+This script serves as a good template for prototyping new
+user interfaces while directly using the SpecEmpty vapp.
+*/
+
+import java.awt.geom.*;
+import org.jwellman.virtualdesktop.vapps.*;
+
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+
+/* Create the following components:
+ * (1) template - JTextArea :: This is for the original text with placeholders
+ * (2) result - JTextArea :: This is for the transformed text
+ * (3) fieldHolder - JPanel :: contains textfields for each placeholder value
+ * (4) Parse - JButton :: initiates "parse" action
+ * (5) Substitute - JButton :: initiates "substitute" action
+ * (6) View - JPanel :: object which contains all components and implements generic command interface
+ * 
+ * Action breakdown:
+ * (template)
+ * User enters template text into 'template' field.
+ * ex: This is the text ${a} which is to be ${a} searched  for occurrences of ${b} the word 'is'.
+ * 
+ * (Parse) 
+ * 1. breakdown text from 'template' into UNIQUE list of 'tokens' (map)
+ * ex: map: ${a}, ${b}
+ * 
+ * 2. send list of tokens to mediator/fieldholder which will then remove any 
+ *    existing fields and create new fields with tokens as labels
+ * ex: since this is dynamic, the fields themselves should probably
+ *     be kept in a map<string,jtextfield> to make lookup easier.
+ *    
+ * (populate data)
+ * User enters a value for each token.
+ * 
+ * (Substitute)
+ * 1. search for each token and replace with value
+ * 1a. remove any comments from original text 
+ * 2. display end result in 'result'
+ * 
+ * 
+ */
+
+public interface Command {
+    void execute();    
+}
+
+public class Template extends JTextArea {
+    private TemplateProcessor mediator;
+
+    public Template(TemplateProcessor m) {
+        super("This is the text ${a} which is to be ${a} searched  for occurrences of ${b} the word 'is'.");
+        this.setLineWrap(true);
+        this.setWrapStyleWord(true);
+
+        this.mediator = m;
+    }
+}
+
+public class Result extends JTextArea {
+    private TemplateProcessor mediator;
+
+    public Result(TemplateProcessor m) {
+        super("substitution-reult-goes-here");
+        this.setLineWrap(true);
+        this.setWrapStyleWord(true);
+
+        this.mediator = m;
+    }
+}
+
+public class Field extends JPanel {
+
+    public JTextField textfield;
+
+    public Field(JTextField tf) {
+        super();
+
+        this.textfield = tf;
+        this.add(tf);
+    }
+
+}
+
+public class FieldHolder extends JPanel {
+    private TemplateProcessor mediator;
+    public Map fields; // = new HashMap(); // string, string
+    public Map values; // = new HashMap(); // string, jtextfield
+
+    public FieldHolder(TemplateProcessor m) {
+        super();
+        this.setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
+
+        this.mediator = m;
+    }
+
+    public Map getTokenMap() {
+        for (String key : this.values.keySet()) {
+            this.fields.put(key, this.values.get(key).textfield.getText());
+        }
+        return this.fields;
+    }
+
+    public void acceptNewTokens(Map tokens) {
+        print("tokens: "); print(tokens);
+
+/* Tricky beanshell bug - I was originally using "this" inside the run() method.
+ * However, because run() is a closure, the fields and values were not being
+ * set on the actual FieldHolder object.  Thus, after much debugging, I finally
+ * realized that I had to use the "me" approach that you see below.
+ * A key help was printing "me" vs "this" and has been left as comments below.
+ */
+        me = this;
+//        print("me1: "); print(me);
+        ui() {
+            public void run() {
+//                print("me2: "); print(me);
+//                print("me2a: "); print(this);
+
+                me.fields = tokens;
+                me.values = new HashMap();
+                me.removeAll();
+
+//                print("keyset: "); print(tokens.keySet());
+                for (String key : tokens.keySet()) {
+                    JTextField tf = me.createField(key);
+                    Field wrapper = new Field(tf);
+                    // weird bug(?): I cannot add JTextField objects to the map so I created the Field class (I **can** however add JPanel objects so I really don't know what's going on)
+                    me.values.put(key, wrapper);
+                    me.add(wrapper);
+                }
+
+                me.revalidate();
+
+                print("fields: "); print(me.fields);
+                print("values: "); print(me.values);
+                
+            }
+
+            return this;
+        };
+        SwingUtilities.invokeLater(ui());
+
+    }
+
+    public JTextField createField(String label) {
+        a = new JTextField("value-goes-here");
+        a.setBorder(new javax.swing.border.TitledBorder(label));
+
+        return a;
+    }
+    
+}
+
+public class View extends JPanel implements ActionListener {
+    private TemplateProcessor mediator;
+
+    public View(TemplateProcessor m) {
+        super(new BorderLayout());
+
+        this.mediator = m;
+    }
+
+    public void actionPerformed(ActionEvent e) {
+        Command cmd = (Command)e.getSource();
+        cmd.execute();
+    }
+
+}
+
+public class Parse extends JButton implements Command {
+    private TemplateProcessor mediator;
+
+    public Parse(TemplateProcessor m) {
+        super("Parse");
+
+        this.mediator = m;
+    }
+
+    public void execute() {
+        mediator.parse();
+    }
+
+}
+
+public class Substitute extends JButton implements Command {
+    private TemplateProcessor mediator;
+
+    public Substitute(TemplateProcessor m) {
+        super("Substitute");
+
+        this.mediator = m;
+    }
+
+    public void execute() {
+        mediator.substitute();
+    }
+
+}
+
+
+
+// CompositeView class is "mediator" pattern
+public class TemplateProcessor {
+
+    public View view;
+    public Result result;
+    public Template template;
+    public FieldHolder fieldHolder;
+    public Parse btnParse;
+    public Substitute btnSubstitute;
+
+    public void parse() {
+        TemplateProcessor me = this;
+        print("me: "); print(me);
+
+        new Thread() {
+            public void run() {
+                print("pressed parse");
+                print("this: "); print(this);
+        
+                String temp = me.template.getText();
+                print("parsing: " + temp);
+        
+        //        Map tokens = new HashMap();
+        //        tokens.put("a", "a");
+        //        tokens.put("b", "b");
+                Map tokens = me.getTokens(temp);
+                print("tokens: "); print(tokens);
+        
+                if ( ! tokens.isEmpty() ) {
+                    print("acceptNewTokens()...");
+                    me.fieldHolder.acceptNewTokens(tokens);
+        //        print("p fields: "); print(this.fieldHolder.fields);
+        //        print("p values: "); print(this.fieldHolder.values);
+                    
+                }
+            }
+        }.start();    
+        
+    }
+
+    public Map getTokens(String input) {
+        Map map = new HashMap();
+
+        String patternString1 = "(#\\{(.+?)\\})";
+        Pattern pattern = Pattern.compile(patternString1);
+        Matcher matcher = pattern.matcher(input);
+
+        while (matcher.find()) {
+            String key = matcher.group(1);
+            String value = matcher.group(2);
+            print("found: " + key + " " + value);
+            map.put(key, value);
+        }
+
+        return map;
+    }
+
+    public void substitute() {
+        print("pressed substitute");
+
+        String copy = template.getText();
+
+        Map tokens = this.fieldHolder.getTokenMap();
+        print("sub tokens: "); print(tokens);
+        for (String key : tokens.keySet()) {
+            print("replace " + key + " with " + tokens.get(key));
+            copy = copy.replace(key, tokens.get(key));
+        }
+        this.result.setText(copy);
+
+    }
+
+    public void init() {
+    }
+
+    public JComponent createView() {
+        this.view = new View(this);
+        this.result = new Result(this);
+        this.template = new Template(this);
+        this.fieldHolder = new FieldHolder(this);
+        this.btnParse = new Parse(this);
+            this.btnParse.addActionListener(this.view);
+        this.btnSubstitute = new Substitute(this);
+            this.btnSubstitute.addActionListener(this.view);
+        
+        z = this.view;
+
+        sp = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+        sp.setTopComponent(this.template);
+        sp.setBottomComponent(this.result);
+        sp.setDividerLocation(0.5);
+        z.add(sp, BorderLayout.CENTER);
+
+        z.add(fieldHolder, BorderLayout.EAST);
+
+        panel = new JPanel(); // flow
+        panel.add(this.btnParse);
+        panel.add(this.btnSubstitute);
+        z.add(panel, BorderLayout.SOUTH);
+
+        return this.view;
+    }
+
+}
+
+
+
+demo = object();
+
+x = new SpecEmpty();
+x.setTitle("RegEx");
+DesktopManager.get().createVApp(x);
+
+x = demo.panel = x.getContent();
+x.setLayout(new BorderLayout());
+
+tp = new TemplateProcessor();
+x.add(tp.createView(), BorderLayout.CENTER);
+
+jvd.demo5 = demo;
+

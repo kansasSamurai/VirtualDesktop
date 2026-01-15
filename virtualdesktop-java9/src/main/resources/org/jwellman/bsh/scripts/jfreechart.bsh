@@ -1,0 +1,571 @@
+import org.jwellman.virtualdesktop.*;
+import org.jwellman.jfreechart.*;
+import org.jwellman.jfreechart.editor.*;
+import org.jwellman.jpreechart.*;
+
+import org.jfree.chart.*;
+import org.jfree.chart.demo.*;
+import org.jfree.chart.plot.*;
+import org.jfree.chart.renderer.xy.*;
+import org.jfree.chart.renderer.xy.*;
+import org.jfree.data.category.*;
+import org.jfree.chart.ui.*; // needed for runtime manipulation
+import org.jwellman.jfreechart.AnyChartTest;
+// https://www.jootoor.com/shades-of-orange-color-with-names-hex-rgb-cmyk-codes/
+// https://www.codemr.co.uk/case-studies/jfreechart/
+
+demoAnyChart() {
+
+    test = "uninitialized"; 
+
+    createChart() {
+        test = new AnyChartTest();
+        test.createChart();
+        ChartPanel panel = new ChartPanel(test.chart);
+        DesktopManager.get().createVApp(panel, "Stacked Horizontal Bar Chart");
+    }
+
+    return this;
+}
+
+t = demoAnyChart();
+t.createChart(); // see file on hard drive
+um = t.test.upperMarker;
+lm = t.test.lowerMarker;
+plot = t.test.chart.getCategoryPlot();
+
+
+
+
+// upper marker manipulation examples
+um = t.test.upperMarker;
+um.setLabelTextAnchor(TextAnchor.TOP_CENTER); 
+um.setLabelAnchor(RectangleAnchor.TOP_RIGHT); // TOP_RIGHT
+// original settings
+um.setLabelAnchor(RectangleAnchor.TOP); 
+um.setLabelTextAnchor(TextAnchor.TOP_CENTER);
+um.setLabelTextAnchor(TextAnchor.BOTTOM_CENTER);
+
+// lower marker manipulation examples
+lm = t.test.lowerMarker;
+lm.setLabelAnchor(RectangleAnchor.TOP_RIGHT); // TOP_RIGHT
+lm.setLabelTextAnchor(TextAnchor.TOP_CENTER); 
+
+// manipulate the plot/axes
+plot = t.test.chart.getCategoryPlot();
+// remember this is a pct
+plot.getRangeAxis().setUpperMargin(0);
+plot.getRangeAxis().setUpperMargin(0.05);
+plot.getRangeAxis().setLowerMargin(0.05); // << does not seem to have an effect
+plot.getDomainAxis().setUpperMargin(0.4);
+plot.getDomainAxis().setLowerMargin(0.2);
+plot.getRangeAxis().setVisible(true);
+plot.getRangeAxis().setVisible(false);
+plot.getDomainAxis().setVisible(true);
+plot.getDomainAxis().setVisible(false);
+
+
+
+//    -------------------
+//    JFreeChart
+//
+//    Before you create the chart from ChartFactory you can set the chart theme:
+//    
+//    ChartFactory.setChartTheme(StandardChartTheme.createLegacyTheme());
+//    The default is the JFreeTheme which adds the gradient. The following themes are available:
+//    
+//    ChartFactory.setChartTheme(StandardChartTheme.createJFreeTheme());
+//    ChartFactory.setChartTheme(StandardChartTheme.createDarknessTheme());
+//    -------------------
+
+// -------------------
+import org.jwellman.virtualdesktop.*;
+import org.jwellman.jfreechart.*;
+import org.jwellman.jpreechart.*;
+
+import org.jfree.chart.*;
+import org.jfree.chart.demo.*;
+import org.jfree.chart.plot.*;
+import org.jfree.chart.renderer.xy.*;
+import org.jfree.data.category.*;
+
+// Step 1A
+// Creates a Line/Spline chart in JVD via createVApp() with ChartPanel
+demoTimeSeriesChart()  {
+    Color transparent = new Color(255, 255, 255, 0);
+    GradientPaint grpCyan = new GradientPaint( 0.0f, 0.0f, Color.cyan, 10.0f, 10.0f, Color.darkGray );
+
+    TimeSeriesTest test = new TimeSeriesTest();
+
+    // These are the main objects to manipulate visually after construction:
+    chart = test.chart;
+    XYPlot plot = test.chart.plot;
+    plot.setRenderer( new XYSplineRenderer(20, XYSplineRenderer$FillType.TO_ZERO) );
+
+    // create the swing panel and put it in the desktop
+    ChartPanel panel = new ChartPanel(test.chart);
+    DesktopManager.get().createVApp(panel, "Time Series Test");
+
+    // a method to decorate the chart
+    decorate() {
+        XYPlot plot = test.chart.plot;
+        plot.setBackgroundPaint( Color.black );
+        plot.setBackgroundPaint( transparent );
+        plot.setOutlineVisible(false);
+        plot.setDomainGridlinesVisible(false);
+    
+        test.chart.getLegend().setBorder(0, 0, 0, 0);
+        test.chart.getLegend().setBackgroundPaint(transparent);
+        // ---------------------------------
+        plot.setBackgroundPaint( Color.darkGray );
+        test.chart.setBackgroundPaint( Color.darkGray );
+        plot.getRangeAxis().setVisible(true);
+        plot.getRangeAxis().setTickMarksVisible(true);
+        plot.getRangeAxis().setTickMarksVisible(false);
+        plot.getRangeAxis().setAxisLineVisible(true);
+        plot.getRangeAxis().setAxisLineVisible(false);
+        plot.getRangeAxis().setTickMarksVisible(false);
+        plot.getDomainAxis().setAxisLineVisible(false);
+        plot.getDomainAxis().setAxisLineVisible(false);
+        plot.getDomainAxis().setTickMarkPaint(Color.lightGray);
+        plot.getDomainAxis().setTickLabelPaint(Color.lightGray);
+        plot.getDomainAxis().setLabelPaint(Color.lightGray);
+        test.chart.getTitle().setPaint(Color.lightGray);
+        test.chart.getLegend().setItemPaint(Color.lightGray);
+    
+        test.setChartTextColor(Color.lightGray);
+    }
+
+    print("demoTimeSeriesChart has been defined");
+    return this;
+}
+
+mypreechart = demoTimeSeriesChart();
+
+// Step 1B
+// To see the decorator, run the following:
+// The following two lines are optional - just decorates with JPreeChart
+// JPreeChart pre = new JPreeChart();
+// pre.decorate(mypreechart.panel.getChart());
+
+
+// Step 2A - create a pie chart panel
+//piechart() {
+//    demo = PieChartDemo1.createDemoPanel();
+//    
+//    pre = new JPreeChart();
+//
+//    p = plot = demo.getChart().getPlot();
+//    p.setLabelBackgroundPaint(null);
+//    p.setOutlineVisible(false);
+//    p.setDrawingSupplier(pre.createDrawingSupplier());
+//    
+//    
+//    DesktopManager.get().createVApp(demo, "Pie Chart 3");
+//    print("pie chart has been defined");
+//    return this;
+//}
+//
+//piechart = piechart();
+
+// Step 2B - apply preechart styling
+// this works (but throws an ignorable exception)
+//piechart.pre.setFontName("Segoe UI");
+//piechart.pre.decorate(piechart.demo.getChart());
+
+// Step 2C - optionally apply user defined colors to each pie section
+// These colors match preechart so you won't notice a change
+// if you executed step 2B.
+//Color[] paintseq = {
+//        Color.decode("#CD4E3C"), // red
+//        Color.decode("#579340"), // green
+//        Color.decode("#5582A6"), // blue
+//        Color.decode("#CA4FCC"), // magenta
+//        Color.decode("#7D6EC7"), // purple
+//        Color.decode("#A87829")  // brown
+//    };
+
+//Well Below (L1-orange)            orange  #F57902
+//Below (L2-yellow)       yellow  #F2C400
+//Meets (L3-lime)                 lime    #8FCE0A
+//Exceeds (L3-felt)               felt    #42774E
+//table-data  tan #EEE6DF
+//    darkblue    #274F73
+//table-grade     #35455C
+//table-primary-header    medslate    #5D6E7C
+//table-secondary-header      #798690
+//table-tertiary-header   lightslate  #818282
+//// corresponding text colors
+//black
+//black
+//white
+//whie
+//#818282
+//#C5D1DB
+//#C5D1DB
+//#C5D1DB
+//#C5D1DB
+//#EEE6DF
+
+
+//piechart.plot.setSectionPaint(null);
+//piechart.plot.setSectionPaint( 0, paintseq[0] );
+//piechart.plot.setSectionPaint( 1, paintseq[1] );
+//piechart.plot.setSectionPaint( 2, paintseq[2] );
+//piechart.plot.setSectionPaint( 3, paintseq[3] );
+
+
+// Step 3A 
+// -------- Apply JPreeChart to the JFreeChartDemo
+//import org.jwellman.jpreechart.*;
+
+demoJFreeChart() {
+    JFreeChartDemo demo = JFreeChartDemo.createMainUI(null);
+
+    DesktopManager.get().createVApp(demo.getPanel(), "JPreeChart");
+
+    JPreeChart pre = new JPreeChart();
+    pre.decorate(demo.getChart());
+
+    print("demoJFreeChart has been defined");
+    return this;
+}
+
+myjfreechart = demoJFreeChart();
+
+// ----------- Change fonts
+// myjfreechart.pre.setFontName("Segoe UI");
+// myjfreechart.pre.decorate(myjfreechart.demo.getChart());
+
+// ----------- Change title
+// myjfreechart.demo.getChart().setTitle("Drive Space");
+
+// --------------------- barchart
+////import org.jfree.data.category.*;
+////
+//barchart() {
+//
+//    init() {
+//
+//        JFreeChart chart = createChart(createCarDataset());
+//        chart.setTitle("Bar chart");
+//
+//        chartPanel = new ChartPanel(chart);
+//        chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+//
+//
+//
+//        DesktopManager.get().createVApp(chartPanel, "Bar Chart");
+//
+//        return chart;
+//    }
+//
+//    createCarDataset( ) {
+//      final String fiat = "FIAT";        
+//      final String audi = "AUDI";        
+//      final String ford = "FORD";        
+//      final String speed = "Speed";        
+//      final String millage = "Mileage";        
+//      final String userrating = "User Rating";        
+//      final String safety = "Safety";        
+//
+//      final DefaultCategoryDataset dataset = new DefaultCategoryDataset( );  
+//
+//      dataset.addValue( 1.0 , fiat , speed );        
+//      dataset.addValue( 3.0 , fiat , userrating );        
+//      dataset.addValue( 5.0 , fiat , millage ); 
+//      dataset.addValue( 5.0 , fiat , safety );           
+//
+//      dataset.addValue( 5.0 , audi , speed );        
+//      dataset.addValue( 6.0 , audi , userrating );       
+//      dataset.addValue( 10.0 , audi , millage );        
+//      dataset.addValue( 4.0 , audi , safety );
+//
+//      dataset.addValue( 4.0 , ford , speed );        
+//      dataset.addValue( 2.0 , ford , userrating );        
+//      dataset.addValue( 3.0 , ford , millage );        
+//      dataset.addValue( 6.0 , ford , safety );               
+//
+//      return dataset; 
+//   }
+//   
+//    createDataset() {
+//
+//        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+//        dataset.setValue(46, "Gold medals", "USA");
+//        dataset.setValue(38, "Gold medals", "China");
+//        dataset.setValue(29, "Gold medals", "UK");
+//        dataset.setValue(22, "Gold medals", "Russia");
+//        dataset.setValue(13, "Gold medals", "South Korea");
+//        dataset.setValue(11, "Gold medals", "Germany");
+//
+//        return dataset;
+//    }
+//
+//    createChart(CategoryDataset dataset) {
+//
+//        JFreeChart barChart = ChartFactory.createBarChart(
+//                "Olympic gold medals in London",
+//                "",
+//                "Gold medals",
+//                dataset,
+//                PlotOrientation.VERTICAL,
+//                false, true, false);
+//
+//        return barChart;
+//    }
+//
+//    return this;
+//}
+//
+//barchart = barchart();
+//barchart.chart = barchart.init();
+
+//pre = new JPreeChart();
+//pre.decorate(barchart.chart);
+
+//pre.setFontName("Segoe UI");
+//pre.decorate(barchart.chart);
+
+// pre.decorate() hardcodes some changes so you can use this also:
+//pre.theme.setTitlePaint(Color.white);
+//pre.theme.apply(barchart.chart);
+
+//r = barchart.chart.getCategoryPlot().getRenderer();
+//r.setSeriesPaint(0, paintseq[0]);
+//r.setSeriesPaint(1, paintseq[1]);
+//r.setSeriesPaint(2, paintseq[2]);
+
+//barchart.plot = barchart.chart.getPlot();
+//barchart.plot.setBackgroundPaint(Color.lightGray);
+//barchart.plot.setRangeGridlinePaint(Color.white);
+
+
+//import org.jfree.chart.renderer.category.*; // needed for StandardBarPainter
+//barchart.renderer = barchart.plot.getRenderer();
+//barchart.renderer.setBarPainter(new StandardBarPainter());
+//barchart.renderer.setItemMargin(0.03);
+
+//barchart.chart.setBackgroundPaint(new Color(255,255,255,0));
+
+//axis = barchart.plot.getDomainAxis();
+//axis.setLabel("Categories");
+
+//axis = barchart.plot.getRangeAxis();
+//axis.setLabel("Score");
+
+
+
+
+
+
+// ==================================================
+// https://www.baeldung.com/jfreechart-visualize-data
+// ==================================================
+
+//// Let’s start by using DefaultCategoryDataset to create a dataset for our graph:
+//DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+//dataset.addValue(200, "Sales", "January");
+//dataset.addValue(150, "Sales", "February");
+//dataset.addValue(180, "Sales", "March");
+//dataset.addValue(260, "Sales", "April");
+//dataset.addValue(300, "Sales", "May");
+
+
+//// Now, we can create a JFreeChart object that uses the previous dataset to plot a line chart.
+//// The ChartFactory.createLineChart method takes the chart title, the x-axis and y-axis labels, and the dataset as parameters:
+//JFreeChart chart = ChartFactory.createLineChart(
+//    "Monthly Sales",
+//    "Month",
+//    "Sales",
+//    dataset);
+
+//// Next, a ChartPanel object is essential for displaying our chart within a Swing component. 
+//// This object is then used as a JFrame content pane to create the application window:
+//ChartPanel chartPanel = new ChartPanel(chart);
+//DesktopManager.get().createVApp(chartPanel, "Baeldung Bar Chart");
+
+// chart = ChartFactory.createBarChart(
+//    "Monthly Sales",
+//    "Month",
+//    "Sales",
+//    dataset);
+// chartPanel.setChart(chart);
+// plot = chart.getPlot();
+// plot.setOrientation(PlotOrientation.HORIZONTAL);
+
+//// Now, you can use jpreechart or other mechanisms 
+//// to decorate the chart for better visual appeal.
+
+
+
+
+
+// Example of how to create a common UI framework:
+// JPanel containing JTree in the WEST.
+// the followup shows how to create a vapp
+// and then update the jtree with a new datamodel.
+jfc() {
+
+    pre = new JPreeChart();
+
+    createUI() {
+        tree = new JTree();
+
+        p = new JPanel(new BorderLayout());
+        p.add(tree, BorderLayout.WEST);
+
+        return this;
+    }
+
+    container = createUI();
+
+    return this;
+}
+jfc = jfc();
+
+// 
+DesktopManager.get().createVApp(jfc.container.p, "jfc" );
+
+// 'cn' is an existing variable that is a ChartNode
+jfc.container.tree.getModel().setRoot(cn);
+
+// or, fully encapsulated example... ///////////////////////
+
+
+import org.jwellman.virtualdesktop.*;
+import org.jwellman.jfreechart.*;
+import org.jwellman.jfreechart.editor.*;
+import org.jwellman.jpreechart.*;
+
+import org.jfree.chart.*;
+import org.jfree.chart.demo.*;
+import org.jfree.chart.plot.*;
+import org.jfree.chart.renderer.xy.*;
+import org.jfree.chart.renderer.xy.*;
+import org.jfree.data.category.*;
+import org.jfree.chart.ui.*; // needed for runtime manipulation
+import org.jfree.chart.title.*; // needed for runtime manipulation
+
+
+jfc() {
+
+    // for convenience, show the api in the beanshell class browser
+    jvd.browser.go2("org.jfree.chart.JFreeChart");
+
+    Color[] paint = new Color[] {
+            Color.decode("#CD4E3C"), // red
+            Color.decode("#579340"), // green
+            Color.decode("#5582A6"), // blue
+            Color.decode("#CA4FCC"), // magenta
+            Color.decode("#7D6EC7"), // purple
+            Color.decode("#A87829")  // brown
+        };
+
+    // Let’s start by using DefaultCategoryDataset to create a dataset for our graph:
+    DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+    dataset.addValue(200, "Laptops", "January");
+    dataset.addValue(150, "Laptops", "February");
+    dataset.addValue(180, "Laptops", "March");
+    dataset.addValue(260, "Laptops", "April");
+    dataset.addValue(300, "Laptops", "May");
+
+    // Create a Random object
+    var random = new Random();
+
+    // Generate a random integer within the specified range
+    // The formula is: random.nextInt(max - min + 1) + min
+    // int randomNumber = random.nextInt(max - min + 1) + min;
+    addDataset(category) {
+        dataset.addValue(random.nextInt(400 - 50 + 1) + 50, category, "January");
+        dataset.addValue(random.nextInt(400 - 50 + 1) + 50, category, "February");
+        dataset.addValue(random.nextInt(400 - 50 + 1) + 50, category, "March");
+        dataset.addValue(random.nextInt(400 - 50 + 1) + 50, category, "April");
+        dataset.addValue(random.nextInt(400 - 50 + 1) + 50, category, "May");        
+    }
+
+    addDataset("Cell Phones");
+
+
+    // Now, we can create a JFreeChart object that uses the previous dataset to plot a bar chart.
+    // The ChartFactory.createLineChart method takes the chart title, the x-axis and y-axis labels, and the dataset as parameters:
+    JFreeChart chart = ChartFactory.createBarChart(
+        "Monthly Sales",
+        "Month",
+        "Sales",
+        dataset);
+
+    // Create a new TextTitle for the subtitle
+    var subtitle = new TextTitle("This is a subtitle", 
+                                       new Font("SansSerif", Font.PLAIN, 24), 
+                                       Color.DARK_GRAY, 
+                                       RectangleEdge.TOP, 
+                                       org.jfree.chart.ui.HorizontalAlignment.CENTER, 
+                                       org.jfree.chart.ui.VerticalAlignment.BOTTOM, 
+                                       org.jfree.chart.ui.RectangleInsets.ZERO_INSETS);
+    
+    // Add the subtitle to the chart
+    chart.addSubtitle(subtitle);
+
+    // Next, a ChartPanel object is essential for displaying our chart within a Swing component. 
+    ChartPanel chartPanel = new ChartPanel(chart);
+    // put the chart (via the chartpanel) on the desktop
+    DesktopManager.get().createVApp(chartPanel, "Baeldung Bar Chart");
+
+    // Closure/object to create the chart editor and put it on the desktop
+    createUI() {
+        var p = new JFCEditor(chart);
+        DesktopManager.get().createVApp(p, "jfc" );
+
+        return this;
+    }
+
+    // Closure/object to create some usable painters
+    createPainters() {
+        var stdbarpainter = new org.jfree.chart.renderer.category.StandardBarPainter();
+        return this;
+    }
+
+    // Create the user interface (for the editor)
+    var container = createUI();
+
+    // Create utility objects to be used ad hoc
+    var pre = new JPreeChart();
+    var painters = createPainters();
+
+    return this;
+}
+jfc = jfc();
+
+//jfc.pre.decorate(jfc.chart);
+//jfc.pre.setAllPainters(Color.white);
+//jfc.pre.decorate(jfc.chart);
+
+//jfc.addDataset("monkeys");
+//jfc.addDataset("gorillas");
+//jfc.addDataset("bears");
+//jfc.addDataset("horses");
+
+
+//r = jfc.chart.categoryPlot.renderer;
+//r.setItemMargin(0.05);
+//r.setSeriesPaint(0, paint[1]);
+//r.setSeriesPaint(1, paint[2]);
+
+//jfc.chart.legend.setPosition(RectangleEdge.TOP);
+
+
+// Not sure **when** I would use this but it does work:
+//import org.jfree.chart.labels.*;
+//generator = new StandardCategorySeriesLabelGenerator("a:{0}");
+//r.setLegendItemLabelGenerator(generator);
+
+
+
+
+
+
+
+
+
+

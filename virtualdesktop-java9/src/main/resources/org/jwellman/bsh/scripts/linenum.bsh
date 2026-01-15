@@ -1,0 +1,26 @@
+import java.io.FileReader;
+
+a() {
+
+    p() {
+        // File f = new File("C:\\dev\\workspaces\\textfiles\\test.html");
+        FileReader fileReader=new FileReader("C:\\dev\\workspaces\\textfiles\\test.html");
+        BufferedReader bufferReader= new BufferedReader(fileReader);
+
+        int number = 1;
+        String line=bufferReader.readLine();        
+        while(line!=null) {
+            System.out.println("" + number++ + ": " + line);
+            line=bufferReader.readLine();
+        }
+        
+        fileReader.close();
+        bufferReader.close();
+    }
+
+    return this;
+}
+
+a = a();
+
+a.p();

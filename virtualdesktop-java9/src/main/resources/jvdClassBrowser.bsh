@@ -1,0 +1,165 @@
+/** =================================================================
+ *  Opens the class browser from the Java Virtual Desktop.
+ *  i.e. this script is adapted to recognize the JVD.
+ *  One of the reasons this script is a bit bigger than the
+ *  original classBrowser.bsh script is because the original
+ *  is dependent on the bsh.system.desktop "environment".
+ *  The JVD effectively "replaces" that environment so
+ *  some code has to be copies/moved here so it will work
+ *  outside the original environment.
+ * 
+ *  // TODO Jan 2021 : this could be optimized a bit because
+ *  // the bsh.util.ClassBrowser object takes a while to 
+ *  // load/instantiate which causes the UI to hang briefly.
+ *  // it is low priority but I would like to get it done some day.
+ *  // UPDATE MAY 2023 : the problem is that ClassBrowser.init()
+ *  // has to be done on the EDT based on the way it is written
+ *  // so it pretty much has to "hang" the UI unfortunately.  While
+ *  // it would certainly be "possible" to rewrite BeanShell's 
+ *  // ClassBrowser, it does not appear to be "simple"/quick :(
+ ** ================================================================= */
+import bsh.ClassIdentifier;
+import bsh.util.JClassBrowser;
+import org.jwellman.virtualdesktop.App;
+import org.jwellman.virtualdesktop.DesktopManager;
+
+jvdClassBrowser() {
+
+    bsh.system.icons=object();
+	bsh.system.icons.bean=
+		new ImageIcon(getResource("/bsh/util/lib/icon.gif"));
+	bsh.system.icons.workspace=
+		new ImageIcon(getResource("/bsh/util/lib/workspace.gif"));
+	bsh.system.icons.script=
+		new ImageIcon(getResource("/bsh/util/lib/script.gif"));
+	bsh.system.icons.eye=
+		new ImageIcon(getResource("/bsh/util/lib/eye.jpg"));
+
+    this.browser = new JClassBrowser( this.interpreter.getClassManager() );
+    this.browser.init();
+
+    makeInternalFrame( String name ) {
+        // Closable by default
+        this.frame = new JInternalFrame( name, true, true, true, true );
+        frame.frameIcon=bsh.system.icons.bean;
+        frame.visible=true;
+        return frame;
+    }
+
+    /* Purposely misspelled... suggestions welcome but 'goto' is a java keyword :( */
+    go2(Object o) {
+        browse(o);
+    }
+
+    browse( Object o ) {
+    	String classname;
+    	if ( o instanceof String)
+    		classname = o;
+    	else if ( o instanceof ClassIdentifier )
+    		classname = this.namespace.identifierToClass(o).getName();
+    	else if ( o instanceof Class )
+    		classname = o.getName();
+    	else
+    		classname = o.getClass().getName();
+
+        this.browser.driveToClass(classname);
+    }
+
+    // Expose this method as a convenience since it is used a lot
+    driveToClass(String classname) {
+        browse(classname);
+    }
+
+    this.javaVirtualDesktop = true;
+    this.inDesktop = true; // ( bsh.system.desktop != void );
+    if ( inDesktop ) {
+        if ( javaVirtualDesktop ) {
+        
+            // old this.frame = App.getVSystem().createVApp(browser, "BeanShell Class Browser - jvd", bsh.system.icons.eye);
+            // new
+            this.frame = DesktopManager.get().createVApp(browser, "BeanShell Class Browser - jvd", bsh.system.icons.eye);
+        } else {
+            this.frame = makeInternalFrame("BeanShell Class Browser");
+            // frame.frameIcon = bsh.system.icons.eye;
+            // bsh.system.desktop.classbrowser = browser;
+        }
+    } else {
+        this.frame = new javax.swing.JFrame("BeanShell Class Browser");
+        // frame.iconImage=bsh.system.icons.eye;
+        frame.frameIcon = bsh.system.icons.eye;
+    }
+
+    // Ignore unhandled method invocations from listeners.
+    invoke( name, args ) {
+            if ( !name.startsWith("internalFrame") )
+                    throw new Error("method: "+name);
+    }
+
+    internalFrameClosing( e ) {
+            // really need foo=void;...
+            // bsh.system.desktop.classbrowser = null;
+    }
+
+    if ( !javaVirtualDesktop ) {
+        if (inDesktop) { frame.addInternalFrameListener(this); }
+        browser.setFrame( frame );
+        frame.getContentPane().add("Center", browser);
+        frame.pack();
+        frame.show();
+        frame.selected=true;
+    } else {
+        if (inDesktop) { frame.addInternalFrameListener(this); }
+//            browser.setFrame( frame );
+//            frame.getContentPane().add("Center", browser);
+        frame.pack();
+//            frame.show();
+//            frame.selected=true;
+    }
+
+    if ( inDesktop ) {
+        if ( javaVirtualDesktop ) {
+//                App.getVSystem().createVApp(browser, "BeanShell Class Browser", bsh.system.icons.eye);
+        } else {
+            bsh.system.desktop.addInternalFrame(frame);
+        }
+    }
+
+    return this; // browser;
+}
+
+_JVD() {
+
+	// Convenience to run Swing code on the EDT (Event Dispatching Thread)
+	edt(x) { SwingUtilities.invokeLater(x); }
+
+    classpath() {
+        ClassLoader cl = ClassLoader.getSystemClassLoader();
+        URL[] urls = ((URLClassLoader)cl).getURLs();
+        for (URL url: urls) { print(url.getFile()); }
+    }
+
+    // 'u' simply stands for "utility"; this creates an empty closure
+    // ... very often used by me to simply create my "namespaces"*
+    // ... i.e. not the same as a BSH namespace.
+    u() {
+        return this;
+    }
+
+    return this;
+}
+
+jvd = _JVD();
+jvd.app = org.jwellman.virtualdesktop.App.getVSystem();
+// The next line seems to fail under Java11+ and I have
+// not completely diagnosed the issue yet.  Therefore,
+// it has been moved to the last line of this script
+// so that everything else runs; particularly the jvd.app
+// line above which is required by the better.bsh which 
+// I use a lot.
+jvd.browser = jvdClassBrowser();
+
+/*
+Examples:
+jvd.browser.browse("org.jwellman.virtualdesktop.DesktopManager");
+
+*/

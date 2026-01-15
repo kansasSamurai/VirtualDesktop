@@ -1,0 +1,143 @@
+import org.jwellman.virtualdesktop.DesktopManager;
+
+cdemo1() {
+
+    /** A JPanel extension that contains the java color chooser */
+    this.panel = new JPanel();
+
+    this.chooser = new JColorChooser();
+    this.chooser.setDragEnabled(true);
+    this.panel.add(this.chooser);
+    
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    this.iframe = DesktopManager.get().createVApp(this.panel, "Color Chooser");
+    
+    print("Color Chooser Demo - started...");
+    return this;
+}
+
+jvd.colorchooser = cdemo1();
+
+----------------------------------------------------------------
+/**
+    Color Chooser
+
+    This script puts a JColorChooser in a vapp panel/frame
+    for demonstration purposes.  This version is identical
+    to the next version (below) except that this version
+    uses a customized JColorChooser class (VColorChooser).
+    
+*/
+
+import org.jwellman.swing.colorchooser.VColorChooser;
+
+public class ColorChooserDemo extends JPanel {
+
+    public VColorChooser tcc;
+    
+    public ColorChooserDemo() {
+        super(new BorderLayout());
+
+        tcc = new VColorChooser();
+        this.add(tcc, BorderLayout.CENTER);
+    }
+    
+}
+
+ccdemo() {
+
+    /** A JPanel extension that contains the java color chooser */
+    this.ccpanel = new ColorChooserDemo();
+
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    this.iframe = DesktopManager.get().createVApp(this.ccpanel, "Java Color Chooser");
+    
+    print("Color Chooser Demo started...");
+    return this;
+}
+
+jvd.ccapp = ccdemo();
+
+//jvd.ccapp.ccpanel.tcc.setMostRecentColor(Color.green);
+//jvd.ccapp.ccpanel.tcc.setDragEnabled(true);
+
+----------------------------------------------------------------
+
+/**
+    Color Chooser
+
+    This script puts a JColorChooser in a vapp panel/frame
+    for demonstration purposes.  This version uses a plain
+    JColorChooser class from the JDK.  See the version above
+    for a customized version.    
+*/
+public class ColorChooserDemo extends JPanel {
+
+    public JColorChooser tcc;
+    
+    public ColorChooserDemo() {
+        super(new BorderLayout());
+
+        tcc = new JColorChooser();
+        this.add(tcc, BorderLayout.PAGE_END);
+    }
+    
+}
+
+ccdemo() {
+
+    /** A JPanel extension that contains the java color chooser */
+    this.ccpanel = new ColorChooserDemo();
+
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    this.iframe = DesktopManager.get().createVApp(this.ccpanel, "Java Color Chooser");
+    
+    print("Color Chooser Demo started...");
+    return this;
+}
+
+jvd.ccapp = ccdemo();
+// jvd.ccapp.ccpanel.tcc.setDragEnabled(true);
+
+
+
+
+
+
+/* ==== Using reflection to update RecentSwatchPanel inside JColorChooser ====
+// as found at: https://www.oipapio.com/question-1749666
+// Beanshell doesn't support variable parameters, so you need to put it in an array as per older versions of the Java language:
+// Object.class.getMethod("equals", new Class[] { Object.class } );
+
+import javax.swing.colorchooser.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+
+//final JColorChooser chooser = new JColorChooser(Color.white);
+chooser = jvd.ccapp.ccpanel.tcc;
+
+for (AbstractColorChooserPanel p : chooser.getChooserPanels()) {
+    if (p.getClass().getSimpleName().equals("DefaultSwatchChooserPanel")) {
+        print(p.getClass().getSimpleName());
+        
+        Field recentPanelField = p.getClass().getDeclaredField("recentSwatchPanel");
+        recentPanelField.setAccessible(true);
+    
+        Object recentPanel = recentPanelField.get(p);
+        Class rpclass = recentPanel.getClass();
+        
+        Method recentColorMethod = rpclass.getMethod("setMostRecentColor", new Class[] { Color.class } );
+        recentColorMethod.setAccessible(true);
+    
+        // add colors...
+        // recentPanel.setMostRecentColor(Color.BLACK)
+        recentColorMethod.invoke(recentPanel, new Object[]{Color.BLACK});
+        // recentPanel.setMostRecentColor(Color.RED)
+        recentColorMethod.invoke(recentPanel, new Object[]{Color.RED});
+        // ... add more colors as desired
+    
+        break;
+    }
+}
+
+*/

@@ -1,0 +1,15 @@
+/* === This opens the groovy console ===
+   20180819 : I thought this didn't work but it does open the console in an external JFrame.
+   I can't remember why I didn't pursue this further... maybe I was obsessed
+   with trying to pull it into the desktop.  Or maybe it doesn't work as expected
+   when run in the JVD environment... stay tuned.
+... Did this console warning come from this?
+Aug 19, 2018 8:31:43 AM java.util.prefs.WindowsPreferences <init>
+WARNING: Could not open/create prefs root node Software\JavaSoft\Prefs at root 0x80000002. Windows RegCreateKeyEx(...) returned error code 5.
+
+
+*/
+gconsole() {
+    console = new groovy.ui.Console();
+    console.run();
+}

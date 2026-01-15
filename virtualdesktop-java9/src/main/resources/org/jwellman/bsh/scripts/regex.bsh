@@ -1,0 +1,62 @@
+// Component Placement Prototype
+
+/*
+This script serves as a good template for prototyping new
+user interfaces while directly using the SpecEmpty vapp.
+*/
+
+import java.awt.geom.*;
+import org.jwellman.virtualdesktop.vapps.*;
+
+m() {
+
+    JComponent createField(String label) {
+        a = new JTextField("value-goes-here");
+        a.setBorder(new javax.swing.border.TitledBorder(label));
+
+        JPanel wrapper = new JPanel();
+        wrapper.add(a);
+        return wrapper;
+    }
+
+    return this;
+}
+m = m();
+
+demo = object();
+
+x = new SpecEmpty();
+x.setTitle("RegEx");
+DesktopManager.get().createVApp(x);
+x = demo.panel = x.getContent();
+x.setLayout(new BorderLayout());
+
+y = demo.pnlFields = new JPanel (); 
+y.setLayout(new BoxLayout(y, BoxLayout.PAGE_AXIS));
+    x.add(y, BorderLayout.EAST);
+
+
+y = demo.pnlContent = new JPanel( new BorderLayout() );  
+    x.add(y, BorderLayout.CENTER);
+
+y = demo.pnlActions = new JPanel( );  
+    x.add(y, BorderLayout.SOUTH);
+
+
+x = demo.pnlFields;
+y = m.createField("${a}"); x.add(y); 
+y = m.createField("${b}"); x.add(y); 
+x.add(Box.createVerticalGlue()); 
+
+
+x = demo.pnlContent;
+y = new JTextArea(); x.add(y, BorderLayout.CENTER);
+y.setText("This is the text ${a} which is to be searched  for occurrences of ${b} the word 'is'.");
+
+
+x = demo.pnlActions;
+x.add(new JButton("Parse"));
+
+
+jvd.demo5 = demo;
+

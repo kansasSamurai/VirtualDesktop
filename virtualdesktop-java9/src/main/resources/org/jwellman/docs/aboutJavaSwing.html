@@ -1,0 +1,78 @@
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>About Java Swing</title>
+
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+        <style>
+
+        body, p, h1, h2, h3, h4, ul, li {
+            color: #0A0A0A;
+            /* background-color: #CCCCCC; */
+            font-family: 'segoe ui', consolas, 'courier new', monospaced;
+        }
+
+        p {
+            color: #5A5A5A;
+        }
+
+        /* li color affects the color of the "dots" */
+        ul, li, h1, h2, h3, h4 {
+            color: #3A3A3A;
+        }
+
+        </style>
+
+    </head>
+
+   <body>
+      <h1>Swing API</h1>
+
+      <p>Swing API is a set of extensible GUI Components
+         to ease the developer's life to create JAVA based Front End/GUI Applications. 
+         It is build on top of AWT API and acts as a replacement of AWT API; 
+         it has almost every control corresponding to AWT controls plus more.
+         Swing component follows an MVC (Model-View-Controller) architecture to
+         fulfill the following design goals:</p>
+      <ul>
+         <li><p>A single API is to be sufficient to support multiple look and feel.</p></li>
+         <li><p>API is to be model driven so that the highest level API is not required to have data.</p></li>
+         <li><p>API is to use the Java Bean model so that Builder Tools and IDE can provide better services to developers.</p></li>
+      </ul>
+      <h2>MVC Architecture</h2>
+      <p>Swing API architecture follows loosely based MVC architecture in the following manner:</p>
+      <ul>
+         <li><p>Model represents the component's data.</p></li>
+         <li><p>View represents visual representation of the component's data.</p></li>
+         <li><p>Controller takes the input from the user (on the view) and reflects those changes in the component's data.</p></li>
+         <li><p>Swing component has Model as a separate element, while the 
+         View and Controller part are together in the same User Interface element. 
+         This design contributes to Swing's pluggable look-and-feel architecture.</p></li>
+      </ul>
+      <h2>Swing Features</h2>
+      <ul>
+         <li><p><b>Light Weight</b> - Swing components are independent of native Operating System's API as Swing API controls are rendered using pure JAVA code instead of underlying operating system calls.</p></li>
+         <li><p><b>Rich Controls</b> - Swing provides a rich set of advanced controls like Tree, TabbedPane, Slider, ColorPicker, and Table.</p></li>
+         <li><p><b>Highly Customizable</b> - Swing controls can be customized in a very easy way as visual appearance is independent of internal representation.</p></li>
+         <li><p><b>Pluggable Look-and-Feel</b> - SWING based GUI Application look and feel can be changed at run-time, if desired.</p></li>
+      </ul>
+   </body>
+
+</html>
+<!--
+Tip: to create a link which will open in an external web browser, try:
+<object classid="java:org.netbeans.modules.javahelp.BrowserDisplayer">
+    <param name="content" value="http://www.netbeans.org/">
+    <param name="text" value="<html><u>http://www.netbeans.org/</u></html>">
+    <param name="textFontSize" value="medium">
+    <param name="textColor" value="blue">
+</object>
+To create a link to a help set from another module, you need to know the code name base and path, e.g.:
+<a href="nbdocs://org.netbeans.modules.usersguide/org/netbeans/modules/usersguide/configure/configure_options.html">Using the Options Window</a>
+(This link will behave sanely if that module is disabled or missing.)
+-->

@@ -1,0 +1,17 @@
+/**
+    cls() - Clears the console (just like DOS/Unix/Linux)
+
+    This command requires/assumes the JVD framework as it needs access
+    to console itself via the '_console' variable, and the console needs
+    to expose the underlying JTextPane with a 'textpane' property
+    (which is only available when using JVD version of JConsole)
+*/
+
+cls() {
+    if (void == _console) {
+        print("ERR: _console is undefined");
+    } else {
+        _console.textpane.setText("");
+        printBanner();
+    }
+}

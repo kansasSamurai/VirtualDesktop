@@ -1,0 +1,50 @@
+import org.jwellman.swing.layout.ResponsiveLayout;
+import javax.swing.border.Border;
+import javax.swing.BorderFactory;
+
+public class LayoutDemo extends JPanel {
+
+    private Border border = BorderFactory.createLineBorder(Color.black);
+
+    private int ptr = 0;
+    private Dimension[] sizes = {
+        new Dimension(150,60),
+        new Dimension(75,40),
+        new Dimension(50,30)    
+    };
+    
+    public LayoutDemo() {
+        super(new ResponsiveLayout());
+
+        JLabel label;        
+        label = l("Live Feeds");
+        label = l("Smart Chat");
+        label = l("Calendar");
+//        this.add(label);
+
+    }
+
+    private JLabel l(String title) {
+        JLabel label = new JLabel(title);
+        label.setBorder(border);
+        label.setMinimumSize( sizes[ptr++] );
+        this.add(label);
+        return label;
+    }
+    
+}
+
+layoutdemo() {
+
+    /** A JPanel extension that contains the java color chooser */
+    this.panel = new LayoutDemo();
+
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    this.iframe = jvd.app.createVApp(this.panel, "Responsive Layout");
+    
+    print("Layout Demo started...");
+    return this;
+}
+
+jvd.layoutapp = layoutdemo();
+

@@ -1,0 +1,27 @@
+/**
+ * Lists files in the current directory.
+ */
+public String[] listFiles(String searchPattern)
+{
+    cwd = new File(bsh.cwd);
+    return cwd.list(new GlobFilenameFilter(searchPattern));
+}
+
+/**
+ * Filter needed by above command.
+ */
+public class GlobFilenameFilter implements FilenameFilter
+{
+    private String regexPattern;
+
+    public GlobFilenameFilter(String globPattern)
+    {
+        regexPattern = globPattern.replaceAll("\\?", ".");
+        regexPattern = regexPattern.replaceAll("\\*", ".*");
+    }
+
+    public boolean accept(File dir, String name)
+    {
+        return name.matches(regexPattern);
+    }
+}

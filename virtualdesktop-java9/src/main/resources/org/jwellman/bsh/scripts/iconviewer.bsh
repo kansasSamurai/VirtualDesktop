@@ -1,0 +1,130 @@
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+import jiconfont.swing.IconFontSwing;
+import jiconfont.icons.FontAwesome;
+import jiconfont.icons.GoogleMaterialDesignIcons;
+
+import org.jwellman.swing.icon.ColorIcon;
+
+icv() {
+
+    // This object/class is a custom JLabel
+    this.preview = new org.jwellman.virtualdesktop.vapps.iconviewer.IconViewer();
+    
+    this.btnColor = new JButton("Icon Color", new ColorIcon(Color.black, 14));
+
+    this.west = new JPanel(new GridLayout(0,1));    
+    this.west.add(btnColor);
+        
+    this.panel = new JPanel(new BorderLayout());
+    this.panel.add(this.preview.getView(), BorderLayout.CENTER);    
+    this.panel.add(west, BorderLayout.WEST);
+
+    this.file = new File("test.png");
+
+/* Note to self:
+   When exporting images/icons created by jIconFont,
+   the PNGs do have transparent backgrounds.
+*/
+    export() {
+
+        Image img = jvd.icv.preview.getIcon().getImage();        
+        BufferedImage bi = new BufferedImage(img.getWidth(null),img.getHeight(null),BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = bi.createGraphics();
+        g2.drawImage(img, 0, 0, null);
+        g2.dispose();
+        
+        ImageIO.write(bi, "png", this.file);
+        print(this.file.canonicalPath);
+
+    }
+    
+    return this;
+}
+
+jvd.icv = icv();
+jvd.icv.preview.setTransferHandler(new TransferHandler("foreground"));
+
+DesktopManager.get().createVApp(jvd.icv.panel, "Icon Viewer");
+
+// If you want just the label opaque:
+// jvd.icv.preview.setOpaque(true);
+// jvd.icv.preview.setBackground(Color.white);
+
+// If you want the entire label view opaque:
+// jvd.icv.preview.view.setOpaque(true);
+// jvd.icv.preview.view.setBackground(Color.white);
+
+/* If you have a reference to a dockable 'x' (see dockables.bsh)
+   then you can do this... (and also use a colorchooser)
+   
+   x.addDockable( "Icon Viewer", jvd.icv.panel );
+*/
+
+/* Everything above this is tested and creates an IconViewer
+   which can be used with a colorchooser.bsh to create
+   custom icons.  see jvd.icv.preview.setIcon() below
+*/
+
+/*  ========================================
+
+import jiconfont.icons.*;
+print(jiconfont.icons.FontAwesome.values());
+for (GoogleMaterialDesignIcons value : jiconfont.icons.GoogleMaterialDesignIcons.values()) {
+    if (value.toString().contains("ZOOM"))
+        print(value);
+}
+
+//import org.jwellman.dsp.DSP;
+//import org.jwellman.dsp.FontAwesomeIconProvider;
+//import org.jwellman.dsp.icons.IconSpecifier;
+//import org.jwellman.swing.icon.ColorIcon;
+//import org.jwellman.swing.jbutton.RolloverButton;
+//import org.jwellman.swing.jpanel.BackgroundPanel;
+//import org.jwellman.swing.jpanel.RestrictedHeightPanel;
+//import org.jwellman.virtualdesktop.DesktopManager;
+//import org.jwellman.virtualdesktop.VirtualAppFrame;
+
+
+//DSP.Icons.registerProvider("FontAwesome", new FontAwesomeIconProvider());
+
+IconSpecifier is = new IconSpecifier( "FontAwesome", "CALENDAR"
+        , 18, null, Color.black, Color.white);
+DSP.Icons.register("jpad.calendar", is);
+
+
+//IconSpecifier is = new IconSpecifier(
+//        "FontAwesome", "BALANCE_SCALE"
+//        , 48, null, Color.black, Color.white);
+
+
+//DSP.Icons.register("myapp.scales", is);
+
+
+//jvd.icv.preview.setIcon(
+//
+//    DSP.Icons.getIcon("myapp.scales")
+//    DSP.Icons.getIcon("myapp.scales", jvd.icv.preview.foreground)
+//    
+//);
+--------------------------------
+z = 0;
+for (VirtualAppFrame y : DesktopManager.get().getFrames()) {
+    if ( y.getTitle().equals("BeanShell Class Browser - jvd") ) {
+        z = y;
+    }
+}
+
+print(z);
+z.setFrameIcon(DSP.Icons.getIcon("jpad.bsh_class_browser"));
+
+------------------------
+jvd.icv.preview.setIcon(
+
+    IconFontSwing.buildIcon(
+    //    GoogleMaterialDesignIcons.BORDER_ALL, 48, Color.red)
+        FontAwesome.BALANCE_SCALE, 48, jvd.icv.preview.foreground)
+    
+);
+
+*/

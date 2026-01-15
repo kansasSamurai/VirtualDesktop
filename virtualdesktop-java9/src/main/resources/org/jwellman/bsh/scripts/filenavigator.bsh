@@ -1,0 +1,303 @@
+// ================================
+// This code implements a file navigator that displays 
+// all images in a particular directory.
+//   
+// The zz() method/closure is an implementation of
+// the SwingViewCreator interface and is injected into a file navigator.
+// 
+// It also uses a custom JLabel to facilitate drap/drop onto the JPAD
+// desktop to alter the JPAD desktop background.
+//
+// see filenavigatortext.bsh for a file viewer
+// ================================
+import org.jwellman.swing_applets.FileNavigator;
+import org.jwellman.virtualdesktop.DesktopManager;
+import org.jwellman.swing_applets.SwingViewCreator;
+import java.awt.image.BufferedImage;
+
+x() {
+
+    createView(Object model, Object api) {
+        return new JButton("button");    
+    }
+    
+    return this;
+}
+
+y() {
+
+    this.dimFilePreview = new Dimension(149,149);
+    
+    createView(Object model, Object api) {
+        File file = (File)model;
+        
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setMinimumSize(dimFilePreview);
+        panel.setMaximumSize(dimFilePreview);
+        panel.setPreferredSize(dimFilePreview);
+
+        JButton button = new JButton(file.name);
+
+        ImageIcon icon = api.createFileIcon(file);
+        BufferedImage image = api.createScaledImage( icon, 126, 126 );
+        JLabel label = new JLabel(new ImageIcon(image));
+
+        panel.add(label, BorderLayout.CENTER);
+        panel.add(button, BorderLayout.SOUTH);
+        return panel;    
+    }
+    
+    return this;
+}
+
+public class JpadMouseAdapter extends MouseAdapter {
+    public void mousePressed(MouseEvent e) {
+        JComponent c = (JComponent)e.getSource();
+        TransferHandler handler = c.getTransferHandler();
+        handler.exportAsDrag(c, e, TransferHandler.COPY);
+    }
+}
+
+// FYI, This is a bit misnamed... yes, it is a drop target listener
+// but its use is to reject drop on a target.
+public class JpadDropTargetListener extends java.awt.dnd.DropTargetAdapter {
+
+        private java.awt.dnd.DropTarget dropTarget;
+
+        public JpadDropTargetListener(JLabel component) {
+            this.dropTarget = new java.awt.dnd.DropTarget(
+                component, java.awt.dnd.DnDConstants.ACTION_COPY, this, true, null);
+        }
+
+        public void drop(java.awt.dnd.DropTargetDropEvent event) {
+            try {
+                event.rejectDrop();
+            } catch (Exception e) {
+                e.printStackTrace();
+                event.rejectDrop();
+            }
+        }
+        
+}
+
+z() {
+
+    this.dimFilePreview = new Dimension(149,149);
+    this.mouseAdapter = new JpadMouseAdapter();
+    
+    createView(Object model, Object api) {
+        File file = (File)model;
+        
+        JPanel panel = new JPanel(new BorderLayout());
+            panel.setMinimumSize(dimFilePreview);
+            panel.setMaximumSize(dimFilePreview);
+            panel.setPreferredSize(dimFilePreview);
+
+        JButton button = new JButton(file.name);
+
+        ImageIcon icon = api.createFileIcon(file);
+        BufferedImage image = api.createScaledImage( icon, 136, 136 );
+        
+        JLabel label = new JLabel(new ImageIcon(image));
+            label.setTransferHandler(new TransferHandler("icon"));
+            label.addMouseListener(mouseAdapter);
+            if (file.name.startsWith("a")) // this line, and/or the next line, are optional
+                new JpadDropTargetListener(label);
+
+        // Assemble components into the panel...
+        panel.add(label, BorderLayout.CENTER);
+        panel.add(button, BorderLayout.SOUTH);
+        return panel;    
+    }
+    
+    return this;
+}
+
+// The zz() method/closure is an implementation of the SwingViewCreator 
+// interface and is injected into a file navigator.
+zz() {
+
+    this.mouseAdapter = new JpadMouseAdapter();
+    this.dimFilePreview = new Dimension(149,149);
+    this.transferHandler = new TransferHandler("backgroundFile");
+    
+    createView(Object model, Object api) {
+        File file = (File)model;
+        
+        JPanel panel = new JPanel(new BorderLayout());
+            panel.setMinimumSize(dimFilePreview);
+            panel.setMaximumSize(dimFilePreview);
+            panel.setPreferredSize(dimFilePreview);
+
+        JButton button = new JButton(file.name);
+
+        ImageIcon icon = api.createFileIcon(file);
+        JLabel label = null;
+        if (icon.getIconHeight() < 136 && icon.getIconWidth() < 136) {
+             label = new org.jwellman.swing.jlabel.BackgroundLabel(file, icon);
+        } else {
+            BufferedImage image = api.createScaledImage( icon, 136, 136 );            
+            label = new org.jwellman.swing.jlabel.BackgroundLabel(file, new ImageIcon(image));
+        }
+        label.setTransferHandler(transferHandler);
+        label.addMouseListener(mouseAdapter);
+        if (file.name.startsWith("a")) // this line, and/or the next line, are optional
+            new JpadDropTargetListener(label);
+
+        // Assemble components into the panel...
+        panel.add(label, BorderLayout.CENTER);
+        panel.add(button, BorderLayout.SOUTH);
+        return panel;    
+    }
+    
+    return this;
+}
+
+zzz() {
+
+    this.mouseAdapter = new JpadMouseAdapter();
+    this.dimFilePreview = new Dimension(149,149);
+    this.transferHandler = new TransferHandler("backgroundFile");
+    
+    createView(Object model, Object api) {
+        File file = (File)model;
+        
+        JPanel panel = new JPanel(new BorderLayout());
+            panel.setMinimumSize(dimFilePreview);
+            panel.setMaximumSize(dimFilePreview);
+            panel.setPreferredSize(dimFilePreview);
+
+        JButton button = new JButton(file.name);
+
+        JLabel label = new org.jwellman.swing.jlabel.BackgroundLabel(file, null);
+        label.setTransferHandler(transferHandler);
+        label.addMouseListener(mouseAdapter);
+        if (file.name.startsWith("a")) // this line, and/or the next line, are optional
+            new JpadDropTargetListener(label);
+
+        // Assemble components into the panel...
+        panel.add(label, BorderLayout.CENTER);
+        panel.add(button, BorderLayout.SOUTH);
+
+        new Thread() {
+            public void run(){
+/* =======================================================
+OK... This *does* work but... it still seems to result in enough of a "lag"
+that the UI still blocks (i.e. the jtree that calls this does not highlight
+the selected node until ALL files have run through this).  For example, if
+you simply remove all the code below, this is acceptably responsive in
+building the UI.  
+                Thread.sleep(1000);
+*/
+                ImageIcon icon = api.createFileIcon(file);
+                    if (icon.getIconHeight() < 136 && icon.getIconWidth() < 136) {
+                        // do nothing, this is the size we want
+                    } else {
+                        BufferedImage image = api.createScaledImage( icon, 136, 136 );            
+                        icon = new ImageIcon(image);
+                    }
+
+                Thread ui = new Thread() {
+                    public void run(){
+                        label.setIcon(icon);
+                    }
+                };
+                SwingUtilities.invokeLater(ui);
+            }
+        }.start();
+      
+
+        return panel;    
+    }
+    
+    
+    return this;
+}
+
+zzzz() {
+
+    this.mouseAdapter = new JpadMouseAdapter();
+    this.dimFilePreview = new Dimension(149,149);
+    this.transferHandler = new TransferHandler("backgroundFile");
+    
+    createView(Object model, Object api) {
+        File file = (File)model;
+        
+        JPanel panel = new JPanel(new BorderLayout());
+            panel.setMinimumSize(dimFilePreview);
+            panel.setMaximumSize(dimFilePreview);
+            panel.setPreferredSize(dimFilePreview);
+
+        JButton button = new JButton(file.name);
+
+        JLabel label = new org.jwellman.swing.jlabel.BackgroundLabel(file, null);
+        label.setTransferHandler(transferHandler);
+        label.addMouseListener(mouseAdapter);
+        if (file.name.startsWith("a")) // this line, and/or the next line, are optional
+            new JpadDropTargetListener(label);
+
+        // Assemble components into the panel...
+        panel.add(label, BorderLayout.CENTER);
+        panel.add(button, BorderLayout.SOUTH);
+
+        // ig := icon generator
+        ig() {
+            public void run(){
+/* =======================================================
+So... this works VERY well, but why?
+A:  It appears that there is substantial overhead incurred by using 
+actual Thread objects (previous version).  This version simply creates
+Runnable objects and passes them back to the ExecutorService via addTask().
+
+*/
+                ImageIcon icon = api.createFileIcon(file);
+                    if (icon.getIconHeight() < 136 && icon.getIconWidth() < 136) {
+                        // do nothing, this is the size we want
+                    } else {
+                        BufferedImage image = api.createScaledImage( icon, 136, 136 );            
+                        icon = new ImageIcon(image);
+                    }
+
+                ui() {
+                    public void run(){
+                        label.setIcon(icon);
+                    }
+
+                    return this;
+                };
+                SwingUtilities.invokeLater(ui());
+            }
+
+            return this;
+        };
+        api.addTask(ig());
+
+        return panel;    
+    }
+
+    return this;
+}
+
+bdemo() {
+
+    /** A JPanel extension that contains a directory navigation tree */
+    this.panel = new FileNavigator("C:\\");
+
+    /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
+    //this.iframe = DesktopManager.get().createVApp(this.panel, "Demo - File Navigator");
+    this.iframe = 1;
+    
+    print("Demo created...");
+    return this;
+}
+
+x = jvd.apps.imgnav = bdemo();
+x.panel.setImageView(zzzz());
+x.iframe = DesktopManager.get().createVApp(x.panel, "File Navigator - Image Viewer");
+
+// c:/dev/jpad/files/bckgrnd
+// C:\Users\rcwel\OneDrive\Graphics\jpad\files\BCKGRND
+// C:\dev\workspaces\git\virtualdesktop\
+// C:\dev\workspaces\git\virtualdesktop\src\main\resources\
+// C:\dev\workspaces\git\virtualdesktop\src\main\resources\org\jwellman\bsh\scripts\
+

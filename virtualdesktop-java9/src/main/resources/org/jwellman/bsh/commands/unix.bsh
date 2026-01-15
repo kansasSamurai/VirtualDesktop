@@ -1,0 +1,97 @@
+/*
+jvd.unix.md5("C:\\Users\\Rick\\Downloads\\apache-jmeter-4.0.zip");
+jvd.unix.verifymd5("C:\\Users\\Rick\\Downloads\\apache-jmeter-4.0.zip", "3a84491f10fb7b147101cf3926c4a855");
+TODO if second argument (checksum) is a URL, fetch the string from the URL
+... in the case of apache, instead of using string.equals use string.startswith
+*/
+
+import java.io.*;
+import java.security.MessageDigest;
+
+/**
+ * Filter needed by listFiles()
+ */
+public class GlobFilenameFilter implements FilenameFilter {
+
+    private String regexPattern;
+
+    public GlobFilenameFilter(String globPattern) {
+        regexPattern = globPattern.replaceAll("\\?", ".");
+        regexPattern = regexPattern.replaceAll("\\*", ".*");
+    }
+
+    public boolean accept(File dir, String name) {
+        return name.matches(regexPattern);
+    }
+}
+
+unix() {
+
+    void cls() { 
+        cls(); // this should invoke the global definition
+    }
+
+    void ls() {
+        this.ls("*");
+    }
+
+    void ls(String glob) {
+        files = this.listFiles(glob);
+
+        for (String file : files) {
+            print(file);
+        }
+    }
+
+    /**
+     * Lists files in the current directory.
+     */
+    public String[] listFiles(String searchPattern) {
+        cwd = new File(bsh.cwd);
+        return cwd.list(new GlobFilenameFilter(searchPattern));
+    }
+
+    void verifymd5(String filename, String checksum) {
+        print("Calculating checksum... (even 50MB takes several seconds)");
+        print("... compared to    : " + checksum);
+
+        filesum = md5(filename);
+        print("... calculated MD5 : " + filesum);
+        print("Do they match?     : " + filesum.equals(checksum));
+    }
+
+    String md5(String filename) { return checksum(filename, "MD5"); }
+
+    String checksum(String filename, String algorithm) {
+
+        File file = new File(filename);
+        FileInputStream inputStream = new FileInputStream(file);
+
+        MessageDigest digest = MessageDigest.getInstance(algorithm);
+
+        byte[] bytesBuffer = new byte[1024];
+        int bytesRead = -1;
+
+        while ((bytesRead = inputStream.read(bytesBuffer)) != -1) {
+            digest.update(bytesBuffer, 0, bytesRead);
+        }
+
+        byte[] hashedBytes = digest.digest();
+
+        return convertByteArrayToHexString(hashedBytes);
+    }
+
+    String convertByteArrayToHexString(byte[] arrayBytes) {
+        StringBuffer stringBuffer = new StringBuffer();
+        for (int i = 0; i < arrayBytes.length; i++) {
+            stringBuffer.append(Integer.toString((arrayBytes[i] & 0xff) + 0x100, 16)
+                    .substring(1));
+        }
+        return stringBuffer.toString();
+    }
+
+    return this;
+}
+
+if (void == global.jvd) { global.jvd = object(); }
+global.jvd.unix = unix();

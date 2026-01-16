@@ -155,6 +155,11 @@ public class ActionFactory {
             action.putValue(Action.ACTION_COMMAND_KEY, vappConfig.getClassName());
             action.setDesktopOnly(vappConfig.isDesktopOnly());
 
+            // Pass configuration attributes for Configurable specs
+            if (vappConfig.getAttrs() != null) {
+                action.setAttrs(vappConfig.getAttrs());
+            }
+
             getListOfActions().add(action);
 
         } catch (ClassNotFoundException ex) {

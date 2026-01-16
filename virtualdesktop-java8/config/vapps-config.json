@@ -140,6 +140,16 @@
           "icon": "palette7",
           "enabled": true,
           "desktopOnly": false
+        },
+        {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecHtmlViewer",
+          "title": "HTML Viewer",
+          "icon": "internet56",
+          "enabled": true,
+          "desktopOnly": false,
+          "attrs": {
+            "htmlFile": "docs/index.html"
+          }
         }
       ]
     }

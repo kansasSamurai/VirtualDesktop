@@ -1,6 +1,7 @@
 package org.jwellman.virtualdesktop.vapps;
 
 import java.awt.event.ActionEvent;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.AbstractAction;
@@ -26,9 +27,12 @@ public class DesktopAction extends AbstractAction implements Runnable {
     private boolean desktopOnly;
 
     private String clazzName;
-    
+
     /** Class of virtual app to create */
     private Class<?> clazz;
+
+    /** Configuration attributes for Configurable specs */
+    private Map<String, String> attrs;
 
     public DesktopAction(String title) {
         super(title);
@@ -56,7 +60,14 @@ public class DesktopAction extends AbstractAction implements Runnable {
     @Override
     public void run() {
             try {
-                DesktopManager.get().createVApp( this.clazz.newInstance() );
+                Object spec = this.clazz.newInstance();
+
+                // Apply configuration if spec supports it
+                if (spec instanceof Configurable && this.attrs != null) {
+                    ((Configurable) spec).configure(this.attrs);
+                }
+
+                DesktopManager.get().createVApp(spec);
             } catch (InstantiationException | IllegalAccessException ex) {
                 Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -88,6 +99,14 @@ public class DesktopAction extends AbstractAction implements Runnable {
 
     public void setClazzName(String clazzName) {
         this.clazzName = clazzName;
+    }
+
+    public Map<String, String> getAttrs() {
+        return attrs;
+    }
+
+    public void setAttrs(Map<String, String> attrs) {
+        this.attrs = attrs;
     }
 
 }

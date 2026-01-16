@@ -6,13 +6,25 @@ This glossary documents terminology used in the VirtualDesktop project to mainta
 
 ## Core Application Concepts
 
-### Virtual Desktop
+### VirtualDesktop / jPad
+**Synonyms:** VirtualDesktop, jPad (these terms are interchangeable)
+
 The entire application - a Java-based desktop environment that runs within a single JVM, providing a consistent cross-platform desktop metaphor independent of the underlying OS.
 
-### Vapp (Virtual Application)
-**Synonyms:** Virtual Application, Tool, Integrated Tool
+**Naming:**
+- **VirtualDesktop** - The historical/technical name used throughout the codebase, package names, and repository
+- **jPad** - The branding/marketing name for the application
+  - Tongue-in-cheek reference to being "one better than an iPad"
+  - Acronym: **J**ava **P**owered **A**lternative **D**esktop
+
+### Vapp / Tool (Virtual Application)
+**Synonyms:** Tool, Vapp, Virtual Application, Integrated Tool
 
 A JPanel-based application that runs within the virtual desktop environment. Examples: BeanShell console, HyperSQL manager, JFreeChart tool.
+
+**Naming Convention:**
+- **Tool** - Preferred user-facing term (used in menus, documentation)
+- **Vapp** - Historical codebase term (used in code, class names like `VirtualAppSpec`)
 
 **Key Characteristics:**
 - Extends or uses `VirtualAppSpec` as its descriptor

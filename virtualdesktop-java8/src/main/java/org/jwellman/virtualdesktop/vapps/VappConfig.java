@@ -1,5 +1,7 @@
 package org.jwellman.virtualdesktop.vapps;
 
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -23,6 +25,12 @@ public class VappConfig {
 
     @JsonProperty("desktopOnly")
     private boolean desktopOnly = false;
+
+    @JsonProperty("args")
+    private Map<String, String> args;
+
+    @JsonProperty("attrs")
+    private Map<String, String> attrs;
 
     /**
      * Default constructor for Jackson deserialization
@@ -68,5 +76,21 @@ public class VappConfig {
 
     public void setDesktopOnly(boolean desktopOnly) {
         this.desktopOnly = desktopOnly;
+    }
+
+    public Map<String, String> getArgs() {
+        return args;
+    }
+
+    public void setArgs(Map<String, String> args) {
+        this.args = args;
+    }
+
+    public Map<String, String> getAttrs() {
+        return attrs;
+    }
+
+    public void setAttrs(Map<String, String> attrs) {
+        this.attrs = attrs;
     }
 }

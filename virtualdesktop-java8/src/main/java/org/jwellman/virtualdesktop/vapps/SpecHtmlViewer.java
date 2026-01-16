@@ -1,12 +1,18 @@
 package org.jwellman.virtualdesktop.vapps;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.Font;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.util.Map;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
@@ -93,6 +99,7 @@ public class SpecHtmlViewer extends VirtualAppSpec implements LaunchAware, Confi
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
+        // Main message
         String message = String.format(
             "<html><center>" +
             "<b>HTML Viewer</b><br><br>" +
@@ -105,7 +112,37 @@ public class SpecHtmlViewer extends VirtualAppSpec implements LaunchAware, Confi
         JLabel label = new JLabel(message, SwingConstants.CENTER);
         label.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
 
-        panel.add(label, BorderLayout.CENTER);
+        // Re-open link
+        JLabel reopenLink = new JLabel(
+            "<html><center><br>If you closed the browser window,<br>" +
+            "<u>click here</u> to re-open.</center></html>",
+            SwingConstants.CENTER
+        );
+        reopenLink.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        reopenLink.setForeground(new Color(0, 102, 204)); // Link blue
+        reopenLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        reopenLink.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                try {
+                    launch();
+                } catch (Exception ex) {
+                    System.err.println("Failed to re-open browser: " + ex.getMessage());
+                }
+            }
+        });
+
+        // Center panel with vertical layout
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        centerPanel.add(Box.createVerticalGlue());
+        label.setAlignmentX(JLabel.CENTER_ALIGNMENT);
+        reopenLink.setAlignmentX(JLabel.CENTER_ALIGNMENT);
+        centerPanel.add(label);
+        centerPanel.add(reopenLink);
+        centerPanel.add(Box.createVerticalGlue());
+
+        panel.add(centerPanel, BorderLayout.CENTER);
         return panel;
     }
 

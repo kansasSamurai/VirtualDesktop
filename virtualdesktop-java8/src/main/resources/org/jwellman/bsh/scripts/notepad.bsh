@@ -1,5 +1,5 @@
 /**
- * Example BeanShell script demonstrating the advanced vapp pattern.
+ * Example BeanShell script demonstrating the advanced scripted tool pattern.
  *
  * This script creates a simple notepad tool that:
  * - Provides a text area for editing
@@ -49,7 +49,7 @@ notepad() {
     }
 
     /**
-     * Called when the vapp window is displayed.
+     * Called when the tool window is displayed.
      */
     launch() {
         textArea.requestFocus();
@@ -100,4 +100,6 @@ notepad() {
 
 // Register in global namespace for inter-tool access
 global.notepad = notepad();
-return global.notepad.getContent();
+
+// Return "this" so SpecBeanShellScript can call configure() and launch()
+return global.notepad;

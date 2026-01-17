@@ -27,7 +27,7 @@ import org.jwellman.virtualdesktop.bsh.BeanShellService;
  * Advanced scripts can implement these optional methods:
  * - getContent() - returns the JComponent to display
  * - configure(Map attrs) - called with configuration attributes
- * - launch() - called when the vapp is displayed
+ * - launch() - called when the tool is displayed
  *
  * Example simple script:
  * <pre>
@@ -37,7 +37,7 @@ import org.jwellman.virtualdesktop.bsh.BeanShellService;
  * return panel;
  * </pre>
  *
- * Example advanced script:
+ * Example advanced script (recommended for lifecycle support):
  * <pre>
  * notepad() {
  *     textArea = new JTextArea();
@@ -51,7 +51,7 @@ import org.jwellman.virtualdesktop.bsh.BeanShellService;
  *     return this;
  * }
  * global.notepad = notepad();
- * return global.notepad.getContent();
+ * return global.notepad;  // Return "this" for lifecycle method support
  * </pre>
  *
  * @author rwellman

@@ -1,0 +1,103 @@
+/**
+ * Example BeanShell script demonstrating the advanced vapp pattern.
+ *
+ * This script creates a simple notepad tool that:
+ * - Provides a text area for editing
+ * - Supports configuration via attrs
+ * - Exposes methods for inter-tool communication
+ *
+ * Usage from BeanShell console:
+ *   global.notepad.setText("Hello from console!");
+ *   text = global.notepad.getText();
+ *   print(text);
+ */
+
+import javax.swing.*;
+import java.awt.*;
+
+notepad() {
+    // UI components
+    textArea = new JTextArea();
+    textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
+
+    panel = new JPanel(new BorderLayout());
+    panel.add(new JScrollPane(textArea), BorderLayout.CENTER);
+
+    // Status bar
+    statusLabel = new JLabel("Ready");
+    statusLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+    panel.add(statusLabel, BorderLayout.SOUTH);
+
+    /**
+     * Return the main content panel.
+     */
+    getContent() {
+        return panel;
+    }
+
+    /**
+     * Called with configuration attributes from vapps-config.json.
+     */
+    configure(attrs) {
+        if (attrs.containsKey("defaultText")) {
+            textArea.setText(attrs.get("defaultText"));
+            statusLabel.setText("Loaded default text");
+        }
+        if (attrs.containsKey("editable")) {
+            textArea.setEditable("true".equals(attrs.get("editable")));
+        }
+    }
+
+    /**
+     * Called when the vapp window is displayed.
+     */
+    launch() {
+        textArea.requestFocus();
+    }
+
+    // ===== Public methods for inter-tool communication =====
+
+    /**
+     * Get the current text content.
+     */
+    getText() {
+        return textArea.getText();
+    }
+
+    /**
+     * Set the text content.
+     */
+    setText(s) {
+        textArea.setText(s);
+        statusLabel.setText("Text updated");
+    }
+
+    /**
+     * Append text to the end.
+     */
+    append(s) {
+        textArea.append(s);
+        statusLabel.setText("Text appended");
+    }
+
+    /**
+     * Clear all text.
+     */
+    clear() {
+        textArea.setText("");
+        statusLabel.setText("Cleared");
+    }
+
+    /**
+     * Get the line count.
+     */
+    getLineCount() {
+        return textArea.getLineCount();
+    }
+
+    return this;
+}
+
+// Register in global namespace for inter-tool access
+global.notepad = notepad();
+return global.notepad.getContent();

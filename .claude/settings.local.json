@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(find:*)",
-      "Bash(git mv:*)",
+      "Bash(git mv:*)"
+    ],
+    "ask": [
       "Bash(mvn:*)"
     ]
   }

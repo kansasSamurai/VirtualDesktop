@@ -150,6 +150,17 @@
           "attrs": {
             "htmlFile": "docs/index.html"
           }
+        },
+        {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecBeanShellScript",
+          "title": "Scripted Notepad",
+          "icon": "document176",
+          "enabled": true,
+          "desktopOnly": false,
+          "attrs": {
+            "scriptPath": "src/main/resources/org/jwellman/bsh/scripts/notepad.bsh",
+            "defaultText": "Welcome to the Scripted Notepad!\n\nThis vapp is powered by a BeanShell script.\nYou can interact with it from the BeanShell Console:\n\n  global.notepad.setText(\"Hello!\");\n  print(global.notepad.getText());\n"
+          }
         }
       ]
     }

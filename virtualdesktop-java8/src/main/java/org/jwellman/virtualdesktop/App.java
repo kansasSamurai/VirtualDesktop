@@ -222,7 +222,7 @@ public class App extends JFrame implements ActionListener {
         menuItem.addActionListener(this);
         menu.add(menuItem);
 
-        appMenu = new JMenu("VApps");
+        appMenu = new JMenu("Tools");
         appMenu.setMnemonic(KeyEvent.VK_V);
         menuBar.add(appMenu);
 

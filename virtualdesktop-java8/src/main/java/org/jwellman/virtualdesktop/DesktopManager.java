@@ -15,6 +15,8 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 import org.jwellman.dsp.DSP;
+import org.jwellman.virtualdesktop.state.actions.SimpleAction;
+import org.jwellman.virtualdesktop.state.store.AppStore;
 import org.jwellman.virtualdesktop.vapps.LaunchAware;
 import org.jwellman.virtualdesktop.vapps.SpecScriptedObject;
 import org.jwellman.virtualdesktop.vapps.VirtualAppSpec;
@@ -94,7 +96,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
             // TODO I want to move this somehow into the definitive method;
             // I do not like having logic spread throughout all these createvapp methods.
         	System.out.println("createVApp() going to populateInternalFrame()");
-            final VirtualAppFrame frame = this.createAppFrame(spec.getTitle());
+            final VirtualAppFrame frame = this.createAppFrame(spec.getTitle(), spec);
             
             if (spec.getIcon() != null) {
                 frame.setFrameIcon(spec.getIcon());            
@@ -165,7 +167,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
         String title = spec.getTitle();
         Container c = spec.getContent();
 
-        final VirtualAppFrame frame = this.createAppFrame(title);
+        final VirtualAppFrame frame = this.createAppFrame(title, spec);
         if (icon != null) {
             if (title.equals("BeanShell Class Browser - jvd")) {
                 frame.setFrameIcon(DSP.Icons.getIcon("jpad.bsh_class_browser"));
@@ -236,36 +238,62 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
     /**
      * A private convenience method to encapsulate things that MUST happen
      * when creating a new Virtual App; such as adding to list of frames, etc ...
-     * 
+     *
      * @param title
      * @return
      */
+    @SuppressWarnings("unused")
     private VirtualAppFrame createAppFrame(String title) {
+        return createAppFrame(title, null);
+    }
+
+    /**
+     * A private convenience method to encapsulate things that MUST happen
+     * when creating a new Virtual App; such as adding to list of frames, etc ...
+     *
+     * @param title
+     * @param spec the VirtualAppSpec (may be null for legacy calls)
+     * @return
+     */
+    private VirtualAppFrame createAppFrame(String title, VirtualAppSpec spec) {
         final VirtualAppFrame frame = new VirtualAppFrame(title);
-        
+
+        // Set tool type from spec class name for Redux state tracking
+        if (spec != null) {
+            frame.setToolType(spec.getClass().getSimpleName());
+        }
+
         // The default close operation is to HIDE (for now)...
         // Moved from the VirtualAppFrame constructor simply for process visibility
         frame.setDefaultCloseOperation(JInternalFrame.HIDE_ON_CLOSE);
         // TODO decide how to handle internal frame lifecycle; hide vs. dispose etc.
-        // for later research/design: 
+        // for later research/design:
         // https://docs.oracle.com/javase/7/docs/api/javax/swing/JInternalFrame.html
         // dispose() -- Makes this internal frame invisible, unselected, and closed.
-        
-        
+
+
         // Ensure that this desktop manager is a frame listener...
         frame.addInternalFrameListener(this);
-        
+
         // It's probably easier/better to use GlazedLists proxies instead of
-        // SwingUtilities.invokeLater() directly, but I have tried to use them 
+        // SwingUtilities.invokeLater() directly, but I have tried to use them
         // and am not doing it right apparently :(
         SwingUtilities.invokeLater(
                 new Runnable() { @Override public void run() {
                     // For example, this will throw an exception if not run on the EDT
                     // which is easily done when creating a UI via beanshell scripts such as better.bsh, etc.
-                    frames.add(frame);                
+                    frames.add(frame);
                 } }
         	);
-        
+
+        // Dispatch TOOL_OPENED action to Redux store
+        AppStore.get().dispatch(SimpleAction.toolOpened(
+            frame.getToolId(),
+            frame.getToolType(),
+            title,
+            null  // workspaceId - will be set when docking is implemented
+        ));
+
         return frame;
     }
     
@@ -297,10 +325,13 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 		return frames;
 	}
 
-	private void displayMessage(String prefix, InternalFrameEvent e) {
-		String s = prefix + " : " + e.getSource() + NEWLINE;
-		System.out.println(s);
-	}
+    private void displayMessage(String prefix, InternalFrameEvent e) {
+        boolean log = false;
+        if (log) {
+            String s = prefix + " : " + e.getSource() + NEWLINE;
+            System.out.println(s);
+        }
+    }
 
 	// ============= Begin InternalFrameListener =======================
 	
@@ -313,10 +344,17 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 	@Override
 	public void internalFrameClosed(InternalFrameEvent e) {
 		// This will not be called if the frames close action is "HIDE"; only when it is "DISPOSE"
-		
+
 		// TODO Auto-generated method stub
 		displayMessage("IFRAME :: closed", e);
-		
+
+		// Dispatch TOOL_CLOSED action to Redux store
+		JInternalFrame source = e.getInternalFrame();
+		if (source instanceof VirtualAppFrame) {
+			String toolId = ((VirtualAppFrame) source).getToolId();
+			AppStore.get().dispatch(SimpleAction.toolClosed(toolId));
+		}
+
 		// TODO Remove the object reference from the list so that it can be garbage collected
 
 	}
@@ -332,7 +370,14 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 		// TODO Auto-generated method stub
 		displayMessage("IFRAME :: iconfy", e);
 		e.getInternalFrame().hide();
-		
+
+		// Dispatch TOOL_MINIMIZED action to Redux store
+		JInternalFrame source = e.getInternalFrame();
+		if (source instanceof VirtualAppFrame) {
+			String toolId = ((VirtualAppFrame) source).getToolId();
+			AppStore.get().dispatch(SimpleAction.toolMinimized(toolId));
+		}
+
 		if ( null == desktop.getSelectedFrame() ) {
 		    this.observedJList.clearSelection();
 		}
@@ -351,6 +396,13 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 	public void internalFrameDeiconified(InternalFrameEvent e) {
 		// TODO Auto-generated method stub
 		displayMessage("IFRAME :: deicon", e);
+
+		// Dispatch TOOL_RESTORED action to Redux store
+		JInternalFrame source = e.getInternalFrame();
+		if (source instanceof VirtualAppFrame) {
+			String toolId = ((VirtualAppFrame) source).getToolId();
+			AppStore.get().dispatch(SimpleAction.toolRestored(toolId));
+		}
 	}
 
 	@Override
@@ -358,7 +410,14 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 		// activated = "selected"; i.e. has the focus
 		// TODO Auto-generated method stub
 		displayMessage("IFRAME :: active", e);
-		
+
+		// Dispatch TOOL_ACTIVATED action to Redux store
+		JInternalFrame source = e.getInternalFrame();
+		if (source instanceof VirtualAppFrame) {
+			String toolId = ((VirtualAppFrame) source).getToolId();
+			AppStore.get().dispatch(SimpleAction.toolActivated(toolId));
+		}
+
 		this.observedJList.setSelectedValue(e.getInternalFrame(), true);
 	}
 
@@ -366,7 +425,13 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 	public void internalFrameDeactivated(InternalFrameEvent e) {
 		// deactivated = "de-selected"; i.e. no longer has the focus
 		displayMessage("IFRAME :: deactv", e);
-		
+
+		// Dispatch TOOL_DEACTIVATED action to Redux store
+		JInternalFrame source = e.getInternalFrame();
+		if (source instanceof VirtualAppFrame) {
+			String toolId = ((VirtualAppFrame) source).getToolId();
+			AppStore.get().dispatch(SimpleAction.toolDeactivated(toolId));
+		}
 	}
 
 	// ============= Begin ListSelectionListener =======================

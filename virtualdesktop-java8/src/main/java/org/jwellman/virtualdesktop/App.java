@@ -41,6 +41,9 @@ import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.VShortcut;
 import org.jwellman.virtualdesktop.desktopmgr.VAppListCellRenderer;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
+import org.jwellman.virtualdesktop.state.reducers.AppReducer;
+import org.jwellman.virtualdesktop.state.store.AppStore;
+import org.jwellman.virtualdesktop.state.store.LoggingMiddleware;
 import org.jwellman.virtualdesktop.vapps.ActionFactory;
 import org.jwellman.virtualdesktop.vapps.DesktopAction;
 import org.jwellman.virtualdesktop.vapps.MenuGroup;
@@ -425,6 +428,16 @@ public class App extends JFrame implements ActionListener {
 
     }
 
+    /**
+     * Initialize the Redux-style state store with reducer and middleware.
+     */
+    private static void initializeStore() {
+        AppStore store = AppStore.get();
+        store.setReducer(new AppReducer());
+        store.addMiddleware(new LoggingMiddleware("[Redux]"));
+        System.out.println("Redux store initialized");
+    }
+
     public static void main(String[] args) {
 
         // Install a custom security manager to prevent guests from shutting down the desktop.
@@ -432,6 +445,9 @@ public class App extends JFrame implements ActionListener {
 
         // Global Initialization(s) [ Frameworks, etc. ]
         createTheme();
+
+        // Initialize Redux-style state store
+        initializeStore();
 
         //Schedule a job for the event-dispatching thread:
         //creating and showing this application's GUI.

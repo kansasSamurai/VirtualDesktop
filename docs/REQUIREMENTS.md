@@ -33,6 +33,8 @@ VirtualDesktop is a Java-based virtual desktop application providing a consisten
 - [External Applications](#external-applications)
 - [Tool Configuration](#tool-configuration)
 - [UI/UX Guidelines](#uiux-guidelines)
+- [Taskbar](#taskbar)
+- [State Management (Redux-Style)](#state-management-redux-style)
 
 ### BeanShell Integration
 
@@ -138,6 +140,98 @@ Tools should follow these guidelines for framework compatibility:
 
 ---
 
+### Taskbar
+
+#### Grouping
+
+**Decision:** Taskbar supports grouping tools by type (class name).
+
+**Behavior:**
+- Model supports grouping; view optionally displays grouped/ungrouped based on user preference
+- Initial implementation: group by tool type (class)
+- Future: grouping by docking relationship
+
+**Rationale:** Reduces taskbar clutter when multiple instances of the same tool type are open.
+
+#### Docking Indicators
+
+**Decision:** Taskbar displays indicators for docking state changes.
+
+**Indicators:**
+- **Original panel present** - Whether the tool's original panel is still in its JInternalFrame
+- **Has external content** - Whether the JInternalFrame contains panels docked from other tools
+
+**Rationale:** Users need visual feedback when panels are moved between frames via docking.
+
+**View flexibility:** Model provides state; view decides rendering (icon badges, colors, text suffixes). Badge rendering deferred to future dependency addition.
+
+---
+
+### State Management (Redux-Style)
+
+#### Architecture Overview
+
+**Decision:** Adopt Redux-style state management with centralized store, actions, and unidirectional data flow.
+
+**Core Concepts:**
+- **Store** - Single source of truth (`AppStore` singleton)
+- **State** - Immutable state objects (`AppState`, `ToolsState`, etc.)
+- **Actions** - Named events describing state changes (`TOOL_OPENED`, `PANEL_DOCKED_IN`)
+- **Reducers** - Pure functions computing new state from current state + action
+- **Subscribers** - UI components subscribe to state changes
+
+**Rationale:**
+- Centralized state simplifies debugging and reasoning about application state
+- Unidirectional flow prevents state synchronization bugs
+- Action logging enables debugging and potential undo/redo
+- Incremental adoption - start with taskbar, expand over time
+
+#### State Model
+
+```
+AppState
+├── ToolsState
+│   ├── toolsById: Map<String, ToolInstance>
+│   └── toolsByType: Map<String, Set<String>>
+├── TaskbarState
+│   ├── groupingEnabled: boolean
+│   ├── groupingMode: BY_TYPE | BY_DOCKING | NONE
+│   └── selectedToolId: String
+└── timestamp: long
+
+ToolInstance
+├── id: String (UUID)
+├── toolType: String (class name)
+├── title: String
+├── frameState: NORMAL | MINIMIZED | MAXIMIZED | HIDDEN
+└── dockingState: DockingState
+```
+
+#### Package Structure
+
+```
+org.jwellman.virtualdesktop.state/
+├── store/     - AppStore, StoreSubscriber, Middleware
+├── actions/   - Action, ActionTypes, payloads/
+├── reducers/  - AppReducer, ToolsReducer, TaskbarReducer
+└── model/     - AppState, ToolsState, ToolInstance, etc.
+```
+
+#### Key Actions
+
+```java
+// Tool lifecycle
+TOOL_OPENED, TOOL_CLOSED, TOOL_MINIMIZED, TOOL_RESTORED, TOOL_ACTIVATED
+
+// Docking
+PANEL_DOCKED_IN, PANEL_DOCKED_OUT, PANEL_LOCATION_CHANGED
+
+// Taskbar
+TASKBAR_GROUPING_TOGGLED, TASKBAR_TOOL_SELECTED
+```
+
+---
+
 ## Architecture Decisions
 
 ### Docking Framework
@@ -164,3 +258,6 @@ Tools should follow these guidelines for framework compatibility:
 | 2026-01-16 | "tool" vs "vapp" terminology | User-facing clarity |
 | 2026-01-16 | Consistent placeholder panels | UX consistency for external tools |
 | 2026-01-16 | Script lifecycle via returning "this" | Enable configure() and launch() callbacks |
+| 2026-01-17 | Redux-style state management | Centralized state, debuggability, future undo/redo |
+| 2026-01-17 | Taskbar grouping by tool type | Reduce clutter with multiple tool instances |
+| 2026-01-17 | Docking state indicators | Visual feedback for panel movement |

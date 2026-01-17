@@ -1,9 +1,14 @@
 package org.jwellman.virtualdesktop;
 
+import java.util.UUID;
+
 import javax.swing.JInternalFrame;
 import javax.swing.border.EmptyBorder;
 
 /**
+ * JInternalFrame subclass representing a tool window in the virtual desktop.
+ *
+ * Each frame has a unique toolId for tracking in the Redux-style state store.
  *
  * @author Rick Wellman
  */
@@ -13,6 +18,12 @@ public class VirtualAppFrame extends JInternalFrame {
     static int openFrameCount = 0;
 
     static final int xOffset = 30, yOffset = 30;
+
+    /** Unique identifier for this tool instance in the state store */
+    private final String toolId;
+
+    /** The tool type (VirtualAppSpec class name) for grouping */
+    private String toolType;
 
     public VirtualAppFrame() {
         this("Document #" + (++openFrameCount), false);
@@ -30,7 +41,10 @@ public class VirtualAppFrame extends JInternalFrame {
               true, //maximizable
               true);//iconifiable
         this.setDefaultCloseOperation(JInternalFrame.HIDE_ON_CLOSE);
-        
+
+        // Generate unique ID for state tracking
+        this.toolId = UUID.randomUUID().toString();
+
         if (updateCount) { ++openFrameCount; }
 
         //...Create the GUI and put it in the window...
@@ -52,6 +66,30 @@ public class VirtualAppFrame extends JInternalFrame {
     
     public String toString() {
     	return this.title;
+    }
+
+    /**
+     * Get the unique tool ID for state tracking.
+     * @return the tool ID (UUID string)
+     */
+    public String getToolId() {
+        return toolId;
+    }
+
+    /**
+     * Get the tool type (VirtualAppSpec class name).
+     * @return the tool type, or null if not set
+     */
+    public String getToolType() {
+        return toolType;
+    }
+
+    /**
+     * Set the tool type (VirtualAppSpec class name).
+     * @param toolType the tool type
+     */
+    public void setToolType(String toolType) {
+        this.toolType = toolType;
     }
 
     @Override protected void finalize() throws Throwable {

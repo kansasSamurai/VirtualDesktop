@@ -1,12 +1,22 @@
 package org.jwellman.virtualdesktop.vapps;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Font;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 
 import org.jwellman.jcx.SystemCommandExecutor;
 
@@ -51,14 +61,58 @@ public class ExternalAppSpec extends VirtualAppSpec implements LaunchAware {
         // this was created by claude but I believe it is un-necessary and misunderstood use of the property
         // this.internalFrameProvider = false;
 
-        this.setContent(this.createContent());
+        this.setContent(this.createPlaceholderPanel());
     }
 
-    private JPanel createContent() {
-        final JPanel content = new JPanel();
+    private JPanel createPlaceholderPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        content.add(new JLabel("Command: " + this.command));
-        return content;
+        // Main message
+        String message = String.format(
+            "<html><center>" +
+            "<b>External Application</b><br><br>" +
+            "Command: <i>%s</i><br><br>" +
+            "Launched as external process." +
+            "</center></html>",
+            command
+        );
+
+        JLabel label = new JLabel(message, SwingConstants.CENTER);
+        label.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+
+        // Re-launch link
+        JLabel relaunchLink = new JLabel(
+            "<html><center><br>If the application closed,<br>" +
+            "<u>click here</u> to re-launch.</center></html>",
+            SwingConstants.CENTER
+        );
+        relaunchLink.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        relaunchLink.setForeground(new Color(0, 102, 204)); // Link blue
+        relaunchLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        relaunchLink.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                try {
+                    launch();
+                } catch (Exception ex) {
+                    System.err.println("Failed to re-launch application: " + ex.getMessage());
+                }
+            }
+        });
+
+        // Center panel with vertical layout
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        centerPanel.add(Box.createVerticalGlue());
+        label.setAlignmentX(JLabel.CENTER_ALIGNMENT);
+        relaunchLink.setAlignmentX(JLabel.CENTER_ALIGNMENT);
+        centerPanel.add(label);
+        centerPanel.add(relaunchLink);
+        centerPanel.add(Box.createVerticalGlue());
+
+        panel.add(centerPanel, BorderLayout.CENTER);
+        return panel;
     }
 
     /**

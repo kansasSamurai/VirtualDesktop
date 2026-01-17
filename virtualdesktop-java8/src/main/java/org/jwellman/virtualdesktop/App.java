@@ -41,6 +41,8 @@ import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.VShortcut;
 import org.jwellman.virtualdesktop.desktopmgr.VAppListCellRenderer;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
+import org.jwellman.virtualdesktop.taskbar.TaskbarController;
+import org.jwellman.virtualdesktop.taskbar.TaskbarItem;
 import org.jwellman.virtualdesktop.state.reducers.AppReducer;
 import org.jwellman.virtualdesktop.state.store.AppStore;
 import org.jwellman.virtualdesktop.state.store.LoggingMiddleware;
@@ -98,6 +100,9 @@ public class App extends JFrame implements ActionListener {
     /** a custom scrollpane for a scrollable desktop */
     private DesktopScrollPane dsp;
 
+    /** Redux-backed taskbar controller (version 6+) */
+    private TaskbarController taskbarController;
+
     // These are a workaround because VirtualAppFrame needs to know the LAF
     // for a workaround that it employs for WEBLAF only
     public static final int LAF_SYSTEM = 1;
@@ -144,7 +149,7 @@ public class App extends JFrame implements ActionListener {
         desktop = new VDesktopPane(); // new JDesktopPane(); //a specialized layered pane
         DesktopManager.get().setDesktop(desktop);
 
-        int version = 5;
+        int version = 6; // 5=GlazedLists, 6=Redux TaskbarController
         switch (version) {
             // previous versions are in source control if needed
             case 5:
@@ -165,6 +170,31 @@ public class App extends JFrame implements ActionListener {
                 splitPane2.setOneTouchExpandable(true);
                 splitPane2.setDividerLocation(150);
                 p.add(splitPane2);
+
+                this.setContentPane(p);
+                break;
+
+            case 6:
+                // Redux-backed taskbar using TaskbarController
+                controls = new JPanel(new BorderLayout());
+
+                // Create JList managed by TaskbarController
+                JList<TaskbarItem> taskbarList = new JList<>();
+                this.taskbarController = new TaskbarController(taskbarList);
+                controls.add(taskbarList, BorderLayout.CENTER);
+
+                // Still need to set observed JList for DesktopManager compatibility
+                // Create a dummy list for now - DesktopManager will be refactored later
+                DefaultEventListModel<VirtualAppFrame> legacyModel = GlazedListsSwing.eventListModel(DesktopManager.get().getFrames());
+                JList<VirtualAppFrame> legacyList = new JList<>(legacyModel);
+                DesktopManager.get().setObservedJList(legacyList);
+
+                dsp = new DesktopScrollPane(desktop);
+
+                JSplitPane splitPane3 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, controls, dsp);
+                splitPane3.setOneTouchExpandable(true);
+                splitPane3.setDividerLocation(150);
+                p.add(splitPane3);
 
                 this.setContentPane(p);
                 break;

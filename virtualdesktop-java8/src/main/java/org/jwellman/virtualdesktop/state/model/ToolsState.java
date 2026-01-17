@@ -63,6 +63,14 @@ public final class ToolsState {
         return toolsById.size();
     }
 
+    /**
+     * Get all tool instances.
+     * @return unmodifiable collection of all tools
+     */
+    public java.util.Collection<ToolInstance> getAllTools() {
+        return toolsById.values();
+    }
+
     // ========== Copy-on-write modifiers ==========
 
     public ToolsState withToolAdded(ToolInstance tool) {

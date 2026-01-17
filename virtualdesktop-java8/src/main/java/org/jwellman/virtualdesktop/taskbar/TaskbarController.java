@@ -16,8 +16,10 @@ import javax.swing.event.ListSelectionListener;
 import org.jwellman.virtualdesktop.DesktopManager;
 import org.jwellman.virtualdesktop.VirtualAppFrame;
 import org.jwellman.virtualdesktop.state.model.AppState;
+import org.jwellman.virtualdesktop.state.model.DockingState;
 import org.jwellman.virtualdesktop.state.model.ToolInstance;
 import org.jwellman.virtualdesktop.state.model.ToolsState;
+import org.jwellman.virtualdesktop.state.actions.SimpleAction;
 import org.jwellman.virtualdesktop.state.store.AppStore;
 import org.jwellman.virtualdesktop.state.store.StoreSubscriber;
 import org.jwellman.virtualdesktop.state.store.Subscription;
@@ -130,12 +132,20 @@ public class TaskbarController implements StoreSubscriber, ListSelectionListener
         VirtualAppFrame frame = frameCache.get(tool.getId());
         Icon icon = frame != null ? frame.getFrameIcon() : null;
 
+        // Compute docking indicator from tool's docking state
+        DockingState dockingState = tool.getDockingState();
+        DockingIndicator indicator = DockingIndicator.fromState(
+            dockingState.isOriginalPanelPresent(),
+            dockingState.hasExternalContent()
+        );
+
         return new TaskbarItem(
             tool.getId(),
             tool.getTitle(),
             tool.getToolType(),
             icon,
-            tool.getFrameState()
+            tool.getFrameState(),
+            indicator
         );
     }
 
@@ -224,6 +234,49 @@ public class TaskbarController implements StoreSubscriber, ListSelectionListener
      */
     public JList<TaskbarItem> getTaskbarList() {
         return taskbarList;
+    }
+
+    /**
+     * Toggle taskbar grouping on/off.
+     */
+    public void toggleGrouping() {
+        boolean currentlyEnabled = AppStore.get().getState().getTaskbar().isGroupingEnabled();
+        AppStore.get().dispatch(SimpleAction.taskbarGroupingToggled(!currentlyEnabled));
+    }
+
+    /**
+     * Set taskbar grouping explicitly.
+     * @param enabled true to enable grouping, false to disable
+     */
+    public void setGroupingEnabled(boolean enabled) {
+        AppStore.get().dispatch(SimpleAction.taskbarGroupingToggled(enabled));
+    }
+
+    /**
+     * Check if grouping is currently enabled.
+     * @return true if grouping is enabled
+     */
+    public boolean isGroupingEnabled() {
+        return AppStore.get().getState().getTaskbar().isGroupingEnabled();
+    }
+
+    // ========== Static convenience methods for BeanShell access ==========
+
+    /**
+     * Toggle taskbar grouping (static convenience method).
+     * Can be called from BeanShell: TaskbarController.toggleTaskbarGrouping()
+     */
+    public static void toggleTaskbarGrouping() {
+        boolean currentlyEnabled = AppStore.get().getState().getTaskbar().isGroupingEnabled();
+        AppStore.get().dispatch(SimpleAction.taskbarGroupingToggled(!currentlyEnabled));
+    }
+
+    /**
+     * Enable or disable taskbar grouping (static convenience method).
+     * Can be called from BeanShell: TaskbarController.setTaskbarGrouping(true)
+     */
+    public static void setTaskbarGrouping(boolean enabled) {
+        AppStore.get().dispatch(SimpleAction.taskbarGroupingToggled(enabled));
     }
 
 }

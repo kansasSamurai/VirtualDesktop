@@ -23,6 +23,7 @@ public class TaskbarItem {
     private final String toolType;
     private final Icon icon;
     private final FrameState frameState;
+    private final DockingIndicator dockingIndicator;
     private final boolean isGroup;
     private final List<TaskbarItem> groupedItems;
 
@@ -30,11 +31,20 @@ public class TaskbarItem {
      * Create a single tool item.
      */
     public TaskbarItem(String id, String title, String toolType, Icon icon, FrameState frameState) {
+        this(id, title, toolType, icon, frameState, DockingIndicator.NORMAL);
+    }
+
+    /**
+     * Create a single tool item with docking indicator.
+     */
+    public TaskbarItem(String id, String title, String toolType, Icon icon,
+                       FrameState frameState, DockingIndicator dockingIndicator) {
         this.id = id;
         this.title = title;
         this.toolType = toolType;
         this.icon = icon;
         this.frameState = frameState;
+        this.dockingIndicator = dockingIndicator;
         this.isGroup = false;
         this.groupedItems = Collections.emptyList();
     }
@@ -48,8 +58,27 @@ public class TaskbarItem {
         this.toolType = toolType;
         this.icon = icon;
         this.frameState = FrameState.NORMAL;
+        this.dockingIndicator = computeGroupIndicator(items);
         this.isGroup = true;
         this.groupedItems = new ArrayList<>(items);
+    }
+
+    /**
+     * Compute the docking indicator for a group based on its items.
+     */
+    private static DockingIndicator computeGroupIndicator(List<TaskbarItem> items) {
+        boolean hasDockedOut = false;
+        boolean hasExtraContent = false;
+        for (TaskbarItem item : items) {
+            DockingIndicator ind = item.getDockingIndicator();
+            if (ind == DockingIndicator.DOCKED_OUT || ind == DockingIndicator.MIXED) {
+                hasDockedOut = true;
+            }
+            if (ind == DockingIndicator.HAS_EXTRA_CONTENT || ind == DockingIndicator.MIXED) {
+                hasExtraContent = true;
+            }
+        }
+        return DockingIndicator.fromState(!hasDockedOut, hasExtraContent);
     }
 
     public String getId() {
@@ -70,6 +99,10 @@ public class TaskbarItem {
 
     public FrameState getFrameState() {
         return frameState;
+    }
+
+    public DockingIndicator getDockingIndicator() {
+        return dockingIndicator;
     }
 
     public boolean isGroup() {

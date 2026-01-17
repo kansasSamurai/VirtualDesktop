@@ -3,6 +3,7 @@ package org.jwellman.virtualdesktop.state.reducers;
 import org.jwellman.virtualdesktop.state.actions.Action;
 import org.jwellman.virtualdesktop.state.actions.ActionTypes;
 import org.jwellman.virtualdesktop.state.actions.SimpleAction;
+import org.jwellman.virtualdesktop.state.model.DockingState;
 import org.jwellman.virtualdesktop.state.model.FrameState;
 import org.jwellman.virtualdesktop.state.model.ToolInstance;
 import org.jwellman.virtualdesktop.state.model.ToolsState;
@@ -46,6 +47,15 @@ public class ToolsReducer {
                 // Tool deactivated doesn't change tools state
                 return state;
 
+            case ActionTypes.PANEL_DOCKED_IN:
+                return handlePanelDockedIn(state, action);
+
+            case ActionTypes.PANEL_DOCKED_OUT:
+                return handlePanelDockedOut(state, action);
+
+            case ActionTypes.PANEL_LOCATION_CHANGED:
+                return handlePanelLocationChanged(state, action);
+
             default:
                 return state;
         }
@@ -83,6 +93,49 @@ public class ToolsReducer {
             if (tool != null) {
                 return state.withToolUpdated(tool.withFrameState(newFrameState));
             }
+        }
+        return state;
+    }
+
+    // ========== Docking Handlers ==========
+
+    private ToolsState handlePanelDockedIn(ToolsState state, Action action) {
+        Object payload = action.getPayload();
+        if (payload instanceof SimpleAction.DockingPayload) {
+            SimpleAction.DockingPayload dp = (SimpleAction.DockingPayload) payload;
+            // Update the target tool's docking state to show it has external content
+            ToolInstance targetTool = state.getTool(dp.targetToolId);
+            if (targetTool != null) {
+                DockingState newDockingState = targetTool.getDockingState()
+                    .withPanelDockedIn(dp.panelId);
+                return state.withToolUpdated(targetTool.withDockingState(newDockingState));
+            }
+        }
+        return state;
+    }
+
+    private ToolsState handlePanelDockedOut(ToolsState state, Action action) {
+        Object payload = action.getPayload();
+        if (payload instanceof SimpleAction.DockingPayload) {
+            SimpleAction.DockingPayload dp = (SimpleAction.DockingPayload) payload;
+            // Update the source tool's docking state to show original panel is gone
+            ToolInstance sourceTool = state.getTool(dp.sourceToolId);
+            if (sourceTool != null) {
+                DockingState newDockingState = sourceTool.getDockingState()
+                    .withOriginalPanelPresent(false);
+                return state.withToolUpdated(sourceTool.withDockingState(newDockingState));
+            }
+        }
+        return state;
+    }
+
+    private ToolsState handlePanelLocationChanged(ToolsState state, Action action) {
+        Object payload = action.getPayload();
+        if (payload instanceof SimpleAction.DockingPayload) {
+            SimpleAction.DockingPayload dp = (SimpleAction.DockingPayload) payload;
+            // Log the location change - full implementation would update workspace tracking
+            System.out.println("[ToolsReducer] Panel " + dp.panelId +
+                " moved to workspace: " + dp.targetToolId);
         }
         return state;
     }

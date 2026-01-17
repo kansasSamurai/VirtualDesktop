@@ -7,8 +7,12 @@ import org.jwellman.virtualdesktop.docking.DockingException;
 import org.jwellman.virtualdesktop.docking.DockingTheme;
 import org.jwellman.virtualdesktop.docking.DockingWorkspace;
 import org.jwellman.virtualdesktop.docking.spi.DockingProvider;
+import org.jwellman.virtualdesktop.state.actions.SimpleAction;
+import org.jwellman.virtualdesktop.state.store.AppStore;
 
 import bibliothek.gui.dock.common.CControl;
+import bibliothek.gui.dock.common.event.CControlListener;
+import bibliothek.gui.dock.common.intern.CDockable;
 import bibliothek.gui.dock.common.theme.ThemeMap;
 
 /**
@@ -41,6 +45,9 @@ public class BibliothekDockingProvider implements DockingProvider {
 
         try {
             control = new CControl(mainFrame);
+
+            // Add listener for dockable events (Redux integration)
+            control.addControlListener(new DockingControlListener());
 
             // Set default theme (Eclipse)
             final ThemeMap themes = control.getThemes();
@@ -143,5 +150,45 @@ public class BibliothekDockingProvider implements DockingProvider {
      */
     public CControl getNativeControl() {
         return control;
+    }
+
+    /**
+     * Inner listener class for CControl events.
+     * Dispatches Redux actions when dockables are added/removed/relocated.
+     */
+    private static class DockingControlListener implements CControlListener {
+
+        @Override
+        public void added(CControl control, CDockable dockable) {
+            String panelId = getDockableId(dockable);
+            System.out.println("[Docking] Panel added: " + panelId);
+            // Note: TOOL_OPENED is dispatched by DesktopManager, not here
+        }
+
+        @Override
+        public void removed(CControl control, CDockable dockable) {
+            String panelId = getDockableId(dockable);
+            System.out.println("[Docking] Panel removed: " + panelId);
+            // Note: TOOL_CLOSED is dispatched by DesktopManager, not here
+        }
+
+        @Override
+        public void opened(CControl control, CDockable dockable) {
+            String panelId = getDockableId(dockable);
+            System.out.println("[Docking] Panel opened (visible): " + panelId);
+        }
+
+        @Override
+        public void closed(CControl control, CDockable dockable) {
+            String panelId = getDockableId(dockable);
+            System.out.println("[Docking] Panel closed (hidden): " + panelId);
+        }
+
+        private String getDockableId(CDockable dockable) {
+            if (dockable instanceof bibliothek.gui.dock.common.DefaultSingleCDockable) {
+                return ((bibliothek.gui.dock.common.DefaultSingleCDockable) dockable).getUniqueId();
+            }
+            return dockable.toString();
+        }
     }
 }

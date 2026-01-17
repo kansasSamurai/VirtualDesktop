@@ -7,9 +7,14 @@ import org.jwellman.virtualdesktop.docking.Dockable;
 import org.jwellman.virtualdesktop.docking.DockableBuilder;
 import org.jwellman.virtualdesktop.docking.DockableLocation;
 import org.jwellman.virtualdesktop.docking.DockingException;
+import org.jwellman.virtualdesktop.state.actions.SimpleAction;
+import org.jwellman.virtualdesktop.state.store.AppStore;
 
 import bibliothek.gui.dock.common.CControl;
+import bibliothek.gui.dock.common.CLocation;
 import bibliothek.gui.dock.common.DefaultSingleCDockable;
+import bibliothek.gui.dock.common.event.CDockableLocationEvent;
+import bibliothek.gui.dock.common.event.CDockableLocationListener;
 
 /**
  * Builder implementation for creating Bibliothek dockables.
@@ -88,6 +93,39 @@ class BibliothekDockableBuilder implements DockableBuilder {
         if (icon != null) {
             nativeDockable.setTitleIcon(icon);
         }
+
+        // Add location listener for Redux integration
+        final String dockableId = id;
+        nativeDockable.addCDockableLocationListener(new CDockableLocationListener() {
+            @Override
+            public void changed(CDockableLocationEvent event) {
+                if (event.isLocationChanged()) {
+                    CLocation oldLoc = event.getOldLocation();
+                    CLocation newLoc = event.getNewLocation();
+
+                    String oldWorkspace = oldLoc != null ? extractWorkspaceId(oldLoc) : null;
+                    String newWorkspace = newLoc != null ? extractWorkspaceId(newLoc) : null;
+
+                    System.out.println("[Docking] Panel " + dockableId +
+                        " location changed: " + oldWorkspace + " -> " + newWorkspace);
+
+                    // Dispatch action if workspace changed
+                    if (newWorkspace != null && !newWorkspace.equals(oldWorkspace)) {
+                        AppStore.get().dispatch(
+                            SimpleAction.panelLocationChanged(dockableId, newWorkspace));
+                    }
+                }
+            }
+
+            private String extractWorkspaceId(CLocation location) {
+                // Extract workspace ID from location string
+                // CLocation.toString() includes the workspace/area info
+                String locStr = location.toString();
+                // For now, just use the string representation
+                // More sophisticated parsing can be added later
+                return locStr;
+            }
+        });
 
         // Wrap in our dockable
         BibliothekDockable dockable = new BibliothekDockable(nativeDockable, id, title, component, visible, location);

@@ -86,6 +86,23 @@ public final class SimpleAction implements Action {
         return new SimpleAction(ActionTypes.TOOL_DEACTIVATED, toolId);
     }
 
+    // ========== Factory Methods for Docking ==========
+
+    public static Action panelDockedIn(String targetToolId, String panelId, String sourceToolId) {
+        return new SimpleAction(ActionTypes.PANEL_DOCKED_IN,
+            new DockingPayload(targetToolId, panelId, sourceToolId));
+    }
+
+    public static Action panelDockedOut(String sourceToolId, String panelId) {
+        return new SimpleAction(ActionTypes.PANEL_DOCKED_OUT,
+            new DockingPayload(null, panelId, sourceToolId));
+    }
+
+    public static Action panelLocationChanged(String panelId, String newWorkspaceId) {
+        return new SimpleAction(ActionTypes.PANEL_LOCATION_CHANGED,
+            new DockingPayload(newWorkspaceId, panelId, null));
+    }
+
     // ========== Factory Methods for Taskbar ==========
 
     public static Action taskbarGroupingToggled(boolean enabled) {
@@ -117,6 +134,29 @@ public final class SimpleAction implements Action {
         @Override
         public String toString() {
             return "ToolPayload{id=" + toolId + ", type=" + toolType + ", title=" + title + "}";
+        }
+    }
+
+    /**
+     * Payload for docking-related actions.
+     */
+    public static final class DockingPayload {
+        /** The target tool/workspace receiving the docked panel (for PANEL_DOCKED_IN) */
+        public final String targetToolId;
+        /** The panel being docked/moved */
+        public final String panelId;
+        /** The source tool/workspace the panel came from (for PANEL_DOCKED_OUT) */
+        public final String sourceToolId;
+
+        public DockingPayload(String targetToolId, String panelId, String sourceToolId) {
+            this.targetToolId = targetToolId;
+            this.panelId = panelId;
+            this.sourceToolId = sourceToolId;
+        }
+
+        @Override
+        public String toString() {
+            return "DockingPayload{target=" + targetToolId + ", panel=" + panelId + ", source=" + sourceToolId + "}";
         }
     }
 

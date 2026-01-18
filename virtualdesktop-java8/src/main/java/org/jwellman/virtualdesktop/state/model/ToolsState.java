@@ -1,8 +1,8 @@
 package org.jwellman.virtualdesktop.state.model;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -21,9 +21,10 @@ public final class ToolsState {
     private final Map<String, Set<String>> toolsByType;
 
     private ToolsState(Map<String, ToolInstance> toolsById, Map<String, Set<String>> toolsByType) {
-        this.toolsById = Collections.unmodifiableMap(new HashMap<>(toolsById));
-        // Deep copy the toolsByType map
-        Map<String, Set<String>> typesCopy = new HashMap<>();
+        // Use LinkedHashMap to maintain insertion order
+        this.toolsById = Collections.unmodifiableMap(new LinkedHashMap<>(toolsById));
+        // Deep copy the toolsByType map (also LinkedHashMap for consistent type ordering)
+        Map<String, Set<String>> typesCopy = new LinkedHashMap<>();
         for (Map.Entry<String, Set<String>> entry : toolsByType.entrySet()) {
             typesCopy.put(entry.getKey(), Collections.unmodifiableSet(new HashSet<>(entry.getValue())));
         }
@@ -74,10 +75,10 @@ public final class ToolsState {
     // ========== Copy-on-write modifiers ==========
 
     public ToolsState withToolAdded(ToolInstance tool) {
-        Map<String, ToolInstance> newById = new HashMap<>(toolsById);
+        Map<String, ToolInstance> newById = new LinkedHashMap<>(toolsById);
         newById.put(tool.getId(), tool);
 
-        Map<String, Set<String>> newByType = new HashMap<>(toolsByType);
+        Map<String, Set<String>> newByType = new LinkedHashMap<>(toolsByType);
         Set<String> typeSet = newByType.get(tool.getToolType());
         if (typeSet == null) {
             typeSet = new HashSet<>();
@@ -96,10 +97,10 @@ public final class ToolsState {
             return this;
         }
 
-        Map<String, ToolInstance> newById = new HashMap<>(toolsById);
+        Map<String, ToolInstance> newById = new LinkedHashMap<>(toolsById);
         newById.remove(toolId);
 
-        Map<String, Set<String>> newByType = new HashMap<>(toolsByType);
+        Map<String, Set<String>> newByType = new LinkedHashMap<>(toolsByType);
         Set<String> typeSet = newByType.get(tool.getToolType());
         if (typeSet != null) {
             typeSet = new HashSet<>(typeSet);
@@ -119,7 +120,7 @@ public final class ToolsState {
             return this;
         }
 
-        Map<String, ToolInstance> newById = new HashMap<>(toolsById);
+        Map<String, ToolInstance> newById = new LinkedHashMap<>(toolsById);
         newById.put(updatedTool.getId(), updatedTool);
 
         // toolsByType doesn't need to change since tool type is immutable

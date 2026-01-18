@@ -1,5 +1,10 @@
 package org.jwellman.virtualdesktop.taskbar;
 
+import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.beans.PropertyVetoException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,6 +14,8 @@ import java.util.Map;
 import javax.swing.DefaultListModel;
 import javax.swing.Icon;
 import javax.swing.JList;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -44,12 +51,36 @@ public class TaskbarController implements StoreSubscriber, ListSelectionListener
     // Flag to prevent recursive selection events
     private boolean updatingSelection = false;
 
+    // Track last mouse click location for popup positioning
+    private int lastClickX = 0;
+    private int lastClickY = 0;
+
     public TaskbarController(JList<TaskbarItem> taskbarList) {
         this.taskbarList = taskbarList;
         this.listModel = new DefaultListModel<>();
         this.taskbarList.setModel(listModel);
         this.taskbarList.setCellRenderer(new TaskbarItemRenderer());
         this.taskbarList.addListSelectionListener(this);
+
+        // Add mouse listener for tracking click location and handling group clicks
+        this.taskbarList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                lastClickX = e.getX();
+                lastClickY = e.getY();
+
+                // Handle double-click on group to expand all
+                if (e.getClickCount() == 2) {
+                    int index = taskbarList.locationToIndex(e.getPoint());
+                    if (index >= 0) {
+                        TaskbarItem item = listModel.get(index);
+                        if (item.isGroup()) {
+                            activateAllInGroup(item);
+                        }
+                    }
+                }
+            }
+        });
 
         // Subscribe to store
         this.subscription = AppStore.get().subscribe(this);
@@ -190,8 +221,7 @@ public class TaskbarController implements StoreSubscriber, ListSelectionListener
         }
 
         if (selected.isGroup()) {
-            // TODO: Show popup menu with grouped items
-            System.out.println("Group selected: " + selected.getTitle());
+            showGroupPopupMenu(selected);
         } else {
             // Activate the tool
             activateTool(selected.getId());
@@ -217,6 +247,87 @@ public class TaskbarController implements StoreSubscriber, ListSelectionListener
             frame.setSelected(true);
         } catch (PropertyVetoException ex) {
             ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Show a popup menu with all items in a group.
+     */
+    private void showGroupPopupMenu(TaskbarItem group) {
+        JPopupMenu popup = new JPopupMenu(group.getToolType());
+
+        // Add menu item for each tool in the group
+        for (final TaskbarItem item : group.getGroupedItems()) {
+            JMenuItem menuItem = new JMenuItem(item.getTitle(), item.getIcon());
+
+            // Style minimized items differently
+            if (item.getFrameState() == org.jwellman.virtualdesktop.state.model.FrameState.MINIMIZED) {
+                menuItem.setFont(menuItem.getFont().deriveFont(java.awt.Font.ITALIC));
+            }
+
+            menuItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    activateTool(item.getId());
+                }
+            });
+            popup.add(menuItem);
+        }
+
+        // Add separator and "Show All" option
+        popup.addSeparator();
+        JMenuItem showAllItem = new JMenuItem("Show All (" + group.getGroupSize() + ")");
+        showAllItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                activateAllInGroup(group);
+            }
+        });
+        popup.add(showAllItem);
+
+        // Show popup at click location or near the selected item
+        int selectedIndex = taskbarList.getSelectedIndex();
+        if (selectedIndex >= 0 && lastClickX == 0 && lastClickY == 0) {
+            // Fallback: show near the cell if no click location recorded
+            Rectangle cellBounds = taskbarList.getCellBounds(selectedIndex, selectedIndex);
+            if (cellBounds != null) {
+                popup.show(taskbarList, cellBounds.x + cellBounds.width, cellBounds.y);
+                return;
+            }
+        }
+        popup.show(taskbarList, lastClickX, lastClickY);
+    }
+
+    /**
+     * Activate all tools in a group - restore and tile them.
+     */
+    private void activateAllInGroup(TaskbarItem group) {
+        for (TaskbarItem item : group.getGroupedItems()) {
+            VirtualAppFrame frame = frameCache.get(item.getId());
+            if (frame != null) {
+                if (!frame.isVisible()) {
+                    frame.setVisible(true);
+                }
+                try {
+                    frame.setIcon(false);
+                } catch (PropertyVetoException ex) {
+                    // Ignore
+                }
+            }
+        }
+
+        // Bring the first one to front and select it
+        if (!group.getGroupedItems().isEmpty()) {
+            TaskbarItem first = group.getGroupedItems().get(0);
+            VirtualAppFrame frame = frameCache.get(first.getId());
+            if (frame != null) {
+                try {
+                    frame.moveToFront();
+                    frame.setSelected(true);
+                } catch (PropertyVetoException ex) {
+                    // Ignore
+                }
+            }
         }
     }
 

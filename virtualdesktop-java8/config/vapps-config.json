@@ -16,6 +16,13 @@
           "desktopOnly": false
         },
         {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecObjectBrowser",
+          "title": "Object Browser",
+          "icon": "tree9",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
           "class": "org.jwellman.virtualdesktop.vapps.SpecGroovyConsole",
           "title": "Groovy Console",
           "icon": "laptop123",

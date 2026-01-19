@@ -23,6 +23,13 @@
           "desktopOnly": false
         },
         {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecScriptBrowser",
+          "title": "Script Browser",
+          "icon": "document176",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
           "class": "org.jwellman.virtualdesktop.vapps.SpecGroovyConsole",
           "title": "Groovy Console",
           "icon": "laptop123",

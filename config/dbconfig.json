@@ -1,0 +1,12 @@
+{
+  "connections": [
+    {
+      "name": "Local HSQLDB",
+      "driver": "org.hsqldb.jdbc.JDBCDriver",
+      "url": "jdbc:hsqldb:file:data/localdb",
+      "username": "SA",
+      "password": "",
+      "autoConnect": false
+    }
+  ]
+}

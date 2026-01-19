@@ -21,9 +21,11 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTree;
 import javax.swing.SwingConstants;
+import javax.swing.TransferHandler;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 
+import org.jwellman.swing.DragInitiator;
 import org.jwellman.swing.jpanel.OverflowX;
 import org.jwellman.swing.jtree.FileNode;
 import org.jwellman.swing.jtree.FileSelectorModel;
@@ -66,11 +68,15 @@ public class FileNavigator extends JPanel {
             preview = (JTextArea) viewer;
             preview.setEditable(false);
             preview.setLineWrap(false);
-            
+
             tree = new JTree(new FileSelectorModel(directory, false));
             tree.addTreeSelectionListener(new DefaultTreeSelectionListener());
 
-            // preview.setWrapStyleWord(false);         
+            // Add drag support for script files
+            this.setTransferHandler(new TransferHandler("scriptFile"));
+            preview.addMouseListener(new DragInitiator(this));
+
+            // preview.setWrapStyleWord(false);
             this.add(status, BorderLayout.SOUTH);
             this.add(new JScrollPane(tree), BorderLayout.WEST);
             this.add(new JScrollPane(viewer), BorderLayout.CENTER);
@@ -125,6 +131,16 @@ public class FileNavigator extends JPanel {
 
     public void setStatusText(String newtext) {
         this.status.setText(newtext);
+    }
+
+    /**
+     * Getter for TransferHandler - returns the preview text content.
+     * Used for drag and drop support with the "scriptFile" property pattern.
+     *
+     * @return the text content from the preview area
+     */
+    public String getScriptFile() {
+        return preview != null ? preview.getText() : null;
     }
 
     public SwingViewCreator getImageView() {

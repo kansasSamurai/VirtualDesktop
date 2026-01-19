@@ -52,9 +52,23 @@ public class Editor extends JPanel {
         scrollpane = new RTextScrollPane(textarea);
 
         this.add(scrollpane, BorderLayout.CENTER);
+
+        // Add drop support for script files
+        this.setTransferHandler(new TransferHandler("scriptFile"));
     }
 
     public RSyntaxTextArea getTextarea() { return this.textarea; }
+
+    /**
+     * Setter for TransferHandler - sets the textarea content directly.
+     * Used for drag and drop support with the "scriptFile" property pattern.
+     *
+     * @param content the text content to set in the editor
+     */
+    public void setScriptFile(String content) {
+        textarea.setText(content);
+        textarea.setCaretPosition(0);
+    }
 
 }
 

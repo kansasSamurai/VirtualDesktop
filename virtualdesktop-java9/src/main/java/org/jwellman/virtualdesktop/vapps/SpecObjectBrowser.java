@@ -222,10 +222,10 @@ public class SpecObjectBrowser extends VirtualAppSpec {
         if (obj instanceof XThis) {
             // BeanShell scripted object - get methods from namespace
             XThis xthis = (XThis) obj;
-            try {
-                NameSpace ns = xthis.getNameSpace();
-                BshMethod[] bshMethods = ns.getMethods();
-                for (BshMethod m : bshMethods) {
+            NameSpace ns = xthis.getNameSpace();
+            BshMethod[] bshMethods = ns.getMethods();
+            for (BshMethod m : bshMethods) {
+                try {
                     StringBuilder sb = new StringBuilder();
                     sb.append(m.getName()).append("(");
                     Class<?>[] paramTypes = m.getParameterTypes();
@@ -242,9 +242,10 @@ public class SpecObjectBrowser extends VirtualAppSpec {
                         sb.append(" : ").append(simplifyTypeName(retType.getName()));
                     }
                     result.add(sb.toString());
+                } catch (Exception e) {
+                    // Method type info unavailable - show name with indicator
+                    result.add(m.getName() + "(...) [type info unavailable]");
                 }
-            } catch (Exception e) {
-                result.add("Error getting methods: " + e.getMessage());
             }
         } else {
             // Java object - use reflection

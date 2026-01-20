@@ -242,22 +242,25 @@ scripttester(String title) {
     }
 
     // === State Variables ===
-    this.lines = new ArrayList();       // List of ScriptLine
-    this.currentIndex = 0;              // Next line to execute
-    this.tableModel = null;             // Table model
-    this.table = null;                  // JTable
-    this.viewPanel = null;              // Current view panel
-    this.isTableView = true;            // Track current view mode
+    // Capture 'this' reference for use in callbacks (BeanShell quirk)
+    self = this;
+
+    self.lines = new ArrayList();       // List of ScriptLine
+    self.currentIndex = 0;              // Next line to execute
+    self.tableModel = null;             // Table model
+    self.table = null;                  // JTable
+    self.viewPanel = null;              // Current view panel
+    self.isTableView = true;            // Track current view mode
 
     // Two-panel view components
-    this.remainingArea = null;
-    this.executedArea = null;
+    self.remainingArea = null;
+    self.executedArea = null;
 
     // Main panel that holds everything
-    this.panel = new JPanel(new BorderLayout());
+    self.panel = new JPanel(new BorderLayout());
 
     // Internal frame reference
-    this.iframe = null;
+    self.iframe = null;
 
     // === Helper Methods ===
 
@@ -266,8 +269,8 @@ scripttester(String title) {
      * Skips empty lines and comment-only lines.
      */
     parseScript(String scriptText) {
-        this.lines.clear();
-        this.currentIndex = 0;
+        self.lines.clear();
+        self.currentIndex = 0;
 
         String[] rawLines = scriptText.split("\n");
         int lineNum = 0;
@@ -280,19 +283,19 @@ scripttester(String title) {
             if (trimmed.startsWith("//")) continue;
 
             lineNum++;
-            this.lines.add(new ScriptLine(lineNum, rawLines[i]));
+            self.lines.add(new ScriptLine(lineNum, rawLines[i]));
         }
 
-        print("Loaded " + this.lines.size() + " lines.");
+        print("Loaded " + self.lines.size() + " lines.");
     }
 
     /**
      * Reset all lines to pending state.
      */
     resetExecution() {
-        this.currentIndex = 0;
-        for (int i = 0; i < this.lines.size(); i++) {
-            ScriptLine line = (ScriptLine) this.lines.get(i);
+        self.currentIndex = 0;
+        for (int i = 0; i < self.lines.size(); i++) {
+            ScriptLine line = (ScriptLine) self.lines.get(i);
             line.status = STATUS_PENDING;
             line.errorMessage = null;
         }
@@ -304,15 +307,12 @@ scripttester(String title) {
      * Execute the current line and advance.
      */
     stepExecution() {
-        print("[DEBUG] stepExecution called, currentIndex=" + this.currentIndex + ", lines.size=" + this.lines.size());
-
-        if (this.currentIndex >= this.lines.size()) {
+        if (self.currentIndex >= self.lines.size()) {
             print("Script complete.");
             return;
         }
 
-        ScriptLine line = (ScriptLine) this.lines.get(this.currentIndex);
-        print("[DEBUG] Executing line " + line.lineNumber + ": " + line.text);
+        ScriptLine line = (ScriptLine) self.lines.get(self.currentIndex);
         line.status = STATUS_CURRENT;
         refreshView();
 
@@ -320,20 +320,18 @@ scripttester(String title) {
             // Use the shared BeanShell interpreter
             BeanShellService.get().eval(line.text);
             line.status = STATUS_COMPLETED;
-            print("[DEBUG] Line completed successfully");
         } catch (Exception e) {
             line.status = STATUS_ERROR;
             line.errorMessage = e.getMessage();
             print("Error at line " + line.lineNumber + ": " + e.getMessage());
         }
 
-        this.currentIndex++;
-        print("[DEBUG] currentIndex now=" + this.currentIndex);
+        self.currentIndex++;
         refreshView();
 
         // Scroll to show current line in table
-        if (this.isTableView && this.table != null && this.currentIndex < this.lines.size()) {
-            this.table.scrollRectToVisible(this.table.getCellRect(this.currentIndex, 0, true));
+        if (self.isTableView && self.table != null && self.currentIndex < self.lines.size()) {
+            self.table.scrollRectToVisible(self.table.getCellRect(self.currentIndex, 0, true));
         }
     }
 
@@ -341,9 +339,9 @@ scripttester(String title) {
      * Refresh the current view.
      */
     refreshView() {
-        if (this.isTableView) {
-            if (this.tableModel != null) {
-                this.tableModel.fireDataChanged();
+        if (self.isTableView) {
+            if (self.tableModel != null) {
+                self.tableModel.fireDataChanged();
             }
         } else {
             refreshTwoPanelView();
@@ -354,13 +352,13 @@ scripttester(String title) {
      * Refresh the two-panel view by rebuilding text areas.
      */
     refreshTwoPanelView() {
-        if (this.remainingArea == null || this.executedArea == null) return;
+        if (self.remainingArea == null || self.executedArea == null) return;
 
         StringBuilder executed = new StringBuilder();
         StringBuilder remaining = new StringBuilder();
 
-        for (int i = 0; i < this.lines.size(); i++) {
-            ScriptLine line = (ScriptLine) this.lines.get(i);
+        for (int i = 0; i < self.lines.size(); i++) {
+            ScriptLine line = (ScriptLine) self.lines.get(i);
             String prefix = "";
             if (STATUS_ERROR.equals(line.status)) {
                 prefix = "[ERROR] ";
@@ -374,19 +372,19 @@ scripttester(String title) {
             }
         }
 
-        this.executedArea.setText(executed.toString());
-        this.remainingArea.setText(remaining.toString());
+        self.executedArea.setText(executed.toString());
+        self.remainingArea.setText(remaining.toString());
     }
 
     /**
      * Create the table view panel.
      */
     createTableView() {
-        this.tableModel = new ScriptTableModel(this.lines);
-        this.table = new JTable(this.tableModel);
+        self.tableModel = new ScriptTableModel(self.lines);
+        self.table = new JTable(self.tableModel);
 
         // Set up column renderers and widths
-        TableColumnModel columnModel = this.table.getColumnModel();
+        TableColumnModel columnModel = self.table.getColumnModel();
 
         // Status column
         TableColumn statusCol = columnModel.getColumn(0);
@@ -405,15 +403,15 @@ scripttester(String title) {
         codeCol.setCellRenderer(new CodeCellRenderer());
 
         // Table settings
-        this.table.setRowHeight(20);
-        this.table.setShowGrid(false);
-        this.table.setIntercellSpacing(new Dimension(0, 0));
-        this.table.getTableHeader().setReorderingAllowed(false);
-        this.table.setRowSelectionAllowed(false);
-        this.table.setCellSelectionEnabled(false);
-        this.table.setFocusable(false);
+        self.table.setRowHeight(20);
+        self.table.setShowGrid(false);
+        self.table.setIntercellSpacing(new Dimension(0, 0));
+        self.table.getTableHeader().setReorderingAllowed(false);
+        self.table.setRowSelectionAllowed(false);
+        self.table.setCellSelectionEnabled(false);
+        self.table.setFocusable(false);
 
-        JScrollPane scrollPane = new JScrollPane(this.table);
+        JScrollPane scrollPane = new JScrollPane(self.table);
         scrollPane.getViewport().setBackground(Color.WHITE);
 
         JPanel tablePanel = new JPanel(new BorderLayout());
@@ -427,18 +425,18 @@ scripttester(String title) {
      */
     createTwoPanelView() {
         // Remaining (pending) area - top
-        this.remainingArea = new JTextArea(10, 60);
-        this.remainingArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        this.remainingArea.setEditable(true);
-        JScrollPane remainingScroll = new JScrollPane(this.remainingArea);
+        self.remainingArea = new JTextArea(10, 60);
+        self.remainingArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        self.remainingArea.setEditable(true);
+        JScrollPane remainingScroll = new JScrollPane(self.remainingArea);
         remainingScroll.setBorder(BorderFactory.createTitledBorder("Remaining"));
 
         // Executed area - bottom
-        this.executedArea = new JTextArea(10, 60);
-        this.executedArea.setFont(new Font(Font.MONOSPACED, Font.ITALIC, 12));
-        this.executedArea.setEditable(false);
-        this.executedArea.setBackground(new Color(230, 230, 230));
-        JScrollPane executedScroll = new JScrollPane(this.executedArea);
+        self.executedArea = new JTextArea(10, 60);
+        self.executedArea.setFont(new Font(Font.MONOSPACED, Font.ITALIC, 12));
+        self.executedArea.setEditable(false);
+        self.executedArea.setBackground(new Color(230, 230, 230));
+        JScrollPane executedScroll = new JScrollPane(self.executedArea);
         executedScroll.setBorder(BorderFactory.createTitledBorder("Executed"));
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT,
@@ -458,19 +456,19 @@ scripttester(String title) {
      * Swap between table view and two-panel view.
      */
     swapView() {
-        this.panel.remove(this.viewPanel);
+        self.panel.remove(self.viewPanel);
 
-        if (this.isTableView) {
-            this.viewPanel = createTwoPanelView();
-            this.isTableView = false;
+        if (self.isTableView) {
+            self.viewPanel = createTwoPanelView();
+            self.isTableView = false;
         } else {
-            this.viewPanel = createTableView();
-            this.isTableView = true;
+            self.viewPanel = createTableView();
+            self.isTableView = true;
         }
 
-        this.panel.add(this.viewPanel, BorderLayout.CENTER);
-        this.panel.revalidate();
-        this.panel.repaint();
+        self.panel.add(self.viewPanel, BorderLayout.CENTER);
+        self.panel.revalidate();
+        self.panel.repaint();
 
         refreshView();
     }
@@ -487,7 +485,7 @@ scripttester(String title) {
         // Start in current directory
         chooser.setCurrentDirectory(new File(System.getProperty("user.dir")));
 
-        int result = chooser.showOpenDialog(this.panel);
+        int result = chooser.showOpenDialog(self.panel);
         if (result == JFileChooser.APPROVE_OPTION) {
             File file = chooser.getSelectedFile();
             try {
@@ -528,7 +526,7 @@ scripttester(String title) {
                 String text = (String) contents.getTransferData(DataFlavor.stringFlavor);
                 parseScript(text);
                 refreshView();
-                print("Pasted " + this.lines.size() + " lines from clipboard.");
+                print("Pasted " + self.lines.size() + " lines from clipboard.");
             } else {
                 print("Clipboard does not contain text.");
             }
@@ -552,8 +550,8 @@ scripttester(String title) {
         } else if ("Swap View".equals(cmd)) {
             swapView();
         } else if ("Close".equals(cmd)) {
-            if (void != this.iframe) {
-                this.iframe.hide();
+            if (void != self.iframe) {
+                self.iframe.hide();
             }
         }
     }
@@ -561,41 +559,41 @@ scripttester(String title) {
     // === Build UI ===
 
     // Create button panel
-    this.buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    self.buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
-    this.stepBtn = new JButton("Step");
-    this.stepBtn.addActionListener(this);
-    this.buttonPanel.add(this.stepBtn);
+    self.stepBtn = new JButton("Step");
+    self.stepBtn.addActionListener(this);
+    self.buttonPanel.add(self.stepBtn);
 
-    this.resetBtn = new JButton("Reset");
-    this.resetBtn.addActionListener(this);
-    this.buttonPanel.add(this.resetBtn);
+    self.resetBtn = new JButton("Reset");
+    self.resetBtn.addActionListener(this);
+    self.buttonPanel.add(self.resetBtn);
 
-    this.loadBtn = new JButton("Load");
-    this.loadBtn.addActionListener(this);
-    this.buttonPanel.add(this.loadBtn);
+    self.loadBtn = new JButton("Load");
+    self.loadBtn.addActionListener(this);
+    self.buttonPanel.add(self.loadBtn);
 
-    this.pasteBtn = new JButton("Paste");
-    this.pasteBtn.addActionListener(this);
-    this.buttonPanel.add(this.pasteBtn);
+    self.pasteBtn = new JButton("Paste");
+    self.pasteBtn.addActionListener(this);
+    self.buttonPanel.add(self.pasteBtn);
 
-    this.swapBtn = new JButton("Swap View");
-    this.swapBtn.addActionListener(this);
-    this.buttonPanel.add(this.swapBtn);
+    self.swapBtn = new JButton("Swap View");
+    self.swapBtn.addActionListener(this);
+    self.buttonPanel.add(self.swapBtn);
 
-    this.panel.add(this.buttonPanel, BorderLayout.NORTH);
+    self.panel.add(self.buttonPanel, BorderLayout.NORTH);
 
     // Create initial view (table view)
-    this.viewPanel = createTableView();
-    this.panel.add(this.viewPanel, BorderLayout.CENTER);
+    self.viewPanel = createTableView();
+    self.panel.add(self.viewPanel, BorderLayout.CENTER);
 
     // Create the virtual app frame
-    this.iframe = DesktopManager.get().createVApp(this.panel, title);
+    self.iframe = DesktopManager.get().createVApp(self.panel, title);
 
     // Set preferred size
-    this.iframe.setSize(600, 400);
+    self.iframe.setSize(600, 400);
 
     print("Script Tester started. Use Load to open a script, then Step to execute.");
 
-    return this;
+    return self;
 }

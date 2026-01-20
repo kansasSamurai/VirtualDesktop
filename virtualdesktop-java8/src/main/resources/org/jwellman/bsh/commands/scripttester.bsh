@@ -9,11 +9,18 @@
  *   scripttester("My Test Script");    // Opens with custom title
  *
  * Features:
- *   - Step button: Execute one line at a time
+ *   - Step button: Execute one line at a time (retries on error)
+ *   - Skip button: Skip current line without executing
+ *   - Edit button: Edit current line in a dialog
  *   - Reset button: Restart execution from beginning
  *   - Load button: Load a script from file
  *   - Paste button: Load script from system clipboard
  *   - Swap View button: Toggle between table and two-panel views
+ *
+ * Error Handling:
+ *   - When a line fails, execution pauses at that line
+ *   - Use Edit to modify the line, then Step to retry
+ *   - Or use Skip to move past the failed line
  */
 
 import javax.swing.*;
@@ -33,6 +40,7 @@ String STATUS_PENDING = "pending";
 String STATUS_CURRENT = "current";
 String STATUS_COMPLETED = "completed";
 String STATUS_ERROR = "error";
+String STATUS_SKIPPED = "skipped";
 
 /**
  * Data model for each script line.
@@ -126,6 +134,9 @@ public class StatusCellRenderer extends DefaultTableCellRenderer {
         } else if (STATUS_ERROR.equals(status)) {
             label.setText("\u2717"); // X mark
             label.setForeground(Color.RED);
+        } else if (STATUS_SKIPPED.equals(status)) {
+            label.setText("\u2014"); // em dash
+            label.setForeground(Color.GRAY);
         } else {
             label.setText(""); // pending - no symbol
             label.setForeground(Color.GRAY);
@@ -171,6 +182,10 @@ public class CodeCellRenderer extends DefaultTableCellRenderer {
             } else if (STATUS_ERROR.equals(status)) {
                 label.setBackground(new Color(255, 200, 200)); // light red
                 label.setForeground(Color.BLACK);
+            } else if (STATUS_SKIPPED.equals(status)) {
+                label.setBackground(new Color(240, 240, 240)); // very light gray
+                label.setFont(italicFont);
+                label.setForeground(Color.GRAY);
             } else {
                 label.setBackground(Color.WHITE);
                 label.setForeground(Color.BLACK);
@@ -211,6 +226,9 @@ public class LineNumberCellRenderer extends DefaultTableCellRenderer {
             } else if (STATUS_ERROR.equals(status)) {
                 label.setBackground(new Color(255, 200, 200));
                 label.setForeground(Color.BLACK);
+            } else if (STATUS_SKIPPED.equals(status)) {
+                label.setBackground(new Color(240, 240, 240));
+                label.setForeground(Color.GRAY);
             } else {
                 label.setBackground(Color.WHITE);
                 label.setForeground(Color.GRAY);
@@ -320,13 +338,15 @@ scripttester(String title) {
             // Use the shared BeanShell interpreter
             BeanShellService.get().eval(line.text);
             line.status = STATUS_COMPLETED;
+            // Only advance on success
+            self.currentIndex++;
         } catch (Exception e) {
             line.status = STATUS_ERROR;
             line.errorMessage = e.getMessage();
             print("Error at line " + line.lineNumber + ": " + e.getMessage());
+            // Don't advance on error - allows retry with Step or skip with Skip
         }
 
-        self.currentIndex++;
         refreshView();
 
         // Scroll to show current line in table
@@ -535,6 +555,64 @@ scripttester(String title) {
         }
     }
 
+    /**
+     * Skip the current line without executing.
+     */
+    skipLine() {
+        if (self.currentIndex >= self.lines.size()) {
+            print("No line to skip.");
+            return;
+        }
+
+        ScriptLine line = (ScriptLine) self.lines.get(self.currentIndex);
+        line.status = STATUS_SKIPPED;
+        self.currentIndex++;
+        refreshView();
+        print("Skipped line " + line.lineNumber);
+    }
+
+    /**
+     * Edit the current line in a dialog.
+     */
+    editCurrentLine() {
+        if (self.currentIndex >= self.lines.size()) {
+            print("No line to edit.");
+            return;
+        }
+
+        ScriptLine line = (ScriptLine) self.lines.get(self.currentIndex);
+
+        // Create edit dialog
+        JTextArea editArea = new JTextArea(3, 50);
+        editArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        editArea.setText(line.text);
+        editArea.setLineWrap(true);
+        editArea.setWrapStyleWord(true);
+
+        JScrollPane scrollPane = new JScrollPane(editArea);
+        scrollPane.setPreferredSize(new Dimension(500, 80));
+
+        String title = "Edit Line " + line.lineNumber;
+        int result = JOptionPane.showConfirmDialog(
+            self.panel,
+            scrollPane,
+            title,
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (result == JOptionPane.OK_OPTION) {
+            String newText = editArea.getText().trim();
+            if (newText.length() > 0) {
+                line.text = newText;
+                line.status = STATUS_PENDING;
+                line.errorMessage = null;
+                refreshView();
+                print("Line " + line.lineNumber + " updated.");
+            }
+        }
+    }
+
     // === Action Handler ===
     actionPerformed(e) {
         String cmd = e.getActionCommand();
@@ -547,6 +625,10 @@ scripttester(String title) {
             loadScript();
         } else if ("Paste".equals(cmd)) {
             pasteFromClipboard();
+        } else if ("Skip".equals(cmd)) {
+            skipLine();
+        } else if ("Edit".equals(cmd)) {
+            editCurrentLine();
         } else if ("Swap View".equals(cmd)) {
             swapView();
         } else if ("Close".equals(cmd)) {
@@ -564,6 +646,14 @@ scripttester(String title) {
     self.stepBtn = new JButton("Step");
     self.stepBtn.addActionListener(this);
     self.buttonPanel.add(self.stepBtn);
+
+    self.skipBtn = new JButton("Skip");
+    self.skipBtn.addActionListener(this);
+    self.buttonPanel.add(self.skipBtn);
+
+    self.editBtn = new JButton("Edit");
+    self.editBtn.addActionListener(this);
+    self.buttonPanel.add(self.editBtn);
 
     self.resetBtn = new JButton("Reset");
     self.resetBtn.addActionListener(this);

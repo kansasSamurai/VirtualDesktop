@@ -21,7 +21,19 @@ public class DataSheet {
     public DataSheet filter(bsh.This closure) {
         List<Map<String, Object>> filtered = rows.stream().filter(row -> {
             try {
-                return (Boolean) closure.invokeMethod("test", new Object[] { row });
+                Object res = closure.invokeMethod("test", new Object[] { row });
+
+                // Handle BeanShell Primitives (boolean, int, etc.)
+                if (res instanceof bsh.Primitive) {
+                    res = ((bsh.Primitive) res).getValue();
+                }
+
+                // Safety check: if the result is null or not a Boolean, default to false
+                if (!(res instanceof Boolean)) {
+                    return false;
+                }
+
+                return (Boolean) res;
             } catch (Exception e) {
                 return false;
             }

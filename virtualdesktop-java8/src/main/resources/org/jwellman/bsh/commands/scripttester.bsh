@@ -1,0 +1,563 @@
+/**
+ * Script Tester Tool - Step-by-step BeanShell script execution with visual feedback.
+ *
+ * A tool for debugging and stepping through BeanShell scripts one line at a time.
+ * Provides visual feedback for completed, current, pending, and error states.
+ *
+ * Usage:
+ *   scripttester();                    // Opens with default title
+ *   scripttester("My Test Script");    // Opens with custom title
+ *
+ * Features:
+ *   - Step button: Execute one line at a time
+ *   - Reset button: Restart execution from beginning
+ *   - Load button: Load a script from file
+ *   - Swap View button: Toggle between table and two-panel views
+ */
+
+import javax.swing.*;
+import javax.swing.table.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.util.ArrayList;
+
+import org.jwellman.virtualdesktop.DesktopManager;
+import org.jwellman.virtualdesktop.bsh.BeanShellService;
+
+// Status constants
+String STATUS_PENDING = "pending";
+String STATUS_CURRENT = "current";
+String STATUS_COMPLETED = "completed";
+String STATUS_ERROR = "error";
+
+/**
+ * Data model for each script line.
+ */
+public class ScriptLine {
+    int lineNumber;
+    String text;
+    String status;
+    String errorMessage;
+
+    public ScriptLine(int lineNumber, String text) {
+        this.lineNumber = lineNumber;
+        this.text = text;
+        this.status = STATUS_PENDING;
+        this.errorMessage = null;
+    }
+
+    public String toString() {
+        return lineNumber + ": " + text + " [" + status + "]";
+    }
+}
+
+/**
+ * Table model for the script lines.
+ */
+public class ScriptTableModel extends AbstractTableModel {
+    private ArrayList lines;
+    private String[] columnNames = {"Status", "#", "Code"};
+
+    public ScriptTableModel(ArrayList lines) {
+        this.lines = lines;
+    }
+
+    public int getRowCount() {
+        return lines.size();
+    }
+
+    public int getColumnCount() {
+        return 3;
+    }
+
+    public String getColumnName(int column) {
+        return columnNames[column];
+    }
+
+    public Object getValueAt(int row, int column) {
+        ScriptLine line = (ScriptLine) lines.get(row);
+        switch (column) {
+            case 0: return line.status;
+            case 1: return Integer.valueOf(line.lineNumber);
+            case 2: return line.text;
+            default: return "";
+        }
+    }
+
+    public Class getColumnClass(int column) {
+        switch (column) {
+            case 0: return String.class;
+            case 1: return Integer.class;
+            case 2: return String.class;
+            default: return Object.class;
+        }
+    }
+
+    public void fireDataChanged() {
+        fireTableDataChanged();
+    }
+}
+
+/**
+ * Custom cell renderer for the status column - shows icons.
+ */
+public class StatusCellRenderer extends DefaultTableCellRenderer {
+
+    public Component getTableCellRendererComponent(JTable table, Object value,
+            boolean isSelected, boolean hasFocus, int row, int column) {
+
+        JLabel label = (JLabel) super.getTableCellRendererComponent(
+            table, "", isSelected, hasFocus, row, column);
+
+        String status = (String) value;
+        label.setHorizontalAlignment(SwingConstants.CENTER);
+
+        // Use text symbols for status (works across all platforms)
+        if (STATUS_COMPLETED.equals(status)) {
+            label.setText("\u2713"); // checkmark
+            label.setForeground(new Color(0, 128, 0)); // green
+        } else if (STATUS_CURRENT.equals(status)) {
+            label.setText("\u25B6"); // right-pointing triangle (play)
+            label.setForeground(new Color(0, 0, 200)); // blue
+        } else if (STATUS_ERROR.equals(status)) {
+            label.setText("\u2717"); // X mark
+            label.setForeground(Color.RED);
+        } else {
+            label.setText(""); // pending - no symbol
+            label.setForeground(Color.GRAY);
+        }
+
+        return label;
+    }
+}
+
+/**
+ * Custom cell renderer for the code column - shows visual state.
+ */
+public class CodeCellRenderer extends DefaultTableCellRenderer {
+    private Font normalFont;
+    private Font italicFont;
+    private Font monoFont;
+
+    public CodeCellRenderer() {
+        monoFont = new Font(Font.MONOSPACED, Font.PLAIN, 12);
+        normalFont = monoFont;
+        italicFont = new Font(Font.MONOSPACED, Font.ITALIC, 12);
+    }
+
+    public Component getTableCellRendererComponent(JTable table, Object value,
+            boolean isSelected, boolean hasFocus, int row, int column) {
+
+        JLabel label = (JLabel) super.getTableCellRendererComponent(
+            table, value, isSelected, hasFocus, row, column);
+
+        // Get the status from column 0
+        String status = (String) table.getValueAt(row, 0);
+
+        label.setFont(monoFont);
+
+        if (!isSelected) {
+            if (STATUS_COMPLETED.equals(status)) {
+                label.setBackground(new Color(230, 230, 230)); // light gray
+                label.setFont(italicFont);
+                label.setForeground(Color.DARK_GRAY);
+            } else if (STATUS_CURRENT.equals(status)) {
+                label.setBackground(new Color(255, 255, 180)); // yellow highlight
+                label.setForeground(Color.BLACK);
+            } else if (STATUS_ERROR.equals(status)) {
+                label.setBackground(new Color(255, 200, 200)); // light red
+                label.setForeground(Color.BLACK);
+            } else {
+                label.setBackground(Color.WHITE);
+                label.setForeground(Color.BLACK);
+            }
+        }
+
+        return label;
+    }
+}
+
+/**
+ * Custom cell renderer for the line number column.
+ */
+public class LineNumberCellRenderer extends DefaultTableCellRenderer {
+
+    public LineNumberCellRenderer() {
+        setHorizontalAlignment(SwingConstants.RIGHT);
+    }
+
+    public Component getTableCellRendererComponent(JTable table, Object value,
+            boolean isSelected, boolean hasFocus, int row, int column) {
+
+        JLabel label = (JLabel) super.getTableCellRendererComponent(
+            table, value, isSelected, hasFocus, row, column);
+
+        // Get the status from column 0
+        String status = (String) table.getValueAt(row, 0);
+
+        label.setHorizontalAlignment(SwingConstants.RIGHT);
+
+        if (!isSelected) {
+            if (STATUS_COMPLETED.equals(status)) {
+                label.setBackground(new Color(230, 230, 230));
+                label.setForeground(Color.DARK_GRAY);
+            } else if (STATUS_CURRENT.equals(status)) {
+                label.setBackground(new Color(255, 255, 180));
+                label.setForeground(Color.BLACK);
+            } else if (STATUS_ERROR.equals(status)) {
+                label.setBackground(new Color(255, 200, 200));
+                label.setForeground(Color.BLACK);
+            } else {
+                label.setBackground(Color.WHITE);
+                label.setForeground(Color.GRAY);
+            }
+        }
+
+        return label;
+    }
+}
+
+
+/**
+ * No-args version - defaults title to 'Script Tester'
+ */
+scripttester() {
+    scripttester("Script Tester");
+}
+
+/**
+ * Main scripttester implementation.
+ *
+ * @param title The title for the container
+ */
+scripttester(String title) {
+
+    if (void == jvd || void == jvd.app) {
+        print("This requires jvd.app; see jvdClassBrowser.bsh");
+        return;
+    }
+
+    // === State Variables ===
+    this.lines = new ArrayList();       // List of ScriptLine
+    this.currentIndex = 0;              // Next line to execute
+    this.tableModel = null;             // Table model
+    this.table = null;                  // JTable
+    this.viewPanel = null;              // Current view panel
+    this.isTableView = true;            // Track current view mode
+
+    // Two-panel view components
+    this.remainingArea = null;
+    this.executedArea = null;
+
+    // Main panel that holds everything
+    this.panel = new JPanel(new BorderLayout());
+
+    // Internal frame reference
+    this.iframe = null;
+
+    // === Helper Methods ===
+
+    /**
+     * Parse script text into ScriptLine objects.
+     * Skips empty lines and comment-only lines.
+     */
+    parseScript(String scriptText) {
+        this.lines.clear();
+        this.currentIndex = 0;
+
+        String[] rawLines = scriptText.split("\n");
+        int lineNum = 0;
+
+        for (int i = 0; i < rawLines.length; i++) {
+            String trimmed = rawLines[i].trim();
+
+            // Skip empty lines and comment-only lines
+            if (trimmed.length() == 0) continue;
+            if (trimmed.startsWith("//")) continue;
+
+            lineNum++;
+            this.lines.add(new ScriptLine(lineNum, rawLines[i]));
+        }
+
+        print("Loaded " + this.lines.size() + " lines.");
+    }
+
+    /**
+     * Reset all lines to pending state.
+     */
+    resetExecution() {
+        this.currentIndex = 0;
+        for (int i = 0; i < this.lines.size(); i++) {
+            ScriptLine line = (ScriptLine) this.lines.get(i);
+            line.status = STATUS_PENDING;
+            line.errorMessage = null;
+        }
+        refreshView();
+        print("Execution reset.");
+    }
+
+    /**
+     * Execute the current line and advance.
+     */
+    stepExecution() {
+        if (this.currentIndex >= this.lines.size()) {
+            print("Script complete.");
+            return;
+        }
+
+        ScriptLine line = (ScriptLine) this.lines.get(this.currentIndex);
+        line.status = STATUS_CURRENT;
+        refreshView();
+
+        try {
+            // Use the shared BeanShell interpreter
+            BeanShellService.get().eval(line.text);
+            line.status = STATUS_COMPLETED;
+        } catch (Exception e) {
+            line.status = STATUS_ERROR;
+            line.errorMessage = e.getMessage();
+            print("Error at line " + line.lineNumber + ": " + e.getMessage());
+        }
+
+        this.currentIndex++;
+        refreshView();
+
+        // Scroll to show current line in table
+        if (this.isTableView && this.table != null && this.currentIndex < this.lines.size()) {
+            this.table.scrollRectToVisible(this.table.getCellRect(this.currentIndex, 0, true));
+        }
+    }
+
+    /**
+     * Refresh the current view.
+     */
+    refreshView() {
+        if (this.isTableView) {
+            if (this.tableModel != null) {
+                this.tableModel.fireDataChanged();
+            }
+        } else {
+            refreshTwoPanelView();
+        }
+    }
+
+    /**
+     * Refresh the two-panel view by rebuilding text areas.
+     */
+    refreshTwoPanelView() {
+        if (this.remainingArea == null || this.executedArea == null) return;
+
+        StringBuilder executed = new StringBuilder();
+        StringBuilder remaining = new StringBuilder();
+
+        for (int i = 0; i < this.lines.size(); i++) {
+            ScriptLine line = (ScriptLine) this.lines.get(i);
+            String prefix = "";
+            if (STATUS_ERROR.equals(line.status)) {
+                prefix = "[ERROR] ";
+            }
+            if (STATUS_COMPLETED.equals(line.status) || STATUS_ERROR.equals(line.status)) {
+                executed.append(prefix).append(line.text).append("\n");
+            } else if (STATUS_CURRENT.equals(line.status)) {
+                remaining.append(">>> ").append(line.text).append("\n");
+            } else {
+                remaining.append(line.text).append("\n");
+            }
+        }
+
+        this.executedArea.setText(executed.toString());
+        this.remainingArea.setText(remaining.toString());
+    }
+
+    /**
+     * Create the table view panel.
+     */
+    createTableView() {
+        this.tableModel = new ScriptTableModel(this.lines);
+        this.table = new JTable(this.tableModel);
+
+        // Set up column renderers and widths
+        TableColumnModel columnModel = this.table.getColumnModel();
+
+        // Status column
+        TableColumn statusCol = columnModel.getColumn(0);
+        statusCol.setPreferredWidth(30);
+        statusCol.setMaxWidth(40);
+        statusCol.setCellRenderer(new StatusCellRenderer());
+
+        // Line number column
+        TableColumn lineNumCol = columnModel.getColumn(1);
+        lineNumCol.setPreferredWidth(40);
+        lineNumCol.setMaxWidth(60);
+        lineNumCol.setCellRenderer(new LineNumberCellRenderer());
+
+        // Code column
+        TableColumn codeCol = columnModel.getColumn(2);
+        codeCol.setCellRenderer(new CodeCellRenderer());
+
+        // Table settings
+        this.table.setRowHeight(20);
+        this.table.setShowGrid(false);
+        this.table.setIntercellSpacing(new Dimension(0, 0));
+        this.table.getTableHeader().setReorderingAllowed(false);
+
+        JScrollPane scrollPane = new JScrollPane(this.table);
+        scrollPane.getViewport().setBackground(Color.WHITE);
+
+        JPanel tablePanel = new JPanel(new BorderLayout());
+        tablePanel.add(scrollPane, BorderLayout.CENTER);
+
+        return tablePanel;
+    }
+
+    /**
+     * Create the two-panel view.
+     */
+    createTwoPanelView() {
+        // Remaining (pending) area - top
+        this.remainingArea = new JTextArea(10, 60);
+        this.remainingArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        this.remainingArea.setEditable(true);
+        JScrollPane remainingScroll = new JScrollPane(this.remainingArea);
+        remainingScroll.setBorder(BorderFactory.createTitledBorder("Remaining"));
+
+        // Executed area - bottom
+        this.executedArea = new JTextArea(10, 60);
+        this.executedArea.setFont(new Font(Font.MONOSPACED, Font.ITALIC, 12));
+        this.executedArea.setEditable(false);
+        this.executedArea.setBackground(new Color(230, 230, 230));
+        JScrollPane executedScroll = new JScrollPane(this.executedArea);
+        executedScroll.setBorder(BorderFactory.createTitledBorder("Executed"));
+
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT,
+            remainingScroll, executedScroll);
+        splitPane.setDividerLocation(200);
+        splitPane.setResizeWeight(0.5);
+
+        JPanel twoPanelPanel = new JPanel(new BorderLayout());
+        twoPanelPanel.add(splitPane, BorderLayout.CENTER);
+
+        refreshTwoPanelView();
+
+        return twoPanelPanel;
+    }
+
+    /**
+     * Swap between table view and two-panel view.
+     */
+    swapView() {
+        this.panel.remove(this.viewPanel);
+
+        if (this.isTableView) {
+            this.viewPanel = createTwoPanelView();
+            this.isTableView = false;
+        } else {
+            this.viewPanel = createTableView();
+            this.isTableView = true;
+        }
+
+        this.panel.add(this.viewPanel, BorderLayout.CENTER);
+        this.panel.revalidate();
+        this.panel.repaint();
+
+        refreshView();
+    }
+
+    /**
+     * Load a script from file.
+     */
+    loadScript() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Select BeanShell Script");
+        chooser.setFileFilter(new FileNameExtensionFilter("BeanShell Scripts", "bsh", "java", "txt"));
+
+        // Start in current directory
+        chooser.setCurrentDirectory(new File(System.getProperty("user.dir")));
+
+        int result = chooser.showOpenDialog(this.panel);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File file = chooser.getSelectedFile();
+            try {
+                StringBuilder sb = new StringBuilder();
+                BufferedReader reader = new BufferedReader(new FileReader(file));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line).append("\n");
+                }
+                reader.close();
+
+                parseScript(sb.toString());
+                refreshView();
+                print("Loaded: " + file.getName());
+            } catch (IOException e) {
+                print("Error loading file: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Load script from text (for programmatic use).
+     */
+    loadScriptText(String scriptText) {
+        parseScript(scriptText);
+        refreshView();
+    }
+
+    // === Action Handler ===
+    actionPerformed(e) {
+        String cmd = e.getActionCommand();
+
+        if ("Step".equals(cmd)) {
+            stepExecution();
+        } else if ("Reset".equals(cmd)) {
+            resetExecution();
+        } else if ("Load".equals(cmd)) {
+            loadScript();
+        } else if ("Swap View".equals(cmd)) {
+            swapView();
+        } else if ("Close".equals(cmd)) {
+            if (void != this.iframe) {
+                this.iframe.hide();
+            }
+        }
+    }
+
+    // === Build UI ===
+
+    // Create button panel
+    this.buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+
+    this.stepBtn = new JButton("Step");
+    this.stepBtn.addActionListener(this);
+    this.buttonPanel.add(this.stepBtn);
+
+    this.resetBtn = new JButton("Reset");
+    this.resetBtn.addActionListener(this);
+    this.buttonPanel.add(this.resetBtn);
+
+    this.loadBtn = new JButton("Load");
+    this.loadBtn.addActionListener(this);
+    this.buttonPanel.add(this.loadBtn);
+
+    this.swapBtn = new JButton("Swap View");
+    this.swapBtn.addActionListener(this);
+    this.buttonPanel.add(this.swapBtn);
+
+    this.panel.add(this.buttonPanel, BorderLayout.NORTH);
+
+    // Create initial view (table view)
+    this.viewPanel = createTableView();
+    this.panel.add(this.viewPanel, BorderLayout.CENTER);
+
+    // Create the virtual app frame
+    this.iframe = DesktopManager.get().createVApp(this.panel, title);
+
+    // Set preferred size
+    this.iframe.setSize(600, 400);
+
+    print("Script Tester started. Use Load to open a script, then Step to execute.");
+
+    return this;
+}

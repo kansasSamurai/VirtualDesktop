@@ -12,6 +12,7 @@
  *   - Step button: Execute one line at a time
  *   - Reset button: Restart execution from beginning
  *   - Load button: Load a script from file
+ *   - Paste button: Load script from system clipboard
  *   - Swap View button: Toggle between table and two-panel views
  */
 
@@ -20,6 +21,7 @@ import javax.swing.table.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.datatransfer.*;
 import java.io.*;
 import java.util.ArrayList;
 
@@ -302,12 +304,15 @@ scripttester(String title) {
      * Execute the current line and advance.
      */
     stepExecution() {
+        print("[DEBUG] stepExecution called, currentIndex=" + this.currentIndex + ", lines.size=" + this.lines.size());
+
         if (this.currentIndex >= this.lines.size()) {
             print("Script complete.");
             return;
         }
 
         ScriptLine line = (ScriptLine) this.lines.get(this.currentIndex);
+        print("[DEBUG] Executing line " + line.lineNumber + ": " + line.text);
         line.status = STATUS_CURRENT;
         refreshView();
 
@@ -315,6 +320,7 @@ scripttester(String title) {
             // Use the shared BeanShell interpreter
             BeanShellService.get().eval(line.text);
             line.status = STATUS_COMPLETED;
+            print("[DEBUG] Line completed successfully");
         } catch (Exception e) {
             line.status = STATUS_ERROR;
             line.errorMessage = e.getMessage();
@@ -322,6 +328,7 @@ scripttester(String title) {
         }
 
         this.currentIndex++;
+        print("[DEBUG] currentIndex now=" + this.currentIndex);
         refreshView();
 
         // Scroll to show current line in table
@@ -402,6 +409,9 @@ scripttester(String title) {
         this.table.setShowGrid(false);
         this.table.setIntercellSpacing(new Dimension(0, 0));
         this.table.getTableHeader().setReorderingAllowed(false);
+        this.table.setRowSelectionAllowed(false);
+        this.table.setCellSelectionEnabled(false);
+        this.table.setFocusable(false);
 
         JScrollPane scrollPane = new JScrollPane(this.table);
         scrollPane.getViewport().setBackground(Color.WHITE);
@@ -471,7 +481,8 @@ scripttester(String title) {
     loadScript() {
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Select BeanShell Script");
-        chooser.setFileFilter(new FileNameExtensionFilter("BeanShell Scripts", "bsh", "java", "txt"));
+        String[] extensions = new String[] {"bsh", "java", "txt"};
+        chooser.setFileFilter(new FileNameExtensionFilter("BeanShell Scripts", extensions));
 
         // Start in current directory
         chooser.setCurrentDirectory(new File(System.getProperty("user.dir")));
@@ -505,6 +516,27 @@ scripttester(String title) {
         refreshView();
     }
 
+    /**
+     * Paste script from system clipboard.
+     */
+    pasteFromClipboard() {
+        try {
+            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+            Transferable contents = clipboard.getContents(null);
+
+            if (contents != null && contents.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+                String text = (String) contents.getTransferData(DataFlavor.stringFlavor);
+                parseScript(text);
+                refreshView();
+                print("Pasted " + this.lines.size() + " lines from clipboard.");
+            } else {
+                print("Clipboard does not contain text.");
+            }
+        } catch (Exception e) {
+            print("Error reading clipboard: " + e.getMessage());
+        }
+    }
+
     // === Action Handler ===
     actionPerformed(e) {
         String cmd = e.getActionCommand();
@@ -515,6 +547,8 @@ scripttester(String title) {
             resetExecution();
         } else if ("Load".equals(cmd)) {
             loadScript();
+        } else if ("Paste".equals(cmd)) {
+            pasteFromClipboard();
         } else if ("Swap View".equals(cmd)) {
             swapView();
         } else if ("Close".equals(cmd)) {
@@ -540,6 +574,10 @@ scripttester(String title) {
     this.loadBtn = new JButton("Load");
     this.loadBtn.addActionListener(this);
     this.buttonPanel.add(this.loadBtn);
+
+    this.pasteBtn = new JButton("Paste");
+    this.pasteBtn.addActionListener(this);
+    this.buttonPanel.add(this.pasteBtn);
 
     this.swapBtn = new JButton("Swap View");
     this.swapBtn.addActionListener(this);

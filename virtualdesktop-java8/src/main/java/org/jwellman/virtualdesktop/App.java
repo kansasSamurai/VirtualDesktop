@@ -8,8 +8,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.swing.Action;
 import javax.swing.Icon;
@@ -29,6 +27,9 @@ import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.plaf.metal.MetalLookAndFeel;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.jwellman.dsp.DSP;
 import org.jwellman.dsp.DirectoryIconProvider;
@@ -88,6 +89,8 @@ import net.sourceforge.napkinlaf.NapkinTheme ;
  */
 @SuppressWarnings("serial")
 public class App extends JFrame implements ActionListener {
+
+    private static final Logger logger = LoggerFactory.getLogger(App.class);
 
     /** The singleton */
     private static App app;
@@ -290,7 +293,7 @@ public class App extends JFrame implements ActionListener {
         if ("new".equals(e.getActionCommand())) {
             // TODO: This temporary menu item is no longer functional after config-based system
             // Consider implementing a proper "New" feature or remove this menu item
-            System.out.println("New menu item - feature not implemented");
+            logger.info("New menu item - feature not implemented");
         } else if ("exit".equals(e.getActionCommand())) {
             quit();
         } else {
@@ -327,7 +330,7 @@ public class App extends JFrame implements ActionListener {
         VappsConfig config = ActionFactory.getVappsConfig();
 
         if (config == null) {
-            System.err.println("ERROR: No VApps configuration loaded - cannot build menu");
+            logger.error("No VApps configuration loaded - cannot build menu");
             return;
         }
 
@@ -465,7 +468,7 @@ public class App extends JFrame implements ActionListener {
         AppStore store = AppStore.get();
         store.setReducer(new AppReducer());
         store.addMiddleware(new LoggingMiddleware("[Redux]"));
-        System.out.println("Redux store initialized");
+        logger.info("Redux store initialized");
     }
 
     public static void main(String[] args) {
@@ -486,7 +489,7 @@ public class App extends JFrame implements ActionListener {
                 try {
 
                     for (LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
-                        System.out.println("Installed LAF: " + info.getName() + " : " + info.getClassName());
+                        logger.debug("Installed LAF: {} : {}", info.getName(), info.getClassName());
                     }
 
                     //Make sure we have nice window decorations.
@@ -547,10 +550,10 @@ public class App extends JFrame implements ActionListener {
 
                         	AluminiumLookAndFeel.setCurrentTheme(props);
                         	UIManager.setLookAndFeel("com.jtattoo.plaf.aluminium.AluminiumLookAndFeel");
-                        	System.out.println("LAF := JTattoo");
+                        	logger.info("LAF := JTattoo");
                         	break;
                         case LAF_FLATLAF:
-                        	System.out.println("LAF := FlatLAF");
+                        	logger.info("LAF := FlatLAF");
 
                         	int flatTheme = 6;
                         	switch (flatTheme) {
@@ -574,7 +577,7 @@ public class App extends JFrame implements ActionListener {
                             UIManager.installLookAndFeel("Web", "com.alee.laf.WebLookAndFeel");
                             WebLookAndFeel.install();
                                 for (LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
-                                    System.out.println(info.getName() + " : " + info.getClassName());
+                                    logger.debug("{} : {}", info.getName(), info.getClassName());
                                     if ("Nimbus".equals(info.getName())) {
                                         UIManager.setLookAndFeel(info.getClassName()); break;
                                     }
@@ -585,20 +588,20 @@ public class App extends JFrame implements ActionListener {
                             break;
                     }
                 } catch (Exception e) {
-                	System.out.println("LAF := (fallback)");
+                	logger.warn("LAF := (fallback)");
 
                     // If Nimbus is not available, you can set the GUI to another look and feel.
                     final String sys = UIManager.getSystemLookAndFeelClassName();
                     try {
                         UIManager.setLookAndFeel(sys);
                     } catch (ClassNotFoundException ex) {
-                        Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
+                        logger.error("Failed to set fallback LAF", ex);
                     } catch (InstantiationException ex) {
-                        Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
+                        logger.error("Failed to set fallback LAF", ex);
                     } catch (IllegalAccessException ex) {
-                        Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
+                        logger.error("Failed to set fallback LAF", ex);
                     } catch (UnsupportedLookAndFeelException ex) {
-                        Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
+                        logger.error("Failed to set fallback LAF", ex);
                     }
                 }
                 createAndShowGUI();

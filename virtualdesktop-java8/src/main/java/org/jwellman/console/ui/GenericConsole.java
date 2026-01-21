@@ -31,6 +31,9 @@ import javax.swing.UIManager;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.jwellman.console.CommandHistory;
 import org.jwellman.console.CompletionProvider;
 import org.jwellman.console.ConsoleTheme;
@@ -63,6 +66,7 @@ public class GenericConsole extends JScrollPane implements
         PropertyChangeListener {
 
     private static final long serialVersionUID = 1L;
+    private static final Logger logger = LoggerFactory.getLogger(GenericConsole.class);
 
     private static final String CUT = "Cut";
     private static final String COPY = "Copy";
@@ -621,7 +625,7 @@ public class GenericConsole extends JScrollPane implements
             }
             return cmd;
         } catch (BadLocationException e) {
-            System.err.println("Internal GenericConsole Error: " + e);
+            logger.error("Internal GenericConsole Error", e);
             return "";
         }
     }
@@ -808,7 +812,7 @@ public class GenericConsole extends JScrollPane implements
             try {
                 SwingUtilities.invokeAndWait(run);
             } catch (InterruptedException | InvocationTargetException e) {
-                e.printStackTrace();
+                logger.error("Error in invokeAndWait", e);
             }
         } else {
             run.run();

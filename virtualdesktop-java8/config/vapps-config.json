@@ -37,6 +37,13 @@
           "desktopOnly": false
         },
         {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecJavaScriptConsole",
+          "title": "New JavaScript Console",
+          "icon": "laptop123",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
           "class": "org.jwellman.virtualdesktop.vapps.SpecGroovyConsole",
           "title": "Groovy Console",
           "icon": "laptop123",

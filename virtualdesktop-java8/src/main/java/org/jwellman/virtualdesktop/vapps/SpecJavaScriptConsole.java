@@ -4,13 +4,12 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.jwellman.console.ConsoleTheme;
 import org.jwellman.console.InterpreterException;
 import org.jwellman.console.impl.NashornAdapter;
-import org.jwellman.console.ui.GenericConsole;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * JavaScript Console vapp using Nashorn (Java 8's built-in JS engine).
@@ -21,11 +20,13 @@ import org.jwellman.console.ui.GenericConsole;
  * <p><b>Note:</b> Nashorn was deprecated in Java 11 and removed in Java 15.
  * This vapp is specifically for Java 8 compatibility.</p>
  *
+ * <p><b>Note:</b> To support arrow functions, etc:
+ * java -Dnashorn.args=--language=es6 -jar YourApp.jar
  * @author Rick Wellman
  */
 public class SpecJavaScriptConsole extends SpecGenericConsole implements Runnable {
 
-    private static final Logger LOGGER = Logger.getLogger(SpecJavaScriptConsole.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(SpecJavaScriptConsole.class);
 
     private Thread interpreterThread;
     private volatile boolean running = true;
@@ -56,7 +57,7 @@ public class SpecJavaScriptConsole extends SpecGenericConsole implements Runnabl
         try {
             return new NashornAdapter();
         } catch (InterpreterException e) {
-            LOGGER.log(Level.SEVERE, "Failed to create Nashorn adapter", e);
+            logger.error("Failed to create Nashorn adapter", e);
             throw new RuntimeException("JavaScript engine not available: " + e.getMessage(), e);
         }
     }
@@ -82,7 +83,7 @@ public class SpecJavaScriptConsole extends SpecGenericConsole implements Runnabl
             console.println("");
 
         } catch (InterpreterException e) {
-            LOGGER.log(Level.WARNING, "Failed to configure JavaScript environment", e);
+            logger.warn("Failed to configure JavaScript environment", e);
         }
     }
 
@@ -144,7 +145,7 @@ public class SpecJavaScriptConsole extends SpecGenericConsole implements Runnabl
 
         } catch (Exception e) {
             if (running) {
-                LOGGER.log(Level.SEVERE, "JavaScript REPL error", e);
+                logger.error("JavaScript REPL error", e);
                 console.error("Console error: " + e.getMessage() + "\n");
             }
         }

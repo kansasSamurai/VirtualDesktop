@@ -242,22 +242,26 @@ public class LineNumberCellRenderer extends DefaultTableCellRenderer {
 
 /**
  * No-args version - defaults title to 'Script Tester'
+ * Creates internal frame for standalone use.
  */
 scripttester() {
-    scripttester("Script Tester");
+    return scripttester("Script Tester", true);
+}
+
+/**
+ * Version with title - creates internal frame for standalone use.
+ */
+scripttester(String title) {
+    return scripttester(title, true);
 }
 
 /**
  * Main scripttester implementation.
  *
  * @param title The title for the container
+ * @param standalone If true, creates internal frame; if false, just builds panel for framework use
  */
-scripttester(String title) {
-
-    if (void == jvd || void == jvd.app) {
-        print("This requires jvd.app; see jvdClassBrowser.bsh");
-        return;
-    }
+scripttester(String title, boolean standalone) {
 
     // === State Variables ===
     // Capture 'this' reference for use in callbacks (BeanShell quirk)
@@ -677,13 +681,35 @@ scripttester(String title) {
     self.viewPanel = createTableView();
     self.panel.add(self.viewPanel, BorderLayout.CENTER);
 
-    // Create the virtual app frame
-    self.iframe = DesktopManager.get().createVApp(self.panel, title);
+    // === Framework Support Methods ===
 
-    // Set preferred size
-    self.iframe.setSize(600, 400);
+    /**
+     * Returns the main panel for framework integration (SpecBeanShellScript).
+     */
+    getContent() {
+        return self.panel;
+    }
 
-    print("Script Tester started. Use Load to open a script, then Step to execute.");
+    /**
+     * Called by framework after component is displayed.
+     */
+    launch() {
+        print("Script Tester started. Use Load to open a script, then Step to execute.");
+    }
+
+    // Create internal frame only in standalone mode
+    if (standalone) {
+        self.iframe = DesktopManager.get().createVApp(self.panel, title);
+        self.iframe.setSize(600, 400);
+        print("Script Tester started. Use Load to open a script, then Step to execute.");
+    }
 
     return self;
 }
+
+/**
+ * Entry point for framework (SpecBeanShellScript) - creates tool without internal frame.
+ * Store in global namespace and return for lifecycle support.
+ */
+global.scripttester = scripttester("Script Tester", false);
+return global.scripttester;

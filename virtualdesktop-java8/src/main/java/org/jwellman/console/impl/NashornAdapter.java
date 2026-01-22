@@ -1,5 +1,8 @@
 package org.jwellman.console.impl;
 
+import java.io.PrintStream;
+import java.io.PrintWriter;
+
 import javax.script.Bindings;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
@@ -70,13 +73,8 @@ public class NashornAdapter implements InterpreterAdapter {
 
     private void initializeEnvironment() {
         try {
-            // Add a print function that works with console output
-            engine.eval(
-                "var print = function() { " +
-                "  var args = Array.prototype.slice.call(arguments); " +
-                "  java.lang.System.out.println(args.join(' ')); " +
-                "}"
-            );
+            // Nashorn's built-in print() function respects the ScriptContext's writer,
+            // so we don't need to override it. Just add helper functions.
 
             // Add a simple help function
             engine.eval(
@@ -119,6 +117,19 @@ public class NashornAdapter implements InterpreterAdapter {
      */
     public void setPrompt(String prompt) {
         this.prompt = prompt;
+    }
+
+    /**
+     * Set the output stream for print() and other output.
+     * This redirects Nashorn's output to the specified stream.
+     *
+     * @param out the PrintStream to use for output
+     */
+    public void setOutput(PrintStream out) {
+        if (out != null) {
+            engine.getContext().setWriter(new PrintWriter(out, true));
+            engine.getContext().setErrorWriter(new PrintWriter(out, true));
+        }
     }
 
     @Override

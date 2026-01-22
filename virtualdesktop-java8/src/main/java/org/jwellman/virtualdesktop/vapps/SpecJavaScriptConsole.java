@@ -64,6 +64,9 @@ public class SpecJavaScriptConsole extends SpecGenericConsole implements Runnabl
 
     private void configureEnvironment() {
         try {
+            // Redirect Nashorn output to console
+            getNashornAdapter().setOutput(console.getOut());
+
             // Expose the console itself
             adapter.set("_console", console);
             adapter.set("_adapter", adapter);

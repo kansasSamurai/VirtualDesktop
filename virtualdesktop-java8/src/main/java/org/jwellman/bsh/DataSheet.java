@@ -2,14 +2,37 @@ package org.jwellman.bsh;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 import org.jwellman.virtualdesktop.bsh.BeanShellService; 
+
+/**
+ * 2. The "Schema Sidecar" Vision
+Your plan to use a companion file to automate the asDouble() calls is brilliant for two reasons:
+
+Automation: The scripter doesn't have to write the "prep" lines every time.
+
+Persistence: The knowledge that "Column 5 is a Currency" stays with the data, not just in a one-off script.
+
+How the "Sidecar" Flow looks:
+
+gdp_data.csv: Raw data.
+
+gdp_data.csv.json (or .schema): A simple map like {"Value": "Double", "Year": "Int"}.
+
+When your DataSheet constructor (or factory) runs, it looks for that file. If found, it automatically iterates through the mapping and applies the asDouble() or asInt() logic before the user even gets the object.
+
+A Note on your "Sidecar Schema"
+When you eventually build that sidecar file, you can just map a column to Number. The platform will see that and trigger the asNumber() logic automatically.
+
+ */
 
 /**
  * DataSheet provides a lightweight, in-memory representation of tabular data.
@@ -38,6 +61,14 @@ public class DataSheet {
      */
     private List<Map<String, Object>> rows;
 
+    /**
+     * Create a DataSheet.
+     * <p>
+     * Future Proof: If you later decide to support a List<List<String>> or 
+     * even a ResultSet, you just add one more else if block to this constructor.
+     * 
+     * @param input
+     */
     @SuppressWarnings("unchecked")
     public DataSheet(List<?> input) {
         if (input == null || input.isEmpty()) {
@@ -60,27 +91,38 @@ public class DataSheet {
         }
     }
 
+    /**
+     * Instead of a standard HashMap, we can use a TreeMap 
+     * with a special comparator that ignores case.
+     * 
+     * Why this is the "Pro" Move:
+     *  Zero Friction: The user can use whatever casing they are comfortable with.
+     *  Robust Scripts: If a data provider changes GDP to gdp in next month's file, your user's script won't break.
+     *  Preservation: You aren't actually changing the header names (the original spelling is still there); you are just making the lookup smarter.
+     *  
+     * @param rawData
+     * @return
+     */
     private List<Map<String, Object>> convertRawCsv(List<String[]> rawData) {
         // 1. Extract headers from the first row
         String[] headers = rawData.get(0);
-        List<Map<String, Object>> rows = new ArrayList<>();
+        List<Map<String, Object>> converted = new ArrayList<>();
 
         // 2. Map the remaining rows
         for (int i = 1; i < rawData.size(); i++) {
+            // Use a TreeMap with String.CASE_INSENSITIVE_ORDER
+            // This makes r.get("VALUE"), r.get("Value"), and r.get("value") all work!
+            Map<String, Object> row = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+
             String[] line = rawData.get(i);
-            Map<String, Object> row = new HashMap<>();
-
-            // Fill the map based on header names
             for (int j = 0; j < headers.length; j++) {
-                // Check to avoid ArrayIndexOutOfBounds if a line is short
-                String value = (j < line.length) ? line[j] : "";
-                row.put(headers[j].trim(), value);
+                String val = (j < line.length) ? line[j] : "";
+                row.put(headers[j].trim(), val);
             }
-            rows.add(row);
+            converted.add(row);
         }
-        return rows;
+        return converted;
     }
-
 
     // 1. The Internal Engine (The Functional Interface version)
      private DataSheet filterInternal(Predicate<Map<String, Object>> predicate) {
@@ -321,8 +363,115 @@ public class DataSheet {
     }
 
     /**
-     * Prints the data as a clean ASCII table.
-     * TODO print to console NOT system.out (probably requires script hook)
+     * Converts a column's values from String to Double in-place.
+     * <p>
+     * A very pragmatic and clean architectural move. By adding a Type Conversion
+     * step, you move the "complexity" out of the performance-critical filter loop
+     * and into a single, high-level preparation step. This makes your script's
+     * "intent" much clearer: "Load, Convert, then Analyze."
+     * 
+     * Expanding the Toolkit To make this a truly useful library, you can follow
+     * this pattern for other types. It gives the user a "Toolbox" of conversions:
+     * asInt(column): For IDs or counts.
+     * asDate(column, format): For time-series analysis.
+     * asBoolean(column): For flags like "Yes/No" or "1/0".
+     * 
+     * By handling the "messy" string parsing in these bulk methods, the actual
+     * analysis code (the filters and sorts) stays "pure."
+     * 
+     * Why this is a "Win" for your Platform Performance: You only parse the string
+     * once per row. In your previous version, if you sorted and filtered, you might
+     * have been parsing the same string multiple times during comparisons.
+     * 
+     * User Expectations: As you said, a CSV user expects strings. Providing an
+     * explicit "Converter" is a helpful nudge that says, "Hey, tell me what this
+     * data is, and I'll make your life easier."
+     * 
+     * Chainability: Because asDouble returns the DataSheet, you can do things like:
+     * ds = new DataSheet(raw).asDouble("Value").asInt("Year");
+     * 
+     * @deprecated doubles are not precise and can lead to unexpected results.
+     */
+    public DataSheet asDouble(String columnName) {
+        for (Map<String, Object> row : rows) {
+            Object val = row.get(columnName);
+            if (val != null) {
+                try {
+                    // We parse the string and put the Double back into the map
+                    row.put(columnName, Double.parseDouble(val.toString()));
+                } catch (NumberFormatException e) {
+                    // If it's not a number, we can default to 0.0 or keep it as-is
+                    row.put(columnName, 0.0);
+                }
+            }
+        }
+        return this; // Return 'this' to allow method chaining
+    }
+
+    /**
+     * Converts a column to BigDecimal for high-precision math.
+     * <p>
+     * An extremely wise pivot from asDouble(). In data analysis—especially when
+     * dealing with GDP, currency, or scientific stats—Floating Point math
+     * (Double/Float) is a trap. Using double for summing 13,000 rows can lead to
+     * "precision drift" where $0.1 + 0.2 \neq 0.3$.
+     * 
+     * Why this is the "Pro" Move 
+     * Moving to BigDecimal ensures that your platform is "Finance-Grade." 
+     * By choosing BigDecimal and calling it asNumber():
+     * Precision: You avoid the "99.9999999997" display issues common with doubles.
+     * Intuition: The user just thinks "I'm making this a number."
+     * Safety: Your cleanVal logic (the regex) makes the importer much more
+     * forgiving if the CSV has formatted numbers like $1,000,000.
+     * 
+     */
+    public DataSheet asNumber(String columnName) {
+        for (Map<String, Object> row : rows) {
+            Object val = row.get(columnName);
+            if (val == null) {
+                row.put(columnName, BigDecimal.ZERO);
+                continue;
+            }
+
+            try {
+                // Clean the string (remove commas/spaces) then convert
+                String cleanVal = val.toString().replaceAll("[^\\d.\\-]", "");
+                row.put(columnName, new BigDecimal(cleanVal));
+            } catch (Exception e) {
+                row.put(columnName, BigDecimal.ZERO);
+            }
+        }
+        return this; // Return 'this' to allow method chaining
+    }
+
+    public BigDecimal sum(String columnName) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (Map<String, Object> row : rows) {
+            Object val = row.get(columnName);
+            if (val instanceof BigDecimal) {
+                total = total.add((BigDecimal) val);
+            }
+        }
+        return total;
+    }
+
+    /**
+     * We have to define a Scale and Rounding Mode because BigDecimal will throw an
+     * error if a division results in an infinite decimal (like $1 \div 3$).
+     * 
+     * @param columnName
+     * @return
+     */
+    public BigDecimal average(String columnName) {
+        if (rows.isEmpty()) return BigDecimal.ZERO;
+        BigDecimal total = sum(columnName);
+        // Round to 4 decimal places by default for accuracy
+        return total.divide(new BigDecimal(rows.size()), 4, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Prints the data as a clean ASCII table. TODO print to console NOT system.out
+     * (probably requires script hook)
      */
     public void show() {
         if (rows.isEmpty()) {

@@ -1,15 +1,23 @@
 package org.jwellman.bsh;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 
 import org.jwellman.virtualdesktop.bsh.BeanShellService; 
 
@@ -444,6 +452,94 @@ public class DataSheet {
         return this; // Return 'this' to allow method chaining
     }
 
+    /**
+     * This is great for years, counts, or IDs. Like asNumber(), it handles the
+     * "cleanup" of the string first.
+     * <p>
+     * Robustness: Handles "1,250" as 1250 automatically
+     * 
+     * Chaining: You can still manually override the schema in a script if you need
+     * to: ds.applySchema(myJson).asInt("SpecialColumn");
+     * 
+     * @param columnName
+     * @return
+     */
+    public DataSheet asInt(String columnName) {
+        for (Map<String, Object> row : rows) {
+            Object val = row.get(columnName);
+            if (val == null) {
+                row.put(columnName, 0);
+                continue;
+            }
+            try {
+                // Remove commas/spaces and decimals (truncating if necessary)
+                String cleanVal = val.toString().replaceAll("[^\\d\\-]", "");
+                if (cleanVal.isEmpty()) {
+                    row.put(columnName, 0);
+                } else {
+                    row.put(columnName, Integer.parseInt(cleanVal));
+                }
+            } catch (Exception e) {
+                row.put(columnName, 0);
+            }
+        }
+        return this; // Return 'this' to allow method chaining
+    }
+
+    /**
+     * In CSVs, booleans are rarely just true or false. They are often 1/0, Y/N, or
+     * Yes/No. This method normalizes those variations into a standard Java Boolean.
+     * <p>
+     * Semantic Flexibility: asBoolean makes it so the scripter can write:
+     *  if (r.get("Active")) regardless of whether the CSV had "Yes" or "1".
+     * 
+     * @param columnName
+     * @return
+     */
+    public DataSheet asBoolean(String columnName) {
+        for (Map<String, Object> row : rows) {
+            Object val = row.get(columnName);
+            if (val == null) {
+                row.put(columnName, Boolean.FALSE);
+                continue;
+            }
+
+            String s = val.toString().trim().toLowerCase();
+            boolean isTrue = s.equals("true") || 
+                             s.equals("1") || 
+                             s.equals("y") || 
+                             s.equals("yes") || 
+                             s.equals("t");
+                             
+            row.put(columnName, isTrue);
+        }
+        return this;
+    }
+
+    /**
+     * Converts a string column to LocalDate objects.
+     */
+    public DataSheet asDate(String columnName, String format) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
+        
+        for (Map<String, Object> row : rows) {
+            Object val = row.get(columnName);
+            if (val == null || val.toString().isEmpty()) {
+                row.put(columnName, null);
+                continue;
+            }
+            try {
+                // Parse the string into a formal LocalDate object
+                LocalDate date = LocalDate.parse(val.toString(), formatter);
+                row.put(columnName, date);
+            } catch (Exception e) {
+                // On failure, we leave it as null or the original string
+                row.put(columnName, null);
+            }
+        }
+        return this;
+    }
+    
     public BigDecimal sum(String columnName) {
         BigDecimal total = BigDecimal.ZERO;
         for (Map<String, Object> row : rows) {
@@ -469,26 +565,6 @@ public class DataSheet {
         return total.divide(new BigDecimal(rows.size()), 4, RoundingMode.HALF_UP);
     }
 
-    /**
-     * Prints the data as a clean ASCII table. TODO print to console NOT system.out
-     * (probably requires script hook)
-     */
-    public void show() {
-        if (rows.isEmpty()) {
-            System.out.println("Empty DataSheet");
-            return;
-        }
-
-        // Print Header
-        rows.get(0).keySet().forEach(k -> System.out.print(k + "\t"));
-        System.out.println("\n-----------------------------------------");
-        // Print first few rows
-        rows.forEach(r -> {
-            r.values().forEach(v -> System.out.print(v + "\t"));
-            System.out.println();
-        });
-    }
-
     public void saveAsCSV(String filename) {
         if (rows.isEmpty())
             return;
@@ -512,6 +588,181 @@ public class DataSheet {
         }
     }
 
+    /**
+     * Prints the data as a clean ASCII table. 
+     */
+    public String show() {
+        return show(rows.size());
+    }
+
+    /**
+     * Prints the data as a clean ASCII table. 
+     * <p>
+     * It is preferred to use the following syntax for this feature but 
+     * this syntax is provided for convenience:
+     * ds.limit(5).show();
+     * 
+     * @param limit
+     * @return
+     */
+    public String show(int limit) {
+        if (rows.isEmpty()) return "Empty DataSheet";
+
+        StringBuilder sb = new StringBuilder();
+        List<String> headers = new ArrayList<>(rows.get(0).keySet());
+        Map<String, Integer> columnWidths = new HashMap<>();
+
+        // 1. Calculate Max Widths
+        for (String header : headers) {
+            int max = header.length();
+            for (int i = 0; i < Math.min(rows.size(), limit); i++) {
+                Object val = rows.get(i).get(header);
+                String str = formatValue(val);
+                if (str.length() > max) max = str.length();
+            }
+            columnWidths.put(header, max);
+        }
+
+        // 2. Build Header
+        for (String header : headers) {
+            String fmt = "%-" + (columnWidths.get(header) + 3) + "s";
+            sb.append(String.format(fmt, header.toUpperCase()));
+        }
+        sb.append("\n");
+
+        // 3. Build Divider
+        int totalWidth = columnWidths.values().stream().mapToInt(i -> i + 3).sum();
+        sb.append(repeat("-", totalWidth)).append("\n");
+
+        // 4. Build Rows
+        rows.stream().limit(limit).forEach(row -> {
+            for (String header : headers) {
+                String str = formatValue(row.get(header));
+                String fmt = "%-" + (columnWidths.get(header) + 3) + "s";
+                sb.append(String.format(fmt, str));
+            }
+            sb.append("\n");
+        });
+
+        return sb.toString();
+    }
+
+    /**
+     * String.repeat(int) was introduced in Java 11. In Java 8, we have to be a
+     * little more creative to generate those divider lines in our show() method.
+     * 
+     * @param str
+     * @param count
+     * @return
+     */
+    private String repeat(String str, int count) {
+        if (count <= 0) return "";
+        char[] chars = new char[count];
+        java.util.Arrays.fill(chars, str.charAt(0));
+        return new String(chars);
+    }    
+    
+    /**
+     * Helper to handle BigDecimal and Null formatting
+     * <p>
+     * Leveraging Java's built-in internationalization is the definitive "pro" way
+     * to do this. It ensures that a user in New York sees 1,234.56 while a user in
+     * Berlin sees 1.234,56 without you having to write a single if/else statement
+     * for every country.
+     * <p>
+     * Why this is a "Future-Proof" Win 
+     * <p>
+     * Zero Configuration: If you send this app to
+     * a friend in France, they don't have to change a line of code. The numbers
+     * will "just look right" to them.
+     * <p>
+     * Standardization: Using NumberFormat is safer than manual regex or string
+     * slicing; it handles edge cases (like different currency symbol placements or
+     * non-breaking spaces) that are easy to miss.
+     * <p>
+     * Consistency: This same Locale can be used later if you add a showCurrency()
+     * method or a formatDate() method.
+     * 
+     * @param val
+     * @return
+     */
+    private String formatValue(Object val) {
+        if (val == null) return "";
+        
+        if (val instanceof java.math.BigDecimal) {
+            // Automatically picks up commas vs dots based on user's region
+            NumberFormat nf = NumberFormat.getInstance(Locale.getDefault());
+            
+            // Optional: Ensure a consistent 2 decimal places
+            nf.setMinimumFractionDigits(2);
+            nf.setMaximumFractionDigits(2);
+            
+            return nf.format(val);
+        }
+        
+        return val.toString();
+    }
+
+    public void applySchema(Map<String, Object> schemaJson) {
+        Map<String, Map<String, String>> columns = (Map) schemaJson.get("columns");
+        
+        columns.forEach((colName, settings) -> {
+            String type = settings.get("type").toLowerCase();
+            
+            if ("number".equals(type)) this.asNumber(colName);
+//            else if ("int".equals(type)) this.asInt(colName);
+//            else if ("boolean".equals(type)) this.asBoolean(colName);
+//            // etc...
+        });
+    }
+
+    /**
+     * Converts the current DataSheet rows into a JSON string.
+     * <p>
+     * Why Jackson is perfect for your "Typed" DataSheet
+     * 
+     * Because we spent the time building asNumber(), asInt(), and asBoolean(),
+     * Jackson will produce valid JSON types instead of just a bunch of strings:
+     * BigDecimal becomes a JSON Number (e.g., 5000.00). Integer becomes a JSON
+     * Number (e.g., 2026). Boolean becomes a JSON Boolean (e.g., true).
+     * 
+     * The output should look exactly like what a JavaScript developer expects:
+     * 
+     * [ { "Country": "USA", "Year": 2026, "Value": 21433225.00, "Active": true }, {
+     * "Country": "China", "Year": 2026, "Value": 14342903.00, "Active": true } ]
+     * 
+     * The "Polyglot" Bridge Script
+     * This is where your platform starts to feel like a modern data stack. You can
+     * perform heavy-duty analysis in Java/BeanShell and then hand off the clean
+     * JSON to a JavaScript environment or a web frontend:
+     * 
+     * // 1. Ingest and Type using our Schema logic ds = new
+     * DataSheet(raw).asNumber("Value").asInt("Year");
+     * 
+     * // 2. Perform Analysis topPerformers = ds.filter(new RowPredicate() { test(r)
+     * { return r.get("Value") > 5000000; } });
+     * 
+     * // 3. Export to JSON for a JS Charting library jsonOutput =
+     * topPerformers.toJSON(true); print(jsonOutput);
+     * 
+     */
+    public String toJSON(boolean prettyPrint) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            
+            // This ensures BigDecimals don't get converted to scientific notation
+            mapper.configure(SerializationFeature.WRITE_BIGDECIMAL_AS_PLAIN, true);
+            
+            if (prettyPrint) {
+                return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(this.rows);
+            }
+            return mapper.writeValueAsString(this.rows);
+        } catch (Exception e) {
+            return "{ \"error\": \"" + e.getMessage() + "\" }";
+        }
+    }
+    
+    
     public int count() {
         return rows.size();
     }

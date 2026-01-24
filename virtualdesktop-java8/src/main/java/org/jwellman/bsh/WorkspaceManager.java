@@ -66,17 +66,22 @@ public class WorkspaceManager {
             target = "global".equalsIgnoreCase(name) ? globalNs : workspaces.get(name);
 
             if (target != null) {
-                // 1. Redirect the interpreter's core pointer
+                // 1. Swap the namespace as before
                 masterInterpreter.setNameSpace(target);
-
-                // 2. Clear the interpreter's internal invocation stack
-                // This is crucial: if the interpreter thinks it is inside a method
-                // or a file, it might ignore the namespace switch.
-                // We set the "global" pointer to our target.
-                masterInterpreter.setOut(masterInterpreter.getOut()); // Minor kick to the state
+                
+                // 2. THE FIX: Clear the method resolution cache
+                // We do this by invoking a clear on the namespace's internal state
+                // and re-initializing the interpreter's "this" reference.
+                try {
+                    // This forces BeanShell to re-evaluate its "This" pointers
+                    masterInterpreter.eval("this.interpreter.setNameSpace(this.interpreter.getNameSpace());");
+                } catch (EvalError e) {
+                    // Fallback: If eval fails, we manually trigger a change event 
+                    // if you have access to NameSpace's protected members.
+                }
 
                 this.activeName = name;
-                System.out.println("SWITCH SUCCESS: Master is now pointing to " + name);
+                System.out.println("Master Interpreter re-synced to: " + name);
             }
             break;
         }
@@ -97,23 +102,27 @@ public class WorkspaceManager {
     
     /* ======== test script =============
 
-     // 1. Define something in Global
-     x = 100;
-    
-     // 2. Create and switch to a scratchpad
-     wm.createWorkspace(this.interpreter, "test1");
-     wm.switchTo(this.interpreter, "test1");
-    
-     // 3. Pollute this workspace
-     x = 200; // This shadows the global 'x'
-     tempFunc() { return "I only exist in test1"; }
-    
-     print(x); // Prints 200
-    
-     // 4. Switch back to Global or a fresh workspace
-     wm.resetToGlobal(this.interpreter);
-     print(x); // Prints 100! The global value is untouched.
-     // tempFunc(); // This would now fail 
+print("Scripted Tool sees wm as: " + System.identityHashCode(wm));
+
+// 1. Define something in Global
+x = 100;
+
+// 2. Create and switch to a scratchpad
+wm.createWorkspace(this.interpreter, "test1");
+wm.switchTo("test1");
+
+// 3. Pollute this workspace
+var x = 200; // This no longer shadows the global 'x'
+tempFunc() { return "I only exist in test1"; }
+
+print(x); // Prints 200
+print(tempFunc()); // Prints "I only exist..."
+
+// 4. Switch back to Global or a fresh workspace
+wm.switchTo("global");
+
+print(x); // Prints 100! The global value is untouched.
+tempFunc(); // This would now fail 
 
 ------------------------------------
 ased on my analysis, I have a few theories about what's happening:                                   
@@ -175,6 +184,29 @@ bsh % NameSpace: whereAmI (bsh.NameSpace@5116435c) (method)
 How to verify that the console is consistently using the same interpreter:
 // Check identity of the interpreter
 print("Interpreter ID: " + System.identityHashCode(this.interpreter));
+
+
+--------------------------------------------
+
+// 1. Switch
+wm.switchTo("test1");
+
+// 2. Define with a self-report
+tempFunc() { return "I am in: " + this.namespace.getName() + " (Hash: " + System.identityHashCode(this.namespace) + ")";  }
+
+// 3. Print immediately from the tool
+print("Tool sees: " + tempFunc());
+
+//////////////////////////////////////
+
+print("Interpreter thinks it is in: " + this.interpreter.getNameSpace().getName());
+print("Console sees: " + tempFunc());
+
+
+
+
+
+
 
 
 

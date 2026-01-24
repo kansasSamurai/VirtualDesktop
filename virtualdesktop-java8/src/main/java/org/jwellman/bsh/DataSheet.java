@@ -1,8 +1,5 @@
 package org.jwellman.bsh;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
@@ -19,7 +16,11 @@ import java.util.TreeMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import org.jwellman.virtualdesktop.bsh.BeanShellService; 
+import org.jwellman.virtualdesktop.bsh.BeanShellService;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule; 
 
 /**
  * 2. The "Schema Sidecar" Vision
@@ -518,6 +519,20 @@ public class DataSheet {
 
     /**
      * Converts a string column to LocalDate objects.
+     * <p>
+     * Usage:<br>
+     * 
+     * <pre>
+        ds = new DataSheet(raw).asDate("ReleaseDate", "yyyy-MM-dd");
+        
+        // Filter for records in the future
+        futureItems = ds.filter(new RowPredicate() {
+        test(r) {
+            // LocalDate supports isAfter() and isBefore()
+            return r.get("ReleaseDate").isAfter(LocalDate.now());
+        }
+        });
+       </pre>
      */
     public DataSheet asDate(String columnName, String format) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
@@ -749,8 +764,14 @@ public class DataSheet {
     public String toJSON(boolean prettyPrint) {
         try {
             ObjectMapper mapper = new ObjectMapper();
-            
-            // This ensures BigDecimals don't get converted to scientific notation
+
+            // 1. Register the module that understands Java 8 Dates
+            mapper.registerModule(new JavaTimeModule());
+
+            // 2. Tell Jackson to write dates as "2026-01-22" instead of [2026, 1, 22]
+            mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+            // 3. Ensure BigDecimals don't get converted to scientific notation
             mapper.configure(SerializationFeature.WRITE_BIGDECIMAL_AS_PLAIN, true);
             
             if (prettyPrint) {

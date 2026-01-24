@@ -164,7 +164,23 @@ extend(target, script) {
     MethodInjector.extendClosure(this.interpreter, target, script);
 }
 
+// Remove Method Signature (rms)
+rms(target, methodName, paramTypes) {
+    MethodInjector.removeMethodSignature(target, methodName, paramTypes);
+}
 
+// Run this in your console to see the 'guts' of your injected objects
+inspect(obj) {
+    ns = obj.namespace;
+    print("--- Variables ---");
+    for (v : ns.getVariableNames()) {
+        print(v + " = " + ns.getVariable(v));
+    }
+    print("--- Methods ---");
+    for (m : ns.getMethods()) {
+        print(m);
+    }
+}
 
 
 

@@ -18,6 +18,7 @@ import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.JTextArea;
 import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.border.EmptyBorder;
@@ -55,6 +56,7 @@ public class SpecObjectBrowser extends VirtualAppSpec {
     private JList<String> methodsList;
     private DefaultListModel<String> methodsListModel;
     private JLabel methodsHeader;
+    private JTextArea valueArea;
 
     public SpecObjectBrowser() {
         this.height = 500;
@@ -169,14 +171,35 @@ public class SpecObjectBrowser extends VirtualAppSpec {
         JScrollPane scrollPane = new JScrollPane(methodsList);
         panel.add(scrollPane, BorderLayout.CENTER);
 
+        // Value panel at bottom
+        JPanel valuePanel = new JPanel(new BorderLayout());
+        valuePanel.setBorder(new EmptyBorder(5, 0, 0, 0));
+
+        JLabel valueHeader = new JLabel("Value");
+        valueHeader.setFont(valueHeader.getFont().deriveFont(Font.BOLD));
+        valueHeader.setBorder(new EmptyBorder(0, 0, 5, 0));
+        valuePanel.add(valueHeader, BorderLayout.NORTH);
+
+        valueArea = new JTextArea(3, 20);
+        valueArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        valueArea.setEditable(false);
+        valueArea.setLineWrap(true);
+        valueArea.setWrapStyleWord(true);
+
+        JScrollPane valueScrollPane = new JScrollPane(valueArea);
+        valuePanel.add(valueScrollPane, BorderLayout.CENTER);
+
+        panel.add(valuePanel, BorderLayout.SOUTH);
+
         return panel;
     }
 
     /**
-     * Handle node selection - update the methods panel.
+     * Handle node selection - update the methods panel and value area.
      */
     private void onNodeSelected(TreePath path) {
         methodsListModel.clear();
+        valueArea.setText("");
 
         if (path == null) {
             methodsHeader.setText("Methods");
@@ -196,7 +219,15 @@ public class SpecObjectBrowser extends VirtualAppSpec {
             Object obj = interpreter.get(fullPath);
             if (obj == null) {
                 methodsListModel.addElement("(null)");
+                valueArea.setText("null");
                 return;
+            }
+
+            // Update value area with toString()
+            try {
+                valueArea.setText(obj.toString());
+            } catch (Exception e) {
+                valueArea.setText("(toString() failed: " + e.getMessage() + ")");
             }
 
             List<String> methods = getMethods(obj);
@@ -210,6 +241,7 @@ public class SpecObjectBrowser extends VirtualAppSpec {
 
         } catch (EvalError e) {
             methodsListModel.addElement("Error: " + e.getMessage());
+            valueArea.setText("Error: " + e.getMessage());
         }
     }
 

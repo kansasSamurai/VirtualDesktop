@@ -34,7 +34,15 @@ public class BshObjectTreeRenderer extends DefaultTreeCellRenderer {
     }
 
     /**
-     * Initialize colors based on current look and feel.
+     * Initialize colors based on current look and feel. 
+     * Element,Current Feel,Suggested Hex,Why it works 
+     * Object/Variable (Blue),Deep Navy,
+     *      #4FC3F7,"A ""Sky Blue"" that provides high contrast without being neon." 
+     * Class/Type (Magenta),Dark Purple,
+     *      #CE93D8,"A ""Soft Orchid"" that is significantly lighter and easier to read." 
+     * Secondary (Cyan),—,
+     *      #80DEEA,"If you need a third color, this ""Seafoam"" is very easy on the eyes."
+     * 
      */
     private void initColors() {
         // Try to get colors that work with the current LAF
@@ -44,21 +52,36 @@ public class BshObjectTreeRenderer extends DefaultTreeCellRenderer {
         }
 
         // XThis objects (BeanShell scripted) - bold blue
-        xthisColor = new Color(0, 100, 180);
+        xthisColor = new Color(0x4FC3F7); //(0, 100, 180);
 
         // Java objects - dark gray
         javaObjectColor = textColor;
 
         // Primitives - green
-        primitiveColor = new Color(0, 128, 0);
+        primitiveColor = new Color(0x80DEEA); //(0, 128, 0);
 
         // Path - lighter gray
         pathColor = Color.GRAY;
 
         // Type - dark magenta
-        typeColor = new Color(128, 0, 128);
+        typeColor = new Color(0xCE93D8); //(128, 0, 128);
     }
 
+    public static Color getReadableColor(Color source, float minBrightness) {
+        float[] hsb = Color.RGBtoHSB(source.getRed(), source.getGreen(), source.getBlue(), null);
+        
+        // hsb[0] = Hue, hsb[1] = Saturation, hsb[2] = Brightness
+        if (hsb[2] < minBrightness) {
+            return Color.getHSBColor(hsb[0], hsb[1], minBrightness);
+        }
+        return source;
+    }
+
+    // High-contrast specific shades for Black Backgrounds
+    public static final Color BRIGHT_BLUE = new Color(0x4FC3F7);    // Light Sky Blue
+    public static final Color BRIGHT_MAGENTA = new Color(0xE1BEE7); // Pale Lavender
+    public static final Color BRIGHT_CYAN = new Color(0x80DEEA);    // Electric Cyan
+    
     @Override
     public Component getTreeCellRendererComponent(JTree tree, Object value,
             boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus) {

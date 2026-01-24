@@ -1,10 +1,11 @@
 package org.jwellman.virtualdesktop.bsh;
 
+import org.jwellman.bsh.WorkspaceManager;
+import org.jwellman.virtualdesktop.DesktopManager;
+
 import bsh.ConsoleInterface;
 import bsh.EvalError;
 import bsh.Interpreter;
-
-import org.jwellman.virtualdesktop.DesktopManager;
 
 /**
  * Singleton service managing a shared BeanShell interpreter.
@@ -165,6 +166,15 @@ public class BeanShellService {
      */
     private void initializeEnvironment() {
         // Intentionally empty - see Javadoc above
+        try {
+
+            WorkspaceManager wm = new WorkspaceManager(interpreter);
+            interpreter.set("wm", wm);
+
+        } catch (EvalError e) {
+            System.err.println("Failed to initialize BeanShell environment: " + e.getMessage());
+        }
+        
     }
 
     /**

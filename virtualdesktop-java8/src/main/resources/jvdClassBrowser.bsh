@@ -155,6 +155,10 @@ jvd.app = org.jwellman.virtualdesktop.App.getVSystem();
 
 
 
+
+
+
+
 // experimental JAN 2026 : works!!
 inject(target, script) { 
     MethodInjector.inject(this.interpreter, target, script); 
@@ -182,7 +186,15 @@ inspect(obj) {
     }
 }
 
-
+listWorkspaces() {
+    print("Active Workspace: [" + wm.getActiveWorkspaceName() + "]");
+    print("Available Workspaces:");
+    names = wm.getWorkspaceNames();
+    for (n : names) {
+        print("  - " + n);
+    }
+    print("  - global (Root)");
+}
 
 
 

@@ -20,6 +20,7 @@
  ** ================================================================= */
 import bsh.ClassIdentifier;
 import bsh.util.JClassBrowser;
+import org.jwellman.bsh.*; // MethodInjector
 import org.jwellman.virtualdesktop.App;
 import org.jwellman.virtualdesktop.DesktopManager;
 
@@ -150,6 +151,28 @@ _JVD() {
 
 jvd = _JVD();
 jvd.app = org.jwellman.virtualdesktop.App.getVSystem();
+
+
+
+
+// experimental JAN 2026
+addMethod(target, script) { 
+    MethodInjector.inject(this.interpreter, target, script); 
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // The next line seems to fail under Java11+ and I have
 // not completely diagnosed the issue yet.  Therefore,
 // it has been moved to the last line of this script

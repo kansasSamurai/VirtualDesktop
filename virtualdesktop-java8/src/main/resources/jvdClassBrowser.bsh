@@ -155,12 +155,14 @@ jvd.app = org.jwellman.virtualdesktop.App.getVSystem();
 
 
 
-// experimental JAN 2026
-addMethod(target, script) { 
+// experimental JAN 2026 : works!!
+inject(target, script) { 
     MethodInjector.inject(this.interpreter, target, script); 
 }
 
-
+extend(target, script) {
+    MethodInjector.extendClosure(this.interpreter, target, script);
+}
 
 
 

@@ -31,7 +31,7 @@ public class WorkspaceManager {
     }
 
     public void switchTo(String name) {
-        int version = 3;
+        int version = 4;
         NameSpace target = null;
         
         switch (version) {
@@ -66,22 +66,46 @@ public class WorkspaceManager {
             target = "global".equalsIgnoreCase(name) ? globalNs : workspaces.get(name);
 
             if (target != null) {
-                // 1. Swap the namespace as before
+                // 1. Update the Interpreter's field (for future evals)
                 masterInterpreter.setNameSpace(target);
-                
-                // 2. THE FIX: Clear the method resolution cache
-                // We do this by invoking a clear on the namespace's internal state
-                // and re-initializing the interpreter's "this" reference.
+
+                // 2. THE SECRET SAUCE:
+                // We need to trigger the Interpreter to realize its root has changed.
+                // In 2.0b5, if we can't restart the run() loop, we must inject the
+                // change into the current stack.
                 try {
-                    // This forces BeanShell to re-evaluate its "This" pointers
-                    masterInterpreter.eval("this.interpreter.setNameSpace(this.interpreter.getNameSpace());");
-                } catch (EvalError e) {
-                    // Fallback: If eval fails, we manually trigger a change event 
-                    // if you have access to NameSpace's protected members.
+                    // This eval runs in the current (old) stack but forces
+                    // the 'this' reference to update to the new target.
+                    masterInterpreter.eval(
+                            "this.interpreter.globalNameSpace = " + "wm.getWorkspaceNamespace(\"" + name + "\");",
+                            target);
+                } catch (Exception e) {
+                    // Fallback: Manually update the 'bsh' system object
+                    // which the interpreter uses for some lookups
+                    System.out.println("EXCEPTION: Exception swapping to " + name);
+                    e.printStackTrace();
                 }
 
                 this.activeName = name;
-                System.out.println("Master Interpreter re-synced to: " + name);
+                System.out.println("CRITICAL: Namespace swapped to " + name);
+            }
+            break;
+        case 4:
+            target = "global".equalsIgnoreCase(name) ? globalNs : workspaces.get(name);
+            if (target != null) {
+                masterInterpreter.setNameSpace(target);
+
+                // Force-clear the internal "This" reference's cache
+                try {
+                    // We set a dummy variable to trigger the NameSpace's
+                    // internal 'changed' flag, which clears the method cache.
+                    target.setVariable("_lastSwitch", System.currentTimeMillis(), false);
+                } catch (Exception e) {
+                    System.out.println("EXCEPTION: Exception swapping to " + name);
+                }
+
+                this.activeName = name;
+                System.out.println("CRITICAL: Namespace swapped to " + name);
             }
             break;
         }

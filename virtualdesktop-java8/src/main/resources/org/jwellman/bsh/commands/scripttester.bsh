@@ -35,12 +35,16 @@ import java.util.ArrayList;
 import org.jwellman.virtualdesktop.DesktopManager;
 import org.jwellman.virtualdesktop.bsh.BeanShellService;
 
-// Status constants
-String STATUS_PENDING = "pending";
-String STATUS_CURRENT = "current";
-String STATUS_COMPLETED = "completed";
-String STATUS_ERROR = "error";
-String STATUS_SKIPPED = "skipped";
+/**
+ * Status constants for script line execution state.
+ */
+public class Status {
+    public static final String PENDING = "pending";
+    public static final String CURRENT = "current";
+    public static final String COMPLETED = "completed";
+    public static final String ERROR = "error";
+    public static final String SKIPPED = "skipped";
+}
 
 /**
  * Data model for each script line.
@@ -54,7 +58,7 @@ public class ScriptLine {
     public ScriptLine(int lineNumber, String text) {
         this.lineNumber = lineNumber;
         this.text = text;
-        this.status = STATUS_PENDING;
+        this.status = Status.PENDING;
         this.errorMessage = null;
     }
 
@@ -125,16 +129,16 @@ public class StatusCellRenderer extends DefaultTableCellRenderer {
         label.setHorizontalAlignment(SwingConstants.CENTER);
 
         // Use text symbols for status (works across all platforms)
-        if (STATUS_COMPLETED.equals(status)) {
+        if (Status.COMPLETED.equals(status)) {
             label.setText("\u2713"); // checkmark
             label.setForeground(new Color(0, 128, 0)); // green
-        } else if (STATUS_CURRENT.equals(status)) {
+        } else if (Status.CURRENT.equals(status)) {
             label.setText("\u25B6"); // right-pointing triangle (play)
             label.setForeground(new Color(0, 0, 200)); // blue
-        } else if (STATUS_ERROR.equals(status)) {
+        } else if (Status.ERROR.equals(status)) {
             label.setText("\u2717"); // X mark
             label.setForeground(Color.RED);
-        } else if (STATUS_SKIPPED.equals(status)) {
+        } else if (Status.SKIPPED.equals(status)) {
             label.setText("\u2014"); // em dash
             label.setForeground(Color.GRAY);
         } else {
@@ -172,17 +176,17 @@ public class CodeCellRenderer extends DefaultTableCellRenderer {
         label.setFont(monoFont);
 
         if (!isSelected) {
-            if (STATUS_COMPLETED.equals(status)) {
+            if (Status.COMPLETED.equals(status)) {
                 label.setBackground(new Color(230, 230, 230)); // light gray
                 label.setFont(italicFont);
                 label.setForeground(Color.DARK_GRAY);
-            } else if (STATUS_CURRENT.equals(status)) {
+            } else if (Status.CURRENT.equals(status)) {
                 label.setBackground(new Color(255, 255, 180)); // yellow highlight
                 label.setForeground(Color.BLACK);
-            } else if (STATUS_ERROR.equals(status)) {
+            } else if (Status.ERROR.equals(status)) {
                 label.setBackground(new Color(255, 200, 200)); // light red
                 label.setForeground(Color.BLACK);
-            } else if (STATUS_SKIPPED.equals(status)) {
+            } else if (Status.SKIPPED.equals(status)) {
                 label.setBackground(new Color(240, 240, 240)); // very light gray
                 label.setFont(italicFont);
                 label.setForeground(Color.GRAY);
@@ -217,16 +221,16 @@ public class LineNumberCellRenderer extends DefaultTableCellRenderer {
         label.setHorizontalAlignment(SwingConstants.RIGHT);
 
         if (!isSelected) {
-            if (STATUS_COMPLETED.equals(status)) {
+            if (Status.COMPLETED.equals(status)) {
                 label.setBackground(new Color(230, 230, 230));
                 label.setForeground(Color.DARK_GRAY);
-            } else if (STATUS_CURRENT.equals(status)) {
+            } else if (Status.CURRENT.equals(status)) {
                 label.setBackground(new Color(255, 255, 180));
                 label.setForeground(Color.BLACK);
-            } else if (STATUS_ERROR.equals(status)) {
+            } else if (Status.ERROR.equals(status)) {
                 label.setBackground(new Color(255, 200, 200));
                 label.setForeground(Color.BLACK);
-            } else if (STATUS_SKIPPED.equals(status)) {
+            } else if (Status.SKIPPED.equals(status)) {
                 label.setBackground(new Color(240, 240, 240));
                 label.setForeground(Color.GRAY);
             } else {
@@ -318,7 +322,7 @@ scripttester(String title, boolean standalone) {
         self.currentIndex = 0;
         for (int i = 0; i < self.lines.size(); i++) {
             ScriptLine line = (ScriptLine) self.lines.get(i);
-            line.status = STATUS_PENDING;
+            line.status = Status.PENDING;
             line.errorMessage = null;
         }
         refreshView();
@@ -335,17 +339,17 @@ scripttester(String title, boolean standalone) {
         }
 
         ScriptLine line = (ScriptLine) self.lines.get(self.currentIndex);
-        line.status = STATUS_CURRENT;
+        line.status = Status.CURRENT;
         refreshView();
 
         try {
             // Use the shared BeanShell interpreter
             BeanShellService.get().eval(line.text);
-            line.status = STATUS_COMPLETED;
+            line.status = Status.COMPLETED;
             // Only advance on success
             self.currentIndex++;
         } catch (Exception e) {
-            line.status = STATUS_ERROR;
+            line.status = Status.ERROR;
             line.errorMessage = e.getMessage();
             print("Error at line " + line.lineNumber + ": " + e.getMessage());
             // Don't advance on error - allows retry with Step or skip with Skip
@@ -384,12 +388,12 @@ scripttester(String title, boolean standalone) {
         for (int i = 0; i < self.lines.size(); i++) {
             ScriptLine line = (ScriptLine) self.lines.get(i);
             String prefix = "";
-            if (STATUS_ERROR.equals(line.status)) {
+            if (Status.ERROR.equals(line.status)) {
                 prefix = "[ERROR] ";
             }
-            if (STATUS_COMPLETED.equals(line.status) || STATUS_ERROR.equals(line.status)) {
+            if (Status.COMPLETED.equals(line.status) || Status.ERROR.equals(line.status)) {
                 executed.append(prefix).append(line.text).append("\n");
-            } else if (STATUS_CURRENT.equals(line.status)) {
+            } else if (Status.CURRENT.equals(line.status)) {
                 remaining.append(">>> ").append(line.text).append("\n");
             } else {
                 remaining.append(line.text).append("\n");
@@ -560,6 +564,31 @@ scripttester(String title, boolean standalone) {
     }
 
     /**
+     * Go back one line (not an undo - just repositions to previous line).
+     */
+    backStep() {
+        if (self.currentIndex <= 0) {
+            print("Already at the beginning.");
+            return;
+        }
+
+        // Move back one line
+        self.currentIndex--;
+
+        // Reset the current line to pending
+        ScriptLine line = (ScriptLine) self.lines.get(self.currentIndex);
+        line.status = Status.CURRENT;
+        line.errorMessage = null;
+        refreshView();
+        print("Moved back to line " + line.lineNumber);
+
+        // Scroll to show current line in table
+        if (self.isTableView && self.table != null) {
+            self.table.scrollRectToVisible(self.table.getCellRect(self.currentIndex, 0, true));
+        }
+    }
+
+    /**
      * Skip the current line without executing.
      */
     skipLine() {
@@ -569,7 +598,7 @@ scripttester(String title, boolean standalone) {
         }
 
         ScriptLine line = (ScriptLine) self.lines.get(self.currentIndex);
-        line.status = STATUS_SKIPPED;
+        line.status = Status.SKIPPED;
         self.currentIndex++;
         refreshView();
         print("Skipped line " + line.lineNumber);
@@ -609,7 +638,7 @@ scripttester(String title, boolean standalone) {
             String newText = editArea.getText().trim();
             if (newText.length() > 0) {
                 line.text = newText;
-                line.status = STATUS_PENDING;
+                line.status = Status.PENDING;
                 line.errorMessage = null;
                 refreshView();
                 print("Line " + line.lineNumber + " updated.");
@@ -623,6 +652,8 @@ scripttester(String title, boolean standalone) {
 
         if ("Step".equals(cmd)) {
             stepExecution();
+        } else if ("Back".equals(cmd)) {
+            backStep();
         } else if ("Reset".equals(cmd)) {
             resetExecution();
         } else if ("Load".equals(cmd)) {
@@ -650,6 +681,10 @@ scripttester(String title, boolean standalone) {
     self.stepBtn = new JButton("Step");
     self.stepBtn.addActionListener(this);
     self.buttonPanel.add(self.stepBtn);
+
+    self.backBtn = new JButton("Back");
+    self.backBtn.addActionListener(this);
+    self.buttonPanel.add(self.backBtn);
 
     self.skipBtn = new JButton("Skip");
     self.skipBtn.addActionListener(this);

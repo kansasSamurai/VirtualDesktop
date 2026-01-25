@@ -44,94 +44,16 @@ public class WorkspaceManager {
     }
 
     public void switchTo(String name) {
-        int version = 4;
-        NameSpace target = null;
-        
-        switch (version) {
-        case 1:
-            // This is the version that "mostly" works... testing version 2
-            
-            // We ignore any passed-in interpreter and use the Master
-            if (name.equals("global")) {
-                masterInterpreter.setNameSpace(globalNs);
-                activeName = "global";
-            } else {
-                target = workspaces.get(name);
-                if (target != null) {
-                    masterInterpreter.setNameSpace(target);
-                    activeName = name;
-                }
-            }
-            break;
-        case 2:
-            // This is an attempted fix so that the console will "see" the same namespace as the scripttester
-            
-            target = name.equals("global") ? globalNs : workspaces.get(name);
-            if (target != null) {
-                // Force the MASTER interpreter to point to the new namespace
-                this.masterInterpreter.setNameSpace(target);
-                this.activeName = name;
-                System.out.println("Master Interpreter shifted to: " + name);
-            }
-            break;
-        case 3:
-            // version 2 didn't work... version 3
-            target = "global".equalsIgnoreCase(name) ? globalNs : workspaces.get(name);
 
-            if (target != null) {
-                // 1. Update the Interpreter's field (for future evals)
-                masterInterpreter.setNameSpace(target);
+        NameSpace target = "global".equalsIgnoreCase(name) ? globalNs : workspaces.get(name);
+        if (target != null) {
+            // This now triggers the JJTree reset and field update in one go
+            masterInterpreter.setNameSpace(target);
 
-                // 2. THE SECRET SAUCE:
-                // We need to trigger the Interpreter to realize its root has changed.
-                // In 2.0b5, if we can't restart the run() loop, we must inject the
-                // change into the current stack.
-                try {
-                    // This eval runs in the current (old) stack but forces
-                    // the 'this' reference to update to the new target.
-                    masterInterpreter.eval(
-                            "this.interpreter.globalNameSpace = " + "wm.getWorkspaceNamespace(\"" + name + "\");",
-                            target);
-                } catch (Exception e) {
-                    // Fallback: Manually update the 'bsh' system object
-                    // which the interpreter uses for some lookups
-                    System.out.println("EXCEPTION: Exception swapping to " + name);
-                    e.printStackTrace();
-                }
-
-                this.activeName = name;
-                System.out.println("CRITICAL: Namespace swapped to " + name);
-            }
-            break;
-        case 4:
-            System.out.println("INFO: Fix version 4 ");
-            target = "global".equalsIgnoreCase(name) ? globalNs : workspaces.get(name);
-            if (target != null) {
-                // 1. Update the master pointer
-                masterInterpreter.setNameSpace(target);
-
-                // 2. Re-anchor the live stack
-                // We use 'this.interpreter' to ensure we are talking to the Master.
-                // We clear the stack and push the NEW namespace that we just set.
-                try {
-                    masterInterpreter.eval(
-                            "this.interpreter.globalNameSpace = " + "wm.getWorkspaceNamespace(\"" + name + "\");");
-
-                    // This is the specific line to reset the stack's base
-                    // without relying on 'this' as a namespace reference.
-                    masterInterpreter.eval("this.interpreter.getNameSpace().clear();");
-                } catch (Exception e) {
-                    // Manual fallback if eval is blocked
-                    masterInterpreter.setu("global", target);
-                    System.out.println("EXCEPTION: Exception swapping to " + name);
-                    e.printStackTrace();
-                }
-
-                this.activeName = name;
-                System.out.println("CRITICAL: Namespace swapped to " + name);
-            }
-            break;
+            this.activeName = name;
+            System.out.println("SYNC: Swapped to " + name + " [Hash: " + System.identityHashCode(target) + "]");
         }
+
     }
 
     public void deleteWorkspace(String name) {
@@ -249,9 +171,58 @@ print("Tool sees: " + tempFunc());
 print("Interpreter thinks it is in: " + this.interpreter.getNameSpace().getName());
 print("Console sees: " + tempFunc());
 
+---------------- logic gamma ----------------------------
+// console : set a baseline
+print("Current Hash: " + System.identityHashCode(this.interpreter.getNameSpace()));
 
+// script tester
+wm.createWorkspace("gamma_test");
+wm.switchTo("gamma_test");
+logicGamma() { return "Gamma Source-Shim Success!"; }
+print("Tool defined logicGamma in gamma_test");
 
+// console
+// Refresh the console's view of the 'current' namespace without setting it
+print("Current Hash: " + System.identityHashCode(this.interpreter.getNameSpace()));
+print(logicGamma());
 
+// success!!! followup...
+
+// 1. Switch back to global
+wm.switchTo("global");
+
+// 2. Exercise the shim
+1+1; 
+
+// 3. Verify Isolation (These should both fail/return null)
+print("Testing isolation in Global...");
+
+try {
+    logicGamma(); 
+    print("FAILURE: logicGamma is visible in global!");
+} catch (Exception e) {
+    print("SUCCESS: logicGamma is isolated (not found in global).");
+}
+
+// 4. Switch back to gamma_test
+wm.switchTo("gamma_test");
+1+1;
+
+// 5. Verify Persistence
+print("Result in gamma_test: " + logicGamma());
+
+----------- failure followup ------------
+// 1. Is this the original global?
+print("Current Hash: " + System.identityHashCode(this.interpreter.getNameSpace()));
+// Compare this to your very first hash (2089204349). 
+// If it matches, then the object IS the same, but its CONTENTS were wiped.
+// If it is different, we have a "Namespace Collision" where two objects are named 'global'.
+
+// 2. Look for the 'wm' object
+print("Is wm here? " + (this.interpreter.get("wm") != null));
+
+// 3. Check Parentage
+print("Parent of current: " + this.interpreter.getNameSpace().getParent());
 
 
 

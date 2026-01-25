@@ -313,25 +313,33 @@ public class Interpreter
         interpreter via eval() and the script variable 'this.namespace'
         (or global.namespace as necessary).
     */
-    public void setNameSpace( NameSpace globalNameSpace ) {
+    /**
+     * Set the global namespace for this interpreter and sync the callstack.
+     */
+    public void setNameSpace(NameSpace globalNameSpace) {
         this.globalNameSpace = globalNameSpace;
+        // The Hard Sync: If we have an active parser/jjtree context,
+        // we ensure the next evaluation starts from this new namespace.
+        if (globalNameSpace != null) {
+            get_jjtree().reset();
+        }
     }
 
     /**
-        Get the global namespace of this interpreter.
-        <p>
-
-        Note: This is here for completeness.  If you're using this a lot 
-        it may be an indication that you are doing more work than you have 
-        to.  For example, caching the interpreter instance rather than the 
-        namespace should not add a significant overhead.  No state other than 
-        the debug status is stored in the interpreter.  
-        <p>
-
-        All features of the namespace can also be accessed using the 
-        interpreter via eval() and the script variable 'this.namespace'
-        (or global.namespace as necessary).
-    */
+     * Get the global namespace of this interpreter.
+     * <p>
+     * 
+     * Note: This is here for completeness. If you're using this a lot it may be an
+     * indication that you are doing more work than you have to. For example,
+     * caching the interpreter instance rather than the namespace should not add a
+     * significant overhead. No state other than the debug status is stored in the
+     * interpreter.
+     * <p>
+     * 
+     * All features of the namespace can also be accessed using the interpreter via
+     * eval() and the script variable 'this.namespace' (or global.namespace as
+     * necessary).
+     */
     public NameSpace getNameSpace() {
         return globalNameSpace;
     }
@@ -551,7 +559,7 @@ public class Interpreter
                 System.out.println("BSH-SYNC: Re-anchoring to " + globalNameSpace.getName() 
                         + " [Hash: " + System.identityHashCode(globalNameSpace) + "]");
                 callstack.clear();
-                callstack.push(getNameSpace());
+                callstack.push(globalNameSpace);
 
                 // Telemetry: After Sync
                 System.out.println("DEBUG: Post-Sync NS Name: " + getNameSpace().getName());

@@ -191,14 +191,11 @@
           }
         },
         {
-          "class": "org.jwellman.virtualdesktop.vapps.SpecBeanShellScript",
+          "class": "org.jwellman.virtualdesktop.vapps.SpecScriptTester",
           "title": "Script Tester",
           "icon": "document176",
           "enabled": true,
-          "desktopOnly": false,
-          "attrs": {
-            "scriptPath": "src/main/resources/org/jwellman/bsh/commands/scripttester.bsh"
-          }
+          "desktopOnly": false
         }
       ]
     }

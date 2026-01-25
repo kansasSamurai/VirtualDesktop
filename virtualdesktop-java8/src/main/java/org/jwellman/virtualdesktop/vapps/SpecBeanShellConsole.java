@@ -3,13 +3,11 @@ package org.jwellman.virtualdesktop.vapps;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import bsh.EvalError;
-import bsh.Interpreter;
-
 import org.jwellman.console.ConsoleTheme;
 import org.jwellman.console.impl.BeanShellAdapter;
-import org.jwellman.console.ui.GenericConsole;
-import org.jwellman.virtualdesktop.bsh.BeanShellService;
+
+import bsh.EvalError;
+import bsh.Interpreter;
 
 /**
  * BeanShell Console vapp using the new GenericConsole architecture.
@@ -38,7 +36,7 @@ public class SpecBeanShellConsole extends SpecGenericConsole implements Runnable
      * Create a BeanShell console with default theme.
      */
     public SpecBeanShellConsole() {
-        this(ConsoleTheme.classic());
+        this(ConsoleTheme.dark());
     }
 
     /**

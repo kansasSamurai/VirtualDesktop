@@ -24,10 +24,23 @@ public class WorkspaceManager {
         this.globalNs = it.getNameSpace();
     }
 
-    public void createWorkspace(Interpreter it, String name) {
+    public void createWorkspace(String name) {
         // Create a new namespace with Global as the parent
         NameSpace ws = new NameSpace(globalNs, name);
         workspaces.put(name, ws);
+    }
+
+    /**
+     * Provides a bridge for the BeanShell script to retrieve a specific 
+     * NameSpace object from the manager's map.
+     */
+    public NameSpace getWorkspaceNamespace(String name) {
+        if (workspaces.containsKey(name)) {
+            return workspaces.get(name);
+        } else if ("global".equalsIgnoreCase(name)) {
+            return globalNs;
+        }
+        return null;
     }
 
     public void switchTo(String name) {
@@ -91,17 +104,27 @@ public class WorkspaceManager {
             }
             break;
         case 4:
+            System.out.println("INFO: Fix version 4 ");
             target = "global".equalsIgnoreCase(name) ? globalNs : workspaces.get(name);
             if (target != null) {
+                // 1. Update the master pointer
                 masterInterpreter.setNameSpace(target);
 
-                // Force-clear the internal "This" reference's cache
+                // 2. Re-anchor the live stack
+                // We use 'this.interpreter' to ensure we are talking to the Master.
+                // We clear the stack and push the NEW namespace that we just set.
                 try {
-                    // We set a dummy variable to trigger the NameSpace's
-                    // internal 'changed' flag, which clears the method cache.
-                    target.setVariable("_lastSwitch", System.currentTimeMillis(), false);
+                    masterInterpreter.eval(
+                            "this.interpreter.globalNameSpace = " + "wm.getWorkspaceNamespace(\"" + name + "\");");
+
+                    // This is the specific line to reset the stack's base
+                    // without relying on 'this' as a namespace reference.
+                    masterInterpreter.eval("this.interpreter.getNameSpace().clear();");
                 } catch (Exception e) {
+                    // Manual fallback if eval is blocked
+                    masterInterpreter.setu("global", target);
                     System.out.println("EXCEPTION: Exception swapping to " + name);
+                    e.printStackTrace();
                 }
 
                 this.activeName = name;

@@ -17,7 +17,7 @@ A comprehensive guide to using VirtualDesktop - your Java-based virtual desktop 
   - [6. Data Tools](#6-data-tools)
   - [7. Visualization](#7-visualization)
   - [8. Utilities](#8-utilities)
-- [Part 4: Configuration & Customization](#part-4-configuration--customization)
+- [Part 4: Configuration & Customization] #part-4-configuration--customization 
   - [9. Theming](#9-theming)
   - [10. Menu Customization](#10-menu-customization)
   - [11. Database Configuration](#11-database-configuration)

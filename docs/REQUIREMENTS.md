@@ -29,14 +29,14 @@ VirtualDesktop is a Java-based virtual desktop application providing a consisten
 
 ## Features
 
-- [BeanShell Integration](#beanshell-integration)
+- [BeanShell Integration] #beanshell-integration
 - [External Applications](#external-applications)
 - [Tool Configuration](#tool-configuration)
-- [UI/UX Guidelines](#uiux-guidelines)
+- [UI/UX Guidelines] #uiux-guidelines 
 - [Taskbar](#taskbar)
 - [State Management (Redux-Style)](#state-management-redux-style)
 
-### BeanShell Integration
+### BeanShell Integration {#beanshell-integration}
 
 #### Shared Interpreter Architecture
 
@@ -125,7 +125,7 @@ return global.myTool;  // Return "this" for lifecycle support
 
 ---
 
-### UI/UX Guidelines
+### UI/UX Guidelines {#uiux-guidelines} {{anchor uiux-guidelines}}
 
 #### Portable Tool Design
 

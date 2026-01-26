@@ -12,22 +12,125 @@ import java.util.Map;
 public class WorkspaceManager {
 
     private String activeName = "global";
-    private NameSpace globalNs;
-    // The persistent interpreter; not the temporary one created during each eval loop
+
+    /** The "Data" bucket */
+    private NameSpace globalNs; 
+
+    /** The "Tools" bucket */
+    private NameSpace utilityNs; 
+
+    /** The persistent interpreter; not the temporary one created during each eval loop */
     private Interpreter masterInterpreter; 
+
+    /** The collection of workspaces */
     private Map<String, NameSpace> workspaces = new HashMap<>();
 
+    /**
+     * 
+     * @param it
+     */
     public WorkspaceManager(Interpreter it) {
         this.masterInterpreter = it;
 
-        // Capture the original global namespace
+        // 1. Capture the original global as the Data bucket
         this.globalNs = it.getNameSpace();
+
+        // 2. Extract or define the Utility parent
+        // If your interpreter already has a parent (like the 'system' namespace), capture it.
+        // Otherwise, create a new one to hold your commands.
+        this.utilityNs = globalNs.getParent();
+        if (utilityNs == null) {
+            this.utilityNs = new NameSpace((NameSpace) null, "utility");
+            // TODO I really need to enable the following line for 
+            // future completeness but I do not want to brick my current environment.
+            // globalNs.setParent(utilityNs);
+        }
+
     }
 
+    /**
+     * Why this is the "Golden Path"
+     * 
+     * Shared Tools: Any method defined in utilityNs (like a custom log() function)
+     * is immediately available in every workspace you ever create.
+     * 
+     * Data Isolation: If you define userData = 500 in Global, a workspace will not
+     * see it because they are now "siblings" under the Utility parent, rather than
+     * a child of Global.
+     * 
+     * Clean Object Browser: Your Object Browser will show the Workspace as almost
+     * empty, keeping your focus on the new code you are writing.
+     * 
+     * @param name
+     */
     public void createWorkspace(String name) {
         // Create a new namespace with Global as the parent
-        NameSpace ws = new NameSpace(globalNs, name);
+        // NameSpace ws = new NameSpace(globalNs, name);
+
+        // We set UTILITY as the parent, NOT global.
+        // This gives the workspace the tools, but isolates it from Global's data.
+        NameSpace ws = new NameSpace(utilityNs, name);
         workspaces.put(name, ws);
+    }
+
+    // TODO this has not been tested yet!!
+    /*
+     * Next Up: Implementing the Utility Parent hierarchy to keep your tools
+     * available in every workspace without cluttering the data.
+     * 
+     * When you're ready to pick this back up, would you like me to help you wrap
+     * this migration logic into a "Bootstrap" class that fires whenever the
+     * environment starts?
+     * 
+     */
+    public void migrateCommands(NameSpace source, NameSpace destination) {
+        // 1. Migrate Methods (commands like print, cls, etc.)
+// This is gemini's first version; compare with second version before final testing/commit
+//        String[] methodNames = source.getMethodNames(); //.getDeclaredMethodNames();
+//        for (String mName : methodNames) {
+//            try {
+//                // We only migrate methods that aren't internal BeanShell hooks
+//                if (!mName.startsWith("_") && !mName.equals("main")) {
+//                    BshMethod[] methods = source.getMethods(mName, new Class[0], true);
+//                    for (BshMethod m : methods) {
+//                        destination.setMethod(m.getName(), m); // .insertMethod(m);
+//                    }
+//                }
+//            } catch (UtilEvalError e) {
+//                System.err.println("Could not migrate method: " + mName);
+//            }
+//        }
+///////////////
+        String[] methodNames = source.getMethodNames();
+        for (String mName : methodNames) {
+            // We avoid internal hooks to keep the utility namespace 'clean'
+            if (!mName.startsWith("_") && !mName.equals("main")) {
+                try {
+                    // Note: Use getMethod(name, paramTypes)
+                    // We'll try to get the no-arg version or the most common version
+                    BshMethod m = source.getMethod(mName, new Class[0]);
+                    if (m != null) {
+                        destination.setMethod(m.getName(), m);
+                    }
+
+                } catch (UtilEvalError e) {
+                    System.err.println("Could not migrate method: " + mName);
+                }
+            }
+        }
+
+        // 2. Migrate Core Objects (like wm, db, etc.)
+        // Note: You may want to be selective here so you don't move "data"
+        String[] varNames = source.getVariableNames();
+        for (String vName : varNames) {
+            if (vName.equals("wm") || vName.equals("bsh")) {
+                try {
+                    destination.setVariable(vName, source.getVariable(vName), false);
+                } catch (UtilEvalError e) {
+                    System.err.println("Could not migrate variable: " + vName);
+                }
+            }
+        }
     }
 
     /**
@@ -68,26 +171,39 @@ public class WorkspaceManager {
         return workspaces.keySet().toArray(new String[0]);
     }
 
+    /* =============== sandbox features ============= */
+
+    public void createSandbox(String name) {
+        // Passing null as the parent creates a root-level namespace
+        // It will NOT see global variables or methods.
+        NameSpace sandbox = new NameSpace((NameSpace)null, name);
+        
+        // Note: You may need to manually load default imports if 
+        // you want basic Java types (String, etc.) available.
+        // sandbox.loadDefaultImports(); 
+        
+        workspaces.put(name, sandbox);
+    }    
     
     /* ======== test script =============
 
 print("Scripted Tool sees wm as: " + System.identityHashCode(wm));
 
-// 1. Define something in Global
+// 1. Initial State - Define something in Global
 x = 100;
 
 // 2. Create and switch to a scratchpad
-wm.createWorkspace(this.interpreter, "test1");
+wm.createWorkspace("test1");
 wm.switchTo("test1");
 
-// 3. Pollute this workspace
+// 3. Local Mutation
 var x = 200; // This no longer shadows the global 'x'
 tempFunc() { return "I only exist in test1"; }
 
 print(x); // Prints 200
 print(tempFunc()); // Prints "I only exist..."
 
-// 4. Switch back to Global or a fresh workspace
+// 4. Verification - Switch back to Global
 wm.switchTo("global");
 
 print(x); // Prints 100! The global value is untouched.

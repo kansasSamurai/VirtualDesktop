@@ -32,6 +32,11 @@ import bsh.Interpreter;
 import bsh.NameSpace;
 import bsh.XThis;
 
+import org.jwellman.bsh.state.actions.BshActionTypes;
+import org.jwellman.bsh.state.model.BshState;
+import org.jwellman.bsh.state.store.BshStore;
+import org.jwellman.bsh.state.store.BshSubscriber;
+import org.jwellman.bsh.state.store.BshSubscription;
 import org.jwellman.virtualdesktop.bsh.BeanShellService;
 import org.jwellman.virtualdesktop.bsh.objectbrowser.BshObjectTreeModel;
 import org.jwellman.virtualdesktop.bsh.objectbrowser.BshObjectTreeNode;
@@ -57,6 +62,8 @@ public class SpecObjectBrowser extends VirtualAppSpec {
     private DefaultListModel<String> methodsListModel;
     private JLabel methodsHeader;
     private JTextArea valueArea;
+    private BshSubscription stateSubscription;
+    private String lastActiveWorkspaceId;
 
     public SpecObjectBrowser() {
         this.height = 500;
@@ -148,6 +155,30 @@ public class SpecObjectBrowser extends VirtualAppSpec {
 
         this.setTitle("Object Browser");
         this.setContent(this.createDefaultContent(panel));
+
+        // Subscribe to BshStore state changes for auto-refresh
+        subscribeToStateChanges();
+    }
+
+    /**
+     * Subscribe to BshStore state changes to auto-refresh when namespace changes.
+     */
+    private void subscribeToStateChanges() {
+        // Capture initial workspace ID
+        lastActiveWorkspaceId = BshStore.get().getState().getWorkspaces().getActiveWorkspaceId();
+
+        stateSubscription = BshStore.get().subscribe(new BshSubscriber() {
+            @Override
+            public void onStateChanged(BshState newState) {
+                String currentWorkspaceId = newState.getWorkspaces().getActiveWorkspaceId();
+
+                // Auto-refresh when workspace changes
+                if (!currentWorkspaceId.equals(lastActiveWorkspaceId)) {
+                    lastActiveWorkspaceId = currentWorkspaceId;
+                    refresh();
+                }
+            }
+        });
     }
 
     /**

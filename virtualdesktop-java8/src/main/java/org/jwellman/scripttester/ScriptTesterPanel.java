@@ -31,6 +31,8 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 
+import org.jwellman.bsh.state.actions.BshActions;
+import org.jwellman.bsh.state.store.BshStore;
 import org.jwellman.virtualdesktop.bsh.BeanShellService;
 
 /**
@@ -59,6 +61,8 @@ public class ScriptTesterPanel extends JPanel implements ActionListener {
 
     private final List<ScriptLine> lines = new ArrayList<ScriptLine>();
     private int currentIndex = 0;
+    private String currentScriptId = null;
+    private static int scriptCounter = 0;
 
     private ScriptTableModel tableModel;
     private JTable table;
@@ -158,6 +162,10 @@ public class ScriptTesterPanel extends JPanel implements ActionListener {
             lines.add(new ScriptLine(lineNum, rawLines[i]));
         }
 
+        // Generate a new script ID and dispatch SCRIPT_STARTED
+        currentScriptId = "script-" + (++scriptCounter);
+        BshStore.get().dispatch(BshActions.scriptStarted(currentScriptId, "Loaded Script", lines.size()));
+
         print("Loaded " + lines.size() + " lines.");
     }
 
@@ -180,6 +188,10 @@ public class ScriptTesterPanel extends JPanel implements ActionListener {
     private void stepExecution() {
         if (currentIndex >= lines.size()) {
             print("Script complete.");
+            // Dispatch SCRIPT_COMPLETED when all lines are done
+            if (currentScriptId != null) {
+                BshStore.get().dispatch(BshActions.scriptCompleted(currentScriptId, null));
+            }
             return;
         }
 
@@ -189,14 +201,32 @@ public class ScriptTesterPanel extends JPanel implements ActionListener {
 
         try {
             // Use the shared BeanShell interpreter
-            BeanShellService.get().eval(line.getText());
+            Object result = BeanShellService.get().eval(line.getText());
             line.setStatus(Status.COMPLETED);
+
+            // Dispatch SCRIPT_LINE_EXECUTED
+            if (currentScriptId != null) {
+                BshStore.get().dispatch(BshActions.scriptLineExecuted(
+                    currentScriptId, line.getLineNumber(), line.getText()));
+            }
+
             // Only advance on success
             currentIndex++;
+
+            // Check if script is now complete
+            if (currentIndex >= lines.size() && currentScriptId != null) {
+                BshStore.get().dispatch(BshActions.scriptCompleted(currentScriptId, result));
+            }
         } catch (Exception e) {
             line.setStatus(Status.ERROR);
             line.setErrorMessage(e.getMessage());
             print("Error at line " + line.getLineNumber() + ": " + e.getMessage());
+
+            // Dispatch SCRIPT_ERROR
+            if (currentScriptId != null) {
+                BshStore.get().dispatch(BshActions.scriptError(
+                    currentScriptId, line.getLineNumber(), e.getMessage()));
+            }
             // Don't advance on error - allows retry with Step or skip with Skip
         }
 

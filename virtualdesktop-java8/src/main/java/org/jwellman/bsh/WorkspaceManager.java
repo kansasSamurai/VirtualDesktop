@@ -4,6 +4,9 @@ import bsh.*;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.jwellman.bsh.state.actions.BshActions;
+import org.jwellman.bsh.state.store.BshStore;
+
 /**
  * 
  * 
@@ -64,13 +67,24 @@ public class WorkspaceManager {
      * @param name
      */
     public void createWorkspace(String name) {
-        // Create a new namespace with Global as the parent
-        // NameSpace ws = new NameSpace(globalNs, name);
 
-        // We set UTILITY as the parent, NOT global.
-        // This gives the workspace the tools, but isolates it from Global's data.
-        NameSpace ws = new NameSpace(utilityNs, name);
-        workspaces.put(name, ws);
+        boolean global = true;
+
+        // Eventually I want the utility namespace but I don't have
+        // it completely setup yet.
+        if (global) {
+            // Create a new namespace with Global as the parent
+            NameSpace ws = new NameSpace(globalNs, name);
+            workspaces.put(name, ws);
+        } else {
+            // We set UTILITY as the parent, NOT global.
+            // This gives the workspace the tools, but isolates it from Global's data.
+            NameSpace ws = new NameSpace(utilityNs, name);
+            workspaces.put(name, ws);
+        }
+
+        // Dispatch WORKSPACE_CREATED action
+        BshStore.get().dispatch(BshActions.workspaceCreated(name, name, false));
     }
 
     // TODO this has not been tested yet!!
@@ -155,12 +169,18 @@ public class WorkspaceManager {
 
             this.activeName = name;
             System.out.println("SYNC: Swapped to " + name + " [Hash: " + System.identityHashCode(target) + "]");
+
+            // Dispatch WORKSPACE_SWITCHED action
+            BshStore.get().dispatch(BshActions.workspaceSwitched(name));
         }
 
     }
 
     public void deleteWorkspace(String name) {
         workspaces.remove(name);
+
+        // Dispatch WORKSPACE_DELETED action
+        BshStore.get().dispatch(BshActions.workspaceDeleted(name));
     }
     
     public String getActiveWorkspaceName() {
@@ -177,12 +197,15 @@ public class WorkspaceManager {
         // Passing null as the parent creates a root-level namespace
         // It will NOT see global variables or methods.
         NameSpace sandbox = new NameSpace((NameSpace)null, name);
-        
-        // Note: You may need to manually load default imports if 
+
+        // Note: You may need to manually load default imports if
         // you want basic Java types (String, etc.) available.
-        // sandbox.loadDefaultImports(); 
-        
+        // sandbox.loadDefaultImports();
+
         workspaces.put(name, sandbox);
+
+        // Dispatch WORKSPACE_CREATED action (sandbox = true)
+        BshStore.get().dispatch(BshActions.workspaceCreated(name, name, true));
     }    
     
     /* ======== test script =============
@@ -288,10 +311,9 @@ print("Interpreter thinks it is in: " + this.interpreter.getNameSpace().getName(
 print("Console sees: " + tempFunc());
 
 ---------------- logic gamma ----------------------------
-// console : set a baseline
+// script tester
 print("Current Hash: " + System.identityHashCode(this.interpreter.getNameSpace()));
 
-// script tester
 wm.createWorkspace("gamma_test");
 wm.switchTo("gamma_test");
 logicGamma() { return "Gamma Source-Shim Success!"; }
@@ -308,21 +330,14 @@ print(logicGamma());
 wm.switchTo("global");
 
 // 2. Exercise the shim
-1+1; 
+//1+1; 
 
 // 3. Verify Isolation (These should both fail/return null)
 print("Testing isolation in Global...");
-
-try {
-    logicGamma(); 
-    print("FAILURE: logicGamma is visible in global!");
-} catch (Exception e) {
-    print("SUCCESS: logicGamma is isolated (not found in global).");
-}
+print(logicGamma());
 
 // 4. Switch back to gamma_test
 wm.switchTo("gamma_test");
-1+1;
 
 // 5. Verify Persistence
 print("Result in gamma_test: " + logicGamma());

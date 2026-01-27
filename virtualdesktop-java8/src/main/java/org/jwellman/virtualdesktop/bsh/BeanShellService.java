@@ -1,6 +1,8 @@
 package org.jwellman.virtualdesktop.bsh;
 
 import org.jwellman.bsh.WorkspaceManager;
+import org.jwellman.bsh.state.actions.BshActions;
+import org.jwellman.bsh.state.store.BshStore;
 import org.jwellman.virtualdesktop.DesktopManager;
 
 import bsh.ConsoleInterface;
@@ -85,6 +87,9 @@ public class BeanShellService {
                 interpreter = new Interpreter();
             }
             initializeEnvironment();
+
+            // Dispatch INTERPRETER_INITIALIZED action
+            BshStore.get().dispatch(BshActions.interpreterInitialized());
         }
         return interpreter;
     }
@@ -212,6 +217,9 @@ public class BeanShellService {
         try {
             getInterpreter().eval("clear();");
             initializeEnvironment();
+
+            // Dispatch INTERPRETER_RESET action
+            BshStore.get().dispatch(BshActions.interpreterReset());
         } catch (EvalError e) {
             System.err.println("Failed to reset BeanShell environment: " + e.getMessage());
         }

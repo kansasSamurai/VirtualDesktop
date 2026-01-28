@@ -22,9 +22,9 @@ import bsh.NameSpace;
  */
 public class BshObjectTreeModel extends DefaultTreeModel implements TreeWillExpandListener {
 
-    private static final long serialVersionUID = 1L;
-
     private final transient Interpreter interpreter;
+
+    private static final long serialVersionUID = 1L;
 
     /**
      * Create a tree model for the given interpreter.
@@ -47,6 +47,7 @@ public class BshObjectTreeModel extends DefaultTreeModel implements TreeWillExpa
         try {
             // Get the global namespace
             NameSpace globalNs = interpreter.getNameSpace();
+            System.out.println("loadRootVariables.globalNs : " + globalNs.getName());
             String[] varNames = globalNs.getVariableNames();
 
             if (varNames != null) {
@@ -89,6 +90,7 @@ public class BshObjectTreeModel extends DefaultTreeModel implements TreeWillExpa
      */
     public Object getValueAt(String path) {
         try {
+            // TODO this is probably where the "value" issue is coming from
             return interpreter.get(path);
         } catch (EvalError e) {
             return null;
@@ -115,4 +117,5 @@ public class BshObjectTreeModel extends DefaultTreeModel implements TreeWillExpa
     public void treeWillCollapse(TreeExpansionEvent event) throws ExpandVetoException {
         // No action needed on collapse
     }
+
 }

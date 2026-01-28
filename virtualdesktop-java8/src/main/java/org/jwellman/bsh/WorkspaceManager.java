@@ -329,7 +329,7 @@ print(logicGamma());
 // 1. Switch back to global
 wm.switchTo("global");
 
-// 2. Exercise the shim
+// 2. Exercise the shim (no longer necessary)
 //1+1; 
 
 // 3. Verify Isolation (These should both fail/return null)

@@ -127,6 +127,7 @@ public class JConsole extends JScrollPane implements
             };
 
         text.setText("");
+        text.setCaretColor(Color.black);
         text.setBackground(PAPER);
         this.setFont( text, font );
         text.setMargin( new Insets(7,5,7,5) );

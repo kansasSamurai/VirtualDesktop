@@ -832,7 +832,7 @@ public class Interpreter
 
     /* 
         Primary interpreter set and get variable methods
-        Note: These are squeltching errors... should they?
+        Note: These are squelching errors... should they?
     */
 
     /**

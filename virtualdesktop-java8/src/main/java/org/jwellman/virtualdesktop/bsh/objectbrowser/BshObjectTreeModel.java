@@ -32,7 +32,10 @@ public class BshObjectTreeModel extends DefaultTreeModel implements TreeWillExpa
      * @param interpreter the BeanShell interpreter
      */
     public BshObjectTreeModel(Interpreter interpreter) {
-        super(new BshObjectTreeNode("global", "global", interpreter));
+//        super(new BshObjectTreeNode("global", "global", interpreter));
+// new [A]
+        super(new BshObjectTreeNode(interpreter.getNameSpace().getName(), "", interpreter));
+
         this.interpreter = interpreter;
         loadRootVariables();
     }
@@ -53,7 +56,10 @@ public class BshObjectTreeModel extends DefaultTreeModel implements TreeWillExpa
             if (varNames != null) {
                 Arrays.sort(varNames);
                 for (String varName : varNames) {
-                    String fullPath = "global." + varName;
+//                    String fullPath = "global." + varName;
+// new [A]
+                    String fullPath = varName;
+
                     BshObjectTreeNode childNode = new BshObjectTreeNode(
                         varName, fullPath, interpreter);
                     rootNode.add(childNode);
@@ -78,6 +84,11 @@ public class BshObjectTreeModel extends DefaultTreeModel implements TreeWillExpa
      * Refresh the tree model, reloading all variables from the namespace.
      */
     public void refresh() {
+// new [A]
+        String nsName = interpreter.getNameSpace().getName();
+        BshObjectTreeNode newRoot = new BshObjectTreeNode(nsName, "global", interpreter);
+        setRoot(newRoot);
+
         loadRootVariables();
         nodeStructureChanged((BshObjectTreeNode) getRoot());
     }

@@ -2,6 +2,7 @@ package org.jwellman.virtualdesktop.vapps;
 
 import java.awt.BorderLayout;
 import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -11,6 +12,8 @@ import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
 import org.jwellman.virtualdesktop.bsh.BeanShellService;
+
+import bsh.EvalError;
 
 /**
  * A workspace that launches multiple tools together as dockables
@@ -60,7 +63,8 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
             return;
         }
 
-        String[] tools = toolsList.split(",");
+        // Use semicolon because bsh scripts might need parameters (thus commas)
+        String[] tools = toolsList.split(";");
         for (String tool : tools) {
             tool = tool.trim();
             if (tool.isEmpty()) continue;
@@ -83,7 +87,14 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
         }
 
         Class<?> clazz = Class.forName(className);
-        Object instance = clazz.newInstance();
+        Object instance;
+
+        // Try hosted constructor first, fall back to no-arg
+        try {
+            instance = clazz.getConstructor(boolean.class).newInstance(true);
+        } catch (NoSuchMethodException e) {
+            instance = clazz.newInstance();
+        }
 
         if (instance instanceof VirtualAppSpec) {
             VirtualAppSpec spec = (VirtualAppSpec) instance;
@@ -97,6 +108,8 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
     }
 
     private void addBshTool(String command) throws Exception {
+        LOG.info("addBshTool(command): " + command);
+
         BeanShellService bsh = BeanShellService.get();
         Object result = bsh.eval(command);
 
@@ -113,25 +126,33 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
         // For BeanShell "this" objects, try to extract a panel
         bsh.getInterpreter().set("__workspace_result", result);
 
-        // Try getContent() first
+        // Try getContent() first (i.e. VirtualAppSpec)
         try {
             Object panel = bsh.eval("__workspace_result.getContent();");
-            if (panel instanceof JComponent) {
-                addDockable(command, (JComponent) panel);
+            Object title = bsh.eval("__workspace_result.getTitle();");
+            if (addPanel(panel, title, bsh, command))
                 return;
-            }
         } catch (Exception ignore) { }
 
-        // Try .panel property (like better.bsh uses)
+        // Try .panel property (like better.bsh uses) : must also have a title property
         try {
             Object panel = bsh.eval("__workspace_result.panel;");
-            if (panel instanceof JComponent) {
-                addDockable(command, (JComponent) panel);
+            Object title = bsh.eval("__workspace_result.title;");
+            if (addPanel(panel, title, bsh, command))
                 return;
-            }
         } catch (Exception ignore) { }
 
+
         LOG.warning("BeanShell tool did not return a usable component: " + command);
+    }
+
+    private boolean addPanel(Object panel, Object title, BeanShellService bsh, String command) throws EvalError {
+        if (panel instanceof JComponent) {
+            addDockable((String) Optional.ofNullable(title).orElse(command) , (JComponent) panel);
+            bsh.getInterpreter().unset("__workspace_result");
+            return true;
+        }
+        return false;
     }
 
 }

@@ -17,7 +17,7 @@ workspace() {
 }
 
 workspace(String name) {
-    workspace(name, "SpecObjectBrowser,SpecScriptTester,bsh:better()");
+    workspace(name, "SpecObjectBrowser;SpecScriptTester;bsh:better(\"Better Editor\", true)");
 //    workspace(name, "SpecBeanShell,SpecObjectBrowser,SpecScriptTester,bsh:better_panel()");
 }
 

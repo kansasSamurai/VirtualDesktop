@@ -35,11 +35,28 @@ abstract public class VirtualAppSpec {
     private JPanel content;
     protected int height = 0;
     protected int width = 0;
+
+    /** 
+     * !! USE WITH CAUTION !! 
+     * <p>
+     * Only set to true for the rare edge case when you want DesktopManager
+     * to create the internal frame but you want your spec instance to 
+     * provide the content directly.  
+     * DesktopManager will call populateInternalFrame().
+     */
     protected boolean internalFrameProvider = false;
+
+    /** When true, this instance content will be hosted by something other than DesktopManager */
+    protected boolean hosted = false;
+
     private String dockableId = null; // Track this instance's dockable ID for cleanup
 
     protected VirtualAppSpec() {
-        // Intentionally Empty
+        this(false);
+    }
+
+    protected VirtualAppSpec(boolean hosted) {
+        this.hosted = hosted;
     }
     
 /* ==============================================
@@ -224,7 +241,7 @@ abstract public class VirtualAppSpec {
      */
     public void setContent(JPanel content) {
         this.content = content;
-        if (this.workspace == null) {
+        if (!hosted && this.workspace == null) {
             String workspaceId = this.getTitle() == null ? "FIXME" : this.getTitle();
 
             // create a workspace with unique name (there may be better algorithms)

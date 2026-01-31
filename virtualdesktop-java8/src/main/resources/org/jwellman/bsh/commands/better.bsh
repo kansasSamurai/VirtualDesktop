@@ -76,7 +76,7 @@ public class Editor extends JPanel {
  * A no-args version which simply defaults the title to 'Better Editor'
  */
 better() {
-    better("Better Editor");
+    better("Better Editor", false);
 }
 
 /**
@@ -100,12 +100,15 @@ better_panel(String title) {
  *
  * @param title The title for the container (either an JFrame or JInternalFrame)
  */
-better(String title) {
+better(String title, boolean hosted) {
 
     if (void == jvd || void == jvd.app) {
         print("This requires jvd.app; see jvdClassBrowser.bsh");
         return;
     }
+
+    /** The title to use when placed in a title capable container */
+    this.title = title;
 
     /** The internal frame (virtualdesktop.VirtualAppFrame) to hold everything */
     this.iframe = null;
@@ -225,9 +228,8 @@ better(String title) {
         frame.show();
     } else {
         this.panel.add(p, BorderLayout.SOUTH);
-        if (void == global.__better_panel_only || !global.__better_panel_only) {
+        if (!hosted) {
             this.iframe = DesktopManager.get().createVApp(this.panel, title); // new
-            // old // jvd.app.createVApp(this.panel, title);
         }
     }
 

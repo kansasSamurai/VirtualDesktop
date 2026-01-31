@@ -141,6 +141,7 @@ public class App extends JFrame implements ActionListener {
         //Make the big window be indented 50 pixels from each edge of the screen.
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         setBounds(0, 0, screenSize.width , screenSize.height );
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
 
         setJMenuBar(createMenuBar());
 

@@ -1,0 +1,31 @@
+/**
+ * Convenience command to launch a workspace by name.
+ *
+ * Usage:
+ *   workspace()                        - launches "BeanShell Development" workspace
+ *   workspace("BeanShell Development") - launches by name
+ *   workspace("My Workspace", "SpecBeanShell,SpecObjectBrowser") - custom tools
+ */
+
+import java.util.HashMap;
+import java.util.Map;
+import org.jwellman.virtualdesktop.DesktopManager;
+import org.jwellman.virtualdesktop.vapps.SpecWorkspace;
+
+workspace() {
+    workspace("BeanShell Development");
+}
+
+workspace(String name) {
+    workspace(name, "SpecObjectBrowser,SpecScriptTester,bsh:better()");
+//    workspace(name, "SpecBeanShell,SpecObjectBrowser,SpecScriptTester,bsh:better_panel()");
+}
+
+workspace(String name, String tools) {
+    spec = new SpecWorkspace();
+    attrs = new HashMap();
+    attrs.put("title", name);
+    attrs.put("tools", tools);
+    spec.configure(attrs);
+    DesktopManager.get().createVApp(spec);
+}

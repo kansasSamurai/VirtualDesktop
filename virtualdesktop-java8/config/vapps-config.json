@@ -16,6 +16,16 @@
           "desktopOnly": false
         },
         {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecWorkspace",
+          "title": "BeanShell Development",
+          "icon": "code39",
+          "enabled": true,
+          "desktopOnly": false,
+          "attrs": {
+            "tools": "SpecBeanShell,SpecObjectBrowser,SpecScriptTester,bsh:better()"
+          }
+        },
+        {
           "class": "org.jwellman.virtualdesktop.vapps.SpecObjectBrowser",
           "title": "Object Browser",
           "icon": "tree9",

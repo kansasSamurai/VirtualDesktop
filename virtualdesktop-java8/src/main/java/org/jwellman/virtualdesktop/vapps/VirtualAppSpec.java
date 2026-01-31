@@ -80,18 +80,22 @@ abstract public class VirtualAppSpec {
     private static final java.util.Set<String> usedDockableIds = new java.util.HashSet<String>();
 
     public void addDockable(JComponent c) {
+        addDockable(this.getTitle(), c);
+    }
+
+    public void addDockable(String title, JComponent c) {
         // Locations cannot be set until:
         // 1) the service workspace is added to a component
         // see DesktopManager.createVApp()
 
         // 2) the Dockable has been added to the workspace
         try {
-            String dockid = this.getTitle();
+            String dockid = title;
 
             // Generate unique ID if needed (global check across all workspaces)
             int counter = 1;
             while (usedDockableIds.contains(dockid)) {
-                dockid = this.getTitle() + "-" + counter++;
+                dockid = title + "-" + counter++;
             }
 
             // Register this ID as used
@@ -104,7 +108,7 @@ abstract public class VirtualAppSpec {
             // Build and add dockable
             Dockable dockable = provider.createDockableBuilder()
                 .withId(dockid)
-                .withTitle(this.getTitle())
+                .withTitle(title)
                 .withComponent(c)
                 .withLocation(DockableLocation.normalIn(workspace))
                 .withVisible(true)

@@ -12,6 +12,7 @@ import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
 import org.jwellman.virtualdesktop.bsh.BeanShellService;
+import org.jwellman.virtualdesktop.docking.DockableLocation;
 
 import bsh.EvalError;
 
@@ -63,17 +64,42 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
             return;
         }
 
+        // Track position index for each direction
+        int northIndex = 0, southIndex = 0, westIndex = 0, eastIndex = 0;
+
         // Use semicolon because bsh scripts might need parameters (thus commas)
         String[] tools = toolsList.split(";");
         for (String tool : tools) {
             tool = tool.trim();
             if (tool.isEmpty()) continue;
 
+            // Parse optional position hint: tool@position
+            String position = null;
+            int atIndex = tool.lastIndexOf('@');
+            if (atIndex > 0) {
+                position = tool.substring(atIndex + 1).trim().toLowerCase();
+                tool = tool.substring(0, atIndex).trim();
+            }
+
+            // Resolve location from position hint
+            DockableLocation location;
+            if ("north".equals(position) || "top".equals(position)) {
+                location = DockableLocation.minimalNorthIn(workspace, northIndex++);
+            } else if ("south".equals(position) || "bottom".equals(position)) {
+                location = DockableLocation.minimalSouthIn(workspace, southIndex++);
+            } else if ("west".equals(position) || "left".equals(position)) {
+                location = DockableLocation.minimalWestIn(workspace, westIndex++);
+            } else if ("east".equals(position) || "right".equals(position)) {
+                location = DockableLocation.minimalEastIn(workspace, eastIndex++);
+            } else {
+                location = DockableLocation.normalIn(workspace);
+            }
+
             try {
                 if (tool.startsWith("bsh:")) {
-                    addBshTool(tool.substring(4));
+                    addBshTool(tool.substring(4), location);
                 } else {
-                    addJavaTool(tool);
+                    addJavaTool(tool, location);
                 }
             } catch (Exception e) {
                 LOG.log(Level.WARNING, "Failed to load tool: " + tool, e);
@@ -81,7 +107,7 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
         }
     }
 
-    private void addJavaTool(String className) throws Exception {
+    private void addJavaTool(String className, DockableLocation location) throws Exception {
         if (!className.contains(".")) {
             className = VAPPS_PACKAGE + className;
         }
@@ -100,21 +126,21 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
             VirtualAppSpec spec = (VirtualAppSpec) instance;
             JPanel content = spec.getContent();
             if (content != null) {
-                addDockable(spec.getTitle(), content);
+                addDockable(spec.getTitle(), content, location);
             } else {
                 LOG.warning("Tool returned null content: " + className);
             }
         }
     }
 
-    private void addBshTool(String command) throws Exception {
+    private void addBshTool(String command, DockableLocation location) throws Exception {
         LOG.info("addBshTool(command): " + command);
 
         BeanShellService bsh = BeanShellService.get();
         Object result = bsh.eval(command);
 
         if (result instanceof JComponent) {
-            addDockable(command, (JComponent) result);
+            addDockable(command, (JComponent) result, location);
             return;
         }
 
@@ -130,7 +156,7 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
         try {
             Object panel = bsh.eval("__workspace_result.getContent();");
             Object title = bsh.eval("__workspace_result.getTitle();");
-            if (addPanel(panel, title, bsh, command))
+            if (addPanel(panel, title, bsh, command, location))
                 return;
         } catch (Exception ignore) { }
 
@@ -138,7 +164,7 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
         try {
             Object panel = bsh.eval("__workspace_result.panel;");
             Object title = bsh.eval("__workspace_result.title;");
-            if (addPanel(panel, title, bsh, command))
+            if (addPanel(panel, title, bsh, command, location))
                 return;
         } catch (Exception ignore) { }
 
@@ -146,9 +172,9 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
         LOG.warning("BeanShell tool did not return a usable component: " + command);
     }
 
-    private boolean addPanel(Object panel, Object title, BeanShellService bsh, String command) throws EvalError {
+    private boolean addPanel(Object panel, Object title, BeanShellService bsh, String command, DockableLocation location) throws EvalError {
         if (panel instanceof JComponent) {
-            addDockable((String) Optional.ofNullable(title).orElse(command) , (JComponent) panel);
+            addDockable((String) Optional.ofNullable(title).orElse(command) , (JComponent) panel, location);
             bsh.getInterpreter().unset("__workspace_result");
             return true;
         }

@@ -101,6 +101,10 @@ abstract public class VirtualAppSpec {
     }
 
     public void addDockable(String title, JComponent c) {
+        addDockable(title, c, DockableLocation.normalIn(workspace));
+    }
+
+    public void addDockable(String title, JComponent c, DockableLocation location) {
         // Locations cannot be set until:
         // 1) the service workspace is added to a component
         // see DesktopManager.createVApp()
@@ -127,7 +131,7 @@ abstract public class VirtualAppSpec {
                 .withId(dockid)
                 .withTitle(title)
                 .withComponent(c)
-                .withLocation(DockableLocation.normalIn(workspace))
+                .withLocation(location)
                 .withVisible(true)
                 .build();
 

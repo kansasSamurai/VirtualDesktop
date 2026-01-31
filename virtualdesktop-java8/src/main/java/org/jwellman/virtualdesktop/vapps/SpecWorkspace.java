@@ -3,8 +3,8 @@ package org.jwellman.virtualdesktop.vapps;
 import java.awt.BorderLayout;
 import java.util.Map;
 import java.util.Optional;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -33,7 +33,7 @@ import bsh.EvalError;
  */
 public class SpecWorkspace extends VirtualAppSpec implements Configurable {
 
-    private static final Logger LOG = Logger.getLogger(SpecWorkspace.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(SpecWorkspace.class);
     private static final String VAPPS_PACKAGE = "org.jwellman.virtualdesktop.vapps.";
 
     private String toolsList;
@@ -59,13 +59,35 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
         loadTools();
     }
 
+    /**
+     * Supports a relatively simple string format (semicolon delimited) for 
+     * specifying a list of tools and their locations.
+     * 
+     * The tool title is derived from the vapp spec or from properties on the bsh
+     * object when using scripted tools. The tool command is a fallback for the
+     * title if none can be found.
+     * 
+     * Simple Example:
+     * "SpecBeanShell,SpecObjectBrowser,SpecScriptTester,bsh:better()"
+     * 
+     * Positioning Example and bsh params:
+     * "SpecObjectBrowser@top(0.5);SpecScriptTester;bsh:better(\"Better Editor\", true)"
+     * 
+     * Updated position parsing to use the new normal directional types. Also
+     * supports an optional size parameter in the tools string syntax:
+     * - SpecObjectBrowser@west — left side, 30% (default) 
+     * - SpecObjectBrowser@west(0.4) — left side, 40% 
+     * - bsh:better()@east(0.5) — right side, 50% 
+     * - SpecScriptTester — center/tabbed (no position)
+     * 
+     */
     private void loadTools() {
         if (toolsList == null || toolsList.trim().isEmpty()) {
             return;
         }
 
-        // Track position index for each direction
-        int northIndex = 0, southIndex = 0, westIndex = 0, eastIndex = 0;
+        // Default size ratio for directional positioning
+        double defaultSize = 0.3;
 
         // Use semicolon because bsh scripts might need parameters (thus commas)
         String[] tools = toolsList.split(";");
@@ -73,24 +95,37 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
             tool = tool.trim();
             if (tool.isEmpty()) continue;
 
-            // Parse optional position hint: tool@position
+            // Parse optional position hint: tool@position or tool@position(size)
             String position = null;
+            double size = defaultSize;
             int atIndex = tool.lastIndexOf('@');
             if (atIndex > 0) {
                 position = tool.substring(atIndex + 1).trim().toLowerCase();
                 tool = tool.substring(0, atIndex).trim();
+
+                // Parse optional size: e.g. "west(0.4)"
+                int parenStart = position.indexOf('(');
+                if (parenStart > 0 && position.endsWith(")")) {
+                    try {
+                        size = Double.parseDouble(position.substring(parenStart + 1, position.length() - 1));
+                    } catch (NumberFormatException e) {
+                        // keep default size
+                    }
+                    position = position.substring(0, parenStart);
+                }
             }
+            LOG.info("loading {}, {}, {} ...", tool, position, size);
 
             // Resolve location from position hint
             DockableLocation location;
             if ("north".equals(position) || "top".equals(position)) {
-                location = DockableLocation.minimalNorthIn(workspace, northIndex++);
+                location = DockableLocation.northIn(workspace, size);
             } else if ("south".equals(position) || "bottom".equals(position)) {
-                location = DockableLocation.minimalSouthIn(workspace, southIndex++);
+                location = DockableLocation.southIn(workspace, size);
             } else if ("west".equals(position) || "left".equals(position)) {
-                location = DockableLocation.minimalWestIn(workspace, westIndex++);
+                location = DockableLocation.westIn(workspace, size);
             } else if ("east".equals(position) || "right".equals(position)) {
-                location = DockableLocation.minimalEastIn(workspace, eastIndex++);
+                location = DockableLocation.eastIn(workspace, size);
             } else {
                 location = DockableLocation.normalIn(workspace);
             }
@@ -102,7 +137,7 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
                     addJavaTool(tool, location);
                 }
             } catch (Exception e) {
-                LOG.log(Level.WARNING, "Failed to load tool: " + tool, e);
+                LOG.warn("Failed to load tool: " + tool, e);
             }
         }
     }
@@ -128,7 +163,7 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
             if (content != null) {
                 addDockable(spec.getTitle(), content, location);
             } else {
-                LOG.warning("Tool returned null content: " + className);
+                LOG.warn("Tool returned null content: " + className);
             }
         }
     }
@@ -145,7 +180,7 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
         }
 
         if (result == null) {
-            LOG.warning("BeanShell tool returned null: " + command);
+            LOG.warn("BeanShell tool returned null: " + command);
             return;
         }
 
@@ -169,7 +204,7 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
         } catch (Exception ignore) { }
 
 
-        LOG.warning("BeanShell tool did not return a usable component: " + command);
+        LOG.warn("BeanShell tool did not return a usable component: " + command);
     }
 
     private boolean addPanel(Object panel, Object title, BeanShellService bsh, String command, DockableLocation location) throws EvalError {

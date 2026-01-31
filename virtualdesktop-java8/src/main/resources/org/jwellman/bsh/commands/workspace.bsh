@@ -17,7 +17,21 @@ workspace() {
 }
 
 workspace(String name) {
-    workspace(name, "SpecObjectBrowser@top;SpecScriptTester@right;bsh:better(\"Better Editor\", true)");
+// Default positioning:
+      workspace(name, "SpecObjectBrowser;SpecScriptTester;bsh:better(\"Better Editor\", true)");
+// When using normal = normal() ^^ all tools are tabbed, including defaultcontent
+// When using normal = normalNorth(0.5) ^^ SpecObjectBrowser is positioned at bottom... all else are tabbed?
+// A: because the FIRST dockable added takes up default center by its "layout manager"
+//      workspace(name, "SpecScriptTester;SpecObjectBrowser");
+//      workspace(name, "SpecScriptTester;SpecObjectBrowser;bsh:better(\"Better Editor\", true)");
+// ^^ specScriptTest is at bottom; "consistent" behavior but why?
+
+
+// Explicit positioning:
+//      workspace(name, "SpecObjectBrowser@top;SpecScriptTester@top;bsh:better(\"Better Editor\", true)@top");
+//      workspace(name, "SpecObjectBrowser;SpecScriptTester@top;bsh:better(\"Better Editor\", true)@top");
+//    workspace(name, "SpecObjectBrowser;SpecScriptTester@bottom;bsh:better(\"Better Editor\", true)");
+//    workspace(name, "SpecObjectBrowser@top;SpecScriptTester@right;bsh:better(\"Better Editor\", true)");
 //    workspace(name, "SpecBeanShell,SpecObjectBrowser,SpecScriptTester,bsh:better_panel()");
 }
 

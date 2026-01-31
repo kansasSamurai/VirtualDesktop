@@ -3,7 +3,8 @@
     "allow": [
       "Bash(find:*)",
       "Bash(git mv:*)",
-      "WebFetch(domain:beanshell.github.io)"
+      "WebFetch(domain:beanshell.github.io)",
+      "Bash(javap:*)"
     ],
     "ask": [
       "Bash(mvn:*)"

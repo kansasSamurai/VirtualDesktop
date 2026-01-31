@@ -7,8 +7,6 @@ import org.jwellman.virtualdesktop.docking.DockingException;
 import org.jwellman.virtualdesktop.docking.DockingTheme;
 import org.jwellman.virtualdesktop.docking.DockingWorkspace;
 import org.jwellman.virtualdesktop.docking.spi.DockingProvider;
-import org.jwellman.virtualdesktop.state.actions.SimpleAction;
-import org.jwellman.virtualdesktop.state.store.AppStore;
 
 import bibliothek.gui.dock.common.CControl;
 import bibliothek.gui.dock.common.event.CControlListener;

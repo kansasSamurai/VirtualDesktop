@@ -26,13 +26,6 @@ import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.TreePath;
 
-import bsh.BshMethod;
-import bsh.EvalError;
-import bsh.Interpreter;
-import bsh.NameSpace;
-import bsh.XThis;
-
-import org.jwellman.bsh.state.actions.BshActionTypes;
 import org.jwellman.bsh.state.model.BshState;
 import org.jwellman.bsh.state.store.BshStore;
 import org.jwellman.bsh.state.store.BshSubscriber;
@@ -41,6 +34,12 @@ import org.jwellman.virtualdesktop.bsh.BeanShellService;
 import org.jwellman.virtualdesktop.bsh.objectbrowser.BshObjectTreeModel;
 import org.jwellman.virtualdesktop.bsh.objectbrowser.BshObjectTreeNode;
 import org.jwellman.virtualdesktop.bsh.objectbrowser.BshObjectTreeRenderer;
+
+import bsh.BshMethod;
+import bsh.EvalError;
+import bsh.Interpreter;
+import bsh.NameSpace;
+import bsh.XThis;
 
 /**
  * BeanShell Object Browser - visual equivalent to the tree() console command.

@@ -70,6 +70,50 @@ public abstract class DockableLocation {
     }
 
     /**
+     * Position at the north (top) of the workspace, visible and taking a portion of the space.
+     *
+     * @param workspace The target workspace
+     * @param size Size ratio (0.0 to 1.0) of the space to occupy
+     * @return A location at the top
+     */
+    public static DockableLocation northIn(DockingWorkspace workspace, double size) {
+        return new NorthLocation(workspace, size);
+    }
+
+    /**
+     * Position at the south (bottom) of the workspace, visible and taking a portion of the space.
+     *
+     * @param workspace The target workspace
+     * @param size Size ratio (0.0 to 1.0) of the space to occupy
+     * @return A location at the bottom
+     */
+    public static DockableLocation southIn(DockingWorkspace workspace, double size) {
+        return new SouthLocation(workspace, size);
+    }
+
+    /**
+     * Position at the west (left) of the workspace, visible and taking a portion of the space.
+     *
+     * @param workspace The target workspace
+     * @param size Size ratio (0.0 to 1.0) of the space to occupy
+     * @return A location at the left
+     */
+    public static DockableLocation westIn(DockingWorkspace workspace, double size) {
+        return new WestLocation(workspace, size);
+    }
+
+    /**
+     * Position at the east (right) of the workspace, visible and taking a portion of the space.
+     *
+     * @param workspace The target workspace
+     * @param size Size ratio (0.0 to 1.0) of the space to occupy
+     * @return A location at the right
+     */
+    public static DockableLocation eastIn(DockingWorkspace workspace, double size) {
+        return new EastLocation(workspace, size);
+    }
+
+    /**
      * Position in an external floating window.
      *
      * @param x X coordinate of the window
@@ -161,6 +205,66 @@ public abstract class DockableLocation {
         @Override
         public Object toNativeLocation() {
             return new Object[] { "minimalEast", workspace, index };
+        }
+    }
+
+    private static class NorthLocation extends DockableLocation {
+        private final DockingWorkspace workspace;
+        private final double size;
+
+        NorthLocation(DockingWorkspace workspace, double size) {
+            this.workspace = workspace;
+            this.size = size;
+        }
+
+        @Override
+        public Object toNativeLocation() {
+            return new Object[] { "north", workspace, size };
+        }
+    }
+
+    private static class SouthLocation extends DockableLocation {
+        private final DockingWorkspace workspace;
+        private final double size;
+
+        SouthLocation(DockingWorkspace workspace, double size) {
+            this.workspace = workspace;
+            this.size = size;
+        }
+
+        @Override
+        public Object toNativeLocation() {
+            return new Object[] { "south", workspace, size };
+        }
+    }
+
+    private static class WestLocation extends DockableLocation {
+        private final DockingWorkspace workspace;
+        private final double size;
+
+        WestLocation(DockingWorkspace workspace, double size) {
+            this.workspace = workspace;
+            this.size = size;
+        }
+
+        @Override
+        public Object toNativeLocation() {
+            return new Object[] { "west", workspace, size };
+        }
+    }
+
+    private static class EastLocation extends DockableLocation {
+        private final DockingWorkspace workspace;
+        private final double size;
+
+        EastLocation(DockingWorkspace workspace, double size) {
+            this.workspace = workspace;
+            this.size = size;
+        }
+
+        @Override
+        public Object toNativeLocation() {
+            return new Object[] { "east", workspace, size };
         }
     }
 

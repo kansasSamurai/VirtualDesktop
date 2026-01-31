@@ -70,6 +70,11 @@ class BibliothekDockable implements Dockable {
 
         switch (type) {
             case "normal":
+//                return CLocation.base(workspace.getContentArea()).normalNorth(0.5);
+                // The following was the original implementation: I am experimenting
+                // to see if there is a "better" way because using normal along with
+                // the other types below usually ends up with "stacking" which is
+                // not the desired end effect.
                 return CLocation.base(workspace.getContentArea()).normal();
             case "minimalNorth":
                 int northIndex = (Integer) locData[2];
@@ -83,6 +88,22 @@ class BibliothekDockable implements Dockable {
             case "minimalEast":
                 int eastIndex = (Integer) locData[2];
                 return CLocation.base(workspace.getContentArea()).minimalEast(eastIndex);
+            case "north":
+                double northSize = (Double) locData[2];
+                return CLocation.base(workspace.getContentArea()).normalNorth(northSize);
+//              return CLocation.base(workspace.getContentArea()).normal().north(southSize);
+            case "south":
+                double southSize = (Double) locData[2];
+                return CLocation.base(workspace.getContentArea()).normalSouth(southSize);
+//                return CLocation.base(workspace.getContentArea()).normal().south(southSize);
+            case "west":
+                double westSize = (Double) locData[2];
+                return CLocation.base(workspace.getContentArea()).normalWest(westSize);
+//                return CLocation.base(workspace.getContentArea()).normal().west(westSize);
+            case "east":
+                double eastSize = (Double) locData[2];
+                return CLocation.base(workspace.getContentArea()).normalEast(eastSize);
+//                return CLocation.base(workspace.getContentArea()).normal().east(eastSize);
             case "external":
                 int x = (Integer) locData[1];
                 int y = (Integer) locData[2];

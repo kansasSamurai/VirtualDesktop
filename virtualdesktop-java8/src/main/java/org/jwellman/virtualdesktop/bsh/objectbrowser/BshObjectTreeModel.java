@@ -34,7 +34,7 @@ public class BshObjectTreeModel extends DefaultTreeModel implements TreeWillExpa
     public BshObjectTreeModel(Interpreter interpreter) {
 //        super(new BshObjectTreeNode("global", "global", interpreter));
 // new [A]
-        super(new BshObjectTreeNode(interpreter.getNameSpace().getName(), "", interpreter));
+        super(new BshObjectTreeNode(interpreter.getNameSpace().getName(), "global", interpreter));
 
         this.interpreter = interpreter;
         loadRootVariables();

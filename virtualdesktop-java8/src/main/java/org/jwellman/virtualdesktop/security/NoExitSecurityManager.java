@@ -2,11 +2,16 @@ package org.jwellman.virtualdesktop.security;
 
 import java.security.Permission;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  *
  * @author Rick
  */
 public class NoExitSecurityManager extends SecurityManager {
+
+    private static final Logger LOG = LoggerFactory.getLogger(NoExitSecurityManager.class);
 
     @Override
     public void checkPermission(Permission perm) {
@@ -29,10 +34,10 @@ public class NoExitSecurityManager extends SecurityManager {
                 break; // do nothing; i.e. default behavior
             case 3:
                 boolean found = false;
-                Class classes[] = this.getClassContext();
+                @SuppressWarnings("rawtypes") Class classes[] = this.getClassContext();
                 final int howmany = classes.length;
                 for (int i = 0; i < howmany; i++) {
-                    System.out.println(classes[i]);
+                    LOG.trace("{}", classes[i]);
                     if (classes[i].toString().contains("org.jwellman.virtualdesktop.App")) {
                         found = classes[i].toString().endsWith(".App");
                         if (found) {
@@ -50,7 +55,13 @@ public class NoExitSecurityManager extends SecurityManager {
     }
 
     /*
-    For reference, his is the callstack when clicking the JFrame close button:
+    This is the callstack when shutting down with the security manager in place:
+        class org.jwellman.virtualdesktop.security.NoExitSecurityManager
+        class java.lang.Runtime
+        class java.lang.System
+        class org.jwellman.virtualdesktop.App
+
+    This is the callstack when clicking the JFrame close button (before security manager):
         class org.jwellman.virtualdesktop.security.NoExitSecurityManager
         class java.lang.Runtime
         class java.lang.System

@@ -8,6 +8,9 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.ExpandVetoException;
 import javax.swing.tree.TreePath;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import bsh.EvalError;
 import bsh.Interpreter;
 import bsh.NameSpace;
@@ -23,6 +26,8 @@ import bsh.NameSpace;
 public class BshObjectTreeModel extends DefaultTreeModel implements TreeWillExpandListener {
 
     private final transient Interpreter interpreter;
+
+    private static final Logger LOG = LoggerFactory.getLogger(BshObjectTreeModel.class);
 
     private static final long serialVersionUID = 1L;
 
@@ -50,7 +55,8 @@ public class BshObjectTreeModel extends DefaultTreeModel implements TreeWillExpa
         try {
             // Get the global namespace
             NameSpace globalNs = interpreter.getNameSpace();
-            System.out.println("loadRootVariables.globalNs : " + globalNs.getName());
+            LOG.info("loadRootVariables.globalNs : '{}'", globalNs.getName());
+
             String[] varNames = globalNs.getVariableNames();
 
             if (varNames != null) {

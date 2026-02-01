@@ -38,6 +38,8 @@ jvd() {
 if (void == global.jvd) { 
     print("INIT: jvd = jvd()");
     global.jvd = jvd(); 
+} else {
+    print("jvd already defined");
 }
 
 if (void == global.jvd.unix) { 

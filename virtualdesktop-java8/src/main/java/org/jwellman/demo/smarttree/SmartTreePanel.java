@@ -17,7 +17,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
 import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeCellRenderer;
+import javax.swing.tree.DefaultTreeModel;
 
 /**
  * Reusable Panel containing the "Smart Tree".
@@ -26,37 +26,49 @@ import javax.swing.tree.DefaultTreeCellRenderer;
  */
 @SuppressWarnings("serial")
 public class SmartTreePanel extends JPanel {
-
     private final JTree tree;
+    private final SummaryRegistry summaryRegistry;
+    private final ExpansionPolicy policy;
 
-    public SmartTreePanel(Object dataToDisplay) {
-        setLayout(new BorderLayout());
-
-        // 1. Setup Default Policy (Expand Collections and POJOs)
-        ExpansionPolicy defaultPolicy = new ExpansionPolicy() {
+    public SmartTreePanel(Object initialData) {
+        this.setLayout(new BorderLayout());
+        this.summaryRegistry = new SummaryRegistry();
+        
+        // Define expansion logic
+        this.policy = new ExpansionPolicy() {
             @Override
-            public boolean shouldExpand(Field f, Object val) {
-                return val != null && 
-                    (val instanceof Collection || !val.getClass().getName().startsWith("java.lang"));
+            public boolean shouldExpand(java.lang.reflect.Field f, Object val) {
+                return val != null && (val instanceof Collection || val instanceof Map || 
+                       !val.getClass().getName().startsWith("java.lang"));
             }
         };
 
-        // 2. Initialize Tree with Smart Nodes
-        // 2a. Create the identity-based "Passport"
-        Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<Object, Boolean>());
-
-        // 2b. Start the chain. This calls the constructor for the Root, which 
-        // then triggers the recursion for all children.
-        RefinedNode root = new RefinedNode("Root", dataToDisplay, defaultPolicy, visited);
-
-        // 2c. Set the model
-        this.tree = new JTree(root);
-
-        // 3. Apply the "JS-Console" Visuals
-        this.tree.setCellRenderer(new PolishedRenderer());
+        this.tree = new JTree();
+        this.tree.setCellRenderer(new PolishedRenderer(summaryRegistry));
         this.tree.setRowHeight(24);
+        
+        this.add(new JScrollPane(tree), BorderLayout.CENTER);
+        
+        // Initial load
+        updateData(initialData);
+    }
 
-        add(new JScrollPane(tree), BorderLayout.CENTER);
+    /**
+     * Resets the tree with a new root object.
+     */
+    public void updateData(Object newData) {
+        // Create the fresh "Passport" for cycle detection
+        java.util.Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<Object, Boolean>());
+        
+        // Generate new nodes
+        RefinedNode newRoot = new RefinedNode("Root", newData, policy, visited);
+        
+        // Swap the model (this triggers the JTree to repaint)
+        this.tree.setModel(new DefaultTreeModel(newRoot));
+    }
+
+    public SummaryRegistry getSummaryRegistry() {
+        return summaryRegistry;
     }
 
     public JTree getTree() {
@@ -148,40 +160,68 @@ public class SmartTreePanel extends JPanel {
 
     }
 
-    static class PolishedRenderer extends DefaultTreeCellRenderer {
+//    static class PolishedRenderer extends DefaultTreeCellRenderer {
+//
+//        @Override
+//        public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean exp, boolean leaf, int row, boolean focus) {
+//            super.getTreeCellRendererComponent(tree, value, sel, exp, leaf, row, focus);
+//            if (value instanceof DefaultMutableTreeNode) {
+//                Object userObj = ((DefaultMutableTreeNode) value).getUserObject();
+//                if (userObj instanceof PropertyPair) {
+//                    PropertyPair pair = (PropertyPair) userObj;
+//                    setText("<html><font color='#CE93D8'><b>" 
+//                            + pair.getName() + "</b></font>: " 
+//                            + formatValue(pair.getValue()) 
+//                            + "</html>");
+//                }
+//            }
+//            setIcon(leaf ? null : getClosedIcon()); 
+//            return this;
+//        }
+//
+//        private String formatValue(Object val) {
+//            // RED
+//            if (val == null) return "<font color='#ff6b68'>null</font>";
+//            // 
+//            if (val instanceof String) return "<font color='#6a8759'>\"" + val + "\"</font>";
+//            // BLUE
+//            if (val instanceof Number) return "<font color='#4FC3F7'>" + val + "</font>";
+//            // 
+//            if (val instanceof Boolean) return "<font color='#cc7832'>" + val + "</font>";
+//            // LAF DEFAULT / ITALIC
+//            if (val instanceof Collection) return "<i>Array(" + ((Collection<?>) val).size() + ")</i>";
+//            // LAF DEFAULT / ITALIC
+//            return "<i>" + val.getClass().getSimpleName() + "</i>";
+//        }
+//
+//    }
+//    
+    static class PolishedRenderer extends javax.swing.tree.DefaultTreeCellRenderer {
+
+        private final SummaryRegistry registry;
+
+        public PolishedRenderer(SummaryRegistry registry) {
+            this.registry = registry;
+        }
 
         @Override
         public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean exp, boolean leaf, int row, boolean focus) {
             super.getTreeCellRendererComponent(tree, value, sel, exp, leaf, row, focus);
-            if (value instanceof DefaultMutableTreeNode) {
-                Object userObj = ((DefaultMutableTreeNode) value).getUserObject();
-                if (userObj instanceof PropertyPair) {
-                    PropertyPair pair = (PropertyPair) userObj;
-                    setText("<html><font color='#CE93D8'><b>" 
-                            + pair.getName() + "</b></font>: " 
-                            + formatValue(pair.getValue()) 
-                            + "</html>");
+
+            if (value instanceof javax.swing.tree.DefaultMutableTreeNode) {
+                Object userObj = ((javax.swing.tree.DefaultMutableTreeNode) value).getUserObject();
+                if (userObj instanceof SmartTreePanel.PropertyPair) {
+                    SmartTreePanel.PropertyPair pair = (SmartTreePanel.PropertyPair) userObj;
+                    
+                    String key = "<b>" + pair.getName() + "</b>";
+                    String summary = registry.getSummary(pair.getValue());
+                    
+                    // Format: Key: Preview
+                    setText("<html><font color='#9876aa'>" + key + "</font>: <font color='#6a8759'>" + summary + "</font></html>");
                 }
             }
-            setIcon(leaf ? null : getClosedIcon()); 
             return this;
         }
-
-        private String formatValue(Object val) {
-            // RED
-            if (val == null) return "<font color='#ff6b68'>null</font>";
-            // 
-            if (val instanceof String) return "<font color='#6a8759'>\"" + val + "\"</font>";
-            // BLUE
-            if (val instanceof Number) return "<font color='#4FC3F7'>" + val + "</font>";
-            // 
-            if (val instanceof Boolean) return "<font color='#cc7832'>" + val + "</font>";
-            // LAF DEFAULT / ITALIC
-            if (val instanceof Collection) return "<i>Array(" + ((Collection<?>) val).size() + ")</i>";
-            // LAF DEFAULT / ITALIC
-            return "<i>" + val.getClass().getSimpleName() + "</i>";
-        }
-
     }
 
     // --- DEMO LAUNCHER (For testing outside your framework) ---
@@ -193,15 +233,19 @@ public class SmartTreePanel extends JPanel {
                 frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 
                 // Your arbitrary object
+                // import org.jwellman.demo.smarttree.*;
                 // Map testData = new HashMap (); // for beanshell
                 Map<String, Object> testData = new HashMap<>();
                 testData.put("ID", 101);
                 testData.put("Status", "Active");
                 testData.put("Meta", new String[]{"Internal", "Verified"});
+//                test1 = object();
+//                test1.stp = new SmartTreePanel(testData);
+//                test1.frame = DesktopManager.get().createVApp(test1.stp, "demo1");
 
                 // Usage in your framework:
                 JPanel mySmartPanel = new SmartTreePanel(testData);
-                
+
                 frame.add(mySmartPanel);
                 frame.setSize(400, 500);
                 frame.setLocationRelativeTo(null);

@@ -2,6 +2,8 @@ package org.jwellman.demo.smarttree;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Collection;
@@ -12,7 +14,9 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.swing.JFrame;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
@@ -27,29 +31,46 @@ import javax.swing.tree.DefaultTreeModel;
 @SuppressWarnings("serial")
 public class SmartTreePanel extends JPanel {
     private final JTree tree;
-    private final SummaryRegistry summaryRegistry;
     private final ExpansionPolicy policy;
+    private final SummaryRegistry summaryRegistry = new SummaryRegistry();
+    private final FieldFilterRegistry filterRegistry = new FieldFilterRegistry();
+    private Object currentData;
 
     public SmartTreePanel(Object initialData) {
+        this.currentData = initialData;
         this.setLayout(new BorderLayout());
-        this.summaryRegistry = new SummaryRegistry();
-        
+
+        this.tree = new JTree();
+        this.tree.setCellRenderer(new PolishedRenderer(summaryRegistry));
+
         // Define expansion logic
         this.policy = new ExpansionPolicy() {
             @Override
             public boolean shouldExpand(java.lang.reflect.Field f, Object val) {
-                return val != null && (val instanceof Collection || val instanceof Map || 
-                       !val.getClass().getName().startsWith("java.lang"));
+                return val != null && (val instanceof Collection || val instanceof Map
+                        || !val.getClass().getName().startsWith("java.lang"));
             }
         };
 
-        this.tree = new JTree();
-        this.tree.setCellRenderer(new PolishedRenderer(summaryRegistry));
-        this.tree.setRowHeight(24);
-        
-        this.add(new JScrollPane(tree), BorderLayout.CENTER);
-        
-        // Initial load
+        // --- ADD REFRESH POPUP ---
+        JPopupMenu popup = new JPopupMenu();
+        JMenuItem refreshItem = new JMenuItem("Refresh");
+        refreshItem.addActionListener(e -> updateData(currentData));
+        popup.add(refreshItem);
+
+        tree.addMouseListener(new MouseAdapter() {
+            public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger()) showPopup(e);
+            }
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger()) showPopup(e);
+            }
+            private void showPopup(MouseEvent e) {
+                popup.show(e.getComponent(), e.getX(), e.getY());
+            }
+        });
+
+        add(new JScrollPane(tree), BorderLayout.CENTER);
         updateData(initialData);
     }
 
@@ -59,16 +80,21 @@ public class SmartTreePanel extends JPanel {
     public void updateData(Object newData) {
         // Create the fresh "Passport" for cycle detection
         java.util.Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<Object, Boolean>());
-        
+
         // Generate new nodes
-        RefinedNode newRoot = new RefinedNode("Root", newData, policy, visited);
-        
+//        RefinedNode newRoot = new RefinedNode("Root", newData, policy, visited);
+        RefinedNode newRoot = new RefinedNode("Root", newData, policy, filterRegistry, visited);
+
         // Swap the model (this triggers the JTree to repaint)
         this.tree.setModel(new DefaultTreeModel(newRoot));
     }
 
     public SummaryRegistry getSummaryRegistry() {
         return summaryRegistry;
+    }
+
+    public FieldFilterRegistry getFilterRegistry() {
+        return filterRegistry;
     }
 
     public JTree getTree() {
@@ -91,7 +117,7 @@ public class SmartTreePanel extends JPanel {
 
     static class RefinedNode extends DefaultMutableTreeNode {
 
-        public RefinedNode(String label, Object userObject, ExpansionPolicy policy, Set<Object> visited) {
+        public RefinedNode(String label, Object userObject, ExpansionPolicy policy, FieldFilterRegistry filterRegistry, Set<Object> visited) {
             super(new PropertyPair(label, userObject));
 
             // Safety checks (nulls and primitives don't have children)
@@ -116,6 +142,10 @@ public class SmartTreePanel extends JPanel {
             // When we find a child field, we pass 'nextVisited' into the NEW node's constructor.
             Field[] fields = userObject.getClass().getDeclaredFields();
             for (Field field : fields) {
+
+                // NEW: Check the registry before processing
+                if (!filterRegistry.isVisible(field, userObject)) continue;                
+
                 // Skip static fields (we want instance data)
                 if (Modifier.isStatic(field.getModifiers())) continue;
 
@@ -125,7 +155,7 @@ public class SmartTreePanel extends JPanel {
 
                     if (policy.shouldExpand(field, childValue)) {
                         // Recurse: Pass the nextVisited set down
-                        this.add(new RefinedNode(field.getName(), childValue, policy, nextVisited));
+                        this.add(new RefinedNode(field.getName(), childValue, policy, filterRegistry, nextVisited));
                     } else {
                         // Leaf: No recursion needed
                         this.add(new DefaultMutableTreeNode(new PropertyPair(field.getName(), childValue)));

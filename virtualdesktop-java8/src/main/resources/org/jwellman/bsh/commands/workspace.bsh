@@ -18,7 +18,7 @@ workspace() {
 
 workspace(String name) {
 // Default positioning:
-      workspace(name, "SpecObjectBrowser;SpecScriptTester;bsh:better(\"Better Editor\", true)");
+//      workspace(name, "SpecObjectBrowser;SpecScriptTester;bsh:better(\"Better Editor\", true)");
 // When using normal = normal() ^^ all tools are tabbed, including defaultcontent
 // When using normal = normalNorth(0.5) ^^ SpecObjectBrowser is positioned at bottom... all else are tabbed?
 // A: because the FIRST dockable added takes up default center by its "layout manager"
@@ -28,8 +28,12 @@ workspace(String name) {
 
 
 // Explicit positioning:
-//      workspace(name, "SpecObjectBrowser@top;SpecScriptTester@top;bsh:better(\"Better Editor\", true)@top");
-//      workspace(name, "SpecObjectBrowser;SpecScriptTester@top;bsh:better(\"Better Editor\", true)@top");
+      workspace(name, "SpecObjectBrowser;bsh:better(\"Better Editor\", true);SpecScriptTester@bottom(0.5)");
+//    workspace(name, "SpecObjectBrowser;SpecScriptTester@bottom;bsh:better(\"Better Editor\", true)@bottom");
+// ^^ this works but... the key to predicatable results seems to be "do it in 'groups' and 'in order'"
+//    workspace(name, "SpecScriptTester;SpecObjectBrowser@top;bsh:better(\"Better Editor\", true)@top");
+// ^^ this works with the new update to SpecWorkspace
+//    workspace(name, "SpecObjectBrowser;SpecScriptTester@top;bsh:better(\"Better Editor\", true)@top");
 //    workspace(name, "SpecObjectBrowser;SpecScriptTester@bottom;bsh:better(\"Better Editor\", true)");
 //    workspace(name, "SpecObjectBrowser@top;SpecScriptTester@right;bsh:better(\"Better Editor\", true)");
 //    workspace(name, "SpecBeanShell,SpecObjectBrowser,SpecScriptTester,bsh:better_panel()");

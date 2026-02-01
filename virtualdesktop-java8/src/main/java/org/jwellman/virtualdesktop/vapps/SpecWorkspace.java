@@ -51,11 +51,21 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
             this.setTitle(attrs.get("title"));
         }
 
-        // Create content panel and load tools
+        // Create content panel; tools are loaded after DesktopManager
+        // adds the base content dockable (see addDockable override)
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(new JLabel(this.getTitle(), SwingConstants.CENTER), BorderLayout.CENTER);
         this.setContent(this.createDefaultContent(panel));
+    }
 
+    /**
+     * Override to load tools after the base content dockable is established.
+     * DesktopManager calls this to add the spec's content as the first dockable,
+     * which initializes the content area. Tools are then added relative to it.
+     */
+    @Override
+    public void addDockable(JComponent c) {
+        super.addDockable(c);
         loadTools();
     }
 

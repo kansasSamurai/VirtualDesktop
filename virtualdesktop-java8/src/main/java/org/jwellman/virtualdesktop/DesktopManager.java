@@ -14,6 +14,9 @@ import javax.swing.event.InternalFrameListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.jwellman.dsp.DSP;
 import org.jwellman.virtualdesktop.state.actions.SimpleAction;
 import org.jwellman.virtualdesktop.state.store.AppStore;
@@ -39,13 +42,13 @@ import ca.odell.glazedlists.EventList;
  */
 public class DesktopManager implements ListSelectionListener, InternalFrameListener {
 
+    private static final Logger LOG = LoggerFactory.getLogger(DesktopManager.class);
+
     private JDesktopPane desktop;
 
     private JList<VirtualAppFrame> observedJList;
 
     private EventList<VirtualAppFrame> frames = new BasicEventList<>();
-
-    private static final String NEWLINE = "\n"; // System.getProperty("line.separator");
 
 	/**
 	 * private constructor to enforce singleton pattern
@@ -95,7 +98,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
         if (spec.isInternalFrameProvider()) {
             // TODO I want to move this somehow into the definitive method;
             // I do not like having logic spread throughout all these createvapp methods.
-        	System.out.println("createVApp() going to populateInternalFrame()");
+        	LOG.debug("createVApp() routing to populateInternalFrame() for: {}", spec.getTitle());
             final VirtualAppFrame frame = this.createAppFrame(spec.getTitle(), spec);
             
             if (spec.getIcon() != null) {
@@ -107,7 +110,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
             desktop.add(frame);
             spec.populateInternalFrame(frame, desktop);
         } else {
-        	System.out.println("createVApp() going to createVApp()");
+        	LOG.debug("createVApp() routing to standard path for: {}", spec.getTitle());
             this.createVApp(spec);
         }
 
@@ -166,6 +169,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
         Icon icon = spec.getIcon();
         String title = spec.getTitle();
         Container c = spec.getContent();
+        LOG.info("Creating vapp: {} [dockable={}, hosted={}]", title, spec.isDockable(), spec.isHosted());
 
         final VirtualAppFrame frame = this.createAppFrame(title, spec);
         if (icon != null) {
@@ -198,9 +202,9 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 
                     if ((c.getWidth() * c.getHeight()) != 0) {
                         frame.setSize(c.getWidth(), c.getHeight());
-                        System.out.println("JIF setSize()");
+                        LOG.debug("Frame '{}' sized to {}x{}", title, c.getWidth(), c.getHeight());
                     } else {
-                        System.out.println("JIF pack()");
+                        LOG.debug("Frame '{}' using pack()", title);
                         frame.pack(); // see Note [1] below
                     }
 
@@ -208,9 +212,9 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
                     frame.setVisible(true); //necessary as of 1.3
                     frame.setSelected(true);
                 } catch (java.beans.PropertyVetoException e) {
-                    e.printStackTrace(); // for now, simply swallow the exception
+                    LOG.warn("PropertyVetoException creating vapp: {}", title, e);
                 } catch (Exception e) {
-                    e.printStackTrace(); // for now, simply swallow the exception
+                    LOG.error("Failed to create vapp: {}", title, e);
                 }
             }
         });
@@ -220,10 +224,9 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
         if (spec instanceof LaunchAware) {
             try {
                 ((LaunchAware) spec).launch();
-                System.out.println("Launched external app: " + spec.getTitle());
+                LOG.info("Launched external app: {}", spec.getTitle());
             } catch (Exception ex) {
-                System.err.println("Failed to launch external app: " + spec.getTitle());
-                ex.printStackTrace();
+                LOG.error("Failed to launch external app: {}", spec.getTitle(), ex);
             }
         }
 
@@ -256,6 +259,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
      * @return
      */
     private VirtualAppFrame createAppFrame(String title, VirtualAppSpec spec) {
+        LOG.debug("Creating app frame: {}", title);
         final VirtualAppFrame frame = new VirtualAppFrame(title);
 
         // Set tool type from spec class name for Redux state tracking
@@ -326,11 +330,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 	}
 
     private void displayMessage(String prefix, InternalFrameEvent e) {
-        boolean log = false;
-        if (log) {
-            String s = prefix + " : " + e.getSource() + NEWLINE;
-            System.out.println(s);
-        }
+        LOG.trace("{} : {}", prefix, e.getSource());
     }
 
 	// ============= Begin InternalFrameListener =======================
@@ -483,7 +483,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 						frame.setIcon(false); // exception is possible on this line...
 						frame.moveToFront();
 					} catch (PropertyVetoException e1) {
-						e1.printStackTrace();
+						LOG.warn("PropertyVetoException restoring frame", e1);
 					}
 				} else {
 					// Verified that this does NOT work with the following LAFs:

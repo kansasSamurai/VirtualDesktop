@@ -292,6 +292,10 @@ abstract public class VirtualAppSpec {
         return this.internalFrameProvider;
     }
 
+    public boolean isHosted() {
+        return this.hosted;
+    }
+
     public boolean isDockable() {
         // for now (10/6/2022), all vappspecs are dockable
         return true;

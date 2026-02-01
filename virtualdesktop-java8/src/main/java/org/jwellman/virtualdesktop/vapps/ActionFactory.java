@@ -8,6 +8,9 @@ import java.util.List;
 import javax.swing.Action;
 import javax.swing.Icon;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.jwellman.dsp.DSP;
 import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
 
@@ -21,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public class ActionFactory {
 
+    private static final Logger LOG = LoggerFactory.getLogger(ActionFactory.class);
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private static final List<DesktopAction> listOfActions = new ArrayList<>();
@@ -50,14 +54,14 @@ public class ActionFactory {
         File configFile = new File("config/vapps-config.json");
 
         if (!configFile.exists()) {
-            System.err.println("ERROR: VApps config file not found: " + configFile.getAbsolutePath());
-            System.err.println("ERROR: The configuration file is mandatory. Please create config/vapps-config.json");
+            LOG.error("VApps config file not found: {}", configFile.getAbsolutePath());
+            LOG.error("The configuration file is mandatory. Please create config/vapps-config.json");
             throw new RuntimeException("Required configuration file not found: config/vapps-config.json");
         }
 
         try {
             vappsConfig = mapper.readValue(configFile, VappsConfig.class);
-            System.out.println("Loaded VApps configuration version " + vappsConfig.getVersion());
+            LOG.info("Loaded VApps configuration version {}", vappsConfig.getVersion());
 
             // Process menu vapps
             for (MenuGroup menuGroup : vappsConfig.getMenuStructure()) {
@@ -72,8 +76,7 @@ public class ActionFactory {
             }
 
         } catch (IOException ex) {
-            System.err.println("ERROR: Failed to load vapps configuration: " + ex.getMessage());
-            ex.printStackTrace();
+            LOG.error("Failed to load vapps configuration", ex);
             throw new RuntimeException("Failed to load required configuration file", ex);
         }
     }
@@ -126,22 +129,22 @@ public class ActionFactory {
             try {
                 smallIcon = DSP.Icons.getIcon(iconKey + "-small");
             } catch (Exception ex) {
-                System.err.println("Icon not found: " + iconKey + "-small, using fallback add196-small");
+                LOG.warn("Icon not found: {}-small, using fallback add196-small", iconKey);
                 try {
                     smallIcon = DSP.Icons.getIcon("add196-small");
                 } catch (Exception ex2) {
-                    System.err.println("Fallback icon add196-small also not found");
+                    LOG.error("Fallback icon add196-small also not found");
                 }
             }
 
             try {
                 largeIcon = DSP.Icons.getIcon(iconKey + "-large");
             } catch (Exception ex) {
-                System.err.println("Icon not found: " + iconKey + "-large, using fallback add196-large");
+                LOG.warn("Icon not found: {}-large, using fallback add196-large", iconKey);
                 try {
                     largeIcon = DSP.Icons.getIcon("add196-large");
                 } catch (Exception ex2) {
-                    System.err.println("Fallback icon add196-large also not found");
+                    LOG.error("Fallback icon add196-large also not found");
                 }
             }
 
@@ -163,9 +166,7 @@ public class ActionFactory {
             getListOfActions().add(action);
 
         } catch (ClassNotFoundException ex) {
-            System.err.println("Failed to register vapp: " + vappConfig.getClassName());
-            System.err.println("Class not found - check that the class name is correct");
-            ex.printStackTrace();
+            LOG.error("Failed to register vapp: {} - class not found", vappConfig.getClassName(), ex);
         }
     }
 
@@ -187,11 +188,11 @@ public class ActionFactory {
             try {
                 largeIcon = DSP.Icons.getIcon(iconKey + "-large");
             } catch (Exception ex) {
-                System.err.println("Icon not found: " + iconKey + "-large, using fallback add196-large");
+                LOG.warn("Icon not found: {}-large, using fallback add196-large", iconKey);
                 try {
                     largeIcon = DSP.Icons.getIcon("add196-large");
                 } catch (Exception ex2) {
-                    System.err.println("Fallback icon add196-large also not found");
+                    LOG.error("Fallback icon add196-large also not found");
                 }
             }
 
@@ -206,8 +207,7 @@ public class ActionFactory {
             getListOfActions().add(action);
 
         } catch (Exception ex) {
-            System.err.println("Failed to register desktop shortcut: " + shortcut.getLabel());
-            ex.printStackTrace();
+            LOG.error("Failed to register desktop shortcut: {}", shortcut.getLabel(), ex);
         }
     }
 
@@ -219,8 +219,8 @@ public class ActionFactory {
         File configFile = new File("config/external-apps.json");
 
         if (!configFile.exists()) {
-            System.out.println("External apps config file not found: " + configFile.getAbsolutePath());
-            System.out.println("Skipping external app loading. Create this file to define external applications.");
+            LOG.info("External apps config file not found: {}", configFile.getAbsolutePath());
+            LOG.info("Skipping external app loading. Create this file to define external applications.");
             return;
         }
 
@@ -231,11 +231,10 @@ public class ActionFactory {
                 registerExternalApp(appConfig);
             }
 
-            System.out.println("Loaded " + config.getExternalApps().size() + " external app(s) from configuration");
+            LOG.info("Loaded {} external app(s) from configuration", config.getExternalApps().size());
 
         } catch (IOException ex) {
-            System.err.println("Failed to load external apps configuration: " + ex.getMessage());
-            ex.printStackTrace();
+            LOG.error("Failed to load external apps configuration", ex);
         }
     }
 
@@ -268,8 +267,8 @@ public class ActionFactory {
                     action.putValue(Action.LARGE_ICON_KEY, largeIcon);
                     action.putValue(Action.SMALL_ICON, smallIcon);
                 } else {
-                    System.err.println("Icon not found in registry for " + appConfig.getName() + ": " + iconValue);
-                    System.err.println("Make sure the icon is in the auto-discovered directory or manually registered.");
+                    LOG.warn("Icon not found in registry for {}: {}", appConfig.getName(), iconValue);
+                    LOG.warn("Make sure the icon is in the auto-discovered directory or manually registered.");
                     // Use default icon
                     Icon defaultLargeIcon = DSP.Icons.getIcon("winking18-large");
                     Icon defaultSmallIcon = DSP.Icons.getIcon("winking18-small");
@@ -286,8 +285,7 @@ public class ActionFactory {
             getListOfActions().add(action);
 
         } catch (Exception ex) {
-            System.err.println("Failed to register external app: " + appConfig.getName());
-            ex.printStackTrace();
+            LOG.error("Failed to register external app: {}", appConfig.getName(), ex);
         }
     }
 

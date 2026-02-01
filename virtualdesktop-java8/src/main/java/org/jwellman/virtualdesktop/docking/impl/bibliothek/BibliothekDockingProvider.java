@@ -2,6 +2,9 @@ package org.jwellman.virtualdesktop.docking.impl.bibliothek;
 
 import javax.swing.JFrame;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.jwellman.virtualdesktop.docking.DockableBuilder;
 import org.jwellman.virtualdesktop.docking.DockingException;
 import org.jwellman.virtualdesktop.docking.DockingTheme;
@@ -21,6 +24,8 @@ import bibliothek.gui.dock.common.theme.ThemeMap;
  * @author Rick Wellman
  */
 public class BibliothekDockingProvider implements DockingProvider {
+
+    private static final Logger LOG = LoggerFactory.getLogger(BibliothekDockingProvider.class);
 
     private CControl control;
     private BibliothekWorkspace defaultWorkspace;
@@ -159,27 +164,27 @@ public class BibliothekDockingProvider implements DockingProvider {
         @Override
         public void added(CControl control, CDockable dockable) {
             String panelId = getDockableId(dockable);
-            System.out.println("[Docking] Panel added: " + panelId);
+            LOG.debug("Panel added: {}", panelId);
             // Note: TOOL_OPENED is dispatched by DesktopManager, not here
         }
 
         @Override
         public void removed(CControl control, CDockable dockable) {
             String panelId = getDockableId(dockable);
-            System.out.println("[Docking] Panel removed: " + panelId);
+            LOG.debug("Panel removed: {}", panelId);
             // Note: TOOL_CLOSED is dispatched by DesktopManager, not here
         }
 
         @Override
         public void opened(CControl control, CDockable dockable) {
             String panelId = getDockableId(dockable);
-            System.out.println("[Docking] Panel opened (visible): " + panelId);
+            LOG.debug("Panel opened (visible): {}", panelId);
         }
 
         @Override
         public void closed(CControl control, CDockable dockable) {
             String panelId = getDockableId(dockable);
-            System.out.println("[Docking] Panel closed (hidden): " + panelId);
+            LOG.debug("Panel closed (hidden): {}", panelId);
         }
 
         private String getDockableId(CDockable dockable) {

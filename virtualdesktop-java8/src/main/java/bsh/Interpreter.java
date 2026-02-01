@@ -16,6 +16,9 @@ import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.jwellman.bsh.FileReader;
 
 //import bsh.BshClassManager;
@@ -90,6 +93,8 @@ import org.jwellman.bsh.FileReader;
 public class Interpreter 
     implements Runnable, ConsoleInterface,Serializable
 {
+    private static final Logger LOG = LoggerFactory.getLogger(Interpreter.class);
+
     /* --- Begin static members --- */
 
     public static final String VERSION = "2.0b5a";
@@ -374,19 +379,18 @@ public class Interpreter
                         if ( e instanceof InvocationTargetException )
                             o = ((InvocationTargetException)e)
                                 .getTargetException();
-                        System.err.println(
-                            "Class: "+result+" main method threw exception:"+o);
+                        LOG.error("Class: {} main method threw exception: {}", result, o);
                     }
             } catch ( FileNotFoundException e ) {
-                System.out.println("File not found: "+e);
+                LOG.error("File not found: {}", e.getMessage());
             } catch ( TargetError e ) {
-                System.out.println("Script threw exception: "+e);
+                LOG.error("Script threw exception: {}", e.getMessage());
                 if ( e.inNativeCode() )
                     e.printStackTrace( DEBUG, System.err );
             } catch ( EvalError e ) {
-                System.out.println("Evaluation Error: "+e);
+                LOG.error("Evaluation Error: {}", e.getMessage());
             } catch ( IOException e ) {
-                System.out.println("I/O Error: "+e);
+                LOG.error("I/O Error: {}", e.getMessage());
             }
         } else 
         {
@@ -552,18 +556,18 @@ public class Interpreter
                 get_jjtree().reset();
 
                 // Telemetry: Before Sync
-                System.out.println("DEBUG: Pre-Sync Stack Depth: " + callstack.depth());
-                System.out.println("DEBUG: Pre-Sync NS Hash: " + System.identityHashCode(callstack.top()));
+                LOG.debug("Pre-Sync Stack Depth: {}, NS Hash: {}",
+                        callstack.depth(), System.identityHashCode(callstack.top()));
 
                 // The Fix
-                System.out.println("BSH-SYNC: Re-anchoring to " + globalNameSpace.getName() 
-                        + " [Hash: " + System.identityHashCode(globalNameSpace) + "]");
+                LOG.debug("BSH-SYNC: Re-anchoring to {} [Hash: {}]",
+                        globalNameSpace.getName(), System.identityHashCode(globalNameSpace));
                 callstack.clear();
                 callstack.push(globalNameSpace);
 
                 // Telemetry: After Sync
-                System.out.println("DEBUG: Post-Sync NS Name: " + getNameSpace().getName());
-                System.out.println("DEBUG: Post-Sync NS Hash: " + System.identityHashCode(getNameSpace()));
+                LOG.debug("Post-Sync NS Name: {}, NS Hash: {}",
+                        getNameSpace().getName(), System.identityHashCode(getNameSpace()));
             }
         } //
 
@@ -1058,7 +1062,7 @@ public class Interpreter
             System.setOut( pout );
             System.setErr( pout );
         } catch ( IOException e ) {
-            System.err.println("Can't redirect output to file: "+filename );
+            LOG.error("Can't redirect output to file: {}", filename);
         }
     }
 
@@ -1137,12 +1141,12 @@ public class Interpreter
             String outfilename = System.getProperty("outfile");
             if ( outfilename != null )
                 redirectOutputToFile( outfilename );
-        } catch ( SecurityException e ) { 
-            System.err.println("Could not init static:"+e);
+        } catch ( SecurityException e ) {
+            LOG.error("Could not init static (SecurityException)", e);
         } catch ( Exception e ) {
-            System.err.println("Could not init static(2):"+e);
-        } catch ( Throwable e ) { 
-            System.err.println("Could not init static(3):"+e);
+            LOG.error("Could not init static (Exception)", e);
+        } catch ( Throwable e ) {
+            LOG.error("Could not init static (Throwable)", e);
         }
     }
 

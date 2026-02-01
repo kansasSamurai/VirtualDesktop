@@ -1,5 +1,8 @@
 package org.jwellman.bsh.state.store;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.jwellman.bsh.state.actions.BshAction;
 
 /**
@@ -12,24 +15,20 @@ import org.jwellman.bsh.state.actions.BshAction;
  */
 public class BshLoggingMiddleware implements BshMiddleware {
 
+    private static final Logger LOG = LoggerFactory.getLogger(BshLoggingMiddleware.class);
+
     private boolean enabled = true;
-    private final String prefix;
 
     public BshLoggingMiddleware() {
-        this("[BshRedux]");
-    }
-
-    public BshLoggingMiddleware(String prefix) {
-        this.prefix = prefix;
     }
 
     @Override
     public BshAction process(BshAction action, BshStore store) {
         if (enabled) {
-            System.out.println(prefix + " " + action.getType() +
-                " | payload=" + action.getPayload() +
-                " | workspaces=" + store.getState().getWorkspaces().getWorkspaceCount() +
-                " | interpreter=" + store.getState().getInterpreter().isInitialized());
+            LOG.debug("{} | payload={} | workspaces={} | interpreter={}",
+                action.getType(), action.getPayload(),
+                store.getState().getWorkspaces().getWorkspaceCount(),
+                store.getState().getInterpreter().isInitialized());
         }
         return action;
     }

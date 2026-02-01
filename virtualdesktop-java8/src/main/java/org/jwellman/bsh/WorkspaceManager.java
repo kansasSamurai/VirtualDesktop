@@ -356,6 +356,49 @@ print("Is wm here? " + (this.interpreter.get("wm") != null));
 print("Parent of current: " + this.interpreter.getNameSpace().getParent());
 
 
+----------------------------
+// LEVEL 1: The Root Closure
+enterpriseApp() {
+    appName = "GridManager";
+    appVersion = 3.1;
+    
+    // LEVEL 2: Nested Closure
+    system() {
+        id = 1024;
+        status = "Active";
+        
+        // LEVEL 3: Deep Nested Closure
+        diagnostics() {
+            cpuLoad = 45;
+            lastAudit = "2026-01-29";
+            getHealth() { return "OK"; }
+            return this;
+        };
+        // Instantiate the level 3 object
+        diagObj = diagnostics();
+        
+        return this;
+    };
+    // Instantiate the level 2 object
+    sysObj = system();
+
+    // LEVEL 2: Another Branch
+    security() {
+        role = "Admin";
+        permissions() {
+            canRead = true;
+            return this;
+        };
+        permObj = permissions();
+        return this;
+    };
+    secObj = security();
+
+    return this;
+}
+
+// Final instantiation to place it in the Workspace/Global
+app = enterpriseApp();
 
 
 

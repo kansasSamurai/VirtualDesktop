@@ -3,6 +3,9 @@ package org.jwellman.virtualdesktop.docking.impl.bibliothek;
 import javax.swing.Icon;
 import javax.swing.JComponent;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.jwellman.virtualdesktop.docking.Dockable;
 import org.jwellman.virtualdesktop.docking.DockableBuilder;
 import org.jwellman.virtualdesktop.docking.DockableLocation;
@@ -22,6 +25,8 @@ import bibliothek.gui.dock.common.event.CDockableLocationListener;
  * @author Rick Wellman
  */
 class BibliothekDockableBuilder implements DockableBuilder {
+
+    private static final Logger LOG = LoggerFactory.getLogger(BibliothekDockableBuilder.class);
 
     private String id;
     private String title;
@@ -106,8 +111,7 @@ class BibliothekDockableBuilder implements DockableBuilder {
                     String oldWorkspace = oldLoc != null ? extractWorkspaceId(oldLoc) : null;
                     String newWorkspace = newLoc != null ? extractWorkspaceId(newLoc) : null;
 
-                    System.out.println("[Docking] Panel " + dockableId +
-                        " location changed: " + oldWorkspace + " -> " + newWorkspace);
+                    LOG.debug("Panel {} location changed: {} -> {}", dockableId, oldWorkspace, newWorkspace);
 
                     // Dispatch action if workspace changed
                     if (newWorkspace != null && !newWorkspace.equals(oldWorkspace)) {

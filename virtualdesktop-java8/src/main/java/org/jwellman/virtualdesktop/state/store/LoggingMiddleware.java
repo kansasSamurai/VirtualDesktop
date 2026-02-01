@@ -1,5 +1,8 @@
 package org.jwellman.virtualdesktop.state.store;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.jwellman.virtualdesktop.state.actions.Action;
 
 /**
@@ -12,23 +15,19 @@ import org.jwellman.virtualdesktop.state.actions.Action;
  */
 public class LoggingMiddleware implements Middleware {
 
+    private static final Logger LOG = LoggerFactory.getLogger(LoggingMiddleware.class);
+
     private boolean enabled = true;
-    private final String prefix;
 
     public LoggingMiddleware() {
-        this("[Redux]");
-    }
-
-    public LoggingMiddleware(String prefix) {
-        this.prefix = prefix;
     }
 
     @Override
     public Action process(Action action, AppStore store) {
         if (enabled) {
-            System.out.println(prefix + " " + action.getType() +
-                " | payload=" + action.getPayload() +
-                " | tools=" + store.getState().getTools().getToolCount());
+            LOG.debug("{} | payload={} | tools={}",
+                action.getType(), action.getPayload(),
+                store.getState().getTools().getToolCount());
         }
         return action;
     }

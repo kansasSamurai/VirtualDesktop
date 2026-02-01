@@ -40,6 +40,9 @@ import javax.swing.text.MutableAttributeSet;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import bsh.util.GUIConsoleInterface;
 import bsh.util.NameCompletion;
 import java.lang.reflect.InvocationTargetException;
@@ -71,6 +74,7 @@ public class JConsole extends JScrollPane implements
 {
 
     private static final long serialVersionUID = 1L;
+    private static final Logger LOG = LoggerFactory.getLogger(JConsole.class);
 
     private final static String CUT = "Cut";
     private final static String COPY = "Copy";
@@ -353,7 +357,7 @@ public class JConsole extends JScrollPane implements
 
     private void doCommandCompletion( String part ) {
         if ( nameCompletion == null ) {
-            System.out.println("doCommandCompletion() : nameCompletion == null");
+            LOG.warn("doCommandCompletion(): nameCompletion == null");
             return;
         }
 
@@ -371,7 +375,7 @@ public class JConsole extends JScrollPane implements
             return;
         }
 
-        System.out.println("completing part: " + part);
+        LOG.debug("completing part: {}", part);
 
         // no completion
         String [] complete = nameCompletion.completeName(part);
@@ -471,7 +475,7 @@ public class JConsole extends JScrollPane implements
             return cmd;
         } catch (BadLocationException e) {
             // should not happen
-            System.out.println("Internal JConsole Error: "+e);
+            LOG.error("Internal JConsole Error", e);
             return "";
         }
     }
@@ -483,7 +487,7 @@ public class JConsole extends JScrollPane implements
             s = text.getText(cmdStart, textLength() - cmdStart);
         } catch (BadLocationException e) {
             // should not happen
-            System.out.println("Internal JConsole Error: "+e);
+            LOG.error("Internal JConsole Error", e);
         }
         return s;
     }
@@ -646,7 +650,7 @@ public class JConsole extends JScrollPane implements
 
     private AttributeSet setStyle(Font font, Color color) {
         {   // new to honor font
-            System.out.print("a");
+            LOG.trace("setStyle(Font, Color)");
             if (null == font) font = this.font;
         }
 
@@ -664,7 +668,7 @@ public class JConsole extends JScrollPane implements
 
     private AttributeSet setStyle (String fontFamilyName, int size, Color color) {
         {   // new to honor font
-            System.out.print("b");
+            LOG.trace("setStyle(String, int, Color)");
             if (null == fontFamilyName) fontFamilyName = this.font.getFamily();
             if (-1 == size) size = this.font.getSize();
         }
@@ -692,7 +696,7 @@ public class JConsole extends JScrollPane implements
         )
     {
         {   // new to honor font
-            System.out.print("c");
+            LOG.trace("setStyle(String, int, Color, boolean, boolean, boolean)");
             if (null == fontFamilyName) fontFamilyName = this.font.getFamily();
             if (-1 == size) size = this.font.getSize();
         }
@@ -714,7 +718,7 @@ public class JConsole extends JScrollPane implements
     }
 
     private void setStyle(AttributeSet attributes) {
-        System.out.print("d");
+        LOG.trace("setStyle(AttributeSet)");
         setStyle(attributes, false);
     }
 
@@ -725,7 +729,7 @@ public class JConsole extends JScrollPane implements
      * @param overWrite
      */
     private void setStyle(AttributeSet attributes, boolean overWrite) {
-        System.out.println("...z");
+        LOG.trace("setStyle(AttributeSet, boolean) [definitive]");
         text.setCharacterAttributes(attributes, overWrite);
     }
 
@@ -735,7 +739,7 @@ public class JConsole extends JScrollPane implements
 
     @Override
     public void setFont( Font font ) {
-        System.out.println("setFont()...");
+        LOG.debug("setFont()");
 
         this.font = font; // pretty pointless but this is original JConsole code
         super.setFont( font );
@@ -818,12 +822,11 @@ public class JConsole extends JScrollPane implements
      */
     private void invokeAndWait(Runnable run) {
         if( !SwingUtilities.isEventDispatchThread() ) {
-            System.out.println("Pushing Runnable onto EDT via invokeAndWait()");
+            LOG.trace("Pushing Runnable onto EDT via invokeAndWait()");
             try {
                 SwingUtilities.invokeAndWait(run);
             } catch(InterruptedException | InvocationTargetException e) {
-                // shouldn't happen
-                e.printStackTrace();
+                LOG.error("Error in invokeAndWait()", e);
             }
         } else {
             run.run();

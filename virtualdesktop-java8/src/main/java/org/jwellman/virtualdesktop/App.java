@@ -468,7 +468,7 @@ public class App extends JFrame implements ActionListener {
     private static void initializeStore() {
         AppStore store = AppStore.get();
         store.setReducer(new AppReducer());
-        store.addMiddleware(new LoggingMiddleware("[Redux]"));
+        store.addMiddleware(new LoggingMiddleware());
         logger.info("Redux store initialized");
     }
 

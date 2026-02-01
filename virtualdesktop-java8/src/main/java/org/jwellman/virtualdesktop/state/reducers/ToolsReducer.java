@@ -1,5 +1,8 @@
 package org.jwellman.virtualdesktop.state.reducers;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.jwellman.virtualdesktop.state.actions.Action;
 import org.jwellman.virtualdesktop.state.actions.ActionTypes;
 import org.jwellman.virtualdesktop.state.actions.SimpleAction;
@@ -14,6 +17,8 @@ import org.jwellman.virtualdesktop.state.model.ToolsState;
  * @author rwellman
  */
 public class ToolsReducer {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ToolsReducer.class);
 
     /**
      * Reduce tools state based on the action.
@@ -134,8 +139,7 @@ public class ToolsReducer {
         if (payload instanceof SimpleAction.DockingPayload) {
             SimpleAction.DockingPayload dp = (SimpleAction.DockingPayload) payload;
             // Log the location change - full implementation would update workspace tracking
-            System.out.println("[ToolsReducer] Panel " + dp.panelId +
-                " moved to workspace: " + dp.targetToolId);
+            LOG.debug("Panel {} moved to workspace: {}", dp.panelId, dp.targetToolId);
         }
         return state;
     }

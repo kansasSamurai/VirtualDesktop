@@ -3,10 +3,12 @@ package org.jwellman.demo.smarttree;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Set;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -39,9 +41,16 @@ public class SmartTreePanel extends JPanel {
         };
 
         // 2. Initialize Tree with Smart Nodes
-        RefinedNode root = new RefinedNode("Root", dataToDisplay, defaultPolicy);
+        // 2a. Create the identity-based "Passport"
+        Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<Object, Boolean>());
+
+        // 2b. Start the chain. This calls the constructor for the Root, which 
+        // then triggers the recursion for all children.
+        RefinedNode root = new RefinedNode("Root", dataToDisplay, defaultPolicy, visited);
+
+        // 2c. Set the model
         this.tree = new JTree(root);
-        
+
         // 3. Apply the "JS-Console" Visuals
         this.tree.setCellRenderer(new PolishedRenderer());
         this.tree.setRowHeight(24);
@@ -68,34 +77,34 @@ public class SmartTreePanel extends JPanel {
     }
 
     static class RefinedNode extends DefaultMutableTreeNode {
-
-        public RefinedNode(String label, Object userObject, ExpansionPolicy policy) {
+        // Pass the visited set down the recursion chain
+        public RefinedNode(String label, Object userObject, ExpansionPolicy policy, Set<Object> visited) {
             super(new PropertyPair(label, userObject));
+            
+            if (userObject == null || isPrimitive(userObject)) return;
 
-            if (userObject == null) return;
-
-            if (userObject instanceof Collection) {
-                int i = 0;
-                for (Object item : (Collection<?>) userObject) {
-                    this.add(new RefinedNode("[" + (i++) + "]", item, policy));
-                }
-            } else if (!userObject.getClass().getName().startsWith("java.lang")) {
-                for (Field field : userObject.getClass().getDeclaredFields()) {
-                    if (Modifier.isStatic(field.getModifiers())) continue;
-                    try {
-                        field.setAccessible(true);
-                        Object val = field.get(userObject);
-                        if (policy.shouldExpand(field, val)) {
-                            this.add(new RefinedNode(field.getName(), val, policy));
-                        } else {
-                            this.add(new DefaultMutableTreeNode(new PropertyPair(field.getName(), val)));
-                        }
-                    } catch (Exception ignored) {}
-                }
+            // IDENTITY CHECK: Have we seen this exact object instance higher in this branch?
+            if (visited.contains(userObject)) {
+                this.add(new DefaultMutableTreeNode(new PropertyPair(label, " [Circular Reference]")));
+                return;
             }
+
+            // Add current object to a NEW visited set for this branch 
+            // (Use a copy to allow the same object to appear in DIFFERENT branches)
+            Set<Object> nextVisited = Collections.newSetFromMap(new IdentityHashMap<Object, Boolean>());
+            nextVisited.addAll(visited);
+            nextVisited.add(userObject);
+
+            // ... rest of the reflection logic using nextVisited ...
+            // Example for POJO fields:
+            // this.add(new RefinedNode(field.getName(), val, policy, nextVisited));
+        }
+
+        private static boolean isPrimitive(Object obj) {
+            return obj.getClass().getName().startsWith("java.lang");
         }
     }
-
+    
     static class PolishedRenderer extends DefaultTreeCellRenderer {
 
         @Override

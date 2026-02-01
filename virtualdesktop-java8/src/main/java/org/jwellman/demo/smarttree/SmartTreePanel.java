@@ -3,6 +3,7 @@ package org.jwellman.demo.smarttree;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -77,34 +78,76 @@ public class SmartTreePanel extends JPanel {
     }
 
     static class RefinedNode extends DefaultMutableTreeNode {
-        // Pass the visited set down the recursion chain
+
         public RefinedNode(String label, Object userObject, ExpansionPolicy policy, Set<Object> visited) {
             super(new PropertyPair(label, userObject));
-            
+
+            // Safety checks (nulls and primitives don't have children)
             if (userObject == null || isPrimitive(userObject)) return;
 
-            // IDENTITY CHECK: Have we seen this exact object instance higher in this branch?
+            // --- CYCLE CHECK ---
             if (visited.contains(userObject)) {
+                // We found a loop! Add a "dead end" node and stop recursing.
                 this.add(new DefaultMutableTreeNode(new PropertyPair(label, " [Circular Reference]")));
                 return;
             }
 
-            // Add current object to a NEW visited set for this branch 
-            // (Use a copy to allow the same object to appear in DIFFERENT branches)
+            // --- PREPARE FOR CHILDREN ---
+            // We create a NEW set for this specific branch. 
+            // This allows the same object to appear in different branches, 
+            // but never as its own ancestor.
             Set<Object> nextVisited = Collections.newSetFromMap(new IdentityHashMap<Object, Boolean>());
             nextVisited.addAll(visited);
             nextVisited.add(userObject);
 
-            // ... rest of the reflection logic using nextVisited ...
-            // Example for POJO fields:
-            // this.add(new RefinedNode(field.getName(), val, policy, nextVisited));
-        }
+            // --- RECURSE ---
+            // When we find a child field, we pass 'nextVisited' into the NEW node's constructor.
+            Field[] fields = userObject.getClass().getDeclaredFields();
+            for (Field field : fields) {
+                // Skip static fields (we want instance data)
+                if (Modifier.isStatic(field.getModifiers())) continue;
+
+                try {
+                    field.setAccessible(true);
+                    Object childValue = field.get(userObject);
+
+                    if (policy.shouldExpand(field, childValue)) {
+                        // Recurse: Pass the nextVisited set down
+                        this.add(new RefinedNode(field.getName(), childValue, policy, nextVisited));
+                    } else {
+                        // Leaf: No recursion needed
+                        this.add(new DefaultMutableTreeNode(new PropertyPair(field.getName(), childValue)));
+                    }
+                } catch (Exception e) {
+                    // Usually occurs due to SecurityManager or deeply internal classes
+                    this.add(new DefaultMutableTreeNode(new PropertyPair(field.getName(), "Error: " + e.getMessage())));
+                }
+            }
+            /*
+             * A Note on getDeclaredFields() vs getFields() I used getDeclaredFields() here
+             * because:
+             * 
+             * getFields() only returns public fields (very rare in well-encapsulated Java
+             * POJOs).
+             * 
+             * getDeclaredFields() returns all fields (private, protected, etc.) defined in
+             * that specific class.
+             * 
+             * If your object model uses Inheritance (e.g., Manager extends Employee),
+             * getDeclaredFields() only sees the fields in Manager. If you want to see the
+             * whole hierarchy, you would need a small while loop to crawl up the superClass
+             * chain—but for a first pass, getDeclaredFields() is usually what developers
+             * expect to see.
+             */
+           
+        } // end constructor
 
         private static boolean isPrimitive(Object obj) {
             return obj.getClass().getName().startsWith("java.lang");
         }
+
     }
-    
+
     static class PolishedRenderer extends DefaultTreeCellRenderer {
 
         @Override
@@ -150,6 +193,7 @@ public class SmartTreePanel extends JPanel {
                 frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 
                 // Your arbitrary object
+                // Map testData = new HashMap (); // for beanshell
                 Map<String, Object> testData = new HashMap<>();
                 testData.put("ID", 101);
                 testData.put("Status", "Active");

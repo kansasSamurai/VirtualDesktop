@@ -90,8 +90,8 @@ import org.jwellman.bsh.FileReader;
 
     See the BeanShell User's Manual for more information.
 */
-public class Interpreter 
-    implements Runnable, ConsoleInterface,Serializable
+@SuppressWarnings({"serial","rawtypes"})
+public class Interpreter implements Runnable, ConsoleInterface,Serializable
 {
     private static final Logger LOG = LoggerFactory.getLogger(Interpreter.class);
 
@@ -427,11 +427,11 @@ public class Interpreter
     }
 
     /**
-        Run interactively.  (printing prompts, etc.)
-    */
-    public void run() 
-    {
-        if(evalOnly)
+     * Run interactively.  (printing prompts, etc.)
+     */
+    public void run() {
+
+        if (evalOnly)
             throw new RuntimeException("bsh Interpreter: No stream");
 
         /*
@@ -1012,6 +1012,7 @@ public class Interpreter
         return parser.jjtree;
     }
 
+    @SuppressWarnings("unused")
     private JavaCharStream get_jj_input_stream() {
         return parser.jj_input_stream;
     }

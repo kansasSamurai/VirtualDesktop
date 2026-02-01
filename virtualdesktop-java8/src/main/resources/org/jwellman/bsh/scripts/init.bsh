@@ -14,10 +14,11 @@
  *     of incompatible characters (i.e. see env.bsh for an example)
  */
 
-// This must be the first line of this script
+// This must be the first line of this script [2]
 importCommands("org.jwellman.bsh.commands");
 
 // A closure to help navigate the shell/console
+print("INIT: sourceUTF8(.../env.bsh");
 sourceUTF8("/org/jwellman/bsh/scripts/env.bsh");
 
 // Unfortunately, importCommands() does not override default commands
@@ -34,8 +35,17 @@ jvd() {
     return this;
 }
 
-if (void == global.jvd) { global.jvd = jvd(); }
-global.jvd.unix = unix();
+if (void == global.jvd) { 
+    print("INIT: jvd = jvd()");
+    global.jvd = jvd(); 
+}
+
+if (void == global.jvd.unix) { 
+    print("INIT: jvd.unix = unix()");
+    global.jvd.unix = unix(); 
+}
 
 // Not only does this clear the console but it reprints the banner now that the banner script is "fixed"
+print("INIT COMPLETE");
+
 cls();

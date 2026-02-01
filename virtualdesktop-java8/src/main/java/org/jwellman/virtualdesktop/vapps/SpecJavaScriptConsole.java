@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
  *
  * <p><b>Note:</b> To support arrow functions, etc:
  * java -Dnashorn.args=--language=es6 -jar YourApp.jar
+
  * @author Rick Wellman
  */
 public class SpecJavaScriptConsole extends SpecGenericConsole implements Runnable {

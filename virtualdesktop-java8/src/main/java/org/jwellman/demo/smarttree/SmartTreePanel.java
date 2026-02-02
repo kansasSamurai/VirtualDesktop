@@ -22,6 +22,7 @@ import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
+import javax.swing.ToolTipManager;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 
@@ -55,6 +56,8 @@ public class SmartTreePanel extends JPanel {
         this.tree.setCellRenderer(new PolishedRenderer(summaryRegistry));
         this.tree.addTreeWillExpandListener(new ExpansionGuardrail());
 
+        ToolTipManager.sharedInstance().registerComponent(this.tree);
+        
         // Define expansion logic
         this.expansionPolicy = new ExpansionPolicy() {
             @Override
@@ -336,6 +339,12 @@ public class SmartTreePanel extends JPanel {
             super.getTreeCellRendererComponent(tree, value, sel, exp, leaf, row, focus);
 
             if (value instanceof javax.swing.tree.DefaultMutableTreeNode) {
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode) value;
+
+                // --- ADD TOOLTIP LOGIC ---
+                // This provides the JS-style breadcrumb on hover
+                setToolTipText(getPathToNode(node));
+
                 Object userObj = ((javax.swing.tree.DefaultMutableTreeNode) value).getUserObject();
                 if (userObj instanceof SmartTreePanel.PropertyPair) {
                     SmartTreePanel.PropertyPair pair = (SmartTreePanel.PropertyPair) userObj;
@@ -348,12 +357,31 @@ public class SmartTreePanel extends JPanel {
                         // for now, do not decorate focused nodes
                         setText(pair.getName() + " : " + summary);
                     } else {
-                        setText("<html><font color='#9876aa'>" + key + "</font> : <font color='#6a8759'>" + summary + "</font></html>");
+                        setText("<html><font color='#4FC3F7'>" + key + "</font> : <font color='#CE93D8'>" + summary + "</font></html>");
                     }
                 }
             }
             return this;
         }
+        
+        public String getPathToNode(DefaultMutableTreeNode node) {
+            Object[] path = node.getPath();
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < path.length; i++) {
+                DefaultMutableTreeNode n = (DefaultMutableTreeNode) path[i];
+                Object userObj = n.getUserObject();
+
+                if (userObj instanceof PropertyPair) {
+                    String name = ((PropertyPair) userObj).getName();
+                    // Clean up name for JS notation (remove [0] brackets or handle spaces)
+                    sb.append(name);
+                    if (i < path.length - 1)
+                        sb.append(".");
+                }
+            }
+            return sb.toString();
+        }
+
     }
 
     public class ExpansionGuardrail implements javax.swing.event.TreeWillExpandListener {

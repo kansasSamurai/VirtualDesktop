@@ -15,6 +15,7 @@ import java.util.Set;
 
 import javax.swing.JFrame;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
@@ -30,21 +31,30 @@ import javax.swing.tree.DefaultTreeModel;
  */
 @SuppressWarnings("serial")
 public class SmartTreePanel extends JPanel {
+
     private final JTree tree;
-    private final ExpansionPolicy policy;
-    private final SummaryRegistry summaryRegistry = new SummaryRegistry();
-    private final FieldFilterRegistry filterRegistry = new FieldFilterRegistry();
+    private ExpansionPolicy expansionPolicy;
+    private SummaryRegistry summaryRegistry = new SummaryRegistry();
+    private LeafPolicyRegistry leafRegistry = new LeafPolicyRegistry();
+    private FieldFilterRegistry filterRegistry = new FieldFilterRegistry();
+    private TransformationRegistry transformerRegistry = new TransformationRegistry();
     private Object currentData;
 
     public SmartTreePanel(Object initialData) {
+
         this.currentData = initialData;
         this.setLayout(new BorderLayout());
 
+        // 1. Initialize Registries
+        // Register the Map transformer so it is available for updateData()
+        this.transformerRegistry.addProvider(new MapTransformer());
+
         this.tree = new JTree();
         this.tree.setCellRenderer(new PolishedRenderer(summaryRegistry));
+        this.tree.addTreeWillExpandListener(new ExpansionGuardrail());
 
         // Define expansion logic
-        this.policy = new ExpansionPolicy() {
+        this.expansionPolicy = new ExpansionPolicy() {
             @Override
             public boolean shouldExpand(java.lang.reflect.Field f, Object val) {
                 return val != null && (val instanceof Collection || val instanceof Map
@@ -78,15 +88,20 @@ public class SmartTreePanel extends JPanel {
      * Resets the tree with a new root object.
      */
     public void updateData(Object newData) {
+        this.currentData = newData;
+
         // Create the fresh "Passport" for cycle detection
-        java.util.Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<Object, Boolean>());
+        Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<Object, Boolean>());
 
         // Generate new nodes
-//        RefinedNode newRoot = new RefinedNode("Root", newData, policy, visited);
-        RefinedNode newRoot = new RefinedNode("Root", newData, policy, filterRegistry, visited);
+        RefinedNode newRoot = new RefinedNode("Root", newData, this, visited);
 
         // Swap the model (this triggers the JTree to repaint)
         this.tree.setModel(new DefaultTreeModel(newRoot));
+    }
+
+    public ExpansionPolicy getExpansionPolicy() {
+        return expansionPolicy;
     }
 
     public SummaryRegistry getSummaryRegistry() {
@@ -95,6 +110,34 @@ public class SmartTreePanel extends JPanel {
 
     public FieldFilterRegistry getFilterRegistry() {
         return filterRegistry;
+    }
+
+    public LeafPolicyRegistry getLeafRegistry() {
+        return leafRegistry;
+    }
+
+    public void setExpansionPolicy(ExpansionPolicy expansionPolicy) {
+        this.expansionPolicy = expansionPolicy;
+    }
+
+    public void setSummaryRegistry(SummaryRegistry summaryRegistry) {
+        this.summaryRegistry = summaryRegistry;
+    }
+
+    public void setLeafRegistry(LeafPolicyRegistry leafRegistry) {
+        this.leafRegistry = leafRegistry;
+    }
+
+    public void setFilterRegistry(FieldFilterRegistry filterRegistry) {
+        this.filterRegistry = filterRegistry;
+    }
+
+    public TransformationRegistry getTransformerRegistry() {
+        return transformerRegistry;
+    }
+
+    public void setTransformerRegistry(TransformationRegistry transformerRegistry) {
+        this.transformerRegistry = transformerRegistry;
     }
 
     public JTree getTree() {
@@ -115,22 +158,38 @@ public class SmartTreePanel extends JPanel {
         boolean shouldExpand(Field f, Object val);
     }
 
+    /**
+     * 
+     * @author rwellman
+     *
+     */
     static class RefinedNode extends DefaultMutableTreeNode {
 
-        public RefinedNode(String label, Object userObject, ExpansionPolicy policy, FieldFilterRegistry filterRegistry, Set<Object> visited) {
-            super(new PropertyPair(label, userObject));
+        public RefinedNode(String label, Object rawObject, SmartTreePanel context, Set<Object> visited) {
+
+            // --- STEP 1: TRANSFORM ---
+            // Map types or 3rd party proxies are converted here
+            Object userObject = context.getTransformerRegistry().transform(rawObject);
+
+            // Initialize the node with the (potentially) transformed object
+            setUserObject(new PropertyPair(label, userObject));
 
             // Safety checks (nulls and primitives don't have children)
             if (userObject == null || isPrimitive(userObject)) return;
 
-            // --- CYCLE CHECK ---
+            // --- STEP 2: GUARDRAILS ---
             if (visited.contains(userObject)) {
-                // We found a loop! Add a "dead end" node and stop recursing.
-                this.add(new DefaultMutableTreeNode(new PropertyPair(label, " [Circular Reference]")));
+                this.add(new DefaultMutableTreeNode(new PropertyPair(label, "[Circular Reference]")));
                 return;
             }
 
-            // --- PREPARE FOR CHILDREN ---
+            // --- NEW: LEAF POLICY CHECK ---
+            // If the registry says this should be a leaf, we stop here.
+            if (context.getLeafRegistry().isForceLeaf(userObject)) {
+                return; // No children will be added
+            }
+
+            // --- STEP 3: RECURSE ---
             // We create a NEW set for this specific branch. 
             // This allows the same object to appear in different branches, 
             // but never as its own ancestor.
@@ -139,32 +198,60 @@ public class SmartTreePanel extends JPanel {
             nextVisited.add(userObject);
 
             // --- RECURSE ---
-            // When we find a child field, we pass 'nextVisited' into the NEW node's constructor.
-            Field[] fields = userObject.getClass().getDeclaredFields();
-            for (Field field : fields) {
 
-                // NEW: Check the registry before processing
-                if (!filterRegistry.isVisible(field, userObject)) continue;                
+            // Handle Collections (including transformed Maps)
+            if (userObject instanceof Collection) {
+                int i = 0;
+                for (Object item : (Collection<?>) userObject) {
+                    // Each item in the collection goes through the same transformation process
+                    this.add(new RefinedNode("[" + (i++) + "]", item, context, nextVisited));
+                }
+            } 
 
-                // Skip static fields (we want instance data)
-                if (Modifier.isStatic(field.getModifiers())) continue;
-
-                try {
-                    field.setAccessible(true);
-                    Object childValue = field.get(userObject);
-
-                    if (policy.shouldExpand(field, childValue)) {
-                        // Recurse: Pass the nextVisited set down
-                        this.add(new RefinedNode(field.getName(), childValue, policy, filterRegistry, nextVisited));
-                    } else {
-                        // Leaf: No recursion needed
-                        this.add(new DefaultMutableTreeNode(new PropertyPair(field.getName(), childValue)));
-                    }
-                } catch (Exception e) {
-                    // Usually occurs due to SecurityManager or deeply internal classes
-                    this.add(new DefaultMutableTreeNode(new PropertyPair(field.getName(), "Error: " + e.getMessage())));
+            // new : Handle POJOs
+            else if (!userObject.getClass().getName().startsWith("java.lang")) {
+                for (Field field : userObject.getClass().getDeclaredFields()) {
+                    if (Modifier.isStatic(field.getModifiers())) continue;
+                    try {
+                        field.setAccessible(true);
+                        Object val = field.get(userObject);
+                        if (context.getExpansionPolicy().shouldExpand(field, val)) {
+                            this.add(new RefinedNode(field.getName(), val, context, nextVisited));
+                        } else {
+                            this.add(new DefaultMutableTreeNode(new PropertyPair(field.getName(), val)));
+                        }
+                    } catch (Exception ignored) {}
                 }
             }
+
+            // old : Handle POJOs
+            
+//            // When we find a child field, we pass 'nextVisited' into the NEW node's constructor.
+//            Field[] fields = userObject.getClass().getDeclaredFields();
+//            for (Field field : fields) {
+//
+//                // NEW: Check the registry before processing
+//                if (!filterRegistry.isVisible(field, userObject)) continue;                
+//
+//                // Skip static fields (we want instance data)
+//                if (Modifier.isStatic(field.getModifiers())) continue;
+//
+//                try {
+//                    field.setAccessible(true);
+//                    Object childValue = field.get(userObject);
+//
+//                    if (policy.shouldExpand(field, childValue)) {
+//                        // Recurse: Pass the nextVisited set down
+//                        this.add(new RefinedNode(field.getName(), childValue, policy, filterRegistry, leafPolicy, nextVisited));
+//                    } else {
+//                        // Leaf: No recursion needed
+//                        this.add(new DefaultMutableTreeNode(new PropertyPair(field.getName(), childValue)));
+//                    }
+//                } catch (Exception e) {
+//                    // Usually occurs due to SecurityManager or deeply internal classes
+//                    this.add(new DefaultMutableTreeNode(new PropertyPair(field.getName(), "Error: " + e.getMessage())));
+//                }
+//            }
             /*
              * A Note on getDeclaredFields() vs getFields() I used getDeclaredFields() here
              * because:
@@ -254,6 +341,56 @@ public class SmartTreePanel extends JPanel {
         }
     }
 
+    public class ExpansionGuardrail implements javax.swing.event.TreeWillExpandListener {
+        private int threshold = 20; // Configurable size
+        private boolean enabled = true;
+
+        @Override
+        public void treeWillExpand(javax.swing.event.TreeExpansionEvent event) throws javax.swing.tree.ExpandVetoException {
+            if (!enabled) return;
+
+            Object node = event.getPath().getLastPathComponent();
+            if (node instanceof RefinedNode) {
+                RefinedNode rNode = (RefinedNode) node;
+                Object data = ((PropertyPair)rNode.getUserObject()).getValue();
+
+                // Check if the data is a collection and exceeds the threshold
+                if (data instanceof Collection && ((Collection<?>) data).size() > threshold) {
+                    int size = ((Collection<?>) data).size();
+                    int result = JOptionPane.showConfirmDialog(null, 
+                        "This collection contains " + size + " items. Expanding may cause a delay. Continue?",
+                        "Large Collection Warning", JOptionPane.YES_NO_OPTION);
+
+                    if (result != JOptionPane.YES_OPTION) {
+                        // Throwing this exception cancels the expansion in Swing
+                        throw new javax.swing.tree.ExpandVetoException(event);
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void treeWillCollapse(javax.swing.event.TreeExpansionEvent event) {
+        }
+
+        public int getThreshold() {
+            return threshold;
+        }
+
+        public void setThreshold(int threshold) {
+            this.threshold = threshold;
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+    }
+    
     // --- DEMO LAUNCHER (For testing outside your framework) ---
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
@@ -283,5 +420,6 @@ public class SmartTreePanel extends JPanel {
             }
         });
     }
+
 }
 

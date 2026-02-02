@@ -3,7 +3,13 @@ package org.jwellman.demo.smarttree;
 import java.awt.*;
 import java.util.*;
 
+/**
+ * 
+ * @author rwellman
+ *
+ */
 public class SummaryRegistry {
+
     // Map of Class -> Function to describe that class
     private final Map<Class<?>, SummaryFunction> registry = new HashMap<>();
 
@@ -25,6 +31,10 @@ public class SummaryRegistry {
             Rectangle r = (Rectangle) o;
             return String.format("[%d,%d, w:%d, h:%d]", r.x, r.y, r.width, r.height);
         });
+        register(SmartTreePanel.PropertyPair.class, o -> {
+            SmartTreePanel.PropertyPair p = (SmartTreePanel.PropertyPair) o;
+            return p.getName() + ": " + p.getValue();
+        } );
     }
 
     public void register(Class<?> clazz, SummaryFunction func) {
@@ -33,7 +43,7 @@ public class SummaryRegistry {
 
     public String getSummary(Object obj) {
         if (obj == null) return "null";
-        
+
         // Check if we have a specific provider for this exact class or interface
         for (Map.Entry<Class<?>, SummaryFunction> entry : registry.entrySet()) {
             if (entry.getKey().isInstance(obj)) {

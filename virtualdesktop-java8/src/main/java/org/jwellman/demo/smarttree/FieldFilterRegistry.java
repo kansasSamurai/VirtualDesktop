@@ -34,13 +34,19 @@ public class FieldFilterRegistry {
 
     public boolean isVisible(Field field, Object parent) {
         if (parent == null) return true;
-        
+
+        // 1. Check for Annotation (Internal control)
+        if (field.isAnnotationPresent(TreeHide.class)) {
+            return false;
+        }
+
+        // 2. Check the Registry (External/Framework control)
         Class<?> clazz = parent.getClass();
         if (whiteList.containsKey(clazz)) {
             return whiteList.get(clazz).contains(field.getName());
         }
-        
-        // Default: Show everything that isn't internal or static
+
+        // 3. Default Sanity Filters
         return !field.getName().startsWith("_") && 
                !java.lang.reflect.Modifier.isStatic(field.getModifiers());
     }

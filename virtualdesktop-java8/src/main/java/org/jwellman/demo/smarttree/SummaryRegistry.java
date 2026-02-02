@@ -31,10 +31,16 @@ public class SummaryRegistry {
             Rectangle r = (Rectangle) o;
             return String.format("[%d,%d, w:%d, h:%d]", r.x, r.y, r.width, r.height);
         });
+
+        register(TransformedMap.class, o -> 
+            "Map(" + ((TransformedMap) o).size() + ")"
+        );
+
         register(SmartTreePanel.PropertyPair.class, o -> {
             SmartTreePanel.PropertyPair p = (SmartTreePanel.PropertyPair) o;
             return p.getName() + ": " + p.getValue();
         } );
+
     }
 
     public void register(Class<?> clazz, SummaryFunction func) {

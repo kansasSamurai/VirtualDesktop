@@ -48,6 +48,7 @@ public class SmartTreePanel extends JPanel {
         // 1. Initialize Registries
         // Register the Map transformer so it is available for updateData()
         this.transformerRegistry.addProvider(new MapTransformer());
+        this.leafRegistry.forceLeaf(PropertyPair.class);
 
         this.tree = new JTree();
         this.tree.setCellRenderer(new PolishedRenderer(summaryRegistry));
@@ -203,8 +204,16 @@ public class SmartTreePanel extends JPanel {
             if (userObject instanceof Collection) {
                 int i = 0;
                 for (Object item : (Collection<?>) userObject) {
-                    // Each item in the collection goes through the same transformation process
-                    this.add(new RefinedNode("[" + (i++) + "]", item, context, nextVisited));
+                    String childLabel = "[" + (i++) + "]";
+
+                    // If this is a transformed map entry, use the 'name' as the label
+                    if (item instanceof PropertyPair) {
+                        childLabel = ((PropertyPair) item).getName();
+                        // We can even pass the 'value' directly so we don't get double PropertyPairs
+                        this.add(new RefinedNode(childLabel, ((PropertyPair) item).getValue(), context, nextVisited));
+                    } else {
+                        this.add(new RefinedNode(childLabel, item, context, nextVisited));
+                    }
                 }
             } 
 

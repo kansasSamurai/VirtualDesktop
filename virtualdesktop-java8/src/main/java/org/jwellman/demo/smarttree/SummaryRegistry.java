@@ -57,10 +57,14 @@ public class SummaryRegistry {
             }
         }
 
+        // 2. Handle Primitives/Wrappers/Strings specifically
+        if (obj instanceof String) return "\"" + obj + "\"";
+        if (obj instanceof Number || obj instanceof Boolean) return String.valueOf(obj);
+
         // Default: If it's a collection, show size. Otherwise, a generic "Object" hint.
         if (obj instanceof Collection) return "Array(" + ((Collection<?>) obj).size() + ")";
         if (obj instanceof Map) return "Map(" + ((Map<?, ?>) obj).size() + ")";
-        
+
         return obj.getClass().getSimpleName();
     }
 

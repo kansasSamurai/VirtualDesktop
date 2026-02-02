@@ -1,6 +1,7 @@
 package org.jwellman.demo.smarttree;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -48,7 +49,7 @@ public class SmartTreePanel extends JPanel {
         // 1. Initialize Registries
         // Register the Map transformer so it is available for updateData()
         this.transformerRegistry.addProvider(new MapTransformer());
-        this.leafRegistry.forceLeaf(PropertyPair.class);
+        this.leafRegistry.forceLeaf(Color.class);
 
         this.tree = new JTree();
         this.tree.setCellRenderer(new PolishedRenderer(summaryRegistry));
@@ -338,12 +339,17 @@ public class SmartTreePanel extends JPanel {
                 Object userObj = ((javax.swing.tree.DefaultMutableTreeNode) value).getUserObject();
                 if (userObj instanceof SmartTreePanel.PropertyPair) {
                     SmartTreePanel.PropertyPair pair = (SmartTreePanel.PropertyPair) userObj;
-                    
+
                     String key = "<b>" + pair.getName() + "</b>";
                     String summary = registry.getSummary(pair.getValue());
-                    
+
                     // Format: Key: Preview
-                    setText("<html><font color='#9876aa'>" + key + "</font>: <font color='#6a8759'>" + summary + "</font></html>");
+                    if (focus) {
+                        // for now, do not decorate focused nodes
+                        setText(pair.getName() + " : " + summary);
+                    } else {
+                        setText("<html><font color='#9876aa'>" + key + "</font> : <font color='#6a8759'>" + summary + "</font></html>");
+                    }
                 }
             }
             return this;
@@ -413,6 +419,7 @@ public class SmartTreePanel extends JPanel {
                 // Map testData = new HashMap (); // for beanshell
                 Map<String, Object> testData = new HashMap<>();
                 testData.put("ID", 101);
+                testData.put("green", Color.green);
                 testData.put("Status", "Active");
                 testData.put("Meta", new String[]{"Internal", "Verified"});
 //                test1 = object();

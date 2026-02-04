@@ -35,6 +35,8 @@ import org.jwellman.bsh.state.actions.BshActions;
 import org.jwellman.bsh.state.store.BshStore;
 import org.jwellman.virtualdesktop.bsh.BeanShellService;
 
+import bsh.EvalError;
+
 /**
  * Script Tester Tool - Step-by-step BeanShell script execution with visual feedback.
  *
@@ -200,6 +202,10 @@ public class ScriptTesterPanel extends JPanel implements ActionListener {
         refreshView();
 
         try {
+            String preview = line.getText().substring(0, Math.max(30, line.getText().length()));
+            String alert = String.format("print(\"[ Tester: %s... ]\");", preview);
+            BeanShellService.get().eval(alert);
+
             // Use the shared BeanShell interpreter
             Object result = BeanShellService.get().eval(line.getText());
             line.setStatus(Status.COMPLETED);
@@ -228,6 +234,13 @@ public class ScriptTesterPanel extends JPanel implements ActionListener {
                     currentScriptId, line.getLineNumber(), e.getMessage()));
             }
             // Don't advance on error - allows retry with Step or skip with Skip
+        } finally {
+            try {
+                BeanShellService.get().eval("this.interpreter.print( getBshPrompt() );");
+            } catch (EvalError e) {
+                // TODO log
+                e.printStackTrace();
+            }
         }
 
         refreshView();

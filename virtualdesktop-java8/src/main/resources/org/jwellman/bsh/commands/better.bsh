@@ -80,22 +80,6 @@ better() {
 }
 
 /**
- * Returns just the Better Editor panel without creating a JInternalFrame.
- * Used by SpecWorkspace to embed the editor in a docking frame.
- */
-better_panel() {
-    return better_panel("Better Editor");
-}
-
-better_panel(String title) {
-    // Temporarily signal that we only want the panel
-    global.__better_panel_only = true;
-    result = better(title);
-    global.__better_panel_only = void;
-    return result.panel;
-}
-
-/**
  * The full better(...) implementation.
  *
  * @param title The title for the container (either an JFrame or JInternalFrame)

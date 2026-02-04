@@ -7,13 +7,16 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.swing.Icon;
 import javax.swing.JFrame;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -40,6 +43,7 @@ public class SmartTreePanel extends JPanel {
     private LeafPolicyRegistry leafRegistry = new LeafPolicyRegistry();
     private FieldFilterRegistry filterRegistry = new FieldFilterRegistry();
     private TransformationRegistry transformerRegistry = new TransformationRegistry();
+    private SmartTreeRenderer renderer;
     private Object currentData;
 
     public SmartTreePanel(Object initialData) {
@@ -53,7 +57,7 @@ public class SmartTreePanel extends JPanel {
         this.leafRegistry.forceLeaf(Color.class);
 
         this.tree = new JTree();
-        this.tree.setCellRenderer(new PolishedRenderer(summaryRegistry));
+        this.tree.setCellRenderer(renderer = new SmartTreeRenderer(summaryRegistry));
         this.tree.addTreeWillExpandListener(new ExpansionGuardrail());
 
         ToolTipManager.sharedInstance().registerComponent(this.tree);
@@ -149,9 +153,13 @@ public class SmartTreePanel extends JPanel {
         return tree;
     }
 
+    public SmartTreeRenderer getRenderer() {
+        return renderer;
+    }
+
     // --- SUPPORTING ARCHITECTURE ---
 
-    static class PropertyPair {
+    public static class PropertyPair {
         private final String name;
         private final Object value;
         public PropertyPair(String name, Object value) { this.name = name; this.value = value; }
@@ -236,35 +244,6 @@ public class SmartTreePanel extends JPanel {
                     } catch (Exception ignored) {}
                 }
             }
-
-            // old : Handle POJOs
-            
-//            // When we find a child field, we pass 'nextVisited' into the NEW node's constructor.
-//            Field[] fields = userObject.getClass().getDeclaredFields();
-//            for (Field field : fields) {
-//
-//                // NEW: Check the registry before processing
-//                if (!filterRegistry.isVisible(field, userObject)) continue;                
-//
-//                // Skip static fields (we want instance data)
-//                if (Modifier.isStatic(field.getModifiers())) continue;
-//
-//                try {
-//                    field.setAccessible(true);
-//                    Object childValue = field.get(userObject);
-//
-//                    if (policy.shouldExpand(field, childValue)) {
-//                        // Recurse: Pass the nextVisited set down
-//                        this.add(new RefinedNode(field.getName(), childValue, policy, filterRegistry, leafPolicy, nextVisited));
-//                    } else {
-//                        // Leaf: No recursion needed
-//                        this.add(new DefaultMutableTreeNode(new PropertyPair(field.getName(), childValue)));
-//                    }
-//                } catch (Exception e) {
-//                    // Usually occurs due to SecurityManager or deeply internal classes
-//                    this.add(new DefaultMutableTreeNode(new PropertyPair(field.getName(), "Error: " + e.getMessage())));
-//                }
-//            }
             /*
              * A Note on getDeclaredFields() vs getFields() I used getDeclaredFields() here
              * because:
@@ -290,80 +269,85 @@ public class SmartTreePanel extends JPanel {
 
     }
 
-//    static class PolishedRenderer extends DefaultTreeCellRenderer {
-//
-//        @Override
-//        public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean exp, boolean leaf, int row, boolean focus) {
-//            super.getTreeCellRendererComponent(tree, value, sel, exp, leaf, row, focus);
-//            if (value instanceof DefaultMutableTreeNode) {
-//                Object userObj = ((DefaultMutableTreeNode) value).getUserObject();
-//                if (userObj instanceof PropertyPair) {
-//                    PropertyPair pair = (PropertyPair) userObj;
-//                    setText("<html><font color='#CE93D8'><b>" 
-//                            + pair.getName() + "</b></font>: " 
-//                            + formatValue(pair.getValue()) 
-//                            + "</html>");
-//                }
-//            }
-//            setIcon(leaf ? null : getClosedIcon()); 
-//            return this;
-//        }
-//
-//        private String formatValue(Object val) {
-//            // RED
-//            if (val == null) return "<font color='#ff6b68'>null</font>";
-//            // 
-//            if (val instanceof String) return "<font color='#6a8759'>\"" + val + "\"</font>";
-//            // BLUE
-//            if (val instanceof Number) return "<font color='#4FC3F7'>" + val + "</font>";
-//            // 
-//            if (val instanceof Boolean) return "<font color='#cc7832'>" + val + "</font>";
-//            // LAF DEFAULT / ITALIC
-//            if (val instanceof Collection) return "<i>Array(" + ((Collection<?>) val).size() + ")</i>";
-//            // LAF DEFAULT / ITALIC
-//            return "<i>" + val.getClass().getSimpleName() + "</i>";
-//        }
-//
-//    }
-//    
-    static class PolishedRenderer extends javax.swing.tree.DefaultTreeCellRenderer {
+    /**
+     * 
+     * @author rwellman
+     *
+     */
+    static class SmartTreeRenderer extends javax.swing.tree.DefaultTreeCellRenderer {
 
-        private final SummaryRegistry registry;
+        private final SummaryRegistry summaryRegistry;
+        private final List<NodeFormatProvider> formatProviders = new ArrayList<>();
+        private final Map<Class<?>, IconProvider> iconProviders = new HashMap<>();
 
-        public PolishedRenderer(SummaryRegistry registry) {
-            this.registry = registry;
+        public SmartTreeRenderer(SummaryRegistry summaryRegistry) {
+            this.summaryRegistry = summaryRegistry;
         }
 
+        // Registration Methods
+        public void addFormatProvider(NodeFormatProvider provider) { formatProviders.add(provider); }
+        public void registerIcon(Class<?> clazz, IconProvider provider) { iconProviders.put(clazz, provider); }
+
         @Override
-        public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean exp, boolean leaf, int row, boolean focus) {
+        public Component getTreeCellRendererComponent(JTree tree, Object value, 
+                boolean sel, boolean exp, boolean leaf, int row, boolean focus) {
+
             super.getTreeCellRendererComponent(tree, value, sel, exp, leaf, row, focus);
 
-            if (value instanceof javax.swing.tree.DefaultMutableTreeNode) {
+            if (value instanceof DefaultMutableTreeNode) {
                 DefaultMutableTreeNode node = (DefaultMutableTreeNode) value;
+                Object userObj = node.getUserObject();
 
-                // --- ADD TOOLTIP LOGIC ---
-                // This provides the JS-style breadcrumb on hover
-                setToolTipText(getPathToNode(node));
-
-                Object userObj = ((javax.swing.tree.DefaultMutableTreeNode) value).getUserObject();
                 if (userObj instanceof SmartTreePanel.PropertyPair) {
                     SmartTreePanel.PropertyPair pair = (SmartTreePanel.PropertyPair) userObj;
+                    Object actualValue = pair.getValue();
 
-                    String key = "<b>" + pair.getName() + "</b>";
-                    String summary = registry.getSummary(pair.getValue());
+                    // --- 1. HANDLE ICONS ---
+                    javax.swing.Icon customIcon = findIcon(actualValue);
+                    if (customIcon != null) {
+                        setIcon(customIcon);
+                    } else {
+                        // Fallback to standard Leaf/Folder icons
+                        setIcon(leaf ? getLeafIcon() : getClosedIcon());
+                    }
 
-                    // Format: Key: Preview
+                    // --- 2. HANDLE TEXT FORMATTING ---
+                    String renderedText = null;
+                    for (NodeFormatProvider provider : formatProviders) {
+                        renderedText = provider.format(pair, summaryRegistry);
+                        if (renderedText != null) break; 
+                    }
+
                     if (focus) {
                         // for now, do not decorate focused nodes
-                        setText(pair.getName() + " : " + summary);
+//                        setText(pair.getName() + " : " + summary);
+                        setText(renderedText);
                     } else {
-                        setText("<html><font color='#4FC3F7'>" + key + "</font> : <font color='#CE93D8'>" + summary + "</font></html>");
+                        if (renderedText != null) {
+                            setText(renderedText);
+                        } else {
+                            // --- 3. DEFAULT FALLBACK ---
+                            String key = "<b>" + pair.getName() + "</b>";
+                            String summary = summaryRegistry.getSummary(actualValue);
+                            setText("<html><font color='#4FC3F7'>" + key + "</font> : <font color='#CE93D8'>" + summary + "</font></html>");
+                        }
                     }
+
                 }
             }
             return this;
         }
-        
+
+        private Icon findIcon(Object value) {
+            if (value == null) return null;
+            for (Map.Entry<Class<?>, IconProvider> entry : iconProviders.entrySet()) {
+                if (entry.getKey().isInstance(value)) {
+                    return entry.getValue().getIcon(value);
+                }
+            }
+            return null;
+        }
+
         public String getPathToNode(DefaultMutableTreeNode node) {
             Object[] path = node.getPath();
             StringBuilder sb = new StringBuilder();
@@ -383,6 +367,64 @@ public class SmartTreePanel extends JPanel {
         }
 
     }
+    
+//    static class PolishedRenderer extends javax.swing.tree.DefaultTreeCellRenderer {
+//
+//        private final SummaryRegistry registry;
+//
+//        public PolishedRenderer(SummaryRegistry registry) {
+//            this.registry = registry;
+//        }
+//
+//        @Override
+//        public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean exp, boolean leaf, int row, boolean focus) {
+//            super.getTreeCellRendererComponent(tree, value, sel, exp, leaf, row, focus);
+//
+//            if (value instanceof javax.swing.tree.DefaultMutableTreeNode) {
+//                DefaultMutableTreeNode node = (DefaultMutableTreeNode) value;
+//
+//                // --- ADD TOOLTIP LOGIC ---
+//                // This provides the JS-style breadcrumb on hover
+//                setToolTipText(getPathToNode(node));
+//
+//                Object userObj = ((javax.swing.tree.DefaultMutableTreeNode) value).getUserObject();
+//                if (userObj instanceof SmartTreePanel.PropertyPair) {
+//                    SmartTreePanel.PropertyPair pair = (SmartTreePanel.PropertyPair) userObj;
+//
+//                    String key = "<b>" + pair.getName() + "</b>";
+//                    String summary = registry.getSummary(pair.getValue());
+//
+//                    // Format: Key: Preview
+//                    if (focus) {
+//                        // for now, do not decorate focused nodes
+//                        setText(pair.getName() + " : " + summary);
+//                    } else {
+//                        setText("<html><font color='#4FC3F7'>" + key + "</font> : <font color='#CE93D8'>" + summary + "</font></html>");
+//                    }
+//                }
+//            }
+//            return this;
+//        }
+//        
+//        public String getPathToNode(DefaultMutableTreeNode node) {
+//            Object[] path = node.getPath();
+//            StringBuilder sb = new StringBuilder();
+//            for (int i = 0; i < path.length; i++) {
+//                DefaultMutableTreeNode n = (DefaultMutableTreeNode) path[i];
+//                Object userObj = n.getUserObject();
+//
+//                if (userObj instanceof PropertyPair) {
+//                    String name = ((PropertyPair) userObj).getName();
+//                    // Clean up name for JS notation (remove [0] brackets or handle spaces)
+//                    sb.append(name);
+//                    if (i < path.length - 1)
+//                        sb.append(".");
+//                }
+//            }
+//            return sb.toString();
+//        }
+//
+//    }
 
     public class ExpansionGuardrail implements javax.swing.event.TreeWillExpandListener {
         private int threshold = 20; // Configurable size

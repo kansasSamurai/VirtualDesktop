@@ -28,6 +28,12 @@ public class WorkspaceManager {
     /** The collection of workspaces */
     private Map<String, NameSpace> workspaces = new HashMap<>();
 
+    /** */
+    private NameSpace activeWS; 
+
+    /** */
+    private NameSpace originalParent;
+
     /**
      * 
      * @param it
@@ -147,6 +153,38 @@ public class WorkspaceManager {
         }
     }
 
+    /**
+     * Why this works: 
+     * 
+     * When isolated = true: The getGlobal() method in
+     * NameSpace.java sees parent == null and returns the activeWS itself.
+     * print(global.x) will now fail or look locally, because the "Ghost" root is no
+     * longer reachable.
+     * 
+     * When isolated = false: The tree is restored. getGlobal() climbs back up to
+     * the original root, and print(global.x) returns 5 again.
+     * 
+     * @param isolated
+     */
+    // TODO this has not been tested yet
+    public void setIsolated(boolean isolated) {
+        if (isolated) {
+            // 1. Save the parent so we don't lose the connection forever
+            originalParent = activeWS.getParent(); 
+            
+            // 2. Orphan the workspace
+            // Now getGlobal() will stop at activeWS
+            activeWS.setParent(null); 
+//            log.info("Workspace '{}' is now isolated (Orphaned).", activeWS.getName());
+        } else {
+            // 3. Re-attach to the family tree
+            if (originalParent != null) {
+                activeWS.setParent(originalParent);
+//                log.info("Workspace '{}' re-connected to parent.", activeWS.getName());
+            }
+        }
+    }
+    
     /**
      * Provides a bridge for the BeanShell script to retrieve a specific 
      * NameSpace object from the manager's map.
@@ -399,6 +437,44 @@ enterpriseApp() {
 
 // Final instantiation to place it in the Workspace/Global
 app = enterpriseApp();
+
+----------------------------
+
+import org.jwellman.demo.smarttree.*;
+import org.jwellman.demo.smarttree.provider.*;
+
+Map testData = new HashMap (); // for beanshell
+testData.put("ID", 101);
+testData.put("Status", "Active");
+testData.put("Meta", new String[]{"Internal", "Verified"});
+testData.put("Boolean", true);
+
+
+test1 = object();
+test1.stp = new SmartTreePanel(testData);
+test1.frame = DesktopManager.get().createVApp(test1.stp, "demo1");
+
+
+test1 = object();
+test1.stp = new SmartTreePanel(testData);
+test1.frame = DesktopManager.get().createVApp(test1.stp, "demo1");
+
+test1.bsp = new BooleanStatusProvider();
+test1.stp.getRenderer().addFormatProvider(test1.bsp);
+test1.stp.updateData(testData); // as needed
+
+test1.nap = new NumericAlertProvider();
+test1.stp.getRenderer().addFormatProvider(test1.nap);
+test1.stp.updateData(testData);
+
+
+
+
+
+
+
+
+
 
 
 

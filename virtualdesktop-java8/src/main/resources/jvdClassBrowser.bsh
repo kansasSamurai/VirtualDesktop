@@ -129,9 +129,15 @@ jvdClassBrowser() {
 }
 
 _JVD() {
+    print("INIT: jvd = _JVD()");
 
-	// Convenience to run Swing code on the EDT (Event Dispatching Thread)
-	edt(x) { SwingUtilities.invokeLater(x); }
+    // Convenience to run Swing code on the EDT (Event Dispatching Thread)
+    edt(x) { SwingUtilities.invokeLater(x); }
+
+    // (c)omponent, usually JPanel. 
+    create(c, title) {
+         DesktopManager.get().createVApp(c, title);
+    }
 
     classpath() {
         ClassLoader cl = ClassLoader.getSystemClassLoader();

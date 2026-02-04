@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>XSL-FO Professional Sandbox v6</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #27ae60; --bg: #525659; --panel-bg: #1e1e1e; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        header { background: var(--primary); color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        main { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 450px; display: flex; flex-direction: column; border-right: 2px solid #333; background: #252526; color: #ccc; }
+        .tabs { display: flex; background: #333; }
+        .tab { flex: 1; padding: 10px; cursor: pointer; text-align: center; font-size: 0.75rem; border-bottom: 2px solid transparent; }
+        .tab.active { background: var(--panel-bg); color: white; border-bottom: 2px solid var(--accent); }
+        textarea { flex: 1; font-family: 'Fira Code', monospace; font-size: 12px; padding: 15px; border: none; outline: none; background: var(--panel-bg); color: #d4d4d4; resize: none; }
+        #library-list { padding: 10px; background: #2d2d2d; border-top: 1px solid #444; max-height: 150px; overflow-y: auto; }
+        .lib-item { font-size: 0.7rem; display: flex; justify-content: space-between; padding: 6px; border-bottom: 1px solid #3d3d3d; align-items: center; }
+        #preview-zone { flex: 1; padding: 40px; overflow-y: auto; display: flex; justify-content: center; background: var(--bg); }
+        #xsl-canvas { background: white; width: 210mm; min-height: 297mm; padding: 20mm; box-shadow: 0 10px 30px rgba(0,0,0,0.5); outline: none; color: black; }
+        button { cursor: pointer; border: none; border-radius: 4px; padding: 6px 12px; font-weight: 600; }
+        .btn-primary { background: var(--accent); color: white; }
+        .status-msg { font-size: 0.7rem; color: #aaa; margin-right: 15px; }
+    </style>
+</head>
+<body onload="initProject()">
+
+<header>
+    <div><strong>XSL-FO Designer</strong> <small>| v6 Master Baseline</small></div>
+    <div>
+        <span id="save-status" class="status-msg"></span>
+        <button class="btn-primary" onclick="renderPreview()">Render Preview & Save</button>
+        <button onclick="clearProject()" style="background:#c0392b; color:white; margin-left:10px;">Reset Project</button>
+    </div>
+</header>
+
+<main>
+    <div class="sidebar">
+        <div class="tabs">
+            <div id="tab-xsl" class="tab active" onclick="showTab('xsl')">XSLT</div>
+            <div id="tab-xml" class="tab" onclick="showTab('xml')">XML DATA</div>
+            <div id="tab-map" class="tab" onclick="showTab('map')">JAVA MAP</div>
+        </div>
+        
+        <textarea id="xslInput" placeholder="Paste Main XSLT..."></textarea>
+        <textarea id="xmlInput" style="display:none;" placeholder="Paste XML Data..."></textarea>
+        <textarea id="mapInput" style="display:none;" placeholder='{ "reportTitle": "Invoice" }'></textarea>
+
+        <div style="padding: 5px 10px; background: #333; font-size: 0.7rem; font-weight: bold;">INCLUDE LIBRARY</div>
+        <div id="library-list"></div>
+        <div style="padding: 10px; display: flex; gap: 5px; background: #252526;">
+            <input type="text" id="lib-name" placeholder="filename.xsl" style="flex:1; font-size:0.7rem; background:#333; color:white; border:1px solid #444; padding:4px;">
+            <button onclick="addLibFile()" style="font-size:0.7rem;">Add File</button>
+        </div>
+    </div>
+
+    <div id="preview-zone">
+        <div id="xsl-canvas" contenteditable="true"></div>
+    </div>
+</main>
+
+<script>
+    let library = {};
+
+    function initProject() {
+        const saved = localStorage.getItem('xslfo_sandbox_v6');
+        if (saved) {
+            const data = JSON.parse(saved);
+            document.getElementById('xslInput').value = data.xsl || '';
+            document.getElementById('xmlInput').value = data.xml || '';
+            document.getElementById('mapInput').value = data.map || '';
+            library = data.library || {};
+            renderLibUI();
+            if (data.xsl) renderPreview();
+        }
+    }
+
+    function saveProject() {
+        const data = {
+            xsl: document.getElementById('xslInput').value,
+            xml: document.getElementById('xmlInput').value,
+            map: document.getElementById('mapInput').value,
+            library: library
+        };
+        localStorage.setItem('xslfo_sandbox_v6', JSON.stringify(data));
+        document.getElementById('save-status').innerText = `Saved: ${new Date().toLocaleTimeString()}`;
+    }
+
+    function clearProject() {
+        if (confirm("Reset everything?")) { localStorage.removeItem('xslfo_sandbox_v6'); location.reload(); }
+    }
+
+    function showTab(id) {
+        ['xsl', 'xml', 'map'].forEach(t => {
+            document.getElementById(t + 'Input').style.display = 'none';
+            document.getElementById('tab-' + t).classList.remove('active');
+        });
+        document.getElementById(id + 'Input').style.display = 'block';
+        document.getElementById('tab-' + id).classList.add('active');
+    }
+
+    function addLibFile() {
+        const name = document.getElementById('lib-name').value;
+        const content = prompt(`Paste XSL for ${name}`);
+        if (name && content) { library[name] = content; renderLibUI(); saveProject(); }
+    }
+
+    function renderLibUI() {
+        const list = document.getElementById('library-list');
+        list.innerHTML = Object.keys(library).map(name => `
+            <div class="lib-item">
+                <span>📄 ${name}</span>
+                <button onclick="delete library['${name}']; renderLibUI(); saveProject();" style="background:none; color:red; cursor:pointer;">&times;</button>
+            </div>`).join('');
+    }
+
+    function evaluateXPath(xpath, context) {
+        if (!xpath) return "";
+        try {
+            const doc = context.ownerDocument || context;
+            const res = doc.evaluate(xpath, context, null, XPathResult.STRING_TYPE, null);
+            return res.stringValue;
+        } catch(e) { return ""; }
+    }
+
+	function renderPreview() {
+		saveProject();
+		console.log("--- Starting Render Process ---");
+		
+		const xslStr = document.getElementById('xslInput').value;
+		const xmlStr = document.getElementById('xmlInput').value || "<r/>";
+		const parser = new DOMParser();
+		
+		let xslDoc = parser.parseFromString(xslStr, "text/xml");
+		const xmlDataDoc = parser.parseFromString(xmlStr, "text/xml");
+
+		// 1. Resolve Includes (Stitching)
+		const includes = xslDoc.getElementsByTagNameNS("*", "include");
+		console.log(`Found ${includes.length} include tags in main XSL.`);
+		
+		for (let i = includes.length - 1; i >= 0; i--) {
+			const href = includes[i].getAttribute('href');
+			console.log(`Processing include: ${href}`);
+			
+			if (library[href]) {
+				console.log(`  SUCCESS: ${href} found in Library.`);
+				const sub = parser.parseFromString(library[href], "text/xml");
+				const subTemplates = sub.getElementsByTagNameNS("*", "template");
+				console.log(`  Moving ${subTemplates.length} templates from ${href} to main XSL.`);
+				
+				Array.from(subTemplates).forEach(t => {
+					xslDoc.documentElement.appendChild(xslDoc.importNode(t, true));
+				});
+				includes[i].remove();
+			} else {
+				console.error(`  FAILURE: ${href} NOT found in Library. Available:`, Object.keys(library));
+			}
+		}
+
+		// 2. Inject Java Map
+		try {
+			const mapData = JSON.parse(document.getElementById('mapInput').value || "{}");
+			for (let [k, v] of Object.entries(mapData)) {
+				let p = xslDoc.createElementNS("http://www.w3.org/1999/XSL/Transform", "xsl:param");
+				p.setAttribute("name", k);
+				p.textContent = v;
+				xslDoc.documentElement.insertBefore(p, xslDoc.documentElement.firstChild);
+			}
+		} catch(e) { console.warn("Java Map JSON is invalid or empty."); }
+
+		const canvas = document.getElementById('xsl-canvas');
+		canvas.innerHTML = '';
+		
+		// 3. Start Context Fix
+		// If the XSL uses "invoice/items", but the context is the Document, it works.
+		// If it uses "/invoice/items", it needs the Document. 
+		// We pass the documentElement (the root tag) to start.
+		const flows = xslDoc.getElementsByTagNameNS("*", "flow");
+		const startNode = flows.length > 0 ? flows[0] : xslDoc.documentElement;
+		
+		console.log("Mapping FO to HTML...");
+		// before: const result = mapToHtml(startNode, xmlDataDoc.documentElement); 
+		// after: This is the "Proper" way: Pass the whole document (Root Node)
+		const result = mapToHtml(startNode, xmlDataDoc);
+		canvas.appendChild(result);
+		console.log("--- Render Complete ---");
+	}
+
+    function mapToHtml(xmlNode, dataContext) {
+        // Handle text nodes
+        if (xmlNode.nodeType === 3) return document.createTextNode(xmlNode.textContent);
+        
+        const ln = xmlNode.localName;
+        const ns = xmlNode.namespaceURI;
+        const isXSL = ns?.includes("Transform");
+
+        // --- XSL LOGIC ---
+        if (isXSL) {
+            if (ln === "value-of") {
+                const val = evaluateXPath(xmlNode.getAttribute('select'), dataContext);
+                const span = document.createElement('span');
+                span.style.color = '#2980b9';
+                span.innerText = val;
+                return span;
+            }
+            if (ln === "for-each") {
+                const frag = document.createDocumentFragment();
+                const nodes = (dataContext.ownerDocument || dataContext).evaluate(xmlNode.getAttribute('select'), dataContext, null, 7, null);
+                for (let i=0; i<nodes.snapshotLength; i++) {
+                    Array.from(xmlNode.childNodes).forEach(c => frag.appendChild(mapToHtml(c, nodes.snapshotItem(i))));
+                }
+                return frag;
+            }
+			if (ln === "call-template") {
+				const name = xmlNode.getAttribute('name');
+				console.log(`Attempting to call template: ${name}`);
+				const templates = xmlNode.ownerDocument.getElementsByTagNameNS("*", "template");
+				
+				let def = null;
+				for (let t of templates) { 
+					if (t.getAttribute('name') === name) { 
+						def = t; 
+						break; 
+					} 
+				}
+				
+				if (def) {
+					console.log(`  Found definition for: ${name}`);
+					const frag = document.createDocumentFragment();
+					Array.from(def.childNodes).forEach(c => frag.appendChild(mapToHtml(c, dataContext)));
+					return frag;
+				} else {
+					console.error(`  Critical: Template "${name}" definition not found in stitched XSL.`);
+					const err = document.createElement('span');
+					err.style.color = 'red';
+					err.innerText = `[Template "${name}" Not Found]`;
+					return err;
+				}
+			}
+            // Other XSL tags: just process children
+            const frag = document.createDocumentFragment();
+            Array.from(xmlNode.childNodes).forEach(c => frag.appendChild(mapToHtml(c, dataContext)));
+            return frag;
+        }
+
+        // --- FO LAYOUT ---
+		const tagMap = { 
+			'table': 'table', 
+			'table-header': 'thead',
+			'table-body': 'tbody', 
+			'table-footer': 'tfoot',
+			'table-row': 'tr', 
+			'table-cell': 'td' 
+		};
+        const el = document.createElement(tagMap[ln] || 'div');
+        
+        if (ns?.includes("Format")) {
+            const styles = {
+                'font-size': 'fontSize',
+                'font-weight': 'fontWeight',
+                'text-align': 'textAlign',
+                'border': 'border',
+                'padding': 'padding',
+                'width': 'width',
+                'color': 'color',
+                'background-color': 'backgroundColor',
+                'space-after': 'marginBottom',
+                'space-before': 'marginTop'
+            };
+            for (let [foAttr, jsProp] of Object.entries(styles)) {
+                const val = xmlNode.getAttribute(foAttr);
+                if (val) el.style[jsProp] = val;
+            }
+            if (ln === 'table') { el.style.width = "100%"; el.style.borderCollapse = "collapse"; }
+        }
+
+        // Recursively process children
+        Array.from(xmlNode.childNodes).forEach(c => {
+            const childHtml = mapToHtml(c, dataContext);
+            if (childHtml) el.appendChild(childHtml);
+        });
+        
+        return el;
+    }
+</script>
+</body>
+</html>

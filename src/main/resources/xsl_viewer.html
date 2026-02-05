@@ -71,6 +71,7 @@
 	// Global scope
     let library = {};
 	let virtualImages = {}; 
+    const MISSING_IMAGE_SVG = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZGVkZWRlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iOCIgZmlsbD0iI2FhYSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TUlTU0lORzwvdGV4dD48L3N2Zz4=";
 	const XSLT_SHIMS = {
 		// Add pairs here: "Original String": "Replacement String"
 		"fo:multi-switch": "fo:block", 
@@ -387,24 +388,22 @@ function mapToHtml(xmlNode, dataContext) {
 	
             if (attrName === 'src') {
                 attrValue = attrValue.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
-				
-				
+                //attrValue = virtualImages[attrValue] || library[attrValue] || attrValue;
+                
 				// new 2/5				
-				// Define this once at the top of your script or inside mapToHtml
-				const MISSING_IMAGE_SVG = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZGVkZWRlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iOCIgZmlsbD0iI2FhYSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TUlTU0lORzwvdGV4dD48L3N2Zz4=";
 
 				// ... inside external-graphic and xsl:attribute 'src' logic ...
 				let resolvedSrc = virtualImages[attrValue] || library[attrValue] || attrValue;
 
 				// If the result is empty, or the lookup failed to find a real URL/Base64
 				if (!resolvedSrc || resolvedSrc.trim() === "") {
-					el.src = MISSING_IMAGE_SVG;
-				} else {
-					el.src = resolvedSrc;
+					attrValue = MISSING_IMAGE_SVG;
 				}
+                
 				// new 2/5				
 
-				console.log("Resolved Image Path:", resolvedSrc);
+                
+				console.log("Resolved Image Path:", attrValue);
             }
             return { type: 'attribute', name: attrName, value: attrValue };
         }
@@ -460,6 +459,7 @@ function mapToHtml(xmlNode, dataContext) {
             let src = xmlNode.getAttribute('src') || "";
             src = src.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
             el.src = virtualImages[src] || library[src] || src;
+
 
             const width = xmlNode.getAttribute('content-width');
             const height = xmlNode.getAttribute('content-height');

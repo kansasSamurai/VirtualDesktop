@@ -71,6 +71,26 @@
 	// Global scope
     let library = {};
 	let virtualImages = {}; 
+	const XSLT_SHIMS = {
+		// Add pairs here: "Original String": "Replacement String"
+		"fo:multi-switch": "fo:block", 
+		"fo:multi-case": "fo:block",
+		"proprietary:custom-extension": "fo:inline",
+		"xsl:analyze-string": "xsl:comment", // Kill complex logic for now
+
+		// Layout tags that browsers don't understand
+		"fo:declarations": "xsl:comment",
+		"fo:bookmark-tree": "xsl:comment",
+		"fo:destination": "xsl:comment",
+		
+		// Proprietary extensions (common in FOP or XEP)
+		"fox:external-document": "fo:block",
+		"rx:meta-field": "xsl:comment",
+		
+		// XSL 2.0+ logic that can break 1.0 parsers if not handled
+		"xsl:result-document": "xsl:comment",
+		"xsl:character-map": "xsl:comment",
+	};
 
 	function initProject() {
         const saved = localStorage.getItem('xslfo_sandbox_v6');
@@ -115,8 +135,7 @@
     function clearProject() {
         if (confirm("Reset everything?")) { localStorage.removeItem('xslfo_sandbox_v6'); location.reload(); }
     }
-	
-	// 3. Copy to Clipboard
+
 	async function copyXsltToClipboard() {
 		const xslContent = document.getElementById('xslInput').value;
 		try {
@@ -133,6 +152,20 @@
 		} catch (err) {
 			console.error('Failed to copy: ', err);
 		}
+	}
+
+	function preProcessXslt(rawStr) {
+		let processed = rawStr;
+		
+		// Apply the static shims
+		for (const [target, replacement] of Object.entries(XSLT_SHIMS)) {
+			// Use a global regex to replace all instances
+			const escapedTarget = target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			const re = new RegExp(escapedTarget, 'g');
+			processed = processed.replace(re, replacement);
+		}
+		
+		return processed;
 	}
 
 	function showTab(tabName) {
@@ -199,16 +232,22 @@
 		}
 	}
 
-	function renderPreview() {
+function renderPreview() {
 		saveProject();
 		console.log("--- Starting Render Process ---");
 		
-		const xslStr = document.getElementById('xslInput').value;
+		// 1. Get the raw string and pre-process it immediately
+		let xslStr = document.getElementById('xslInput').value;
+		xslStr = preProcessXslt(xslStr); 
+		
 		const xmlStr = document.getElementById('xmlInput').value || "<r/>";
 		const parser = new DOMParser();
 		
+		// 2. Now parse the "cleaned" string
 		let xslDoc = parser.parseFromString(xslStr, "text/xml");
 		const xmlDataDoc = parser.parseFromString(xmlStr, "text/xml");
+		
+		// ... rest of the function ...
 
 		// 1. Resolve Includes (Stitching)
 		const includes = xslDoc.getElementsByTagNameNS("*", "include");
@@ -348,8 +387,24 @@ function mapToHtml(xmlNode, dataContext) {
 	
             if (attrName === 'src') {
                 attrValue = attrValue.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
-                attrValue = virtualImages[attrValue] || library[attrValue] || attrValue;
-				console.log("Resolved Image Path:", attrValue);
+				
+				
+				// new 2/5				
+				// Define this once at the top of your script or inside mapToHtml
+				const MISSING_IMAGE_SVG = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZGVkZWRlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iOCIgZmlsbD0iI2FhYSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TUlTU0lORzwvdGV4dD48L3N2Zz4=";
+
+				// ... inside external-graphic and xsl:attribute 'src' logic ...
+				let resolvedSrc = virtualImages[attrValue] || library[attrValue] || attrValue;
+
+				// If the result is empty, or the lookup failed to find a real URL/Base64
+				if (!resolvedSrc || resolvedSrc.trim() === "") {
+					el.src = MISSING_IMAGE_SVG;
+				} else {
+					el.src = resolvedSrc;
+				}
+				// new 2/5				
+
+				console.log("Resolved Image Path:", resolvedSrc);
             }
             return { type: 'attribute', name: attrName, value: attrValue };
         }

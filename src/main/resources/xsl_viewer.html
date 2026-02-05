@@ -68,6 +68,26 @@
 </main>
 
 <script>
+/*
+ * Notes:
+
+example xml:
+<report>
+    ...
+    <imagePath>file:/C:/.../reports/image.svg</imagePath>
+
+4. Use data model in template:
+    <fo:external-graphic content-width="scale-down-to-fit" content-height="scale-down-to-fit"
+        inline-progression-dimension.maximum="5mm" block-progression-dimension.maximum="5mm">
+        <xsl:attribute name="src"><xsl:value-of select="report/imagePath" /> 
+    </fo:external-graphic>
+
+
+** XSL Viewer seems to handle this seamlessly when full path is given like shown above 
+*** ... it also seems to handle .png, .svg, (probably more) without issue
+
+ */
+	
 	// Global scope
     let library = {};
 	let virtualImages = {}; 
@@ -521,3 +541,4 @@ function mapToHtml(xmlNode, dataContext) {
 </script>
 </body>
 </html>
+

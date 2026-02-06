@@ -959,3 +959,81 @@ In your main flow, you simply loop through your XML data. Because these are all 
 
 If your icons are SVGs and you want them to match the text color perfectly, some engines allow you to omit the color in the SVG code and set `color` on the `fo:external-graphic`. However, most people find it easier to just ensure the SVGs are exported with the correct "theme" colors from the start.
 
+When `alignment-baseline="middle"` gets you 95% of the way there but still looks "off" to the eye (often because of the way a specific font's x-height interacts with an icon's geometry), you have a few ways to perform that final "nudge."
+
+Since your icons are a consistent size, you can move away from the automatic "middle" calculation and use more surgical tools.
+
+### 1. The `baseline-shift` (The Micro-Adjuster)
+
+This is the most direct way to nudge an element up or down without affecting the flow of the rest of the line. You can use it on either the `fo:external-graphic` or the `fo:inline` wrapper.
+
+```xml
+<fo:external-graphic src="url('icon.svg')" 
+                     width="12pt" 
+                     baseline-shift="-1.5pt" /> 
+
+```
+
+* **Why use this:** It is specifically designed for "fine-tuning." It doesn't change the height of the line; it just shifts the element's "sit" relative to the baseline.
+
+### 2. Manual Vertical Alignment (No `alignment-baseline`)
+
+If you find the automatic "middle" is unpredictable, you can align the **bottoms** and use padding or shift.
+
+* **The Bottom-Align + Nudge:**
+If you set the icon to sit on the baseline (the default), it often looks too high because text has "descenders" (like the tails on 'g' or 'y') that the icon doesn't account for.
+```xml
+<fo:external-graphic src="url('icon.svg')" 
+                     width="12pt" 
+                     baseline-shift="-2pt" /> 
+<fo:inline>Text sit here</fo:inline>
+
+```
+
+
+
+### 3. The "Transparent Border" Trick
+
+If you don't want to use `baseline-shift` (which can occasionally be finicky in very old versions of FOP), you can use a transparent border or padding on the icon to "push" it into place.
+
+```xml
+<fo:external-graphic src="url('icon.svg')" 
+                     width="12pt"
+                     padding-top="2pt" 
+                     border-top="1pt solid transparent" />
+
+```
+
+### 4. Which one is "Best Practice"?
+
+For a modern, professional look, I recommend **`baseline-shift`**. It’s the XSL-FO equivalent of a "relative top" in CSS.
+
+**Revised Legend Template with Micro-Adjustment:**
+Adding a `shift` parameter to your template gives you total control:
+
+```xml
+<xsl:template name="ui.legend.item">
+  <xsl:param name="icon-url" />
+  <xsl:param name="label" />
+  <xsl:param name="shift" select="'-1pt'" /> <fo:inline keep-together.within-line="always">
+    <fo:external-graphic src="url('{$icon-url}')" 
+                         width="12pt" 
+                         content-width="scale-to-fit" 
+                         baseline-shift="{$shift}"/>
+    
+    <fo:inline padding-left="3pt" padding-right="10pt">
+      <xsl:value-of select="$label"/>
+    </fo:inline>
+  </fo:inline>
+</xsl:template>
+
+```
+
+### A Note on the "Optical Center"
+
+Icons often look "centered" to a computer but "uncentered" to a human because:
+
+1. **Caps vs. Lowercase:** Text with lots of capital letters has a different visual center than text with all lowercase letters.
+2. **The X-Height:** Humans usually perceive the vertical center of text to be the middle of the lowercase letters (the x-height), not the full height of the capital letters.
+
+If your legend labels are all Caps, `baseline-shift="-1pt"` is usually enough. If they are mixed case, you might need `-2pt` to make the icon feel "weighted" correctly against the lowercase letters.

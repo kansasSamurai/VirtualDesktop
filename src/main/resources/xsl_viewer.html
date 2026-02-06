@@ -40,12 +40,14 @@
 			<div id="tab-xml" class="tab" onclick="showTab('xml')">XML DATA</div>
 			<div id="tab-map" class="tab" onclick="showTab('map')">JAVA MAP</div>
 			<div id="tab-img" class="tab" onclick="showTab('img')">IMAGES</div>
+            <div id="tab-shims" class="tab" onclick="showTab('shims')">SHIMS</div>
 		</div>
 		
 		<textarea id="xslInput" oninput="saveProject()" placeholder="Paste Main XSLT..."></textarea>
 		<textarea id="xmlInput" style="display:none;" oninput="saveProject()" placeholder="Paste XML Data..."></textarea>
 		<textarea id="mapInput" style="display:none;" oninput="saveProject()" placeholder='{ "reportTitle": "Invoice" }'></textarea>
 		<textarea id="imageMapInput" style="display:none;" oninput="saveProject()" placeholder="logo.png|data:image/png;base64,..."></textarea>
+        <textarea id="shimInput" style="display:none;" oninput="saveProject()" placeholder="OriginalText|ReplacementText"></textarea>
 
 		 <div style="padding: 5px 10px; background: #333; font-size: 0.7rem; font-weight: bold;">INCLUDE LIBRARY</div>
         <div id="library-list"></div>
@@ -92,7 +94,23 @@ example xml:
     let library = {};
 	let virtualImages = {}; 
     const MISSING_IMAGE_SVG = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZGVkZWRlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iOCIgZmlsbD0iI2FhYSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TUlTU0lORzwvdGV4dD48L3N2Zz4=";
-	const XSLT_SHIMS = {
+	
+    // Centralized Style Mapping for FO to CSS
+    const SUPPORTED_FO_STYLES = {
+        'font-size': 'fontSize',
+        'font-weight': 'fontWeight',
+        'text-align': 'textAlign',
+        'border': 'border',
+        'padding': 'padding',
+        'width': 'width',
+        'height': 'height',
+        'color': 'color',
+        'background-color': 'backgroundColor',
+        'space-after': 'marginBottom',
+        'space-before': 'marginTop'
+    };
+
+    const XSLT_SHIMS = {
 		// Add pairs here: "Original String": "Replacement String"
 		"fo:multi-switch": "fo:block", 
 		"fo:multi-case": "fo:block",
@@ -125,6 +143,9 @@ example xml:
             
             // 2. Load the new Images Tab content
             document.getElementById('imageMapInput').value = data.img || '';
+
+			// 2b. Load Persistent Shims
+			if(document.getElementById('shimInput')) document.getElementById('shimInput').value = data.shims || '';
             
             // 3. Re-hydrate the Library object
             library = data.library || {};
@@ -142,6 +163,7 @@ example xml:
             xml: document.getElementById('xmlInput').value,
             map: document.getElementById('mapInput').value,
             img: document.getElementById('imageMapInput').value, // Save Images
+			shims: document.getElementById('shimInput')?.value || '', // Save Shims
             library: library
         };
         localStorage.setItem('xslfo_sandbox_v6', JSON.stringify(data));
@@ -178,8 +200,18 @@ example xml:
 	function preProcessXslt(rawStr) {
 		let processed = rawStr;
 		
-		// Apply the static shims
-		for (const [target, replacement] of Object.entries(XSLT_SHIMS)) {
+		// 1. Build dynamic shim map from hardcoded + user input
+		let activeShims = { ...XSLT_SHIMS };
+		const shimEl = document.getElementById('shimInput');
+		if (shimEl && shimEl.value) {
+			shimEl.value.split('\n').forEach(line => {
+				const [target, replacement] = line.split('|');
+				if (target && replacement) activeShims[target.trim()] = replacement.trim();
+			});
+		}
+
+		// 2. Apply the shims
+		for (const [target, replacement] of Object.entries(activeShims)) {
 			// Use a global regex to replace all instances
 			const escapedTarget = target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 			const re = new RegExp(escapedTarget, 'g');
@@ -199,6 +231,7 @@ example xml:
 		document.getElementById('xmlInput').style.display = (tabName === 'xml' ? 'block' : 'none');
 		document.getElementById('mapInput').style.display = (tabName === 'map' ? 'block' : 'none');
 		document.getElementById('imageMapInput').style.display = (tabName === 'img' ? 'block' : 'none');
+		if(document.getElementById('shimInput')) document.getElementById('shimInput').style.display = (tabName === 'shims' ? 'block' : 'none');
 	}
 
     function addLibFile() {
@@ -392,38 +425,23 @@ function mapToHtml(xmlNode, dataContext) {
         if (ln === "attribute") {
             const attrName = xmlNode.getAttribute('name');
             let attrValue = "";
-			Array.from(xmlNode.childNodes).forEach(c => {
-				// Use a more robust check that handles potential prefixes or lack of localName
-				const nodeName = c.localName || c.nodeName.split(':').pop();
-				
-				if (nodeName === "value-of") {
-					attrValue += evaluateXPath(c.getAttribute('select'), dataContext);
-				} else if (c.nodeType === 3) {
-					attrValue += c.textContent;
-				}
-			});
-	
-			// --- ADD THE TRIM HERE ---
-			attrValue = attrValue.trim();
-	
+            Array.from(xmlNode.childNodes).forEach(c => {
+                const nodeName = c.localName || c.nodeName.split(':').pop();
+                if (nodeName === "value-of") {
+                    attrValue += evaluateXPath(c.getAttribute('select'), dataContext);
+                } else if (c.nodeType === 3) {
+                    attrValue += c.textContent;
+                }
+            });
+            attrValue = attrValue.trim();
             if (attrName === 'src') {
                 attrValue = attrValue.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
-                //attrValue = virtualImages[attrValue] || library[attrValue] || attrValue;
-                
-				// new 2/5				
-
-				// ... inside external-graphic and xsl:attribute 'src' logic ...
-				let resolvedSrc = virtualImages[attrValue] || library[attrValue] || attrValue;
-
-				// If the result is empty, or the lookup failed to find a real URL/Base64
-				if (!resolvedSrc || resolvedSrc.trim() === "") {
-					attrValue = MISSING_IMAGE_SVG;
-				}
-                
-				// new 2/5				
-
-                
-				console.log("Resolved Image Path:", attrValue);
+                let resolvedSrc = virtualImages[attrValue] || library[attrValue] || attrValue;
+                if (!resolvedSrc || resolvedSrc.trim() === "") {
+                    attrValue = MISSING_IMAGE_SVG;
+                } else {
+                    attrValue = resolvedSrc;
+                }
             }
             return { type: 'attribute', name: attrName, value: attrValue };
         }
@@ -445,47 +463,84 @@ function mapToHtml(xmlNode, dataContext) {
         'table-footer': 'tfoot',
         'table-row': 'tr',
         'table-cell': 'td',
+        'table-column': 'col',
         'leader': 'span',
         'page-number': 'span',
-        'external-graphic': 'img'
+        'external-graphic': 'img',
+        'inline': 'span',
+        'inline-container': 'span',
+        'block': 'div'
     };
-    
+
     const el = document.createElement(tagMap[ln] || 'div');
 
     if (ns?.includes("Format")) {
-        const styles = {
-            'font-size': 'fontSize',
-            'font-weight': 'fontWeight',
-            'text-align': 'textAlign',
-            'border': 'border',
-            'padding': 'padding',
-            'width': 'width',
-            'color': 'color',
-            'background-color': 'backgroundColor',
-            'space-after': 'marginBottom',
-            'space-before': 'marginTop'
-        };
-        for (let [foAttr, jsProp] of Object.entries(styles)) {
+        // 1. Handle Attribute Sets (Lookup phase)
+        const attrSetNames = xmlNode.getAttribute('use-attribute-sets');
+        if (attrSetNames) {
+            attrSetNames.split(/\s+/).forEach(setName => {
+                const sets = xmlNode.ownerDocument.getElementsByTagNameNS("*", "attribute-set");
+                for (let set of sets) {
+                    if (set.getAttribute('name') === setName) {
+                        Array.from(set.childNodes).forEach(attrNode => {
+                            if (attrNode.localName === 'attribute') {
+                                const aName = attrNode.getAttribute('name');
+                                const aVal = attrNode.textContent.trim();
+                                if (SUPPORTED_FO_STYLES[aName]) el.style[SUPPORTED_FO_STYLES[aName]] = aVal;
+                                else el.setAttribute(aName, aVal);
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        // 2. Apply Direct FO Attributes (overrides sets) using global mapping
+        for (let [foAttr, jsProp] of Object.entries(SUPPORTED_FO_STYLES)) {
             const val = xmlNode.getAttribute(foAttr);
             if (val) el.style[jsProp] = val;
         }
-        
+
+        // 3. Special Case: display-align (vertical alignment)
+        const displayAlign = xmlNode.getAttribute('display-align');
+        if (displayAlign) {
+            const vAlignMap = { 'before': 'top', 'center': 'middle', 'after': 'bottom' };
+            el.style.verticalAlign = vAlignMap[displayAlign] || displayAlign;
+        }
+
+        // 4. Component-specific Logic
         if (ln === 'table') { 
             el.style.width = "100%"; 
             el.style.borderCollapse = "collapse"; 
+        }
+
+        if (ln === 'table-column') {
+            const colWidth = xmlNode.getAttribute('column-width');
+            if (colWidth) el.style.width = colWidth;
+        }
+
+        if (ln === 'table-cell') {
+            const colSpan = xmlNode.getAttribute('number-columns-spanned');
+            if (colSpan) el.colSpan = colSpan;
+            const rowSpan = xmlNode.getAttribute('number-rows-spanned');
+            if (rowSpan) el.rowSpan = rowSpan;
+            // Default vertical align if not specified
+            if (!el.style.verticalAlign) el.style.verticalAlign = 'top';
+        }
+
+        if (ln === 'inline-container') {
+            el.style.display = 'inline-block';
+            el.style.verticalAlign = 'middle';
         }
 
         if (ln === 'external-graphic') {
             let src = xmlNode.getAttribute('src') || "";
             src = src.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
             el.src = virtualImages[src] || library[src] || src;
-
-
             const width = xmlNode.getAttribute('content-width');
             const height = xmlNode.getAttribute('content-height');
             if (width) el.style.width = width;
             if (height) el.style.height = height;
-            
             el.style.display = 'inline-block';
             el.alt = "XSL-FO Graphic";
             el.style.maxWidth = '100%';
@@ -506,28 +561,24 @@ function mapToHtml(xmlNode, dataContext) {
             const thickness = xmlNode.getAttribute('rule-thickness') || '1pt';
             el.style.display = 'inline-block';
             el.style.verticalAlign = 'baseline';
-            if (len) {
-                el.style.width = len;
-            } else {
-                el.style.width = '100%';
-                el.style.minWidth = '10px';
-            }
+            if (len) el.style.width = len; else el.style.width = '100%';
             if (pattern === 'dots') el.style.borderBottom = `${thickness} dotted currentColor`;
             else if (pattern === 'rule') el.style.borderBottom = `${thickness} solid currentColor`;
-            
             const leaderColor = xmlNode.getAttribute('color');
             if (leaderColor) el.style.borderColor = leaderColor;
         }
     }
 
-    // Recursively process children for FO Elements
+    // Recursively process children
     Array.from(xmlNode.childNodes).forEach(c => {
         const childResult = mapToHtml(c, dataContext);
         
         if (childResult && childResult.type === 'attribute') {
-            // Apply the dynamic attribute to the current FO element 'el'
+            // Apply dynamic attributes using the global style map
             if (childResult.name === 'src' && el.tagName === 'IMG') {
                 el.src = childResult.value;
+            } else if (SUPPORTED_FO_STYLES[childResult.name]) {
+                el.style[SUPPORTED_FO_STYLES[childResult.name]] = childResult.value;
             } else {
                 el.setAttribute(childResult.name, childResult.value);
             }
@@ -541,4 +592,3 @@ function mapToHtml(xmlNode, dataContext) {
 </script>
 </body>
 </html>
-

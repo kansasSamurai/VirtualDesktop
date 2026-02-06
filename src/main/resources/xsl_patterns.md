@@ -829,3 +829,133 @@ Since we talked about images and `block-container`, here is a representative pat
 
 **Use a Formatter-Specific Extension:** Most engines (FOP, AH, XEP) have their own namespace for specialized things (like PDF bookmarks, metadata, or encryption). Don't be afraid to use them, but keep them organized so you can swap them if you ever change engines.
 
+In XSL-FO, when you move to an inline model (like a legend), you shift from **Cell Alignment** to **Baseline Alignment**.
+
+### The Solution: `alignment-baseline` and `dominant-baseline`
+
+When you place an image and text side-by-side in a `fo:block`, the engine tries to align the bottom of the image with the "alphabetic baseline" of the text (the invisible line letters sit on). To fix this, you want to align the **middle** of the objects to each other.
+
+#### The Modern "Legend" Pattern
+
+```xml
+<fo:block space-before="5mm" line-height="20pt">
+  <fo:external-graphic src="url('icon1.svg')" 
+                       width="12pt" 
+                       content-width="scale-to-fit" 
+                       alignment-baseline="middle"/>
+  <fo:inline padding-left="2pt" padding-right="10pt" alignment-baseline="middle">
+      Approved
+  </fo:inline>
+
+  <fo:external-graphic src="url('icon2.svg')" 
+                       width="12pt" 
+                       content-width="scale-to-fit" 
+                       alignment-baseline="middle"/>
+  <fo:inline padding-left="2pt" padding-right="10pt" alignment-baseline="middle">
+      Pending
+  </fo:inline>
+  
+  </fo:block>
+
+```
+
+### Why this works:
+
+1. **`alignment-baseline="middle"`:** This is the magic property. When applied to both the `external-graphic` and the `inline` text wrapper, the engine calculates the vertical midpoint of both and snaps them together.
+2. **`line-height`:** Setting a slightly generous `line-height` on the parent `fo:block` ensures that if your icons are taller than your text, the lines of the legend don't "crash" into each other.
+3. **`padding` vs Space:** Using `padding-right` on the `fo:inline` creates the "gutter" between your legend items without using a table's column spacing.
+
+---
+
+### A "Pro" Tip for Accessibility: The `alt` text equivalent
+
+Since you are doing this for accessibility, remember that `fo:external-graphic` itself doesn't always provide a "description" field that translates well to PDF tags in every engine.
+
+To be truly accessible:
+
+* **For decorative icons:** If the text "Approved" is next to the icon, the icon is redundant. Some high-end engines allow you to "artifact" the image (hide it from screen readers).
+* **For meaningful icons:** Ensure your SVG has a `<title>` and `<desc>` tag inside the XML, as some modern PDF taggers can pull from there.
+
+---
+
+### The "Inline-Container" Alternative
+
+If your icons and text vary wildly in size and `alignment-baseline` isn't giving you the "pixel-perfect" look you want, you can use `fo:inline-container`.
+
+**Warning:** Use this sparingly, as it’s essentially a "mini block" inside a line of text, and some older engines (like FOP) have historically struggled with them.
+
+```xml
+<fo:inline-container vertical-align="middle" width="15mm">
+  <fo:block>
+    <fo:external-graphic src="url('icon.svg')" width="10mm"/>
+  </fo:block>
+</fo:inline-container>
+<fo:inline vertical-align="middle">Approved</fo:inline>
+
+```
+
+To make the accessible "Legend" both dynamic and maintainable, build a template.
+
+The goal is to pass a "list" of items (icons and labels) and let XSLT handle the spacing.
+
+### 1. The "Legend Item" Template
+
+This template handles a single icon-text pair. Notice the use of `alignment-baseline` to keep things vertically centered without a table.
+
+```xml
+<xsl:template name="ui.legend.item">
+  <xsl:param name="icon-url" />
+  <xsl:param name="label" />
+  <xsl:param name="icon-width" select="'12pt'" />
+  
+  <fo:inline keep-together.within-line="always">
+    
+    <fo:external-graphic src="url('{$icon-url}')" 
+                         width="{$icon-width}" 
+                         content-width="scale-to-fit" 
+                         scaling="uniform"
+                         alignment-baseline="middle"/>
+    
+    <fo:inline alignment-baseline="middle" 
+               padding-left="3pt" 
+               padding-right="12pt" 
+               font-size="9pt">
+      <xsl:value-of select="$label"/>
+    </fo:inline>
+    
+  </fo:inline>
+</xsl:template>
+
+```
+
+### 2. The Implementation (Dynamic Loop)
+
+In your main flow, you simply loop through your XML data. Because these are all `fo:inline` elements, they will "flow" like words in a paragraph. If the legend is too long for one line, it will naturally wrap to the next line—something a table cannot do easily!
+
+```xml
+<fo:block space-before="10mm" line-height="1.5">
+  <fo:inline font-weight="bold" padding-right="5pt">Legend:</fo:inline>
+  
+  <xsl:for-each select="report/metadata/legend-items">
+    <xsl:call-template name="ui.legend.item">
+      <xsl:with-param name="icon-url" select="icon_path" />
+      <xsl:with-param name="label" select="display_name" />
+    </xsl:call-template>
+  </xsl:for-each>
+</fo:block>
+
+```
+
+---
+
+### Why this is a "Modern Best Practice":
+
+1. **Accessibility (WCAG):** Since this is a standard `fo:block` containing text and images, a screen reader reads it in a logical linear flow: "Icon [or Alt text], Approved, Icon, Pending..." instead of getting lost in table coordinates.
+2. **`keep-together.within-line`:** This is the most important "nuance." By wrapping the icon and its label in an `fo:inline` with this property, you ensure that an icon will never appear at the end of a line with its label stranded at the start of the next line. They move together as a single unit.
+3. **Reflowable Layout:** If you change your page margins or switch to a two-column layout, this legend will automatically re-wrap itself. A table would simply overflow the margin or require manual recalculation of column widths.
+4. **Baseline Harmony:** By applying `alignment-baseline="middle"` to both the graphic and the text, you avoid the common "floating icon" look where the image sits too high relative to the lowercase letters.
+
+### One final "Trick" for Icons:
+
+If your icons are SVGs and you want them to match the text color perfectly, some engines allow you to omit the color in the SVG code and set `color` on the `fo:external-graphic`. However, most people find it easier to just ensure the SVGs are exported with the correct "theme" colors from the start.
+

@@ -17,9 +17,9 @@
         .lib-item { font-size: 0.7rem; display: flex; justify-content: space-between; padding: 6px; border-bottom: 1px solid #3d3d3d; align-items: center; }
         #preview-zone { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; background: var(--bg); gap: 40px; }
         #xsl-canvas { display: flex; flex-direction: column; align-items: center; gap: 40px; }
-        .xsl-page { background: white; width: 210mm; min-height: 297mm; box-shadow: 0 10px 30px rgba(0,0,0,0.5); outline: none; color: black; box-sizing: border-box; display: flex; flex-direction: column; }
+        .xsl-page { background: white; width: 210mm; min-height: 297mm; box-shadow: 0 10px 30px rgba(0,0,0,0.5); outline: none; color: black; box-sizing: border-box; display: flex; flex-direction: column; position: relative; }
         .xsl-region-before { flex-shrink: 0; min-height: 15mm; padding: 5mm 20mm; border-bottom: 1px dashed #ccc; background: #fafafa; }
-        .xsl-region-body { flex: 1; padding: 20mm; overflow: hidden; }
+        .xsl-region-body { flex: 1; padding: 15mm; overflow: hidden; } /* Default padding, overridden by fo:region-body margin */
         .xsl-region-after { flex-shrink: 0; min-height: 15mm; padding: 5mm 20mm; border-top: 1px dashed #ccc; background: #fafafa; }
         .fo-page-number { background-color: #e3f2fd; padding: 0 3px; border-radius: 2px; }
         .fo-page-number-citation-last { background-color: #e8f5e9; padding: 0 3px; border-radius: 2px; }
@@ -513,6 +513,7 @@
 				<button onclick="showTableDialog()" title="Insert fo:table">table...</button>
 				<button onclick="insertSnippet('leader')" title="Insert fo:leader">leader</button>
 				<button onclick="insertSnippet('graphic')" title="Insert fo:external-graphic">graphic</button>
+				<button onclick="showCommentDialog()" title="Insert XSL comment" style="background:#5a5a2a;">comment</button>
 			</div>
 			<div class="snippet-row">
 				<span class="snippet-label">XSL:</span>
@@ -645,7 +646,15 @@ example xml:
         'background-color': 'backgroundColor',
         'space-after': 'marginBottom',
         'space-before': 'marginTop',
-        'line-height': 'lineHeight'
+        'line-height': 'lineHeight',
+        // Positioning (for watermarks/overlays)
+        'position': 'position',
+        'top': 'top',
+        'left': 'left',
+        'right': 'right',
+        'bottom': 'bottom',
+        'transform': 'transform',
+        'z-index': 'zIndex'
     };
 
     const XSLT_SHIMS = {
@@ -1224,8 +1233,31 @@ function renderPreview() {
 			if (name && data) virtualImages[name.trim()] = data.trim();
 		});
 
-		// 3. Extract static content (headers/footers) before processing flow
+		// 3. Extract static content (headers/footers) and page layout info
 		const staticContents = {};
+		const pageLayout = { bodyMargin: null };
+
+		// Extract region-body margin from layout-master-set
+		const layoutMasters = xslDoc.getElementsByTagNameNS("*", "simple-page-master");
+		if (layoutMasters.length > 0) {
+			const regionBody = layoutMasters[0].getElementsByTagNameNS("*", "region-body")[0];
+			if (regionBody) {
+				// Check for margin attribute (shorthand) or individual margins
+				const margin = regionBody.getAttribute('margin');
+				const marginTop = regionBody.getAttribute('margin-top');
+				const marginRight = regionBody.getAttribute('margin-right');
+				const marginBottom = regionBody.getAttribute('margin-bottom');
+				const marginLeft = regionBody.getAttribute('margin-left');
+
+				if (margin) {
+					pageLayout.bodyMargin = margin;
+				} else if (marginTop || marginRight || marginBottom || marginLeft) {
+					pageLayout.bodyMargin = `${marginTop || '0'} ${marginRight || '0'} ${marginBottom || '0'} ${marginLeft || '0'}`;
+				}
+				console.log(`Region-body margin: ${pageLayout.bodyMargin}`);
+			}
+		}
+
 		const pageSequences = xslDoc.getElementsByTagNameNS("*", "page-sequence");
 		if (pageSequences.length > 0) {
 			const statics = pageSequences[0].getElementsByTagNameNS("*", "static-content");
@@ -1252,7 +1284,7 @@ function renderPreview() {
 		canvas.appendChild(result);
 
 		// Post-process: Split content into pages at page-break markers
-		paginateCanvas(canvas, staticContents);
+		paginateCanvas(canvas, staticContents, pageLayout);
 
 		// Post-process: Enable flex-based leaders if toggle is on
 		if (document.getElementById('flexLeadersToggle')?.checked) {
@@ -1271,7 +1303,7 @@ function renderPreview() {
 		console.log("--- Render Complete ---");
 	}
 
-	function createPageWithRegions(staticContents) {
+	function createPageWithRegions(staticContents, pageLayout = {}) {
 		const page = document.createElement('div');
 		page.className = 'xsl-page';
 
@@ -1287,6 +1319,10 @@ function renderPreview() {
 		const body = document.createElement('div');
 		body.className = 'xsl-region-body';
 		body.contentEditable = 'true';
+		// Apply dynamic margin/padding from fo:region-body
+		if (pageLayout.bodyMargin) {
+			body.style.padding = pageLayout.bodyMargin;
+		}
 		page.appendChild(body);
 
 		// Footer (region-after)
@@ -1300,7 +1336,7 @@ function renderPreview() {
 		return { page, body };
 	}
 
-	function paginateCanvas(canvas, staticContents = {}) {
+	function paginateCanvas(canvas, staticContents = {}, pageLayout = {}) {
 		// Collect all content from canvas into a temporary container
 		const tempContainer = document.createElement('div');
 		while (canvas.firstChild) {
@@ -1312,32 +1348,34 @@ function renderPreview() {
 
 		if (markers.length === 0) {
 			// No page breaks - wrap all content in a single page with regions
-			const { page, body } = createPageWithRegions(staticContents);
+			const { page, body } = createPageWithRegions(staticContents, pageLayout);
 			while (tempContainer.firstChild) {
 				body.appendChild(tempContainer.firstChild);
 			}
 			canvas.appendChild(page);
 			updatePageNumbers(canvas);
+			relocateAbsoluteElements(canvas);
 			return;
 		}
 
 		// Split content at page-break markers
-		let { page: currentPage, body: currentBody } = createPageWithRegions(staticContents);
+		let { page: currentPage, body: currentBody } = createPageWithRegions(staticContents, pageLayout);
 
 		// Process all nodes, splitting at markers
 		const allNodes = Array.from(tempContainer.childNodes);
-		splitAtMarkers(allNodes, canvas, currentPage, currentBody, staticContents);
+		splitAtMarkers(allNodes, canvas, currentPage, currentBody, staticContents, pageLayout);
 		updatePageNumbers(canvas);
+		relocateAbsoluteElements(canvas);
 	}
 
-	function splitAtMarkers(nodes, canvas, currentPage, currentBody, staticContents) {
+	function splitAtMarkers(nodes, canvas, currentPage, currentBody, staticContents, pageLayout = {}) {
 		nodes.forEach(node => {
 			if (node.classList && node.classList.contains('page-break-marker')) {
 				// Found a page break - finalize current page and start a new one
 				if (currentBody.childNodes.length > 0 || canvas.childNodes.length === 0) {
 					canvas.appendChild(currentPage);
 				}
-				const newPage = createPageWithRegions(staticContents);
+				const newPage = createPageWithRegions(staticContents, pageLayout);
 				currentPage = newPage.page;
 				currentBody = newPage.body;
 			} else if (node.nodeType === 1 && node.querySelector && node.querySelector('.page-break-marker')) {
@@ -1353,7 +1391,7 @@ function renderPreview() {
 						if (currentBody.childNodes.length > 0) {
 							canvas.appendChild(currentPage);
 						}
-						const newPage = createPageWithRegions(staticContents);
+						const newPage = createPageWithRegions(staticContents, pageLayout);
 						currentPage = newPage.page;
 						currentBody = newPage.body;
 						// Create new wrapper for continued content
@@ -1361,7 +1399,7 @@ function renderPreview() {
 						currentBody.appendChild(newWrapper);
 					} else if (child.nodeType === 1 && child.querySelector && child.querySelector('.page-break-marker')) {
 						// Nested page breaks - recurse
-						const nestedResult = splitAtMarkersNested(child, canvas, currentPage, currentBody, node, staticContents);
+						const nestedResult = splitAtMarkersNested(child, canvas, currentPage, currentBody, node, staticContents, pageLayout);
 						currentPage = nestedResult.currentPage;
 						currentBody = nestedResult.currentBody;
 					} else {
@@ -1386,7 +1424,7 @@ function renderPreview() {
 		}
 	}
 
-	function splitAtMarkersNested(node, canvas, currentPage, currentBody, parentTemplate, staticContents) {
+	function splitAtMarkersNested(node, canvas, currentPage, currentBody, parentTemplate, staticContents, pageLayout = {}) {
 		const childNodes = Array.from(node.childNodes);
 		const wrapper = node.cloneNode(false);
 		const parentWrapper = currentBody.lastElementChild;
@@ -1399,7 +1437,7 @@ function renderPreview() {
 		childNodes.forEach(child => {
 			if (child.classList && child.classList.contains('page-break-marker')) {
 				canvas.appendChild(currentPage);
-				const newPage = createPageWithRegions(staticContents);
+				const newPage = createPageWithRegions(staticContents, pageLayout);
 				currentPage = newPage.page;
 				currentBody = newPage.body;
 				// Recreate parent structure
@@ -1442,6 +1480,24 @@ function renderPreview() {
 				// Ensure text nodes before/after leader are wrapped for proper flex behavior
 				// (Browser should handle this, but explicit wrapping can help)
 			}
+		});
+	}
+
+	function relocateAbsoluteElements(canvas) {
+		// Move absolutely positioned elements from region-before/after to page level
+		// This allows watermarks and overlays defined in static-content to position
+		// relative to the page, matching real XSL-FO engine behavior
+		canvas.querySelectorAll('.xsl-page').forEach(page => {
+			const regions = page.querySelectorAll('.xsl-region-before, .xsl-region-after');
+			regions.forEach(region => {
+				// Find all direct and nested elements with position: absolute
+				region.querySelectorAll('*').forEach(el => {
+					if (getComputedStyle(el).position === 'absolute') {
+						// Move to page level so it positions relative to .xsl-page
+						page.appendChild(el);
+					}
+				});
+			});
 		});
 	}
 
@@ -1581,6 +1637,49 @@ function renderPreview() {
 		const textarea = document.getElementById('xslInput');
 		insertAtCursor(textarea, xsl);
 		closeTableDialog();
+	}
+
+	// ===== COMMENT DIALOG =====
+
+	function showCommentDialog() {
+		const overlay = document.createElement('div');
+		overlay.className = 'table-dialog-overlay';
+		overlay.id = 'comment-dialog-overlay';
+		overlay.innerHTML = `
+			<div class="table-dialog" style="min-width: 350px;">
+				<h3>Insert XSL Comment</h3>
+				<label style="display: block; margin-bottom: 10px;">
+					Comment text:
+					<textarea id="comment-text" rows="4" style="width: 100%; margin-top: 5px; background: #444; color: #ccc; border: 1px solid #555; border-radius: 3px; padding: 6px; font-family: inherit; resize: vertical;"></textarea>
+				</label>
+				<div class="table-dialog-buttons">
+					<button onclick="closeCommentDialog()">Cancel</button>
+					<button onclick="insertComment()" class="btn-primary">Insert</button>
+				</div>
+			</div>
+		`;
+		document.body.appendChild(overlay);
+		// Focus the textarea
+		setTimeout(() => document.getElementById('comment-text').focus(), 50);
+	}
+
+	function closeCommentDialog() {
+		const overlay = document.getElementById('comment-dialog-overlay');
+		if (overlay) overlay.remove();
+	}
+
+	function insertComment() {
+		const text = document.getElementById('comment-text').value.trim();
+		if (!text) {
+			closeCommentDialog();
+			return;
+		}
+		// Escape any "--" in the comment text (not allowed in XML comments)
+		const safeText = text.replace(/--/g, '- -');
+		const comment = `<!-- ${safeText} -->`;
+		const textarea = document.getElementById('xslInput');
+		insertAtCursor(textarea, comment);
+		closeCommentDialog();
 	}
 
 	// ===== HELP MODE DIALOGS =====
@@ -2109,7 +2208,18 @@ function evaluateAVT(template, dataContext) {
 
 function mapToHtml(xmlNode, dataContext) {
     // Handle text nodes
-    if (xmlNode.nodeType === 3) return document.createTextNode(xmlNode.textContent);
+    if (xmlNode.nodeType === 3) {
+        const text = xmlNode.textContent;
+        // Skip whitespace-only text nodes that contain newlines (XML formatting/indentation)
+        // This prevents unwanted gaps between inline-block elements like inline-container
+        if (/^\s*$/.test(text) && text.includes('\n')) {
+            return null;
+        }
+        return document.createTextNode(text);
+    }
+
+    // Skip comment nodes (nodeType 8)
+    if (xmlNode.nodeType === 8) return null;
 
     const ln = xmlNode.localName;
     const ns = xmlNode.namespaceURI;
@@ -2377,23 +2487,28 @@ function mapToHtml(xmlNode, dataContext) {
             const leaderColor = xmlNode.getAttribute('color');
 
             // Determine if this leader should "fill" available space
-            // Fill when: no length specified, or length is a percentage
-            const shouldFill = !len || len.includes('%');
+            // Fill ONLY when no length specified at all
+            // If leader-length is explicitly set (any value), honor it and don't apply flex
+            const shouldFill = !len;
+
+            el.style.display = 'inline-block';
 
             if (shouldFill) {
                 // Flex-based fill mode (activated by post-processor if toggle enabled)
                 el.className = 'fo-leader-fill pattern-' + pattern;
-                el.style.display = 'inline-block';
-                if (pattern === 'dots') el.style.borderBottom = `${thickness} dotted currentColor`;
-                else if (pattern === 'rule') el.style.borderBottom = `${thickness} solid currentColor`;
             } else {
                 // Fixed-length mode
-                el.style.display = 'inline-block';
                 el.style.verticalAlign = 'baseline';
-                el.style.width = len;
-                if (pattern === 'dots') el.style.borderBottom = `${thickness} dotted currentColor`;
-                else if (pattern === 'rule') el.style.borderBottom = `${thickness} solid currentColor`;
             }
+
+            // Always map leader-length to width when specified
+            if (len) {
+                el.style.width = len;
+            }
+
+            // Apply pattern styling
+            if (pattern === 'dots') el.style.borderBottom = `${thickness} dotted currentColor`;
+            else if (pattern === 'rule') el.style.borderBottom = `${thickness} solid currentColor`;
 
             if (leaderColor) el.style.borderColor = leaderColor;
         }

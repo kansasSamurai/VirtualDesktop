@@ -1037,3 +1037,503 @@ Icons often look "centered" to a computer but "uncentered" to a human because:
 2. **The X-Height:** Humans usually perceive the vertical center of text to be the middle of the lowercase letters (the x-height), not the full height of the capital letters.
 
 If your legend labels are all Caps, `baseline-shift="-1pt"` is usually enough. If they are mixed case, you might need `-2pt` to make the icon feel "weighted" correctly against the lowercase letters.
+
+
+In an XSL-FO document, the "proper" place to define global font settings is on the **`fo:page-sequence`** element.
+
+While you might be tempted to put them on the `fo:root`, the specification dictates that many inherited properties (like font settings) are actually passed from the `fo:page-sequence` down to the `fo:flow` and its children.
+
+### 1. The Standard Approach (Inheritance)
+
+By defining the font on the `fo:page-sequence`, every `fo:block`, `fo:table`, and `fo:inline` within that sequence will inherit those settings unless you explicitly override them.
+
+```xml
+<fo:page-sequence master-reference="A4-Standard" 
+                  font-family="Helvetica, Arial, sans-serif" 
+                  font-size="10pt" 
+                  color="#333333">
+    
+    <fo:static-content flow-name="xsl-region-before">
+        <fo:block>Header Text</fo:block>
+    </fo:static-content>
+
+    <fo:flow flow-name="xsl-region-body">
+        <fo:block>Main Body Text</fo:block>
+        
+        <fo:block font-weight="bold">Bold Title</fo:block>
+    </fo:flow>
+</fo:page-sequence>
+
+```
+
+### 2. The "Modern" XSLT Approach (Attribute Sets)
+
+As we discussed earlier, if you want your global font settings to be truly "global" across multiple page sequences or even multiple documents, you should define them in an **Attribute Set** and apply that set to your page sequence.
+
+**In your `theme.xsl`:**
+
+```xml
+<xsl:attribute-set name="attr.global.font">
+  <xsl:attribute name="font-family">Helvetica, sans-serif</xsl:attribute>
+  <xsl:attribute name="font-size">10pt</xsl:attribute>
+  <xsl:attribute name="line-height">1.4</xsl:attribute>
+  <xsl:attribute name="color">#000000</xsl:attribute>
+</xsl:attribute-set>
+
+```
+
+**In your main template:**
+
+```xml
+<fo:page-sequence master-reference="main" xsl:use-attribute-sets="attr.global.font">
+   <fo:flow flow-name="xsl-region-body">
+      </fo:flow>
+</fo:page-sequence>
+
+```
+
+### Why not the `fo:root`?
+
+Technically, some processors allow you to put font attributes on the `fo:root`. However, the XSL-FO recommendation (the spec) focuses on the `fo:page-sequence` as the primary container for a "stream" of content. Placing it there ensures the most consistent behavior across different rendering engines (FOP, Antenna House, etc.).
+
+You are spot-on. In XSL-FO, the "Inheritance Rule" is your best friend for tables. Setting styles at the `fo:table` level is the standard best practice because it keeps your code DRY (Don't Repeat Yourself) and prevents "attribute bloat" in your cells.
+
+However, there is a **technical nuance** regarding what actually inherits and what doesn't.
+
+### 1. What Inherits (Set these on `fo:table`)
+
+Most "textual" properties flow down perfectly from the table to the rows and cells. Define these once on the `fo:table`:
+
+* **`font-family`**, **`font-size`**, and **`color`**.
+* **`line-height`**.
+* **`text-align`** (Note: Setting this on the table will align text in every cell unless overridden).
+
+### 2. What Does NOT Inherit (The "Cell" Trap)
+
+This is where developers often get tripped up. **Layout** and **Border** properties generally do **not** inherit from the table to the cells.
+
+* **`padding`**: Setting padding on `fo:table` puts space *around the whole table*, not inside the cells. You must set padding on the `fo:table-cell` (or via an attribute set).
+* **`border`**: Setting a border on `fo:table` puts a box around the outside. To get a grid, you must define borders on the cells.
+* **`display-align`**: (Vertical alignment) This must be set on the `fo:table-cell` or `fo:table-row`.
+
+---
+
+### 3. The Modern Styling Pattern
+
+The most robust way to style a table is a "Hybrid" approach using the **Attribute Sets** we discussed earlier.
+
+```xml
+<fo:table xsl:use-attribute-sets="attr.type.body" 
+          table-layout="fixed" 
+          width="100%" 
+          space-before="5mm">
+  
+  <fo:table-column column-width="50%"/>
+  <fo:table-column column-width="50%"/>
+
+  <fo:table-body>
+    <fo:table-row>
+      <fo:table-cell xsl:use-attribute-sets="attr.table.cell.base">
+        <fo:block>This inherits the font from the table.</fo:block>
+      </fo:table-cell>
+      
+      <fo:table-cell xsl:use-attribute-sets="attr.table.cell.base">
+        <fo:block>But gets its padding/border from the cell set.</fo:block>
+      </fo:table-cell>
+    </fo:table-row>
+  </fo:table-body>
+</fo:table>
+
+```
+
+### 4. Pro-Tip: The "Row" Override
+
+If you have a table where 90% of the text is left-aligned, but one specific row (like a "Total" row) should be bold and right-aligned, you can put those properties on that specific `fo:table-row`. The cells in that row will prioritize the row's settings over the table's settings.
+
+## Border Collapse
+
+Border collapse as follows **`border-collapse="collapse"`** is the other "must-have" property for tables to look right!
+
+In the world of XSL-FO tables, `border-collapse` is the difference between a professional, crisp grid and a messy, "doubled-up" look. It determines how the borders of adjacent cells (and the table itself) interact.
+
+There are two primary models: **separate** and **collapse**.
+
+---
+
+### 1. `border-collapse="separate"` (The Default)
+
+In this model, every cell has its own distinct borders. If Cell A has a 1pt border and Cell B has a 1pt border, you will see a **2pt gap** (or a 2pt thick line) between them.
+
+* **The Look:** It often looks like a "nested box" effect.
+* **The Issue:** It makes it very difficult to get clean, thin lines. If you try to give every cell a `border="1pt solid black"`, the interior lines will look twice as thick as the outer edges.
+* **Use Case:** Almost never used in modern documents, except for specific "button" or "raised" cell effects.
+
+### 2. `border-collapse="collapse"` (The Best Practice)
+
+This model tells the engine: "If two cells share a boundary, merge their borders into a single line."
+
+* **The Look:** A clean, single-line grid (like a standard Excel sheet).
+* **The Advantage:** If Cell A and Cell B both define a 1pt border, the engine only draws **one** 1pt line between them.
+* **Precision:** It simplifies your "Shim" logic significantly because you don't have to worry about "double borders" bloating the width of your table.
+
+---
+
+### 3. How to implement it
+
+You apply this attribute to the `fo:table` element.
+
+```xml
+<fo:table table-layout="fixed" 
+          width="100%" 
+          border-collapse="collapse" 
+          border="1pt solid black">
+  </fo:table>
+
+```
+
+### 4. The "Border Conflict" Rules
+
+When you use `collapse`, the engine has to decide which border "wins" if they are different. The spec follows these general rules:
+
+1. **Thickness wins:** A `2pt` border will override a `1pt` border.
+2. **Style wins:** A `solid` line usually beats a `dotted` line.
+3. **Hidden wins:** If any element says `border-style="hidden"`, the border disappears entirely, even if another element wants a border there.
+
+### 5. Interaction with `id` and Shims
+
+Since you are building a tool to identify and fix layout issues, `border-collapse` is a common culprit for "overflow" errors.
+
+* **In "Separate" mode**, the table's total width is: `sum(columns) + all border widths + border-separation`.
+* **In "Collapse" mode**, the table's total width is simply: `sum(columns) + (outer left border / 2) + (outer right border / 2)`.
+
+**Shim Tip:** If you see a table that is slightly too wide for the page (causing a "pushed to next page" error), check if it's using `border-collapse="separate"`. Changing it to `collapse` often gains you just enough millimeters to fix the layout without changing the font size.
+
+---
+
+### Summary Table for your Tool logic:
+
+| Property | `separate` (Default) | `collapse` (Modern) |
+| --- | --- | --- |
+| **Grid Look** | Double lines / Gaps | Single, clean lines |
+| **Precision** | Hard to predict total width | Very predictable |
+| **Complexity** | High (must manage gaps) | Low (merge logic is automatic) |
+| **Recommended?** | No | **Yes** |
+
+That 30-50% "blank/default" gap is a classic XSL-FO technical debt trap. If you don't specify it, the engine defaults to `separate`, and suddenly your developers are fighting "thick lines" by setting `border-top` on some cells and `border-bottom` on others to avoid doubling up—a recipe for a maintenance nightmare.
+
+Since you are building a tool to "shim" and preview these files, here is how you can handle that specific discovery.
+
+### 1. The Preprocessor "Auto-Fix"
+
+If your goal is to modernize the look without touching every file, you can have your preprocessor check for the absence of that attribute and inject it.
+
+```xml
+<xsl:template match="fo:table[not(@border-collapse)]">
+  <xsl:copy>
+    <xsl:attribute name="border-collapse">collapse</xsl:attribute>
+    <xsl:apply-templates select="@*|node()"/>
+  </xsl:copy>
+</xsl:template>
+
+```
+
+### 2. What happens when you switch to `collapse`?
+
+When you force a table from the default (`separate`) to `collapse`, you might see two immediate visual changes in your previewer:
+
+* **The "Shifting" Table:** In `separate` mode, there is often a default `border-separation` (usually about `0.5pt` to `2pt`). When you collapse the borders, that gap vanishes. The table might look slightly narrower, which is usually a win.
+* **Border Precision:** If a developer tried to "fix" double borders by only putting a border on the left and top of every cell, the table might suddenly look like it's missing its right and bottom outer edges in `collapse` mode.
+
+### 3. Identifying "Problem" Tables via IDs
+
+Since your tool identifies elements by `id`, you can create a "Table Audit" log. Your tool could flag any `fo:table` that lacks a `border-collapse` definition.
+
+> **Audit Entry:** `Table [ID: shim_d1e99] is using default (separate) borders. This may cause alignment discrepancies in high-precision layouts.`
+
+### 4. A Note on "Border-Separation"
+
+If you find a table that *intended* to have gaps between cells (like a grid of polaroid photos or a fancy dashboard), you cannot use `collapse`. In that rare case, you must use `separate` and then use the `border-separation` attribute:
+
+```xml
+<fo:table border-collapse="separate" border-separation="2mm">
+   </fo:table>
+
+```
+
+To ensure table headers repeat on every new page, the secret isn't just a property—it’s the **XML structure**. XSL-FO engines are hard-coded to look for a specific "container" to decide what gets repeated.
+
+### 1. The Proper Structure
+
+You must use the `fo:table-header` element. If you simply put your header text in the first `fo:table-row` of the `fo:table-body`, the engine treats it as regular data and it will disappear after the first page.
+
+```xml
+<fo:table table-layout="fixed" width="100%" border-collapse="collapse">
+  
+  <fo:table-column column-width="50%"/>
+  <fo:table-column column-width="50%"/>
+
+  <fo:table-header>
+    <fo:table-row font-weight="bold" background-color="#EEEEEE">
+      <fo:table-cell border="1pt solid black" padding="2mm">
+        <fo:block>Product</fo:block>
+      </fo:table-cell>
+      <fo:table-cell border="1pt solid black" padding="2mm">
+        <fo:block>Status</fo:block>
+      </fo:table-cell>
+    </fo:table-row>
+  </fo:table-header>
+
+  <fo:table-body>
+    </fo:table-body>
+</fo:table>
+
+```
+
+---
+
+### 2. The "Must-Have" Attributes
+
+While the structure above works 90% of the time, there are two attributes that control the "nuances" of repeating headers:
+
+| Attribute | Where it goes | What it does |
+| --- | --- | --- |
+| **`table-omit-header-at-break`** | `fo:table` | **Default is "false".** This means "Repeat the header." If you set this to "true," the header will *only* appear on the first page. |
+| **`table-omit-footer-at-break`** | `fo:table` | **Default is "false".** Same as above, but for `fo:table-footer`. Great for "Continued on next page" notes. |
+
+---
+
+### 3. Common Troubleshooting (For your Tool)
+
+If you have a `fo:table-header` but it is **not** repeating, your tool should check for these three "Gotchas":
+
+1. **The "Omit" Attribute:** Check if someone explicitly set `table-omit-header-at-break="true"`.
+2. **The "Body" Overflow:** If a single table row is so tall that it takes up the whole page, the engine might struggle to find room for the header. (Use `keep-together.within-page="always"` on rows to prevent awkward splits).
+3. **Nested Tables:** If a table is inside another table, the "inner" table header will only repeat if the "outer" cell allows it to break. This is a common source of layout "shims" in legacy documents.
+
+### 4. Documentation "Pro-Tip": The Footer Strategy
+
+A very professional pattern for long tables is to use the `fo:table-footer` to show a "Continued..." message.
+
+> **Crucial Rule:** In XSL-FO 1.0, the `fo:table-footer` **must** appear *before* the `fo:table-body` in your code, even though it renders at the bottom.
+
+```xml
+<fo:table>
+  <fo:table-column .../>
+  <fo:table-header> ... </fo:table-header>
+  
+  <fo:table-footer>
+    <fo:table-row>
+      <fo:table-cell number-columns-spanned="2">
+        <fo:block font-style="italic" font-size="8pt">Continued on next page...</fo:block>
+      </fo:table-cell>
+    </fo:table-row>
+  </fo:table-footer>
+
+  <fo:table-body> ... </fo:table-body>
+</fo:table>
+
+```
+
+This is a great way to codify these "rules of the road." Here is a consolidated checklist based on our discussion, organized by functional area.
+
+### 1. General & Global Styling
+
+* [ ] **Define Fonts on the Sequence:** Set global `font-family` and `font-size` on the `fo:page-sequence` to ensure a consistent cascade.
+* [ ] **Use Attribute Sets for Styles:** Treat `xsl:attribute-set` like CSS classes for reusable properties (colors, borders, padding).
+* [ ] **Use Named Templates for Components:** Treat templates like UI components for complex FO structures (like table cells with logic).
+* [ ] **Prioritize Absolute Units:** Use `pt` (typography/nudge) or `mm` (layout) for predictable PDF output.
+* [ ] **Avoid `px`:** Pixels are DPI-dependent and unpredictable in print-first FO engines.
+* [ ] **Use `id` for Targeting:** Ensure every structural element has a unique `id` for internal links, TOCs, and preprocessor "shim" targeting.
+
+### 2. Table Best Practices
+
+* [ ] **Always Set `table-layout="fixed"`:** For performance and layout predictability, always define your column widths.
+* [ ] **Set `border-collapse="collapse"`:** Avoid the "double border" look and layout math headaches of the default `separate` model.
+* [ ] **Inherit Text Styles:** Set font, color, and alignment at the `fo:table` level to keep child code clean.
+* [ ] **Repeat Headers Properly:** Use the `fo:table-header` element for any row that must reappear on new pages.
+* [ ] **Define Borders on the Cell:** Layout and border properties do **not** inherit; apply them directly to the `fo:table-cell` via attribute sets.
+* [ ] **Use `display-align` for Vertical Centering:** Set this on the cell, not the block inside it.
+
+### 3. Images & Icons
+
+* [ ] **Prefer SVG:** For logos and icons, use SVGs to ensure infinite scalability and smaller file sizes.
+* [ ] **Control Aspect Ratio:** Use `content-width="scale-to-fit"` and `scaling="uniform"` to prevent "funhouse mirror" stretching.
+* [ ] **Define Width, not Height:** Set a fixed `width` and let the height be `auto` to maintain proportions.
+* [ ] **Nudge with `baseline-shift`:** Use small `pt` values (e.g., `-1.5pt`) to optically align icons with text baselines.
+
+### 4. Accessibility & Layout
+
+* [ ] **Avoid Layout Tables:** Use `fo:block` and `fo:inline` for legends and side-by-side content to stay screen-reader friendly.
+* [ ] **Use `alignment-baseline="middle"`:** Use this on inline elements to get them 95% of the way to vertical center.
+* [ ] **Protect Wraps:** Use `keep-together.within-line="always"` on inline icon/label pairs so they don't break across lines.
+* [ ] **Make Links Interactive:** Wrap TOC entries and cross-references in `fo:basic-link` with `internal-destination`.
+
+#### Keeps and Breaks 
+
+* [ ] **Headings:** Apply `keep-with-next.within-page="always"`.
+* [ ] **Table Rows:** Apply `keep-together.within-page="always"` to prevent split text.
+* [ ] **Global Flow:** Set `widows="2"` and `orphans="2"` on the page sequence.
+* [ ] **Images:** Wrap `fo:external-graphic` in a `fo:block` with `keep-together.within-page="always"` so the image and its caption don't separate.
+
+### 5. Performance & Maintenance
+
+* [ ] **Break Up Page Sequences:** Use separate `fo:page-sequence` elements for different chapters/sections to manage memory.
+* [ ] **Avoid Deep Nesting:** Keep the FO hierarchy as flat as possible (avoid unnecessary `fo:block` wrappers).
+* [ ] **Identity Transform for Pre-processing:** Use an identity transform to inject synthetic IDs into "anonymous" blocks for easier debugging.
+
+### Keeps and Breaks 
+In the XSL-FO world, **"Keeps and Breaks"** are the tools that separate amateur PDFs from professional ones. Without them, you end up with "widows and orphans"—headings at the very bottom of a page with no content below them, or tables that split right after the header.
+
+Here is the breakdown of the "Keep" logic you’ll want for your documentation and your tool’s shim-logic.
+
+---
+
+### 1. The Three "Keep" Attributes
+
+There are three main properties, and they each serve a very specific structural purpose:
+
+| Property | Typical Value | Purpose |
+| --- | --- | --- |
+| **`keep-with-next`** | `always` | Used on **Headings**. Ensures the heading never sits alone at the bottom of a page. |
+| **`keep-with-previous`** | `always` | Used on **Table Footers** or "Total" rows. Ensures the conclusion stays with the data. |
+| **`keep-together`** | `within-page="always"` | Used on **Table Rows** or small **Images**. Ensures the entire element stays on one page. |
+
+---
+
+### 2. The "Sticky Heading" Pattern (Best Practice)
+
+A common mistake is trying to "force" a page break. Instead, you should make your headings "sticky" so they follow the content below them.
+
+```xml
+<fo:block font-weight="bold" 
+          font-size="14pt" 
+          keep-with-next.within-page="always" 
+          space-after="2mm">
+  Chapter 1: The Introduction
+</fo:block>
+<fo:block>
+  This paragraph will now always stay with the heading above. 
+  If the paragraph has to move to page 2, the heading will jump with it.
+</fo:block>
+
+```
+
+---
+
+### 3. Keeping Table Rows Together
+
+By default, an FO engine will try to split a table row if it contains a lot of text. This often looks broken. To prevent a row from splitting across two pages:
+
+```xml
+<fo:table-row keep-together.within-page="always">
+  <fo:table-cell>
+    <fo:block>This row will never be sliced in half.</fo:block>
+  </fo:table-cell>
+</fo:table-row>
+
+```
+
+**Warning for your Tool:** If a single row is taller than an *entire page*, and you have `keep-together="always"`, the engine will often crash or "overflow" the page because it has been given an impossible instruction.
+
+---
+
+### 4. The "Orphan" and "Widow" Control
+
+If you are dealing with long paragraphs, you don't want a single line of a paragraph left alone on a page.
+
+* **`orphans="2"`**: The minimum number of lines left at the **bottom** of a page.
+* **`widows="2"`**: The minimum number of lines left at the **top** of the next page.
+
+*Set these globally on your `fo:page-sequence` or `fo:root` so they apply to all blocks.*
+
+---
+
+### 5. Troubleshooting / Shim Strategy
+
+When you're building your visual previewer, "Keep" conflicts are a major source of "White Space Gaps."
+
+* **The "Keep Chain" Conflict:** If you have ten blocks in a row all set to `keep-with-next="always"`, and they collectively exceed one page, the engine gets "stuck." It wants to keep them together, but it can't.
+* **The "Broken Table" Shim:** If your tool detects a table header at the bottom of a page with no data, your shim should ensure the `fo:table-header` (or the first row of the body) hasn't lost its `keep-with-next` logic.
+
+Cell spanning is the most common cause of table "blow-ups" in XSL-FO. If the math doesn't perfectly match the defined columns, the engine will either throw an error or—worse—render a garbled mess that pushes content off the edge of the page.
+
+Here are the best practices for handling horizontal (column) and vertical (row) spanning.
+
+---
+
+### 1. Horizontal Spanning (`number-columns-spanned`)
+
+This is the "merging" of columns. The most critical rule: **You must still account for the total column count.**
+
+* **The Rule:** If you have 4 columns defined, and a cell spans 3, the next cell in that row must be the 4th column.
+* **The Attribute:** `number-columns-spanned="[integer]"`
+
+```xml
+<fo:table table-layout="fixed" width="100%">
+  <fo:table-column column-width="25%"/> <fo:table-column column-width="25%"/> <fo:table-column column-width="25%"/> <fo:table-column column-width="25%"/> <fo:table-body>
+    <fo:table-row>
+      <fo:table-cell number-columns-spanned="3" border="1pt solid black">
+        <fo:block>I am taking up 75% of the table width</fo:block>
+      </fo:table-cell>
+      <fo:table-cell border="1pt solid black">
+        <fo:block>Col 4</fo:block>
+      </fo:table-cell>
+    </fo:table-row>
+  </fo:table-body>
+</fo:table>
+
+```
+
+### 2. Vertical Spanning (`number-rows-spanned`)
+
+This is significantly trickier because it affects the rows *below* the current one.
+
+* **The Rule:** In the subsequent rows, you must **omit** the cell that the span is "dropping into."
+* **The Attribute:** `number-rows-spanned="[integer]"`
+
+```xml
+<fo:table-body>
+  <fo:table-row>
+    <fo:table-cell number-rows-spanned="2" border="1pt solid black">
+      <fo:block>I span this row and the next.</fo:block>
+    </fo:table-cell>
+    <fo:table-cell border="1pt solid black">
+      <fo:block>Row 1, Col 2</fo:block>
+    </fo:table-cell>
+  </fo:table-row>
+  
+  <fo:table-row>
+    <fo:table-cell border="1pt solid black">
+      <fo:block>Row 2, Col 2</fo:block>
+    </fo:table-cell>
+  </fo:table-row>
+</fo:table-body>
+
+```
+
+---
+
+### 3. Common Troubleshooting (For your Tool/Shims)
+
+* **The "Phantom Column" Bug:** If your code defines a span of 3 but still provides 4 cells in that row, the engine will create a "phantom" 5th column that overflows the page margin.
+* **The "Border Gap" Bug:** In `border-collapse="separate"` mode, spanned cells can create weirdly thick borders or gaps. **Always use `border-collapse="collapse"` when spanning** to ensure the merged area looks like a single unit.
+* **The Page Break Disaster:** If a cell spans 5 rows, but the page breaks after row 2, some older FO engines will duplicate the cell content or simply "clip" it.
+* **Shim Fix:** For high-reliability layouts, use `keep-together.within-page="always"` on any row containing a `number-rows-spanned` attribute to ensure the entire spanned group stays on one page.
+
+
+
+---
+
+### 4. Cell Spanning Checklist
+
+* [ ] **Math Check:** Ensure `number-columns-spanned` + remaining cells = total `fo:table-column` count.
+* [ ] **Structural Omission:** In vertical spans, ensure the following rows "skip" the occupied column.
+* [ ] **Collapse Borders:** Always use `border-collapse="collapse"` to keep spanned boundaries clean.
+* [ ] **Alignment:** Use `display-align="center"` on spanned cells; large empty spaces in merged cells look better when centered vertically.
+* [ ] **Page Breaks:** Use `keep-together` on groups of rows that share a vertical span to prevent "fragmented" merges across pages.
+
+---
+
+### Closing the Loop
+
+You’ve now got a robust set of "Modern XSL-FO" principles—from accessible legends and micro-adjusted icons to bulletproof table logic.

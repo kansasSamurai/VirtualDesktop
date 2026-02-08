@@ -343,7 +343,6 @@
             gap: 8px;
             padding: 8px 10px;
             background: #2a2a2a;
-            border-top: 1px solid #444;
         }
         .template-nav-bar label {
             font-size: 0.7rem;
@@ -446,6 +445,44 @@
             font-size: 0.8rem;
             font-style: italic;
         }
+        /* Bottom Tabs */
+        .bottom-tabs-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 200px;
+            border-top: 1px solid #444;
+        }
+        .bottom-tabs {
+            display: flex;
+            background: #252526;
+            border-bottom: 1px solid #444;
+        }
+        .bottom-tab {
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 0.65rem;
+            color: #888;
+            border-bottom: 2px solid transparent;
+            text-transform: uppercase;
+        }
+        .bottom-tab:hover {
+            color: #ccc;
+        }
+        .bottom-tab.active {
+            color: white;
+            border-bottom-color: var(--accent);
+            background: #2d2d2d;
+        }
+        .bottom-tab-content {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .bottom-tab-content.active {
+            display: flex;
+        }
         /* Options Panel */
         .options-panel {
             flex: 1;
@@ -523,6 +560,7 @@
 				<button onclick="insertSnippet('if')" title="Insert xsl:if">if</button>
 				<button onclick="insertSnippet('choose')" title="Insert xsl:choose">choose</button>
 				<button onclick="insertSnippet('value-of')" title="Insert xsl:value-of">value-of</button>
+				<button onclick="showAttrSetDialog()" title="Insert xsl:attribute-set">attr set...</button>
 			</div>
 		</div>
 
@@ -558,30 +596,71 @@
 			</div>
 		</div>
 
-		<!-- Template Navigator (below textarea, XSL tab only) -->
-		<div id="template-nav-bar" class="template-nav-bar">
-			<label>Templates:</label>
-			<select id="template-nav" onchange="loadTemplateToEditor(this.value)" title="Select template to edit">
-				<option value="">-- Select a template --</option>
-			</select>
-			<button onclick="refreshTemplateNav()" title="Refresh template list">↻</button>
-		</div>
-
-		<!-- Template Editor (below nav bar, XSL tab only) -->
-		<div id="template-editor" class="template-editor">
-			<div id="template-editor-placeholder" class="template-editor-placeholder">
-				Select a template above to edit
+		<!-- Bottom Tabs Container -->
+		<div id="bottom-tabs-container" class="bottom-tabs-container">
+			<div class="bottom-tabs">
+				<div id="bottom-tab-templates" class="bottom-tab active" onclick="showBottomTab('templates')">TEMPLATES</div>
+				<div id="bottom-tab-attrsets" class="bottom-tab" onclick="showBottomTab('attrsets')">ATTRIBUTE SETS</div>
 			</div>
-			<div id="template-editor-active" style="display: none; flex: 1; flex-direction: column;">
-				<div class="template-editor-header">
-					<span class="template-name" id="template-editor-name"></span>
-					<span class="template-status" id="template-editor-status"></span>
-					<div class="template-editor-buttons">
-						<button class="btn-discard" onclick="discardTemplateChanges()" title="Reload from main XSL">Discard</button>
-						<button class="btn-update" onclick="updateTemplateInXsl()" title="Update template in main XSL">Update XSL</button>
+
+			<!-- TEMPLATES Tab Content -->
+			<div id="bottom-content-templates" class="bottom-tab-content active">
+				<!-- Template Navigator -->
+				<div id="template-nav-bar" class="template-nav-bar">
+					<label>Templates:</label>
+					<select id="template-nav" onchange="loadTemplateToEditor(this.value)" title="Select template to edit">
+						<option value="">-- Select a template --</option>
+					</select>
+					<button onclick="refreshTemplateNav()" title="Refresh template list">↻</button>
+				</div>
+
+				<!-- Template Editor -->
+				<div id="template-editor" class="template-editor">
+					<div id="template-editor-placeholder" class="template-editor-placeholder">
+						Select a template above to edit
+					</div>
+					<div id="template-editor-active" style="display: none; flex: 1; flex-direction: column;">
+						<div class="template-editor-header">
+							<span class="template-name" id="template-editor-name"></span>
+							<span class="template-status" id="template-editor-status"></span>
+							<div class="template-editor-buttons">
+								<button class="btn-discard" onclick="discardTemplateChanges()" title="Reload from main XSL">Discard</button>
+								<button class="btn-update" onclick="updateTemplateInXsl()" title="Update template in main XSL">Update XSL</button>
+							</div>
+						</div>
+						<textarea id="templateEditorInput" oninput="onTemplateEditorChange()" placeholder="Template content..."></textarea>
 					</div>
 				</div>
-				<textarea id="templateEditorInput" oninput="onTemplateEditorChange()" placeholder="Template content..."></textarea>
+			</div>
+
+			<!-- ATTRIBUTE SETS Tab Content -->
+			<div id="bottom-content-attrsets" class="bottom-tab-content">
+				<!-- Attribute Set Navigator -->
+				<div class="template-nav-bar">
+					<label>Attr Sets:</label>
+					<select id="attrset-nav" onchange="loadAttrSetToEditor(this.value)" title="Select attribute set to edit">
+						<option value="">-- Select an attribute set --</option>
+					</select>
+					<button onclick="refreshAttrSetNav()" title="Refresh attribute set list">↻</button>
+				</div>
+
+				<!-- Attribute Set Editor -->
+				<div id="attrset-editor" class="template-editor">
+					<div id="attrset-editor-placeholder" class="template-editor-placeholder">
+						Select an attribute set above to edit
+					</div>
+					<div id="attrset-editor-active" style="display: none; flex: 1; flex-direction: column;">
+						<div class="template-editor-header">
+							<span class="template-name" id="attrset-editor-name"></span>
+							<span class="template-status" id="attrset-editor-status"></span>
+							<div class="template-editor-buttons">
+								<button class="btn-discard" onclick="discardAttrSetChanges()" title="Reload from main XSL">Discard</button>
+								<button class="btn-update" onclick="updateAttrSetInXsl()" title="Update attribute set in main XSL">Update XSL</button>
+							</div>
+						</div>
+						<textarea id="attrSetEditorInput" oninput="onAttrSetEditorChange()" placeholder="Attribute set content..."></textarea>
+					</div>
+				</div>
 			</div>
 		</div>
 
@@ -624,6 +703,8 @@ example xml:
 	let virtualImages = {};
 	let templates = {};        // Stored template contents { "name": "full template text" }
 	let activeTemplate = null; // Currently selected template name
+	let attrSets = {};         // Stored attribute set contents { "name": "full attr set text" }
+	let activeAttrSet = null;  // Currently selected attribute set name
 	let currentProjectId = null;  // ID of currently loaded project (null = unsaved)
 	let lastSavedState = null;    // Snapshot of last saved state for dirty checking
     const MISSING_IMAGE_SVG = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZGVkZWRlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iOCIgZmlsbD0iI2FhYSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TUlTU0lORzwvdGV4dD48L3N2Zz4=";
@@ -705,7 +786,11 @@ example xml:
             templates = data.templates || {};
             activeTemplate = data.activeTemplate || null;
 
-            // 3c. Re-hydrate Project tracking
+            // 3c. Re-hydrate Attribute Sets storage
+            attrSets = data.attrSets || {};
+            activeAttrSet = data.activeAttrSet || null;
+
+            // 3d. Re-hydrate Project tracking
             currentProjectId = data.currentProjectId || null;
             // Set lastSavedState if we have a saved project
             if (currentProjectId) {
@@ -725,8 +810,14 @@ example xml:
                 showTemplateEditor(activeTemplate, templates[activeTemplate]);
             }
 
-            // 6. Refresh template navigator
+            // 5b. Restore active attribute set in editor if any
+            if (activeAttrSet && attrSets[activeAttrSet]) {
+                showAttrSetEditor(activeAttrSet, attrSets[activeAttrSet]);
+            }
+
+            // 6. Refresh navigators
             refreshTemplateNav();
+            refreshAttrSetNav();
         }
     }
 
@@ -742,6 +833,8 @@ example xml:
             library: library,
             templates: templates,           // Save template editor contents
             activeTemplate: activeTemplate, // Save which template is open
+            attrSets: attrSets,             // Save attribute set editor contents
+            activeAttrSet: activeAttrSet,   // Save which attribute set is open
             currentProjectId: currentProjectId  // Save which project is loaded
         };
         localStorage.setItem('xslfo_sandbox_v6', JSON.stringify(data));
@@ -774,7 +867,9 @@ example xml:
 			flexLeaders: document.getElementById('flexLeadersToggle')?.checked ?? true,
 			library: library,
 			templates: templates,
-			activeTemplate: activeTemplate
+			activeTemplate: activeTemplate,
+			attrSets: attrSets,
+			activeAttrSet: activeAttrSet
 		};
 	}
 
@@ -947,6 +1042,8 @@ example xml:
 		library = data.library || {};
 		templates = data.templates || {};
 		activeTemplate = data.activeTemplate || null;
+		attrSets = data.attrSets || {};
+		activeAttrSet = data.activeAttrSet || null;
 
 		renderLibUI();
 
@@ -960,10 +1057,16 @@ example xml:
 		// Refresh UI
 		if (data.xsl) renderPreview();
 		refreshTemplateNav();
+		refreshAttrSetNav();
 		if (activeTemplate && templates[activeTemplate]) {
 			showTemplateEditor(activeTemplate, templates[activeTemplate]);
 		} else {
 			hideTemplateEditor();
+		}
+		if (activeAttrSet && attrSets[activeAttrSet]) {
+			showAttrSetEditor(activeAttrSet, attrSets[activeAttrSet]);
+		} else {
+			hideAttrSetEditor();
 		}
 
 		closeProjectDialog();
@@ -1020,12 +1123,16 @@ example xml:
 		library = {};
 		templates = {};
 		activeTemplate = null;
+		attrSets = {};
+		activeAttrSet = null;
 		currentProjectId = null;
 		lastSavedState = null;
 
 		renderLibUI();
 		hideTemplateEditor();
+		hideAttrSetEditor();
 		refreshTemplateNav();
+		refreshAttrSetNav();
 		document.getElementById('xsl-canvas').innerHTML = '';
 
 		saveProject();
@@ -1103,20 +1210,33 @@ example xml:
 		const snippetToolbar = document.getElementById('snippet-toolbar');
 		if (snippetToolbar) snippetToolbar.style.display = (tabName === 'xsl' ? 'flex' : 'none');
 
-		// 4. Toggle template navigator bar (only show for XSLT tab)
-		const templateNavBar = document.getElementById('template-nav-bar');
-		if (templateNavBar) templateNavBar.style.display = (tabName === 'xsl' ? 'flex' : 'none');
-
-		// 4b. Toggle template editor (only show for XSLT tab)
-		const templateEditor = document.getElementById('template-editor');
-		if (templateEditor) templateEditor.style.display = (tabName === 'xsl' ? 'flex' : 'none');
+		// 4. Toggle bottom tabs container (only show for XSLT tab)
+		const bottomTabsContainer = document.getElementById('bottom-tabs-container');
+		if (bottomTabsContainer) bottomTabsContainer.style.display = (tabName === 'xsl' ? 'flex' : 'none');
 
 		// 5. Toggle options panel
 		const optionsPanel = document.getElementById('optionsPanel');
 		if (optionsPanel) optionsPanel.style.display = (isOptionsTab ? 'flex' : 'none');
 
-		// 6. Refresh template navigator when switching to XSLT tab
-		if (tabName === 'xsl') refreshTemplateNav();
+		// 6. Refresh navigators when switching to XSLT tab
+		if (tabName === 'xsl') {
+			refreshTemplateNav();
+			refreshAttrSetNav();
+		}
+	}
+
+	function showBottomTab(tabName) {
+		// Update bottom tab styling
+		document.querySelectorAll('.bottom-tab').forEach(t => t.classList.remove('active'));
+		document.getElementById('bottom-tab-' + tabName).classList.add('active');
+
+		// Toggle bottom tab content
+		document.querySelectorAll('.bottom-tab-content').forEach(c => c.classList.remove('active'));
+		document.getElementById('bottom-content-' + tabName).classList.add('active');
+
+		// Refresh navigator for the selected tab
+		if (tabName === 'templates') refreshTemplateNav();
+		if (tabName === 'attrsets') refreshAttrSetNav();
 	}
 
     function addLibFile() {
@@ -1136,23 +1256,34 @@ example xml:
 
 	function evaluateXPath(xpath, context) {
 		if (!xpath) return "";
-		
+
+		// Unwrap template context if needed (from call-template)
+		// Template context is { _xmlContext: actualXmlContext, _params: {...} }
+		let xmlContext = context;
+		if (context && context._xmlContext) {
+			xmlContext = context._xmlContext;
+			// Recursively unwrap in case of nested template calls
+			while (xmlContext && xmlContext._xmlContext) {
+				xmlContext = xmlContext._xmlContext;
+			}
+		}
+
 		let resolvedXPath = xpath;
 
 		// --- Dynamic XSL 3.0 Map Shim ---
 		// This regex captures the map name (group 1) and the key (group 2)
 		// Matches: map:get($anyMapName, 'anyKey')
 		const mapRegex = /map:get\(\$([^,\s]+),\s*['"]([^'"]+)['"]\)/g;
-		
+
 		if (resolvedXPath.includes("map:get")) {
 			try {
 				const mapData = JSON.parse(document.getElementById('mapInput').value || "{}");
-				
+
 				resolvedXPath = resolvedXPath.replace(mapRegex, (match, mapName, key) => {
 					// Look for the specific map object in your JSON (e.g., mapData['firstMap'])
 					const targetMap = mapData[mapName];
 					const value = targetMap ? targetMap[key] : undefined;
-					
+
 					// Return as an XPath string literal
 					return value !== undefined ? `'${value}'` : "''";
 				});
@@ -1162,12 +1293,12 @@ example xml:
 		}
 
 		try {
-			const doc = context.ownerDocument || context;
-			const res = doc.evaluate(resolvedXPath, context, null, XPathResult.STRING_TYPE, null);
+			const doc = xmlContext.ownerDocument || xmlContext;
+			const res = doc.evaluate(resolvedXPath, xmlContext, null, XPathResult.STRING_TYPE, null);
 			return res.stringValue;
-		} catch(e) { 
+		} catch(e) {
 			console.error(`XPath Error on [${resolvedXPath}]:`, e);
-			return ""; 
+			return "";
 		}
 	}
 
@@ -1260,7 +1391,19 @@ function renderPreview() {
 
 		const pageSequences = xslDoc.getElementsByTagNameNS("*", "page-sequence");
 		if (pageSequences.length > 0) {
-			const statics = pageSequences[0].getElementsByTagNameNS("*", "static-content");
+			const pageSeq = pageSequences[0];
+
+			// Extract inheritable font properties from page-sequence
+			const inheritableProps = ['font-family', 'font-size', 'color', 'font-weight', 'font-style', 'line-height'];
+			inheritableProps.forEach(prop => {
+				const val = pageSeq.getAttribute(prop);
+				if (val) {
+					pageLayout[prop] = val;
+					console.log(`Page-sequence ${prop}: ${val}`);
+				}
+			});
+
+			const statics = pageSeq.getElementsByTagNameNS("*", "static-content");
 			Array.from(statics).forEach(sc => {
 				const flowName = sc.getAttribute('flow-name');
 				if (flowName) {
@@ -1306,6 +1449,14 @@ function renderPreview() {
 	function createPageWithRegions(staticContents, pageLayout = {}) {
 		const page = document.createElement('div');
 		page.className = 'xsl-page';
+
+		// Apply inheritable font properties from page-sequence
+		if (pageLayout['font-family']) page.style.fontFamily = pageLayout['font-family'];
+		if (pageLayout['font-size']) page.style.fontSize = pageLayout['font-size'];
+		if (pageLayout['color']) page.style.color = pageLayout['color'];
+		if (pageLayout['font-weight']) page.style.fontWeight = pageLayout['font-weight'];
+		if (pageLayout['font-style']) page.style.fontStyle = pageLayout['font-style'];
+		if (pageLayout['line-height']) page.style.lineHeight = pageLayout['line-height'];
 
 		// Header (region-before)
 		if (staticContents['xsl-region-before']) {
@@ -1571,12 +1722,26 @@ function renderPreview() {
 		overlay.className = 'table-dialog-overlay';
 		overlay.id = 'table-dialog-overlay';
 		overlay.innerHTML = `
-			<div class="table-dialog">
+			<div class="table-dialog" style="min-width: 320px;">
 				<h3>Insert Table</h3>
-				<label>Columns: <input type="number" id="table-cols" value="3" min="1" max="10"></label>
-				<label>Rows: <input type="number" id="table-rows" value="2" min="1" max="20"></label>
-				<label><input type="checkbox" id="table-header" checked> Include header row</label>
-				<label><input type="checkbox" id="table-borders" checked> Add borders</label>
+				<div style="display: flex; gap: 15px; margin-bottom: 10px;">
+					<label>Columns: <input type="number" id="table-cols" value="2" min="1" max="10" style="width: 50px;"></label>
+					<label>Rows: <input type="number" id="table-rows" value="2" min="1" max="20" style="width: 50px;"></label>
+				</div>
+				<label><input type="checkbox" id="table-header"> Include header row</label>
+				<label><input type="checkbox" id="table-borders" checked> Add borders (if no attribute sets)</label>
+				<hr style="border-color: #555; margin: 12px 0;">
+				<div style="font-size: 0.75rem; color: #aaa; margin-bottom: 8px;">
+					Attribute Sets (optional - leave blank for inline styles)
+				</div>
+				<label style="display: block; margin-bottom: 8px;">
+					Table attribute set:
+					<input type="text" id="table-attr-set" placeholder="e.g. attr.table.base" style="width: 100%; padding: 4px; background: #444; border: 1px solid #555; color: white; border-radius: 3px; margin-top: 3px;">
+				</label>
+				<label style="display: block; margin-bottom: 8px;">
+					Cell attribute set:
+					<input type="text" id="table-cell-attr-set" placeholder="e.g. attr.table.cell.base" style="width: 100%; padding: 4px; background: #444; border: 1px solid #555; color: white; border-radius: 3px; margin-top: 3px;">
+				</label>
 				<div class="table-dialog-buttons">
 					<button onclick="closeTableDialog()">Cancel</button>
 					<button onclick="generateTableXsl()" class="btn-primary">Insert</button>
@@ -1592,19 +1757,60 @@ function renderPreview() {
 	}
 
 	function generateTableXsl() {
-		const cols = parseInt(document.getElementById('table-cols').value) || 3;
+		const cols = parseInt(document.getElementById('table-cols').value) || 2;
 		const rows = parseInt(document.getElementById('table-rows').value) || 2;
 		const hasHeader = document.getElementById('table-header').checked;
 		const hasBorders = document.getElementById('table-borders').checked;
+		const tableAttrSet = document.getElementById('table-attr-set').value.trim();
+		const cellAttrSet = document.getElementById('table-cell-attr-set').value.trim();
 
-		const borderAttr = hasBorders ? ' border="1pt solid black"' : '';
+		// Check if attribute sets exist and offer to create them
+		const missingAttrSets = [];
+		if (tableAttrSet && !attrSetExists(tableAttrSet)) {
+			missingAttrSets.push({ name: tableAttrSet, type: 'table' });
+		}
+		if (cellAttrSet && !attrSetExists(cellAttrSet)) {
+			missingAttrSets.push({ name: cellAttrSet, type: 'cell' });
+		}
+
+		if (missingAttrSets.length > 0) {
+			const names = missingAttrSets.map(a => a.name).join(', ');
+			const create = confirm(
+				`The following attribute set(s) do not exist:\n${names}\n\n` +
+				`Would you like to create them with default presets?\n` +
+				`(You can edit them later in the ATTRIBUTE SETS tab)`
+			);
+			if (create) {
+				// Auto-create each missing attribute set with its preset
+				missingAttrSets.forEach(attrSet => {
+					createAttrSetWithPreset(attrSet.name, attrSet.type);
+				});
+				refreshAttrSetNav();
+			}
+		}
+
 		const colWidth = `${Math.floor(100 / cols)}%`;
 
-		let xsl = '<fo:table width="100%" table-layout="fixed">\n';
+		// Build table opening tag
+		let tableAttrs = 'table-layout="fixed" width="100%"';
+		if (tableAttrSet) {
+			tableAttrs = `xsl:use-attribute-sets="${tableAttrSet}" ${tableAttrs}`;
+		}
+		let xsl = `<fo:table ${tableAttrs}>\n`;
 
 		// Column definitions
 		for (let c = 0; c < cols; c++) {
 			xsl += `    <fo:table-column column-width="${colWidth}"/>\n`;
+		}
+
+		// Build cell attributes
+		let cellAttrs = '';
+		if (cellAttrSet) {
+			cellAttrs = ` xsl:use-attribute-sets="${cellAttrSet}"`;
+		} else if (hasBorders) {
+			cellAttrs = ' border="1pt solid black" padding="2pt"';
+		} else {
+			cellAttrs = ' padding="2pt"';
 		}
 
 		// Header
@@ -1612,7 +1818,7 @@ function renderPreview() {
 			xsl += '    <fo:table-header>\n';
 			xsl += '        <fo:table-row>\n';
 			for (let c = 0; c < cols; c++) {
-				xsl += `            <fo:table-cell${borderAttr} padding="2pt">\n`;
+				xsl += `            <fo:table-cell${cellAttrs}>\n`;
 				xsl += `                <fo:block font-weight="bold">Header ${c + 1}</fo:block>\n`;
 				xsl += '            </fo:table-cell>\n';
 			}
@@ -1625,7 +1831,7 @@ function renderPreview() {
 		for (let r = 0; r < rows; r++) {
 			xsl += '        <fo:table-row>\n';
 			for (let c = 0; c < cols; c++) {
-				xsl += `            <fo:table-cell${borderAttr} padding="2pt">\n`;
+				xsl += `            <fo:table-cell${cellAttrs}>\n`;
 				xsl += `                <fo:block>Cell ${r + 1}-${c + 1}</fo:block>\n`;
 				xsl += '            </fo:table-cell>\n';
 			}
@@ -1680,6 +1886,190 @@ function renderPreview() {
 		const textarea = document.getElementById('xslInput');
 		insertAtCursor(textarea, comment);
 		closeCommentDialog();
+	}
+
+	// ===== ATTRIBUTE SET DIALOG =====
+
+	const ATTRSET_PRESETS = {
+		'table': {
+			label: 'Table',
+			attributes: [
+				{ name: 'width', value: '100%', checked: true },
+				{ name: 'table-layout', value: 'fixed', checked: true },
+				{ name: 'border-collapse', value: 'collapse', checked: true },
+				{ name: 'space-before', value: '5mm', checked: false },
+				{ name: 'space-after', value: '5mm', checked: false }
+			]
+		},
+		'cell': {
+			label: 'Table Cell',
+			attributes: [
+				{ name: 'border', value: '0.5pt solid #333', checked: true },
+				{ name: 'padding', value: '3pt', checked: true },
+				{ name: 'display-align', value: 'center', checked: false },
+				{ name: 'background-color', value: '#ffffff', checked: false }
+			]
+		},
+		'block': {
+			label: 'Block',
+			attributes: [
+				{ name: 'font-family', value: 'Arial, sans-serif', checked: false },
+				{ name: 'font-size', value: '10pt', checked: false },
+				{ name: 'color', value: '#333333', checked: false },
+				{ name: 'space-before', value: '6pt', checked: false },
+				{ name: 'space-after', value: '6pt', checked: false },
+				{ name: 'line-height', value: '1.4', checked: false }
+			]
+		},
+		'header': {
+			label: 'Header Text',
+			attributes: [
+				{ name: 'font-weight', value: 'bold', checked: true },
+				{ name: 'font-size', value: '14pt', checked: true },
+				{ name: 'color', value: '#333333', checked: false },
+				{ name: 'space-before', value: '12pt', checked: false },
+				{ name: 'space-after', value: '8pt', checked: false }
+			]
+		}
+	};
+
+	function showAttrSetDialog(prefilledName = '', prefilledType = 'table') {
+		const presetOptions = Object.entries(ATTRSET_PRESETS)
+			.map(([key, val]) => `<option value="${key}" ${key === prefilledType ? 'selected' : ''}>${val.label}</option>`)
+			.join('');
+
+		const overlay = document.createElement('div');
+		overlay.className = 'table-dialog-overlay';
+		overlay.id = 'attrset-dialog-overlay';
+		overlay.innerHTML = `
+			<div class="table-dialog" style="min-width: 380px;">
+				<h3>Create Attribute Set</h3>
+				<label style="display: block; margin-bottom: 10px;">
+					Name:
+					<input type="text" id="attrset-name" value="${prefilledName}" placeholder="e.g. attr.table.base" style="width: 100%; padding: 6px; background: #444; border: 1px solid #555; color: white; border-radius: 3px; margin-top: 3px;">
+				</label>
+				<label style="display: block; margin-bottom: 10px;">
+					Preset:
+					<select id="attrset-preset" onchange="updateAttrSetPreview()" style="width: 100%; padding: 6px; background: #444; border: 1px solid #555; color: white; border-radius: 3px; margin-top: 3px;">
+						${presetOptions}
+					</select>
+				</label>
+				<div style="font-size: 0.75rem; color: #aaa; margin-bottom: 6px;">Attributes (check to include):</div>
+				<div id="attrset-attrs" style="max-height: 200px; overflow-y: auto; background: #333; padding: 8px; border-radius: 3px; margin-bottom: 10px;">
+				</div>
+				<div class="table-dialog-buttons">
+					<button onclick="closeAttrSetDialog()">Cancel</button>
+					<button onclick="insertAttrSet()" class="btn-primary">Insert</button>
+				</div>
+			</div>
+		`;
+		document.body.appendChild(overlay);
+		updateAttrSetPreview();
+		setTimeout(() => document.getElementById('attrset-name').focus(), 50);
+	}
+
+	function updateAttrSetPreview() {
+		const preset = document.getElementById('attrset-preset').value;
+		const attrs = ATTRSET_PRESETS[preset]?.attributes || [];
+		const container = document.getElementById('attrset-attrs');
+
+		container.innerHTML = attrs.map((attr, i) => `
+			<label style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.8rem;">
+				<input type="checkbox" id="attrset-attr-${i}" ${attr.checked ? 'checked' : ''}>
+				<span style="color: #4fc3f7; min-width: 120px;">${attr.name}</span>
+				<input type="text" id="attrset-val-${i}" value="${attr.value}" style="flex: 1; padding: 3px 6px; background: #444; border: 1px solid #555; color: #ccc; border-radius: 3px; font-size: 0.75rem;">
+			</label>
+		`).join('');
+	}
+
+	function closeAttrSetDialog() {
+		const overlay = document.getElementById('attrset-dialog-overlay');
+		if (overlay) overlay.remove();
+	}
+
+	function insertAttrSet() {
+		const name = document.getElementById('attrset-name').value.trim();
+		if (!name) {
+			document.getElementById('attrset-name').style.borderColor = '#c62828';
+			document.getElementById('attrset-name').focus();
+			return;
+		}
+
+		const preset = document.getElementById('attrset-preset').value;
+		const attrs = ATTRSET_PRESETS[preset]?.attributes || [];
+
+		// Collect checked attributes
+		const selectedAttrs = [];
+		attrs.forEach((attr, i) => {
+			const checkbox = document.getElementById(`attrset-attr-${i}`);
+			const valueInput = document.getElementById(`attrset-val-${i}`);
+			if (checkbox && checkbox.checked) {
+				selectedAttrs.push({ name: attr.name, value: valueInput.value });
+			}
+		});
+
+		// Build the attribute set XSL
+		let xsl = `<xsl:attribute-set name="${name}">\n`;
+		selectedAttrs.forEach(attr => {
+			xsl += `    <xsl:attribute name="${attr.name}">${attr.value}</xsl:attribute>\n`;
+		});
+		xsl += '</xsl:attribute-set>';
+
+		const textarea = document.getElementById('xslInput');
+		insertAtCursor(textarea, xsl);
+		closeAttrSetDialog();
+
+		// Refresh the attribute set navigator
+		refreshAttrSetNav();
+	}
+
+	function attrSetExists(name) {
+		const xsl = document.getElementById('xslInput').value;
+		const regex = new RegExp(`<xsl:attribute-set\\s+name="${name}"`, 'g');
+		return regex.test(xsl);
+	}
+
+	function createAttrSetWithPreset(name, type) {
+		const preset = ATTRSET_PRESETS[type];
+		if (!preset) return;
+
+		// Build attribute set with checked (default) attributes from preset
+		let attrSetXsl = `<xsl:attribute-set name="${name}">\n`;
+		preset.attributes.filter(a => a.checked).forEach(attr => {
+			attrSetXsl += `    <xsl:attribute name="${attr.name}">${attr.value}</xsl:attribute>\n`;
+		});
+		attrSetXsl += '</xsl:attribute-set>\n\n';
+
+		// Insert at a good location - after stylesheet opening or after existing attribute-sets
+		const textarea = document.getElementById('xslInput');
+		let xsl = textarea.value;
+
+		// Try to find existing attribute-sets and insert after the last one
+		const lastAttrSetMatch = xsl.match(/<\/xsl:attribute-set>\s*/g);
+		if (lastAttrSetMatch) {
+			const lastIndex = xsl.lastIndexOf('</xsl:attribute-set>');
+			const insertPos = lastIndex + '</xsl:attribute-set>'.length;
+			// Find end of line
+			let endOfLine = xsl.indexOf('\n', insertPos);
+			if (endOfLine === -1) endOfLine = insertPos;
+			xsl = xsl.slice(0, endOfLine + 1) + '\n' + attrSetXsl + xsl.slice(endOfLine + 1);
+		} else {
+			// No existing attribute-sets, insert after stylesheet declaration
+			const stylesheetMatch = xsl.match(/<xsl:stylesheet[^>]*>/);
+			if (stylesheetMatch) {
+				const insertPos = stylesheetMatch.index + stylesheetMatch[0].length;
+				let endOfLine = xsl.indexOf('\n', insertPos);
+				if (endOfLine === -1) endOfLine = insertPos;
+				xsl = xsl.slice(0, endOfLine + 1) + '\n' + attrSetXsl + xsl.slice(endOfLine + 1);
+			} else {
+				// Fallback: insert at cursor
+				insertAtCursor(textarea, attrSetXsl);
+				return;
+			}
+		}
+
+		textarea.value = xsl;
+		saveProject();
 	}
 
 	// ===== HELP MODE DIALOGS =====
@@ -2184,6 +2574,191 @@ function renderPreview() {
 		}, 1500);
 	}
 
+	// ===== ATTRIBUTE SET NAVIGATOR =====
+
+	function refreshAttrSetNav() {
+		const xsl = document.getElementById('xslInput').value;
+		const select = document.getElementById('attrset-nav');
+		const regex = /<xsl:attribute-set\s+name="([^"]+)"/g;
+
+		// Clear existing options except first
+		select.innerHTML = '<option value="">-- Select an attribute set --</option>';
+
+		let match;
+		while ((match = regex.exec(xsl)) !== null) {
+			const option = document.createElement('option');
+			option.value = match[1];
+			option.textContent = match[1];
+			// Mark if attribute set has stored edits
+			if (attrSets[match[1]]) {
+				option.textContent += ' •';
+				option.style.color = '#4fc3f7';
+			}
+			select.appendChild(option);
+		}
+
+		// Re-select active attribute set if it exists
+		if (activeAttrSet) {
+			select.value = activeAttrSet;
+		}
+	}
+
+	// ===== ATTRIBUTE SET EDITOR FUNCTIONS =====
+
+	function extractAttrSetFromXsl(attrSetName) {
+		const xsl = document.getElementById('xslInput').value;
+		// Find the attribute-set start
+		const startRegex = new RegExp(`<xsl:attribute-set\\s+name="${attrSetName}"[^>]*>`, 'g');
+		const startMatch = startRegex.exec(xsl);
+		if (!startMatch) return null;
+
+		const startIndex = startMatch.index;
+		let depth = 1;
+		let pos = startIndex + startMatch[0].length;
+
+		// Find matching closing tag by counting depth
+		while (depth > 0 && pos < xsl.length) {
+			const openMatch = xsl.substring(pos).match(/^<xsl:attribute-set[\s>]/);
+			const closeMatch = xsl.substring(pos).match(/^<\/xsl:attribute-set>/);
+
+			if (closeMatch) {
+				depth--;
+				if (depth === 0) {
+					return xsl.substring(startIndex, pos + closeMatch[0].length);
+				}
+				pos += closeMatch[0].length;
+			} else if (openMatch) {
+				depth++;
+				pos++;
+			} else {
+				pos++;
+			}
+		}
+		return null;
+	}
+
+	function loadAttrSetToEditor(attrSetName) {
+		if (!attrSetName) {
+			hideAttrSetEditor();
+			activeAttrSet = null;
+			saveProject();
+			return;
+		}
+
+		// Check if we already have this attribute set stored
+		if (!attrSets[attrSetName]) {
+			const extracted = extractAttrSetFromXsl(attrSetName);
+			if (!extracted) {
+				alert(`Could not find attribute set "${attrSetName}" in the main XSL.`);
+				return;
+			}
+			attrSets[attrSetName] = extracted;
+		}
+
+		activeAttrSet = attrSetName;
+		showAttrSetEditor(attrSetName, attrSets[attrSetName]);
+		saveProject();
+	}
+
+	function showAttrSetEditor(attrSetName, content) {
+		document.getElementById('attrset-editor-placeholder').style.display = 'none';
+		const activePanel = document.getElementById('attrset-editor-active');
+		activePanel.style.display = 'flex';
+
+		document.getElementById('attrset-editor-name').textContent = attrSetName;
+		document.getElementById('attrSetEditorInput').value = content;
+
+		updateAttrSetEditorStatus();
+	}
+
+	function hideAttrSetEditor() {
+		document.getElementById('attrset-editor-placeholder').style.display = 'flex';
+		document.getElementById('attrset-editor-active').style.display = 'none';
+		document.getElementById('attrset-nav').value = '';
+	}
+
+	function onAttrSetEditorChange() {
+		if (!activeAttrSet) return;
+		attrSets[activeAttrSet] = document.getElementById('attrSetEditorInput').value;
+		updateAttrSetEditorStatus();
+		saveProject();
+	}
+
+	function updateAttrSetEditorStatus() {
+		if (!activeAttrSet) return;
+
+		const statusEl = document.getElementById('attrset-editor-status');
+		const currentInXsl = extractAttrSetFromXsl(activeAttrSet);
+		const stored = attrSets[activeAttrSet];
+
+		if (!currentInXsl) {
+			statusEl.textContent = '⚠ Not in XSL';
+			statusEl.className = 'template-status modified';
+		} else if (currentInXsl !== stored) {
+			statusEl.textContent = '● Modified';
+			statusEl.className = 'template-status modified';
+		} else {
+			statusEl.textContent = '✓ Synced';
+			statusEl.className = 'template-status';
+		}
+	}
+
+	function discardAttrSetChanges() {
+		if (!activeAttrSet) return;
+
+		const currentInXsl = extractAttrSetFromXsl(activeAttrSet);
+		if (currentInXsl) {
+			attrSets[activeAttrSet] = currentInXsl;
+			document.getElementById('attrSetEditorInput').value = currentInXsl;
+			updateAttrSetEditorStatus();
+			saveProject();
+		} else {
+			if (confirm(`Attribute set "${activeAttrSet}" not found in main XSL. Remove from editor?`)) {
+				delete attrSets[activeAttrSet];
+				activeAttrSet = null;
+				hideAttrSetEditor();
+				refreshAttrSetNav();
+				saveProject();
+			}
+		}
+	}
+
+	function updateAttrSetInXsl() {
+		if (!activeAttrSet) return;
+
+		const xsl = document.getElementById('xslInput').value;
+		const newContent = attrSets[activeAttrSet];
+
+		const currentInXsl = extractAttrSetFromXsl(activeAttrSet);
+
+		if (!currentInXsl) {
+			alert(
+				`Attribute set "${activeAttrSet}" was not found in the main XSL.\n\n` +
+				`To re-establish it:\n` +
+				`1. Copy the attribute set content from the editor below\n` +
+				`2. Paste it into the main XSL at the desired location\n` +
+				`3. Click "Discard" to sync the editor with the main XSL`
+			);
+			return;
+		}
+
+		const newXsl = xsl.replace(currentInXsl, newContent);
+		document.getElementById('xslInput').value = newXsl;
+
+		updateAttrSetEditorStatus();
+		saveProject();
+
+		// Visual feedback
+		const btn = event.target;
+		const originalText = btn.textContent;
+		btn.textContent = '✓ Updated!';
+		btn.style.background = '#43a047';
+		setTimeout(() => {
+			btn.textContent = originalText;
+			btn.style.background = '';
+		}, 1500);
+	}
+
 // Helper: Evaluate Attribute Value Templates (AVTs)
 // Replaces {$param} and {xpath} patterns with their values
 function evaluateAVT(template, dataContext) {
@@ -2374,7 +2949,8 @@ function mapToHtml(xmlNode, dataContext) {
 
     if (ns?.includes("Format")) {
         // 1. Handle Attribute Sets (Lookup phase)
-        const attrSetNames = xmlNode.getAttribute('use-attribute-sets');
+        // Check for both use-attribute-sets and xsl:use-attribute-sets (with namespace prefix)
+        const attrSetNames = xmlNode.getAttribute('use-attribute-sets') || xmlNode.getAttribute('xsl:use-attribute-sets');
         if (attrSetNames) {
             attrSetNames.split(/\s+/).forEach(setName => {
                 const sets = xmlNode.ownerDocument.getElementsByTagNameNS("*", "attribute-set");

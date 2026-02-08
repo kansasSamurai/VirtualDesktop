@@ -1260,15 +1260,40 @@ example xml:
 		// Unwrap template context if needed (from call-template)
 		// Template context is { _xmlContext: actualXmlContext, _params: {...} }
 		let xmlContext = context;
-		if (context && context._xmlContext) {
-			xmlContext = context._xmlContext;
-			// Recursively unwrap in case of nested template calls
-			while (xmlContext && xmlContext._xmlContext) {
-				xmlContext = xmlContext._xmlContext;
+		let params = {};
+
+		// Collect params from all levels of nested template contexts
+		let ctx = context;
+		while (ctx) {
+			if (ctx._params) {
+				// Merge params, inner scopes take precedence
+				params = { ...ctx._params, ...params };
+			}
+			if (ctx._xmlContext) {
+				xmlContext = ctx._xmlContext;
+				ctx = ctx._xmlContext;
+			} else {
+				break;
 			}
 		}
 
 		let resolvedXPath = xpath;
+
+		// --- Parameter Resolution ---
+		// Replace $paramName references with actual parameter values
+		// This handles simple parameter references like $icon-path
+		const paramRegex = /\$([a-zA-Z_][\w.-]*)/g;
+		if (resolvedXPath.match(paramRegex)) {
+			resolvedXPath = resolvedXPath.replace(paramRegex, (match, paramName) => {
+				if (params.hasOwnProperty(paramName)) {
+					const value = params[paramName];
+					// Return as XPath string literal (properly escaped)
+					return `'${String(value).replace(/'/g, "''")}'`;
+				}
+				// Leave unresolved params as-is (may be XPath variables from XML)
+				return match;
+			});
+		}
 
 		// --- Dynamic XSL 3.0 Map Shim ---
 		// This regex captures the map name (group 1) and the key (group 2)

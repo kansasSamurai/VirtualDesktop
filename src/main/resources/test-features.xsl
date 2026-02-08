@@ -11,8 +11,27 @@
 
     Expected result: 3 pages displayed vertically with gap between them.
     - Page 1: Sections 1-9 (fonts, inheritance, tables, leaders, etc.)
-    - Page 2: Sections 10-11 (inline legend pattern with alignment-baseline)
+    - Page 2: Sections 10-14 (inline legend, shims, inline-containers, nested templates, java maps)
     - Page 3: Summary
+
+    REGRESSION TESTS:
+    - Template in static-content with XPath expressions (fixes doc.evaluate error)
+    - Nested templates (template calling template)
+    - Whitespace between inline-containers
+    - XML comments not creating empty divs
+    - Java Map with multiple map entries (dot notation and map:get syntax)
+
+    SAMPLE XML DATA for testing (paste into XML DATA tab):
+    <report>
+        <title>Test Report</title>
+        <logoUrl>test-image.png</logoUrl>
+    </report>
+
+    SAMPLE JAVA MAP for testing (paste into JAVA MAP tab):
+    {
+      "firstMap": {"reportTitle": "QUARTERLY AUDIT REPORT"},
+      "secondMap": {"auditorName": "John Doe"}
+    }
 -->
 
 <xsl:template match="/">
@@ -23,17 +42,14 @@
             </fo:simple-page-master>
         </fo:layout-master-set>
 
-        <fo:page-sequence master-reference="test-page">
+        <fo:page-sequence master-reference="test-page"
+                          font-family="Arial, sans-serif"
+                          font-size="10pt"
+                          color="#333333">
             <!-- Header (region-before) -->
+            <!-- REGRESSION TEST: Template called from static-content with XPath expressions -->
             <fo:static-content flow-name="xsl-region-before">
-                <fo:block text-align="center" font-weight="bold" font-size="10pt" color="#333">
-                    XSL Viewer Feature Test Report
-                </fo:block>
-                <!-- Watermark: absolutely positioned in region-before, should overlay the page -->
-                <fo:block position="absolute" top="40%" left="10%" font-size="72pt" color="rgba(200,200,200,0.3)"
-                          font-weight="bold" transform="rotate(-30deg)">
-                    SAMPLE
-                </fo:block>
+                <xsl:call-template name="page.header"/>
             </fo:static-content>
 
             <!-- Footer (region-after) with Page X of N -->
@@ -52,8 +68,8 @@
                     1. Font Properties
                 </fo:block>
 
-                <fo:block font-size="10pt" space-after="6pt">
-                    Default font (no font-family specified)
+                <fo:block space-after="6pt">
+                    Default font - inherits Arial 10pt #333 from page-sequence
                 </fo:block>
 
                 <fo:block font-family="Georgia, serif" font-size="10pt" space-after="6pt">
@@ -409,6 +425,53 @@
                     </fo:inline-container>
                 </fo:block>
 
+                <!-- ============================================ -->
+                <!-- SECTION 13: Nested Templates -->
+                <!-- ============================================ -->
+                <fo:block font-size="16pt" font-weight="bold" space-before="20pt" space-after="12pt">
+                    13. Nested Templates (Template calling Template)
+                </fo:block>
+
+                <fo:block space-after="8pt" font-size="10pt" color="gray">
+                    This tests a template that calls another template. The outer template wraps
+                    content in a bordered box, the inner template renders an icon with text.
+                </fo:block>
+
+                <!-- Call the outer template, which internally calls the inner template -->
+                <xsl:call-template name="test.outer-wrapper">
+                    <xsl:with-param name="title">Nested Template Test</xsl:with-param>
+                </xsl:call-template>
+
+                <!-- ============================================ -->
+                <!-- SECTION 14: Java Map (Multiple Maps) -->
+                <!-- ============================================ -->
+                <fo:block font-size="16pt" font-weight="bold" space-before="20pt" space-after="12pt">
+                    14. Java Map (Multiple Map Entries)
+                </fo:block>
+
+                <fo:block space-after="8pt" font-size="10pt" color="gray">
+                    Tests the JAVA MAP tab feature with multiple map entries.
+                    Supports two syntaxes: $mapName.key (dot notation) and map:get($mapName, 'key').
+                </fo:block>
+
+                <fo:block space-after="6pt" font-size="9pt" color="#666" font-style="italic">
+                    Required JSON in JAVA MAP tab:
+                    {"firstMap": {"reportTitle": "QUARTERLY AUDIT REPORT"}, "secondMap": {"auditorName": "John Doe"}}
+                </fo:block>
+
+                <fo:block space-after="10pt">
+                    <fo:block space-after="4pt">
+                        <fo:inline font-weight="bold">Dot Notation: </fo:inline>
+                        Title = <xsl:value-of select="$firstMap.reportTitle"/>,
+                        Auditor = <xsl:value-of select="$secondMap.auditorName"/>
+                    </fo:block>
+                    <fo:block>
+                        <fo:inline font-weight="bold">map:get() Syntax: </fo:inline>
+                        Title = <xsl:value-of select="map:get($firstMap, 'reportTitle')"/>,
+                        Auditor = <xsl:value-of select="map:get($secondMap, 'auditorName')"/>
+                    </fo:block>
+                </fo:block>
+
             </fo:flow>
         </fo:page-sequence>
     </fo:root>
@@ -440,6 +503,85 @@
             <xsl:value-of select="$label"/>
         </fo:inline>
     </fo:inline>
+</xsl:template>
+
+<!-- ============================================ -->
+<!-- NESTED TEMPLATE TEST: Outer Wrapper -->
+<!-- ============================================ -->
+<!--
+    Outer template that creates a bordered container and calls
+    the inner template to render content inside it.
+-->
+<xsl:template name="test.outer-wrapper">
+    <xsl:param name="title"/>
+
+    <fo:block border="2pt solid #336699" padding="10pt" background-color="#f0f8ff" space-after="12pt">
+        <fo:block font-weight="bold" font-size="12pt" color="#336699" space-after="8pt">
+            <xsl:value-of select="$title"/>
+        </fo:block>
+
+        <!-- Call the inner template -->
+        <xsl:call-template name="test.inner-content"/>
+    </fo:block>
+</xsl:template>
+
+<!-- ============================================ -->
+<!-- NESTED TEMPLATE TEST: Inner Content -->
+<!-- ============================================ -->
+<!--
+    Inner template that renders a block with text and an external graphic.
+    Called from within test.outer-wrapper.
+-->
+<xsl:template name="test.inner-content">
+    <fo:block space-after="6pt">
+        This content is rendered by the inner template (test.inner-content).
+    </fo:block>
+    <fo:block>
+        <fo:external-graphic src="test-image.png" content-width="30pt" content-height="30pt"/>
+        <fo:inline padding-left="8pt">Icon rendered from nested template call.</fo:inline>
+    </fo:block>
+</xsl:template>
+
+<!-- ============================================ -->
+<!-- REGRESSION TEST: Page Header Template -->
+<!-- ============================================ -->
+<!--
+    Tests template called from static-content (region-before) that uses
+    XPath expressions for dynamic attributes. This previously caused:
+    "TypeError: doc.evaluate is not a function"
+
+    The fix ensures dataContext is properly unwrapped when evaluating
+    XPath inside templates called from static-content.
+-->
+<xsl:template name="page.header">
+    <fo:block>
+        <!-- Header with logo from XML data and static title -->
+        <fo:inline-container width="20%">
+            <fo:block>
+                <!-- XPath-based src attribute - the key regression test -->
+                <fo:external-graphic content-width="20pt" content-height="20pt">
+                    <xsl:attribute name="src">
+                        <xsl:value-of select="/report/logoUrl"/>
+                    </xsl:attribute>
+                </fo:external-graphic>
+            </fo:block>
+        </fo:inline-container>
+        <fo:inline-container width="60%">
+            <fo:block text-align="center" font-weight="bold" font-size="10pt" color="#333">
+                XSL Viewer Feature Test Report
+            </fo:block>
+        </fo:inline-container>
+        <fo:inline-container width="20%">
+            <fo:block text-align="right" font-size="8pt" color="#666">
+                <xsl:value-of select="/report/title"/>
+            </fo:block>
+        </fo:inline-container>
+    </fo:block>
+    <!-- Watermark: absolutely positioned, should overlay the page -->
+    <fo:block position="absolute" top="40%" left="10%" font-size="72pt" color="rgba(200,200,200,0.3)"
+              font-weight="bold" transform="rotate(-30deg)">
+        SAMPLE
+    </fo:block>
 </xsl:template>
 
 </xsl:stylesheet>

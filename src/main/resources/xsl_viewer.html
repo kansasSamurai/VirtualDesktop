@@ -570,7 +570,7 @@
 
 		<textarea id="xslInput" oninput="saveProject()" placeholder="Paste Main XSLT..."></textarea>
 		<textarea id="xmlInput" style="display:none;" oninput="saveProject()" placeholder="Paste XML Data..."></textarea>
-		<textarea id="mapInput" style="display:none;" oninput="saveProject()" placeholder='{ "reportTitle": "Invoice" }'></textarea>
+		<textarea id="mapInput" style="display:none;" oninput="saveProject()" placeholder='{"firstMap": {"reportTitle": "Invoice"}, "secondMap": {"auditorName": "Jane Doe"}}'></textarea>
 		<textarea id="imageMapInput" style="display:none;" oninput="saveProject()" placeholder="logo.png|data:image/png;base64,..."></textarea>
 
 		<!-- Bottom Tabs Container -->
@@ -1352,6 +1352,22 @@ example xml:
 				// Leave unresolved params as-is (may be XPath variables from XML)
 				return match;
 			});
+		}
+
+		// --- Java Map Dot Notation ---
+		// Matches: $mapName.keyName (e.g., $firstMap.reportTitle)
+		const dotNotationRegex = /\$([a-zA-Z_][\w]*)\.([\w]+)/g;
+		if (resolvedXPath.match(dotNotationRegex)) {
+			try {
+				const mapData = JSON.parse(document.getElementById('mapInput').value || "{}");
+				resolvedXPath = resolvedXPath.replace(dotNotationRegex, (match, mapName, key) => {
+					const targetMap = mapData[mapName];
+					const value = targetMap ? targetMap[key] : undefined;
+					return value !== undefined ? `'${String(value).replace(/'/g, "''")}'` : "''";
+				});
+			} catch(e) {
+				console.warn("Map dot notation resolution failed: check if JAVA MAP JSON is valid.");
+			}
 		}
 
 		// --- Dynamic XSL 3.0 Map Shim ---

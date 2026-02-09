@@ -1402,6 +1402,62 @@ example xml:
 		}
 	}
 
+	function evaluateXPathBoolean(xpath, context) {
+		if (!xpath) return false;
+
+		// Unwrap template context if needed
+		let xmlContext = context;
+		let params = {};
+		let ctx = context;
+		while (ctx) {
+			if (ctx._params) {
+				params = { ...ctx._params, ...params };
+			}
+			if (ctx._xmlContext) {
+				xmlContext = ctx._xmlContext;
+				ctx = ctx._xmlContext;
+			} else {
+				break;
+			}
+		}
+
+		let resolvedXPath = xpath;
+
+		// Replace $mapName.key dot notation
+		const dotNotationRegex = /\$([a-zA-Z_][\w]*)\.([\w]+)/g;
+		if (resolvedXPath.match(dotNotationRegex)) {
+			try {
+				const mapData = JSON.parse(document.getElementById('mapInput').value || "{}");
+				resolvedXPath = resolvedXPath.replace(dotNotationRegex, (match, mapName, key) => {
+					const targetMap = mapData[mapName];
+					const value = targetMap ? targetMap[key] : undefined;
+					return value !== undefined ? `'${String(value).replace(/'/g, "''")}'` : "''";
+				});
+			} catch(e) {}
+		}
+
+		// Replace $paramName references
+		const paramRegex = /\$([a-zA-Z_][\w.-]*)/g;
+		if (resolvedXPath.match(paramRegex)) {
+			resolvedXPath = resolvedXPath.replace(paramRegex, (match, paramName) => {
+				if (params.hasOwnProperty(paramName)) {
+					const value = params[paramName];
+					return `'${String(value).replace(/'/g, "''")}'`;
+				}
+				return match;
+			});
+		}
+
+		try {
+			const doc = xmlContext.ownerDocument || xmlContext;
+			const res = doc.evaluate(resolvedXPath, xmlContext, null, XPathResult.BOOLEAN_TYPE, null);
+			return res.booleanValue;
+		} catch(e) {
+			console.error(`XPath Boolean Error on [${resolvedXPath}]:`, e);
+			return false;
+		}
+	}
+
 function renderPreview() {
 		saveProject();
 		console.log("--- Starting Render Process ---");
@@ -1490,44 +1546,82 @@ function renderPreview() {
 		}
 
 		const pageSequences = xslDoc.getElementsByTagNameNS("*", "page-sequence");
-		if (pageSequences.length > 0) {
-			const pageSeq = pageSequences[0];
+		console.log(`Found ${pageSequences.length} page-sequence(s)`);
 
-			// Extract inheritable font properties from page-sequence
+		// Process each page-sequence
+		Array.from(pageSequences).forEach((pageSeq, seqIndex) => {
+			console.log(`Processing page-sequence ${seqIndex + 1}...`);
+
+			// Create per-sequence static contents and layout
+			const seqStaticContents = {};
+			const seqLayout = { ...pageLayout }; // Start with base layout
+
+			// Extract inheritable font properties from this page-sequence
 			const inheritableProps = ['font-family', 'font-size', 'color', 'font-weight', 'font-style', 'line-height'];
 			inheritableProps.forEach(prop => {
 				const val = pageSeq.getAttribute(prop);
 				if (val) {
-					pageLayout[prop] = val;
-					console.log(`Page-sequence ${prop}: ${val}`);
+					seqLayout[prop] = val;
+					console.log(`  Page-sequence ${seqIndex + 1} ${prop}: ${val}`);
 				}
 			});
 
+			// Extract static-content for this page-sequence
 			const statics = pageSeq.getElementsByTagNameNS("*", "static-content");
 			Array.from(statics).forEach(sc => {
 				const flowName = sc.getAttribute('flow-name');
 				if (flowName) {
-					console.log(`Found static-content for: ${flowName}`);
-					staticContents[flowName] = mapToHtml(sc, xmlDataDoc);
+					console.log(`  Found static-content for: ${flowName}`);
+					seqStaticContents[flowName] = mapToHtml(sc, xmlDataDoc);
 				}
 			});
+
+			// Store for use by paginateCanvas
+			// For first sequence, use global staticContents; for others, we'll handle via markers
+			if (seqIndex === 0) {
+				Object.assign(staticContents, seqStaticContents);
+				Object.assign(pageLayout, seqLayout);
+			}
+
+			// Add page-break marker before subsequent sequences
+			if (seqIndex > 0) {
+				const seqBreak = document.createElement('div');
+				seqBreak.className = 'page-break-marker page-sequence-break';
+				seqBreak.dataset.breakType = 'before';
+				seqBreak.dataset.sequenceIndex = seqIndex;
+				// Store static contents and layout as JSON for this sequence
+				seqBreak.dataset.staticContents = JSON.stringify({
+					'xsl-region-before': seqStaticContents['xsl-region-before']?.outerHTML || '',
+					'xsl-region-after': seqStaticContents['xsl-region-after']?.outerHTML || ''
+				});
+				seqBreak.dataset.pageLayout = JSON.stringify(seqLayout);
+				canvas.appendChild(seqBreak);
+			}
+
+			// Find and render the flow for this page-sequence
+			const flows = pageSeq.getElementsByTagNameNS("*", "flow");
+			if (flows.length > 0) {
+				console.log(`  Mapping flow content...`);
+				const result = mapToHtml(flows[0], xmlDataDoc);
+				canvas.appendChild(result);
+			}
+		});
+
+		// Fallback: if no page-sequences found, try to render flows directly
+		if (pageSequences.length === 0) {
+			const flows = xslDoc.getElementsByTagNameNS("*", "flow");
+			const startNode = flows.length > 0 ? flows[0] : xslDoc.documentElement;
+			console.log("No page-sequences found, mapping from flow/root...");
+			const result = mapToHtml(startNode, xmlDataDoc);
+			canvas.appendChild(result);
 		}
-
-		// 4. Start Context Fix
-		// If the XSL uses "invoice/items", but the context is the Document, it works.
-		// If it uses "/invoice/items", it needs the Document.
-		// We pass the documentElement (the root tag) to start.
-		const flows = xslDoc.getElementsByTagNameNS("*", "flow");
-		const startNode = flows.length > 0 ? flows[0] : xslDoc.documentElement;
-
-		console.log("Mapping FO to HTML...");
-		// before: const result = mapToHtml(startNode, xmlDataDoc.documentElement);
-		// after: This is the "Proper" way: Pass the whole document (Root Node)
-		const result = mapToHtml(startNode, xmlDataDoc);
-		canvas.appendChild(result);
 
 		// Post-process: Split content into pages at page-break markers
 		paginateCanvas(canvas, staticContents, pageLayout);
+
+		// Post-process: Enable basic-link click handling via event delegation
+		// (needed because contentEditable regions can interfere with normal link behavior)
+		setupLinkHandlers(canvas);
 
 		// Post-process: Enable flex-based leaders if toggle is on
 		if (document.getElementById('flexLeadersToggle')?.checked) {
@@ -1620,13 +1714,43 @@ function renderPreview() {
 	}
 
 	function splitAtMarkers(nodes, canvas, currentPage, currentBody, staticContents, pageLayout = {}) {
+		// Track current static contents and layout (may change at page-sequence boundaries)
+		let currentStaticContents = staticContents;
+		let currentLayout = pageLayout;
+
 		nodes.forEach(node => {
 			if (node.classList && node.classList.contains('page-break-marker')) {
 				// Found a page break - finalize current page and start a new one
 				if (currentBody.childNodes.length > 0 || canvas.childNodes.length === 0) {
 					canvas.appendChild(currentPage);
 				}
-				const newPage = createPageWithRegions(staticContents, pageLayout);
+
+				// Check if this is a page-sequence break with its own static contents
+				if (node.classList.contains('page-sequence-break') && node.dataset.staticContents) {
+					try {
+						const seqStatics = JSON.parse(node.dataset.staticContents);
+						const seqLayout = JSON.parse(node.dataset.pageLayout || '{}');
+
+						// Create new static content elements from stored HTML
+						currentStaticContents = {};
+						if (seqStatics['xsl-region-before']) {
+							const temp = document.createElement('div');
+							temp.innerHTML = seqStatics['xsl-region-before'];
+							currentStaticContents['xsl-region-before'] = temp.firstChild;
+						}
+						if (seqStatics['xsl-region-after']) {
+							const temp = document.createElement('div');
+							temp.innerHTML = seqStatics['xsl-region-after'];
+							currentStaticContents['xsl-region-after'] = temp.firstChild;
+						}
+						currentLayout = { ...pageLayout, ...seqLayout };
+						console.log(`Switched to page-sequence ${node.dataset.sequenceIndex} static contents`);
+					} catch (e) {
+						console.warn('Failed to parse page-sequence static contents:', e);
+					}
+				}
+
+				const newPage = createPageWithRegions(currentStaticContents, currentLayout);
 				currentPage = newPage.page;
 				currentBody = newPage.body;
 			} else if (node.nodeType === 1 && node.querySelector && node.querySelector('.page-break-marker')) {
@@ -1642,7 +1766,7 @@ function renderPreview() {
 						if (currentBody.childNodes.length > 0) {
 							canvas.appendChild(currentPage);
 						}
-						const newPage = createPageWithRegions(staticContents, pageLayout);
+						const newPage = createPageWithRegions(currentStaticContents, currentLayout);
 						currentPage = newPage.page;
 						currentBody = newPage.body;
 						// Create new wrapper for continued content
@@ -1650,7 +1774,7 @@ function renderPreview() {
 						currentBody.appendChild(newWrapper);
 					} else if (child.nodeType === 1 && child.querySelector && child.querySelector('.page-break-marker')) {
 						// Nested page breaks - recurse
-						const nestedResult = splitAtMarkersNested(child, canvas, currentPage, currentBody, node, staticContents, pageLayout);
+						const nestedResult = splitAtMarkersNested(child, canvas, currentPage, currentBody, node, currentStaticContents, currentLayout);
 						currentPage = nestedResult.currentPage;
 						currentBody = nestedResult.currentBody;
 					} else {
@@ -1718,6 +1842,34 @@ function renderPreview() {
 			page.querySelectorAll('.fo-page-number-citation-last').forEach(el => {
 				el.textContent = totalPages;
 			});
+		});
+	}
+
+	function setupLinkHandlers(canvas) {
+		// Use event delegation for links since contentEditable can interfere
+		canvas.addEventListener('click', function(e) {
+			// Find if we clicked on or within a link
+			let link = e.target.closest('a[href]');
+			if (!link) return;
+
+			// Check for data attributes that mark this as an FO link
+			const href = link.getAttribute('href');
+			if (!href) return;
+
+			e.preventDefault();
+			e.stopPropagation();
+
+			if (href.startsWith('#')) {
+				// Internal link - scroll to target
+				const targetId = href.substring(1);
+				const target = document.getElementById(targetId);
+				if (target) {
+					target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				}
+			} else {
+				// External link - open in new tab
+				window.open(href, '_blank', 'noopener,noreferrer');
+			}
 		});
 	}
 
@@ -3007,7 +3159,49 @@ function mapToHtml(xmlNode, dataContext) {
             return { type: 'attribute', name: attrName, value: attrValue };
         }
 
-        // Default XSL container (like xsl:if, xsl:choose)
+        if (ln === "if") {
+            const testExpr = xmlNode.getAttribute('test');
+            if (evaluateXPathBoolean(testExpr, dataContext)) {
+                const frag = document.createDocumentFragment();
+                Array.from(xmlNode.childNodes).forEach(c => {
+                    const res = mapToHtml(c, dataContext);
+                    if (res instanceof Node) frag.appendChild(res);
+                });
+                return frag;
+            }
+            return null; // Condition false, render nothing
+        }
+
+        if (ln === "choose") {
+            // Process xsl:when and xsl:otherwise children
+            for (const child of xmlNode.childNodes) {
+                if (child.nodeType !== 1) continue; // Skip non-elements
+                const childLn = child.localName;
+
+                if (childLn === "when") {
+                    const testExpr = child.getAttribute('test');
+                    if (evaluateXPathBoolean(testExpr, dataContext)) {
+                        const frag = document.createDocumentFragment();
+                        Array.from(child.childNodes).forEach(c => {
+                            const res = mapToHtml(c, dataContext);
+                            if (res instanceof Node) frag.appendChild(res);
+                        });
+                        return frag;
+                    }
+                } else if (childLn === "otherwise") {
+                    // Only reached if no xsl:when matched
+                    const frag = document.createDocumentFragment();
+                    Array.from(child.childNodes).forEach(c => {
+                        const res = mapToHtml(c, dataContext);
+                        if (res instanceof Node) frag.appendChild(res);
+                    });
+                    return frag;
+                }
+            }
+            return null; // No condition matched and no otherwise
+        }
+
+        // Default XSL container (passthrough for unknown XSL elements)
         const frag = document.createDocumentFragment();
         Array.from(xmlNode.childNodes).forEach(c => {
             const childResult = mapToHtml(c, dataContext);
@@ -3032,7 +3226,8 @@ function mapToHtml(xmlNode, dataContext) {
         'external-graphic': 'img',
         'inline': 'span',
         'inline-container': 'span',
-        'block': 'div'
+        'block': 'div',
+        'basic-link': 'a'
     };
 
     const el = document.createElement(tagMap[ln] || 'div');
@@ -3187,6 +3382,29 @@ function mapToHtml(xmlNode, dataContext) {
             else if (pattern === 'rule') el.style.borderBottom = `${thickness} solid currentColor`;
 
             if (leaderColor) el.style.borderColor = leaderColor;
+        }
+
+        if (ln === 'basic-link') {
+            // Handle external-destination (URLs)
+            let extDest = xmlNode.getAttribute('external-destination');
+            if (extDest) {
+                // Strip url('...') wrapper if present
+                extDest = extDest.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
+                el.href = extDest;
+            }
+
+            // Handle internal-destination (document anchors)
+            const intDest = xmlNode.getAttribute('internal-destination');
+            if (intDest) {
+                el.href = '#' + intDest;
+            }
+
+            // Style as link if no explicit color set
+            if (!xmlNode.getAttribute('color')) {
+                el.style.color = '#0066cc';
+                el.style.textDecoration = 'underline';
+            }
+            el.style.cursor = 'pointer';
         }
     }
 

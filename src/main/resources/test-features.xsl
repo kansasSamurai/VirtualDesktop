@@ -9,10 +9,11 @@
     This file exercises supported features for visual regression testing.
     Load into XSLT tab and click "Render Preview & Save" to verify rendering.
 
-    Expected result: 3 pages displayed vertically with gap between them.
-    - Page 1: Sections 1-9 (fonts, inheritance, tables, leaders, etc.)
-    - Page 2: Sections 10-14 (inline legend, shims, inline-containers, nested templates, java maps)
-    - Page 3: Summary
+    Expected result: Multiple pages displayed vertically with gap between them.
+    - Sections 1-14: fonts, tables, leaders, legends, templates, java maps
+    - Sections 15-17: xsl:for-each, xsl:if, xsl:choose (XSL logic elements)
+    - Section 18: Multiple page-sequences (different headers/footers/fonts)
+    - Section 19: Basic links (fo:basic-link) with external and internal destinations
 
     REGRESSION TESTS:
     - Template in static-content with XPath expressions (fixes doc.evaluate error)
@@ -20,12 +21,37 @@
     - Whitespace between inline-containers
     - XML comments not creating empty divs
     - Java Map with multiple map entries (dot notation and map:get syntax)
+    - xsl:if conditional rendering
+    - xsl:choose with xsl:when and xsl:otherwise
+    - xsl:for-each iteration over XML nodes
+    - Multiple page-sequences with different static-content and fonts
+    - fo:basic-link with external-destination and internal-destination
 
     SAMPLE XML DATA for testing (paste into XML DATA tab):
-    <report>
-        <title>Test Report</title>
-        <logoUrl>test-image.png</logoUrl>
-    </report>
+    <invoice>
+      <company>ACME Corp</company>
+      <street>123 Industrial Way</street>
+      <city>Metropolis</city>
+      <zip>90210</zip>
+      <url>C:/dev/test/test.svg</url>
+      <items>
+        <item>
+          <description>Standard Widget</description>
+          <price>$25.00</price>
+        </item>
+        <item>
+          <description>Super Widget</description>
+          <price>$45.00</price>
+        </item>
+        <item>
+          <description>Hyper Widget</description>
+          <price>$95.00</price>
+        </item>
+      </items>
+      <data>
+        <myLogo>test-dot</myLogo>
+      </data>
+    </invoice>
 
     SAMPLE JAVA MAP for testing (paste into JAVA MAP tab):
     {
@@ -38,7 +64,7 @@
     <fo:root>
         <fo:layout-master-set>
             <fo:simple-page-master master-name="test-page" page-width="8.5in" page-height="11in">
-                <fo:region-body margin="1in"/>
+                <fo:region-body margin="15mm"/>
             </fo:simple-page-master>
         </fo:layout-master-set>
 
@@ -64,7 +90,7 @@
                 <!-- ============================================ -->
                 <!-- SECTION 1: Font Properties -->
                 <!-- ============================================ -->
-                <fo:block font-size="16pt" font-weight="bold" space-after="12pt">
+                <fo:block id="section-1-anchor" font-size="16pt" font-weight="bold" space-after="12pt">
                     1. Font Properties
                 </fo:block>
 
@@ -445,7 +471,7 @@
                 <!-- ============================================ -->
                 <!-- SECTION 14: Java Map (Multiple Maps) -->
                 <!-- ============================================ -->
-                <fo:block font-size="16pt" font-weight="bold" space-before="20pt" space-after="12pt">
+                <fo:block font-size="16pt" font-weight="bold" space-before="20pt" space-after="12pt" break-before="page">
                     14. Java Map (Multiple Map Entries)
                 </fo:block>
 
@@ -472,8 +498,261 @@
                     </fo:block>
                 </fo:block>
 
+                <!-- ============================================ -->
+                <!-- SECTION 15: xsl:for-each -->
+                <!-- ============================================ -->
+                <fo:block font-size="16pt" font-weight="bold" space-after="12pt">
+                    15. xsl:for-each (Iterating over XML nodes)
+                </fo:block>
+
+                <fo:block space-after="8pt" font-size="10pt" color="gray">
+                    Iterates over invoice/items/item nodes from XML data.
+                </fo:block>
+
+                <fo:block space-after="6pt">
+                    <fo:inline font-weight="bold">Company: </fo:inline>
+                    <xsl:value-of select="invoice/company"/>
+                </fo:block>
+
+                <fo:table table-layout="fixed" width="100%" space-after="15pt">
+                    <fo:table-column column-width="70%"/>
+                    <fo:table-column column-width="30%"/>
+                    <fo:table-header>
+                        <fo:table-row background-color="#336699" color="white">
+                            <fo:table-cell padding="5pt">
+                                <fo:block font-weight="bold">Description</fo:block>
+                            </fo:table-cell>
+                            <fo:table-cell padding="5pt">
+                                <fo:block font-weight="bold" text-align="right">Price</fo:block>
+                            </fo:table-cell>
+                        </fo:table-row>
+                    </fo:table-header>
+                    <fo:table-body>
+                        <xsl:for-each select="invoice/items/item">
+                            <fo:table-row>
+                                <fo:table-cell padding="5pt" border-bottom="1pt solid #ddd">
+                                    <fo:block><xsl:value-of select="description"/></fo:block>
+                                </fo:table-cell>
+                                <fo:table-cell padding="5pt" border-bottom="1pt solid #ddd">
+                                    <fo:block text-align="right"><xsl:value-of select="price"/></fo:block>
+                                </fo:table-cell>
+                            </fo:table-row>
+                        </xsl:for-each>
+                    </fo:table-body>
+                </fo:table>
+
+                <!-- ============================================ -->
+                <!-- SECTION 16: xsl:if -->
+                <!-- ============================================ -->
+                <fo:block font-size="16pt" font-weight="bold" space-before="20pt" space-after="12pt">
+                    16. xsl:if (Conditional Rendering)
+                </fo:block>
+
+                <fo:block space-after="8pt" font-size="10pt" color="gray">
+                    Conditionally renders content based on XPath test expressions.
+                </fo:block>
+
+                <fo:block space-after="6pt">
+                    <xsl:if test="invoice/company">
+                        <fo:inline color="green">✓ Company exists: </fo:inline>
+                        <xsl:value-of select="invoice/company"/>
+                    </xsl:if>
+                </fo:block>
+
+                <fo:block space-after="6pt">
+                    <xsl:if test="invoice/items/item">
+                        <fo:inline color="green">✓ Items exist: </fo:inline>
+                        <xsl:value-of select="count(invoice/items/item)"/> item(s) found
+                    </xsl:if>
+                </fo:block>
+
+                <fo:block space-after="6pt">
+                    <xsl:if test="invoice/nonexistent">
+                        <fo:inline color="red">✗ This should NOT appear (nonexistent element)</fo:inline>
+                    </xsl:if>
+                    <xsl:if test="not(invoice/nonexistent)">
+                        <fo:inline color="blue">✓ Correctly hidden: nonexistent element not found</fo:inline>
+                    </xsl:if>
+                </fo:block>
+
+                <fo:block space-after="15pt">
+                    <xsl:if test="invoice/url">
+                        <fo:block>
+                            <fo:inline font-weight="bold">URL from XML: </fo:inline>
+                            <xsl:value-of select="invoice/url"/>
+                        </fo:block>
+                    </xsl:if>
+                </fo:block>
+
+                <!-- ============================================ -->
+                <!-- SECTION 17: xsl:choose -->
+                <!-- ============================================ -->
+                <fo:block font-size="16pt" font-weight="bold" space-before="20pt" space-after="12pt">
+                    17. xsl:choose (Multiple Conditions)
+                </fo:block>
+
+                <fo:block space-after="8pt" font-size="10pt" color="gray">
+                    Switch-style conditional with xsl:when and xsl:otherwise branches.
+                </fo:block>
+
+                <fo:block space-after="8pt">
+                    <fo:inline font-weight="bold">Company type: </fo:inline>
+                    <xsl:choose>
+                        <xsl:when test="invoice/company = 'ACME Corp'">
+                            <fo:inline color="#336699">Known Partner (ACME Corp)</fo:inline>
+                        </xsl:when>
+                        <xsl:when test="invoice/company = 'Other Corp'">
+                            <fo:inline color="#996633">Other Corporation</fo:inline>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <fo:inline color="gray">Unknown Company</fo:inline>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </fo:block>
+
+                <fo:block space-after="8pt">
+                    <fo:inline font-weight="bold">Item count category: </fo:inline>
+                    <xsl:choose>
+                        <xsl:when test="count(invoice/items/item) &gt; 5">
+                            <fo:inline color="green">Large order (more than 5 items)</fo:inline>
+                        </xsl:when>
+                        <xsl:when test="count(invoice/items/item) &gt; 2">
+                            <fo:inline color="blue">Medium order (3-5 items)</fo:inline>
+                        </xsl:when>
+                        <xsl:when test="count(invoice/items/item) &gt; 0">
+                            <fo:inline color="orange">Small order (1-2 items)</fo:inline>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <fo:inline color="red">No items</fo:inline>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </fo:block>
+
             </fo:flow>
         </fo:page-sequence>
+
+        <!-- ============================================ -->
+        <!-- PAGE-SEQUENCE 2: Testing Multiple Sequences -->
+        <!-- ============================================ -->
+        <fo:page-sequence master-reference="test-page"
+                          font-family="Georgia, serif"
+                          font-size="11pt"
+                          color="#444444">
+
+            <!-- Different header for this sequence -->
+            <fo:static-content flow-name="xsl-region-before">
+                <fo:block text-align="center" font-size="10pt" color="#996633" padding="3mm"
+                          border-bottom="2pt solid #996633">
+                    SECOND PAGE-SEQUENCE - Different Header Style
+                </fo:block>
+            </fo:static-content>
+
+            <!-- Different footer for this sequence -->
+            <fo:static-content flow-name="xsl-region-after">
+                <fo:block text-align="right" font-size="9pt" color="#996633">
+                    Sequence 2 | Page <fo:page-number/> of <fo:page-number-citation-last ref-id="end-of-document"/>
+                </fo:block>
+            </fo:static-content>
+
+            <fo:flow flow-name="xsl-region-body">
+
+                <!-- ============================================ -->
+                <!-- SECTION 18: Multiple Page-Sequences -->
+                <!-- ============================================ -->
+                <fo:block font-size="18pt" font-weight="bold" space-after="15pt" color="#996633">
+                    18. Multiple Page-Sequences
+                </fo:block>
+
+                <fo:block space-after="12pt">
+                    This content is in a <fo:inline font-weight="bold">second fo:page-sequence</fo:inline>.
+                    Notice the different styling:
+                </fo:block>
+
+                <fo:block space-after="8pt" margin-left="20pt">
+                    <fo:block>- Font changed to Georgia, serif (11pt)</fo:block>
+                    <fo:block>- Header has brown border and different text</fo:block>
+                    <fo:block>- Footer is right-aligned with "Sequence 2" prefix</fo:block>
+                    <fo:block>- Text color is slightly different (#444444)</fo:block>
+                </fo:block>
+
+                <fo:block space-before="15pt" space-after="12pt">
+                    Each page-sequence can have its own:
+                </fo:block>
+
+                <fo:table table-layout="fixed" width="100%" border="1pt solid #ccc">
+                    <fo:table-column column-width="40%"/>
+                    <fo:table-column column-width="60%"/>
+                    <fo:table-body>
+                        <fo:table-row background-color="#f5f5f5">
+                            <fo:table-cell padding="8pt" border="1pt solid #ccc">
+                                <fo:block font-weight="bold">Static Content</fo:block>
+                            </fo:table-cell>
+                            <fo:table-cell padding="8pt" border="1pt solid #ccc">
+                                <fo:block>Headers and footers unique to this sequence</fo:block>
+                            </fo:table-cell>
+                        </fo:table-row>
+                        <fo:table-row>
+                            <fo:table-cell padding="8pt" border="1pt solid #ccc">
+                                <fo:block font-weight="bold">Font Properties</fo:block>
+                            </fo:table-cell>
+                            <fo:table-cell padding="8pt" border="1pt solid #ccc">
+                                <fo:block>Inherited font-family, size, color, etc.</fo:block>
+                            </fo:table-cell>
+                        </fo:table-row>
+                        <fo:table-row background-color="#f5f5f5">
+                            <fo:table-cell padding="8pt" border="1pt solid #ccc">
+                                <fo:block font-weight="bold">Master Reference</fo:block>
+                            </fo:table-cell>
+                            <fo:table-cell padding="8pt" border="1pt solid #ccc">
+                                <fo:block>Different page dimensions (deferred feature)</fo:block>
+                            </fo:table-cell>
+                        </fo:table-row>
+                    </fo:table-body>
+                </fo:table>
+
+                <!-- ============================================ -->
+                <!-- SECTION 19: Basic Links (Hyperlinks) -->
+                <!-- ============================================ -->
+                <fo:block font-size="18pt" font-weight="bold" space-before="25pt" space-after="15pt" color="#996633">
+                    19. Basic Links (fo:basic-link)
+                </fo:block>
+
+                <fo:block space-after="12pt">
+                    The <fo:inline font-weight="bold">fo:basic-link</fo:inline> element creates hyperlinks
+                    with support for external URLs and internal document references.
+                </fo:block>
+
+                <fo:block space-after="8pt">
+                    <fo:inline font-weight="bold">External Link: </fo:inline>
+                    <fo:basic-link external-destination="url('https://www.w3.org/Style/XSL/')">
+                        W3C XSL-FO Specification
+                    </fo:basic-link>
+                </fo:block>
+
+                <fo:block space-after="8pt">
+                    <fo:inline font-weight="bold">External Link (styled): </fo:inline>
+                    <fo:basic-link external-destination="url('https://github.com')" color="#009900" font-weight="bold">
+                        GitHub (green, bold)
+                    </fo:basic-link>
+                </fo:block>
+
+                <fo:block space-after="8pt">
+                    <fo:inline font-weight="bold">Internal Link: </fo:inline>
+                    <fo:basic-link internal-destination="section-1-anchor">
+                        Jump to Section 1 (Font Properties)
+                    </fo:basic-link>
+                </fo:block>
+
+                <fo:block space-after="8pt" font-size="10pt" color="#666" font-style="italic">
+                    Note: External links open in a new tab. Internal links scroll to the target element.
+                </fo:block>
+
+                <!-- End of document marker for page-number-citation-last -->
+                <fo:block id="end-of-document" space-before="20pt"/>
+
+            </fo:flow>
+        </fo:page-sequence>
+
     </fo:root>
 </xsl:template>
 

@@ -1520,8 +1520,6 @@ This is significantly trickier because it affects the rows *below* the current o
 * **The Page Break Disaster:** If a cell spans 5 rows, but the page breaks after row 2, some older FO engines will duplicate the cell content or simply "clip" it.
 * **Shim Fix:** For high-reliability layouts, use `keep-together.within-page="always"` on any row containing a `number-rows-spanned` attribute to ensure the entire spanned group stays on one page.
 
-
-
 ---
 
 ### 4. Cell Spanning Checklist
@@ -1537,3 +1535,371 @@ This is significantly trickier because it affects the rows *below* the current o
 ### Closing the Loop
 
 You’ve now got a robust set of "Modern XSL-FO" principles—from accessible legends and micro-adjusted icons to bulletproof table logic.
+
+In the world of XSL-FO, `inline-progression-dimension` (IPD) is essentially a fancy, internationalized way of saying **"Width"**—but with a catch.
+
+Because XSL-FO was designed to handle languages that read horizontally (English) and vertically (traditional Chinese or Japanese), it doesn't use fixed terms like "width" or "height." Instead, it uses **"inline-progression"** (the direction text flows in a line) and **"block-progression"** (the direction blocks stack).
+
+### 1. What it actually does
+
+For standard English documents (left-to-right), `inline-progression-dimension` controls the **horizontal width** of an area.
+
+Its intended usage is to define the boundaries of an object within a line. You will most commonly (and legitimately) see it used on:
+
+* **`fo:external-graphic`**: To set the width of an image.
+* **`fo:instream-foreign-object`**: To set the width of an SVG.
+* **`fo:table`**: To define the total width of a table.
+* **`fo:table-column`**: To set specific column widths.
+* **`fo:block-container`**: To create a "box" with a specific width that is different from the parent.
+
+---
+
+### 2. Is it necessary? (The "Potpourri" Check)
+
+In many legacy templates, `inline-progression-dimension` is used where simpler attributes or automatic behavior would suffice. Here is how to spot the "junk" usage:
+
+#### Use `width` instead?
+
+In almost all modern XSL-FO processors (like Apache FOP or Antenna House), `width` is a shorthand for `inline-progression-dimension`. If your templates are strictly English/horizontal, using `width="100px"` is cleaner and easier to read than the long-form IPD version.
+
+#### The "Over-Specified" Block
+
+If you see this on a standard `fo:block`:
+
+```xml
+<fo:block inline-progression-dimension="100%"> ... </fo:block>
+
+```
+
+**It is likely unnecessary.** Blocks naturally expand to fill the available width of their parent container. Explicitly setting it to 100% is redundant.
+
+#### The "Misplaced" Property
+
+If you see it on an `fo:inline` element, it's often ignored. Inline elements are supposed to shrink-wrap their content. Setting a width on them usually requires the element to be "stretched," which many processors don't support for simple inline text.
+
+---
+
+### 3. The "Correct" Syntax
+
+If you do use it, it’s actually a "compound" property. While most people just use the shortcut value, the full specification allows for:
+
+* **`.minimum`**
+* **`.optimum`** (The one usually set when you provide a single value)
+* **`.maximum`**
+
+**Example of "Professional" Usage:**
+To make a table flexible but capped:
+
+```xml
+<fo:table inline-progression-dimension.optimum="100%" 
+          inline-progression-dimension.maximum="500pt">
+
+```
+
+---
+
+### Red Flag Summary
+
+If you are cleaning up legacy code, look for these signs of misuse:
+
+| Scenario | Verdict | Fix |
+| --- | --- | --- |
+| On a standard `fo:block` | **Likely Redundant** | Remove it; let the block auto-fill. |
+| On `fo:inline` | **Often Ignored** | Use a `fo:block-container` if you need a fixed-width box. |
+| Set to `auto` | **Useless** | `auto` is the default value; delete it. |
+| Hardcoded `px` or `pt` | **Rigid** | Consider if `100%` or `proportional-column-width()` is better for responsive layouts. |
+
+> [TIP]
+> If your templates are "English-only," you can safely replace `inline-progression-dimension` with `width` to make your code 50% more readable for the next person.
+
+The short answer is: **Yes, but with a technical caveat.**
+
+In the XSL-FO specification, `width` is defined as a **shorthand** for the `inline-progression-dimension` property. Because of this relationship, they share the same underlying structure, including the "compound" components.
+
+### 1. The Syntax
+
+When you use the shorthand `width`, you are typically setting the `.optimum` value by default. However, you can access the sub-components using the dot notation just like you would with the long-form version:
+
+* **`width.minimum`**
+* **`width.optimum`**
+* **`width.maximum`**
+
+**Example of valid usage:**
+
+```xml
+<fo:table width.minimum="50%" width.optimum="100%" width.maximum="10in">
+
+```
+
+---
+
+### 2. How Processors Treat Them
+
+While the spec says they are interchangeable, here is how it works "under the hood" in most engines (like Apache FOP, Antenna House, or RenderX):
+
+| Property Used | What Happens |
+| --- | --- |
+| `width="100pt"` | The processor sets `inline-progression-dimension.optimum` to `100pt`. |
+| `width.maximum="500pt"` | The processor sets `inline-progression-dimension.maximum` to `500pt`. |
+| **Mixing both** | If you set `width="200pt"` and `inline-progression-dimension.maximum="500pt"`, the last one parsed usually wins or they merge, depending on the processor's strictness. |
+
+---
+
+### 3. The "Gotcha": Why stick to one?
+
+The biggest risk with "Potpourri" legacy code is **Property Overlap**.
+
+If a legacy template has:
+
+```xml
+<fo:table width="100%" inline-progression-dimension="auto">
+
+```
+
+The processor might get confused. In XSL-FO, **shorthands (like `width`) generally have lower priority than the specific property (`inline-progression-dimension`)**. If both are present, the long-form version will likely override the shorthand.
+
+---
+
+### Summary Recommendation
+
+If you are cleaning up your templates for readability:
+
+1. **Standardize on `width**`: It is much easier for humans to read.
+2. **Use Dot Notation**: If you need range control, use `width.minimum` and `width.maximum`.
+3. **Delete the Duplicates**: If a tag has both `width` and `inline-progression-dimension`, delete the latter (unless you are doing complex right-to-left/vertical writing layout).
+
+> [!NOTE]
+> **Check your Engine:** While `width.maximum` is valid XSL-FO, some very old or basic processors only recognize the simple `width="val"` string. If you use dot notation and it fails to render, your processor might only support the shorthand as a single literal value.
+
+Would you like me to show you how to use these "min/max" values to create a table that shrinks or grows based on its content?
+
+To create a table that dynamically shrinks or grows, we leverage the `.minimum`, `.optimum`, and `.maximum` components of the `width` (or `inline-progression-dimension`) property.
+
+In XSL-FO, this is often referred to as **"Elastic Layout."** ### The Dynamic Table Strategy
+To make a table respond to its content, you define a range rather than a fixed number. The processor will try to hit the `optimum`, but will "squeeze" down to the `minimum` if space is tight, or "stretch" up to the `maximum` if the content demands it.
+
+```xml
+<fo:table width.minimum="50%" 
+          width.optimum="100%" 
+          width.maximum="100%" 
+          table-layout="auto"
+          border="1pt solid black">
+
+    <fo:table-column column-width="1in"/>
+    <fo:table-column column-width="proportional-column-width(1)"/>
+
+    <fo:table-body>
+        <fo:table-row>
+            <fo:table-cell>
+                <fo:block>ID: 001</fo:block>
+            </fo:table-cell>
+            <fo:table-cell>
+                <fo:block> This cell will expand the table width up to the maximum. </fo:block>
+            </fo:table-cell>
+        </fo:table-row>
+    </fo:table-body>
+</fo:table>
+
+```
+
+---
+
+### Key Attributes for "Elasticity"
+
+#### 1. `table-layout="auto"` vs `"fixed"`
+
+This is the most critical setting.
+
+* **`fixed` (Default in many FO engines):** The processor ignores the content and only looks at the defined column widths.
+* **`auto`:** The processor looks at the actual text inside the cells before deciding how wide the columns (and the table) should be.
+
+#### 2. The Width Range
+
+* **`width.minimum="50%"`**: Tells the engine, "No matter how little text is inside, don't make the table skinnier than half the page."
+* **`width.optimum="100%"`**: Tells the engine, "Ideally, I'd like this table to fill the whole page width."
+* **`width.maximum="100%"`**: This is your "safety rail." It prevents the table from bleeding off the right side of the page if the content is extremely long.
+
+#### 3. `proportional-column-width(1)`
+
+When used in conjunction with a dynamic table width, this function tells the column to "grab all the leftover space." If you have one column at `1in` and another at `proportional-column-width(1)`, the second column will grow and shrink as the table width fluctuates between your minimum and maximum.
+
+---
+
+### A Common "Legacy" Trap
+
+In your "potpourri" of templates, you might see this:
+`width="100%"` combined with `inline-progression-dimension.maximum="100%"`.
+
+**Why this is redundant:** Setting `width="100%"` is shorthand for setting the **optimum** to 100%. If the maximum is also 100%, the table has no "room" to be anything other than exactly 100%.
+
+> [!TIP]
+> **The Modern Cleanup:** If you want a table that always fills the page, just use `width="100%"`. If you want it to be "as small as possible but no bigger than the page," use `width.optimum="0pt" width.maximum="100%" table-layout="auto"`.
+
+Would you like me to explain how `proportional-column-width` calculates those shares if you have multiple flexible columns?
+
+Think of `proportional-column-width()` as a **pie chart** for your table. It’s the XSL-FO equivalent of the `fr` unit in CSS Grid or "weighted" constraints in other layout engines.
+
+It doesn’t set a fixed size (like inches or points). Instead, it says, "After we subtract the fixed-width columns, divide the leftover space into shares."
+
+### 1. How the "Shares" Work
+
+The number inside the parentheses is the number of **shares** that column gets.
+
+| Column | Code | Result |
+| --- | --- | --- |
+| **Column A** | `column-width="1in"` | Always **1 inch** (Fixed). |
+| **Column B** | `column-width="proportional-column-width(1)"` | Gets **1 share** of what's left. |
+| **Column C** | `column-width="proportional-column-width(2)"` | Gets **2 shares** of what's left (Twice as much as B). |
+
+---
+
+### 2. The Step-by-Step Calculation
+
+If you have a **6-inch wide table** with the columns defined above:
+
+1. **Subtract Fixed Widths:** The engine takes the total table width () and subtracts the fixed columns ().
+
+```plain
+Leftover space = 5 inches.
+```
+
+2. **Add Up the Shares:** It looks at the proportional columns. .
+
+3. **Divide the Space:** It divides the  of leftover space by the  total shares.
+
+```
+Value of 1 share = 1.66 inches.
+```
+
+4. **Assign the Widths:**
+
+```plain
+Column B** () = **1.66"
+Column C** () = **3.33"
+```
+
+---
+
+### 3. The "Legacy" Red Flag: Using it with `width="auto"`
+
+This is where many legacy templates break.
+
+> [!CAUTION]
+> **The Golden Rule:** You **cannot** use `proportional-column-width()` if the table doesn't have a defined total width (like `100%` or `7in`).
+
+If your table width is set to `auto` (meaning "shrink-wrap the content"), the engine doesn't know how much "leftover space" there is to divide. In this scenario, most processors will either:
+
+* Default the proportional columns to **0px** (hiding your text).
+* Throw a **Validation Error**.
+* Treat the share as a tiny, arbitrary value.
+
+### 4. Best Practice Example
+
+If you want a three-column table where the middle column is twice as wide as the outer two, and the whole thing fills the page:
+
+```xml
+<fo:table width="100%" table-layout="fixed">
+  <fo:table-column column-width="proportional-column-width(1)"/>
+  <fo:table-column column-width="proportional-column-width(2)"/>
+  <fo:table-column column-width="proportional-column-width(1)"/>
+  
+  <fo:table-body>
+    <fo:table-row>
+      <fo:table-cell border="solid 1pt black"><fo:block>25%</fo:block></fo:table-cell>
+      <fo:table-cell border="solid 1pt black"><fo:block>50%</fo:block></fo:table-cell>
+      <fo:table-cell border="solid 1pt black"><fo:block>25%</fo:block></fo:table-cell>
+    </fo:table-row>
+  </fo:table-body>
+</fo:table>
+
+```
+
+---
+
+### Summary for your Cleanup
+
+* **Check for `table-layout="fixed"`:** Proportional widths work best (and are most predictable) when the layout is fixed.
+* **Check for Table Width:** Ensure the `fo:table` has an explicit `width` or `inline-progression-dimension`.
+* **Simplify the Math:** If you see `proportional-column-width(50)` and `proportional-column-width(50)`, you can simplify that to `(1)` and `(1)`. It’s just a ratio!
+
+Would you like to know how this interacts with `number-columns-spanned` if you have cells crossing over these proportional columns?
+
+You are right to be suspicious—column spanning in legacy XSL-FO templates is often where the "math" of the layout finally breaks. When you combine `number-columns-spanned` with `proportional-column-width()`, things get interesting (and potentially messy).
+
+Here is the rule of thumb: **Spanning doesn't change the column width; it just changes how many "buckets" a cell can sit in.**
+
+---
+
+### 1. How the Spanning Math Works
+
+If you have three columns defined with proportional shares, the engine calculates their widths **first**, before it ever looks at the cells.
+
+* **Column 1:** `proportional-column-width(1)` (e.g., 100pt)
+* **Column 2:** `proportional-column-width(2)` (e.g., 200pt)
+* **Column 3:** `proportional-column-width(1)` (e.g., 100pt)
+
+If a cell has `number-columns-spanned="2"`, it simply takes the sum of the columns it covers. If it starts in Column 1, it will be **300pt wide** ().
+
+### 2. The "Ghost Column" Trap
+
+In legacy templates, you might find a row that looks like this:
+
+```xml
+<fo:table-row>
+  <fo:table-cell number-columns-spanned="3">
+    <fo:block>Header Text</fo:block>
+  </fo:table-cell>
+</fo:table-row>
+
+```
+
+**The Risk:** If someone previously deleted the `<fo:table-column>` definitions but left the `number-columns-spanned="3"`, the XSL-FO processor may fail or default to a single-column layout. **A spanned cell can only span as many columns as are explicitly defined at the top of the table.**
+
+### 3. The "Missing Cell" Logic
+
+In XSL-FO, you don't "skip" cells that are covered by a span. You simply **omit** the `<fo:table-cell>` elements that would have started in those slots.
+
+**Example of a 3-Column Table with a Span:**
+
+```xml
+<fo:table-row>
+  <fo:table-cell number-columns-spanned="2" border="1pt solid red">
+    <fo:block>I take up 3 shares (1+2)</fo:block>
+  </fo:table-cell>
+  
+  <fo:table-cell border="1pt solid blue">
+    <fo:block>I take up 1 share</fo:block>
+  </fo:table-cell>
+</fo:table-row>
+
+```
+
+---
+
+### 4. Legacy "Red Flags" to Look For
+
+When auditing your library, keep an eye out for these two specific headaches:
+
+#### A. Spanning with `table-layout="auto"`
+
+If the table is `auto` (shrink-to-fit) and you have a spanned cell with a huge amount of text, the processor has to decide: *"Do I make Column 1 wider, or Column 2 wider?"*
+
+* **The Result:** Different processors (FOP vs. Antenna House) handle this differently. It often leads to unpredictable column "jittering."
+* **The Fix:** If you must span, try to keep `table-layout="fixed"` and use `proportional-column-width`.
+
+#### B. The "Over-Span"
+
+If a cell has `number-columns-spanned="5"` but there are only 4 `<fo:table-column>` elements:
+
+* **The Result:** Most modern processors will truncate the span to 4 and move on, but some will throw a fatal error.
+* **The Fix:** Always ensure your `table-column` count matches or exceeds your highest span.
+
+---
+
+### Summary Checklist for your Audit
+
+1. **Count your `<fo:table-column>` tags.** Do they match the logic of the rows?
+2. **Check for "Lone Spans."** Is there a `number-columns-spanned` on a cell where there is only one column defined? (Delete it; it’s doing nothing).
+3. **Check for `from-table-column()` functions.** Sometimes legacy code uses this to pull properties (like background color) from the column definition into the spanned cell.
+
+Do you have any tables that use `number-rows-spanned` (vertical spans)? Those are a whole different beast because they can break page-splitting logic.

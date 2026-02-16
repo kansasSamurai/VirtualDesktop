@@ -947,6 +947,8 @@ example xml:
 	let lastSavedState = null;    // Snapshot of last saved state for dirty checking
 	let sidebarExpanded = false;  // Whether sidebar is in expanded mode
     const MISSING_IMAGE_SVG = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZGVkZWRlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iOCIgZmlsbD0iI2FhYSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TUlTU0lORzwvdGV4dD48L3N2Zz4=";
+    // Well-known placeholder image: border + X pattern, used with src="placeholder" for design-time layout roughing
+    const PLACEHOLDER_IMAGE_SVG = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" preserveAspectRatio="none"><rect x="1" y="1" width="198" height="198" fill="#f5f5f5" stroke="#999" stroke-width="1"/><line x1="1" y1="1" x2="199" y2="199" stroke="#ccc" stroke-width="1"/><line x1="199" y1="1" x2="1" y2="199" stroke="#ccc" stroke-width="1"/></svg>')}`;
 	
     // Centralized Style Mapping for FO to CSS
     const SUPPORTED_FO_STYLES = {
@@ -4213,11 +4215,15 @@ function mapToHtml(xmlNode, dataContext) {
             attrValue = attrValue.trim();
             if (attrName === 'src') {
                 attrValue = attrValue.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
-                let resolvedSrc = virtualImages[attrValue] || library[attrValue] || attrValue;
-                if (!resolvedSrc || resolvedSrc.trim() === "") {
-                    attrValue = MISSING_IMAGE_SVG;
+                if (attrValue.toLowerCase() === 'placeholder') {
+                    attrValue = PLACEHOLDER_IMAGE_SVG;
                 } else {
-                    attrValue = resolvedSrc;
+                    let resolvedSrc = virtualImages[attrValue] || library[attrValue] || attrValue;
+                    if (!resolvedSrc || resolvedSrc.trim() === "") {
+                        attrValue = MISSING_IMAGE_SVG;
+                    } else {
+                        attrValue = resolvedSrc;
+                    }
                 }
             }
             return { type: 'attribute', name: attrName, value: attrValue };
@@ -4395,12 +4401,16 @@ function mapToHtml(xmlNode, dataContext) {
             // Evaluate AVTs in src attribute, then clean url() wrapper
             src = evaluateAVT(src, dataContext);
             src = src.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
-            let resolvedSrc = virtualImages[src] || library[src] || src;
-            // Fall back to MISSING_IMAGE_SVG if src is empty or unresolved
-            if (!resolvedSrc || resolvedSrc.trim() === "") {
-                el.src = MISSING_IMAGE_SVG;
+            if (src.toLowerCase() === 'placeholder') {
+                el.src = PLACEHOLDER_IMAGE_SVG;
             } else {
-                el.src = resolvedSrc;
+                let resolvedSrc = virtualImages[src] || library[src] || src;
+                // Fall back to MISSING_IMAGE_SVG if src is empty or unresolved
+                if (!resolvedSrc || resolvedSrc.trim() === "") {
+                    el.src = MISSING_IMAGE_SVG;
+                } else {
+                    el.src = resolvedSrc;
+                }
             }
             const width = evaluateAVT(xmlNode.getAttribute('width') || '', dataContext);
             const contentWidth = xmlNode.getAttribute('content-width');

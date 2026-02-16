@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>XSL-FO Professional Sandbox v6</title>
+    <title>XSL-FO Designer</title>
     <style>
         :root { --primary: #2c3e50; --accent: #27ae60; --bg: #525659; --panel-bg: #1e1e1e; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -23,9 +23,9 @@
         #preview-zone { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; background: var(--bg); gap: 40px; }
         #xsl-canvas { display: flex; flex-direction: column; align-items: center; gap: 40px; }
         .xsl-page { background: white; width: 210mm; min-height: 297mm; box-shadow: 0 10px 30px rgba(0,0,0,0.5); outline: none; color: black; box-sizing: border-box; display: flex; flex-direction: column; position: relative; }
-        .xsl-region-before { flex-shrink: 0; min-height: 15mm; padding: 5mm 20mm; border-bottom: 1px dashed #ccc; background: #fafafa; }
-        .xsl-region-body { flex: 1; padding: 15mm; overflow: hidden; } /* Default padding, overridden by fo:region-body margin */
-        .xsl-region-after { flex-shrink: 0; min-height: 15mm; padding: 5mm 20mm; border-top: 1px dashed #ccc; background: #fafafa; }
+        .xsl-region-before { flex-shrink: 0; border-bottom: 1px dashed #ccc; background: #fafafa; overflow: hidden; }
+        .xsl-region-body { flex: 1; overflow: hidden; }
+        .xsl-region-after { flex-shrink: 0; border-top: 1px dashed #ccc; background: #fafafa; overflow: hidden; }
         .fo-page-number { background-color: #e3f2fd; padding: 0 3px; border-radius: 2px; }
         .fo-page-number-citation-last { background-color: #e8f5e9; padding: 0 3px; border-radius: 2px; }
         .page-break-marker { display: none; }
@@ -98,6 +98,8 @@
             box-shadow: 0 10px 40px rgba(0,0,0,0.5);
             color: #ccc;
             min-width: 280px;
+            align-self: flex-start;
+            margin-top: 50px;
         }
         .table-dialog h3 {
             margin: 0 0 15px 0;
@@ -133,6 +135,8 @@
             box-shadow: 0 10px 40px rgba(0,0,0,0.5);
             color: #ccc;
             min-width: 450px;
+            align-self: flex-start;
+            margin-top: 50px;
             max-width: 550px;
         }
         .project-dialog h3 {
@@ -526,7 +530,7 @@
 <body onload="initProject()">
 
 <header>
-    <div><strong>XSL-FO Designer</strong> <small>| v6 Master Baseline</small></div>
+    <div><strong>XSL-FO Designer</strong> <small>| v6 Professional</small></div>
     <div>
         <span id="render-status" class="status-msg"></span>
         <span id="save-status" class="status-msg"></span>
@@ -551,6 +555,7 @@
 				<button onclick="insertSnippet('block')" title="Insert fo:block">block</button>
 				<button onclick="insertSnippet('inline')" title="Insert fo:inline">inline</button>
 				<button onclick="insertSnippet('inline-container')" title="Insert fo:inline-container">container</button>
+				<button onclick="insertSnippet('block-container')" title="Insert fo:block-container">block-ctr</button>
 				<button onclick="showTableDialog()" title="Insert fo:table">table...</button>
 				<button onclick="insertSnippet('leader')" title="Insert fo:leader">leader</button>
 				<button onclick="insertSnippet('graphic')" title="Insert fo:external-graphic">graphic</button>
@@ -561,9 +566,11 @@
 				<button onclick="showTemplateDialog()" title="Insert xsl:template">template...</button>
 				<button onclick="showCallTemplateDialog()" title="Insert xsl:call-template">call...</button>
 				<button onclick="insertSnippet('for-each')" title="Insert xsl:for-each">for-each</button>
+				<button onclick="insertSnippet('sort')" title="Insert xsl:sort">sort</button>
 				<button onclick="insertSnippet('if')" title="Insert xsl:if">if</button>
 				<button onclick="insertSnippet('choose')" title="Insert xsl:choose">choose</button>
 				<button onclick="insertSnippet('value-of')" title="Insert xsl:value-of">value-of</button>
+				<button onclick="insertSnippet('variable')" title="Insert xsl:variable">variable</button>
 				<button onclick="showAttrSetDialog()" title="Insert xsl:attribute-set">attr set...</button>
 			</div>
 		</div>
@@ -746,6 +753,22 @@ example xml:
         'font-family': 'fontFamily',
         'text-align': 'textAlign',
         'border': 'border',
+        'border-top': 'borderTop',
+        'border-bottom': 'borderBottom',
+        'border-left': 'borderLeft',
+        'border-right': 'borderRight',
+        'border-top-color': 'borderTopColor',
+        'border-bottom-color': 'borderBottomColor',
+        'border-left-color': 'borderLeftColor',
+        'border-right-color': 'borderRightColor',
+        'border-top-style': 'borderTopStyle',
+        'border-bottom-style': 'borderBottomStyle',
+        'border-left-style': 'borderLeftStyle',
+        'border-right-style': 'borderRightStyle',
+        'border-top-width': 'borderTopWidth',
+        'border-bottom-width': 'borderBottomWidth',
+        'border-left-width': 'borderLeftWidth',
+        'border-right-width': 'borderRightWidth',
         'padding': 'padding',
         'padding-left': 'paddingLeft',
         'padding-right': 'paddingRight',
@@ -765,7 +788,11 @@ example xml:
         'right': 'right',
         'bottom': 'bottom',
         'transform': 'transform',
-        'z-index': 'zIndex'
+        'z-index': 'zIndex',
+        'text-decoration': 'textDecoration',
+        'text-indent': 'textIndent',
+        'inline-progression-dimension': 'width',
+        'block-progression-dimension': 'height'
     };
 
     const XSLT_SHIMS = {
@@ -976,6 +1003,7 @@ example xml:
 			</div>
 		`;
 		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
 	}
 
 	function closeProjectDialog() {
@@ -1313,6 +1341,322 @@ example xml:
             </div>`).join('');
     }
 
+	// --- XPath 2.0 Function Shims ---
+	// Resolves XPath 2.0 function calls that browsers don't support natively.
+	// Called by both evaluateXPath and evaluateXPathBoolean before doc.evaluate().
+	function resolveXPath2Functions(xpath, xmlContext) {
+		let resolved = xpath;
+		const doc = xmlContext.ownerDocument || xmlContext;
+
+		function evalStr(expr) {
+			try {
+				return doc.evaluate(expr.trim(), xmlContext, null, XPathResult.STRING_TYPE, null).stringValue;
+			} catch(e) {
+				console.warn(`XPath 2.0 shim: failed to evaluate [${expr}]`, e);
+				return '';
+			}
+		}
+
+		function evalNodeSet(expr) {
+			try {
+				return doc.evaluate(expr.trim(), xmlContext, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+			} catch(e) {
+				console.warn(`XPath 2.0 shim: failed to evaluate node-set [${expr}]`, e);
+				return null;
+			}
+		}
+
+		function escStr(s) {
+			return "'" + s.replace(/'/g, "''") + "'";
+		}
+
+		// Find a function call respecting parenthesis and string-literal nesting.
+		// Returns { start, end, args[], full } or null.
+		function findFunc(str, funcName) {
+			const re = new RegExp('\\b' + funcName.replace(/-/g, '\\-') + '\\s*\\(');
+			const m = re.exec(str);
+			if (!m) return null;
+			const startIdx = m.index;
+			const argsStart = m.index + m[0].length;
+			let depth = 1, i = argsStart;
+			let args = [], argStart = argsStart;
+			while (i < str.length && depth > 0) {
+				const ch = str[i];
+				if (ch === '(') depth++;
+				else if (ch === ')') {
+					depth--;
+					if (depth === 0) { args.push(str.substring(argStart, i)); break; }
+				} else if (ch === ',' && depth === 1) {
+					args.push(str.substring(argStart, i));
+					argStart = i + 1;
+				} else if (ch === "'" || ch === '"') {
+					const q = ch; i++;
+					while (i < str.length && str[i] !== q) i++;
+				}
+				i++;
+			}
+			const end = i + 1; // +1 to consume past the closing ')'
+			return { start: startIdx, end, args: args.map(a => a.trim()), full: str.substring(startIdx, end) };
+		}
+
+		const FUNC_NAMES = ['upper-case', 'lower-case', 'ends-with', 'contains-token', 'string-join', 'tokenize', 'exists', 'empty', 'distinct-values', 'abs', 'avg', 'round-half-to-even', 'current-date', 'current-dateTime'];
+
+		// Iteratively resolve — innermost calls resolve first on re-scan
+		let safety = 50;
+		while (safety-- > 0) {
+			let matched = false;
+			for (const fn of FUNC_NAMES) {
+				const call = findFunc(resolved, fn);
+				if (!call) continue;
+
+				let replacement;
+				let customEnd = call.end; // may extend past call.end for predicates
+
+				switch (fn) {
+				case 'upper-case':
+					replacement = escStr(evalStr(call.args[0]).toUpperCase());
+					break;
+				case 'lower-case':
+					replacement = escStr(evalStr(call.args[0]).toLowerCase());
+					break;
+				case 'ends-with': {
+					const s = evalStr(call.args[0]);
+					const suffix = evalStr(call.args[1]);
+					replacement = s.endsWith(suffix) ? 'true()' : 'false()';
+					break;
+				}
+				case 'contains-token': {
+					const list = evalStr(call.args[0]);
+					const token = evalStr(call.args[1]);
+					const tokens = list.trim().split(/\s+/);
+					replacement = tokens.includes(token) ? 'true()' : 'false()';
+					break;
+				}
+				case 'string-join': {
+					const nodeSet = evalNodeSet(call.args[0]);
+					const delim = call.args.length > 1 ? evalStr(call.args[1]) : '';
+					let parts = [];
+					if (nodeSet) {
+						for (let j = 0; j < nodeSet.snapshotLength; j++) {
+							parts.push(nodeSet.snapshotItem(j).textContent);
+						}
+					}
+					replacement = escStr(parts.join(delim));
+					break;
+				}
+				case 'tokenize': {
+					const input = evalStr(call.args[0]);
+					const pattern = call.args.length > 1 ? evalStr(call.args[1]) : '\\s+';
+					const tokens = input.split(new RegExp(pattern));
+
+					// Check for positional predicate: tokenize(...)[N]
+					const afterCall = resolved.substring(call.end);
+					const predMatch = afterCall.match(/^\s*\[(\d+)\]/);
+					if (predMatch) {
+						const idx = parseInt(predMatch[1]) - 1; // XPath is 1-based
+						replacement = escStr(tokens[idx] !== undefined ? tokens[idx] : '');
+						customEnd = call.end + predMatch[0].length;
+						break;
+					}
+
+					// Check if wrapped in count(): count(tokenize(...))
+					const before = resolved.substring(0, call.start);
+					const countPre = before.match(/\bcount\s*\(\s*$/);
+					if (countPre) {
+						const afterTokenize = resolved.substring(call.end);
+						const countClose = afterTokenize.match(/^\s*\)/);
+						if (countClose) {
+							replacement = String(tokens.length);
+							resolved = resolved.substring(0, before.length - countPre[0].length) + replacement + resolved.substring(call.end + countClose[0].length);
+							matched = true;
+							continue;
+						}
+					}
+
+					// Bare tokenize (no predicate, no count) → join with space
+					replacement = escStr(tokens.join(' '));
+					break;
+				}
+				case 'exists': {
+					const ns = evalNodeSet(call.args[0]);
+					replacement = (ns && ns.snapshotLength > 0) ? 'true()' : 'false()';
+					break;
+				}
+				case 'empty': {
+					const ns = evalNodeSet(call.args[0]);
+					replacement = (!ns || ns.snapshotLength === 0) ? 'true()' : 'false()';
+					break;
+				}
+				case 'distinct-values': {
+					const ns = evalNodeSet(call.args[0]);
+					const seen = new Set();
+					const unique = [];
+					if (ns) {
+						for (let j = 0; j < ns.snapshotLength; j++) {
+							const val = ns.snapshotItem(j).textContent;
+							if (!seen.has(val)) { seen.add(val); unique.push(val); }
+						}
+					}
+
+					// Check for positional predicate: distinct-values(...)[N]
+					const afterCall = resolved.substring(call.end);
+					const predMatch = afterCall.match(/^\s*\[(\d+)\]/);
+					if (predMatch) {
+						const idx = parseInt(predMatch[1]) - 1;
+						replacement = escStr(unique[idx] !== undefined ? unique[idx] : '');
+						customEnd = call.end + predMatch[0].length;
+						break;
+					}
+
+					// Check if wrapped in count(): count(distinct-values(...))
+					const before = resolved.substring(0, call.start);
+					const countPre = before.match(/\bcount\s*\(\s*$/);
+					if (countPre) {
+						const afterDV = resolved.substring(call.end);
+						const countClose = afterDV.match(/^\s*\)/);
+						if (countClose) {
+							replacement = String(unique.length);
+							resolved = resolved.substring(0, before.length - countPre[0].length) + replacement + resolved.substring(call.end + countClose[0].length);
+							matched = true;
+							continue;
+						}
+					}
+
+					// Bare distinct-values → join with space
+					replacement = escStr(unique.join(' '));
+					break;
+				}
+				case 'abs': {
+					const num = parseFloat(evalStr(call.args[0]));
+					replacement = String(isNaN(num) ? 'NaN' : Math.abs(num));
+					break;
+				}
+				case 'avg': {
+					const ns = evalNodeSet(call.args[0]);
+					if (ns && ns.snapshotLength > 0) {
+						let sum = 0;
+						for (let j = 0; j < ns.snapshotLength; j++) {
+							sum += parseFloat(ns.snapshotItem(j).textContent) || 0;
+						}
+						replacement = String(sum / ns.snapshotLength);
+					} else {
+						replacement = 'NaN';
+					}
+					break;
+				}
+				case 'round-half-to-even': {
+					const num = parseFloat(evalStr(call.args[0]));
+					const precision = call.args.length > 1 ? parseInt(evalStr(call.args[1])) : 0;
+					if (isNaN(num)) {
+						replacement = 'NaN';
+					} else {
+						const factor = Math.pow(10, precision);
+						const shifted = num * factor;
+						const floored = Math.floor(shifted);
+						const diff = shifted - floored;
+						let rounded;
+						if (Math.abs(diff - 0.5) < 1e-10) {
+							// Exactly halfway — round to even
+							rounded = (floored % 2 === 0) ? floored : floored + 1;
+						} else {
+							rounded = Math.round(shifted);
+						}
+						replacement = String(rounded / factor);
+					}
+					break;
+				}
+				case 'current-date': {
+					const now = new Date();
+					const yyyy = now.getFullYear();
+					const mm = String(now.getMonth() + 1).padStart(2, '0');
+					const dd = String(now.getDate()).padStart(2, '0');
+					replacement = escStr(`${yyyy}-${mm}-${dd}`);
+					break;
+				}
+				case 'current-dateTime': {
+					replacement = escStr(new Date().toISOString());
+					break;
+				}
+				}
+
+				resolved = resolved.substring(0, call.start) + replacement + resolved.substring(customEnd);
+				matched = true;
+				break; // restart scan from beginning
+			}
+			if (!matched) break;
+		}
+
+		// Handle XPath 2.0 if/then/else expressions (not a function call)
+		let ifSafety = 20;
+		while (ifSafety-- > 0) {
+			const ifMatch = resolved.match(/\bif\s*\(/);
+			if (!ifMatch) break;
+			const ifStart = ifMatch.index;
+
+			// Parse balanced-paren condition after "if ("
+			const condStart = ifStart + ifMatch[0].length;
+			let depth = 1, ci = condStart;
+			while (ci < resolved.length && depth > 0) {
+				const ch = resolved[ci];
+				if (ch === '(') depth++;
+				else if (ch === ')') depth--;
+				else if (ch === "'" || ch === '"') { const q = ch; ci++; while (ci < resolved.length && resolved[ci] !== q) ci++; }
+				ci++;
+			}
+			const condExpr = resolved.substring(condStart, ci - 1);
+
+			// Find "then" keyword after condition's closing paren
+			const afterCond = resolved.substring(ci);
+			const thenMatch = afterCond.match(/^\s*then\b/);
+			if (!thenMatch) break; // not a valid if/then/else
+			const thenStart = ci + thenMatch[0].length;
+
+			// Scan for "else" keyword at depth 0 (outside parens and strings)
+			let ei = thenStart, eDepth = 0;
+			let elseIdx = -1;
+			while (ei < resolved.length) {
+				const ch = resolved[ei];
+				if (ch === '(' ) eDepth++;
+				else if (ch === ')') { if (eDepth === 0) break; eDepth--; }
+				else if (ch === "'" || ch === '"') { const q = ch; ei++; while (ei < resolved.length && resolved[ei] !== q) ei++; }
+				else if (eDepth === 0 && resolved.substring(ei).match(/^else\b/)) { elseIdx = ei; break; }
+				ei++;
+			}
+			if (elseIdx === -1) break; // no else found
+
+			const thenExpr = resolved.substring(thenStart, elseIdx).trim();
+			const elseStart = elseIdx + 4; // skip "else"
+
+			// Scan else-expr end: ')' or ',' at depth 0, or end of string
+			let xi = elseStart, xDepth = 0;
+			while (xi < resolved.length) {
+				const ch = resolved[xi];
+				if (ch === '(') xDepth++;
+				else if (ch === ')') { if (xDepth === 0) break; xDepth--; }
+				else if (ch === ',' && xDepth === 0) break;
+				else if (ch === "'" || ch === '"') { const q = ch; xi++; while (xi < resolved.length && resolved[xi] !== q) xi++; }
+				xi++;
+			}
+			const elseExpr = resolved.substring(elseStart, xi).trim();
+
+			// Evaluate condition as boolean
+			let condResult = false;
+			try {
+				const resolvedCond = resolveXPath2Functions(condExpr, xmlContext);
+				condResult = doc.evaluate(resolvedCond, xmlContext, null, XPathResult.BOOLEAN_TYPE, null).booleanValue;
+			} catch(e) {
+				console.warn('XPath 2.0 shim: if/then/else condition failed', e);
+			}
+
+			const winningExpr = condResult ? thenExpr : elseExpr;
+			// Resolve any XPath 2.0 functions in the winning branch
+			const winningResult = resolveXPath2Functions(winningExpr, xmlContext);
+			resolved = resolved.substring(0, ifStart) + winningResult + resolved.substring(xi);
+		}
+
+		return resolved;
+	}
+
 	function evaluateXPath(xpath, context) {
 		if (!xpath) return "";
 
@@ -1320,13 +1664,17 @@ example xml:
 		// Template context is { _xmlContext: actualXmlContext, _params: {...} }
 		let xmlContext = context;
 		let params = {};
+		let variables = {};
 
-		// Collect params from all levels of nested template contexts
+		// Collect params and variables from all levels of nested template contexts
 		let ctx = context;
 		while (ctx) {
 			if (ctx._params) {
 				// Merge params, inner scopes take precedence
 				params = { ...ctx._params, ...params };
+			}
+			if (ctx._variables) {
+				variables = { ...ctx._variables, ...variables };
 			}
 			if (ctx._xmlContext) {
 				xmlContext = ctx._xmlContext;
@@ -1338,12 +1686,15 @@ example xml:
 
 		let resolvedXPath = xpath;
 
-		// --- Parameter Resolution ---
-		// Replace $paramName references with actual parameter values
-		// This handles simple parameter references like $icon-path
+		// --- Variable & Parameter Resolution ---
+		// Replace $name references with actual values (variables take precedence over params)
 		const paramRegex = /\$([a-zA-Z_][\w.-]*)/g;
 		if (resolvedXPath.match(paramRegex)) {
 			resolvedXPath = resolvedXPath.replace(paramRegex, (match, paramName) => {
+				if (variables.hasOwnProperty(paramName)) {
+					const value = variables[paramName];
+					return `'${String(value).replace(/'/g, "''")}'`;
+				}
 				if (params.hasOwnProperty(paramName)) {
 					const value = params[paramName];
 					// Return as XPath string literal (properly escaped)
@@ -1392,6 +1743,9 @@ example xml:
 			}
 		}
 
+		// --- XPath 2.0 Function Shims ---
+		resolvedXPath = resolveXPath2Functions(resolvedXPath, xmlContext);
+
 		try {
 			const doc = xmlContext.ownerDocument || xmlContext;
 			const res = doc.evaluate(resolvedXPath, xmlContext, null, XPathResult.STRING_TYPE, null);
@@ -1408,10 +1762,14 @@ example xml:
 		// Unwrap template context if needed
 		let xmlContext = context;
 		let params = {};
+		let variables = {};
 		let ctx = context;
 		while (ctx) {
 			if (ctx._params) {
 				params = { ...ctx._params, ...params };
+			}
+			if (ctx._variables) {
+				variables = { ...ctx._variables, ...variables };
 			}
 			if (ctx._xmlContext) {
 				xmlContext = ctx._xmlContext;
@@ -1436,10 +1794,14 @@ example xml:
 			} catch(e) {}
 		}
 
-		// Replace $paramName references
+		// Replace $name references (variables take precedence over params)
 		const paramRegex = /\$([a-zA-Z_][\w.-]*)/g;
 		if (resolvedXPath.match(paramRegex)) {
 			resolvedXPath = resolvedXPath.replace(paramRegex, (match, paramName) => {
+				if (variables.hasOwnProperty(paramName)) {
+					const value = variables[paramName];
+					return `'${String(value).replace(/'/g, "''")}'`;
+				}
 				if (params.hasOwnProperty(paramName)) {
 					const value = params[paramName];
 					return `'${String(value).replace(/'/g, "''")}'`;
@@ -1447,6 +1809,9 @@ example xml:
 				return match;
 			});
 		}
+
+		// --- XPath 2.0 Function Shims ---
+		resolvedXPath = resolveXPath2Functions(resolvedXPath, xmlContext);
 
 		try {
 			const doc = xmlContext.ownerDocument || xmlContext;
@@ -1522,12 +1887,30 @@ function renderPreview() {
 
 		// 3. Extract static content (headers/footers) and page layout info
 		const staticContents = {};
-		const pageLayout = { bodyMargin: null };
+		const pageLayout = { bodyMargin: null, beforeExtent: null, afterExtent: null };
 
-		// Extract region-body margin from layout-master-set
+		// Extract region layout from layout-master-set
 		const layoutMasters = xslDoc.getElementsByTagNameNS("*", "simple-page-master");
 		if (layoutMasters.length > 0) {
-			const regionBody = layoutMasters[0].getElementsByTagNameNS("*", "region-body")[0];
+			const master = layoutMasters[0];
+
+			// Extract region-before extent and margins
+			const regionBefore = master.getElementsByTagNameNS("*", "region-before")[0];
+			if (regionBefore) {
+				pageLayout.beforeExtent = regionBefore.getAttribute('extent');
+				pageLayout.beforeMargin = extractMarginPadding(regionBefore, 'margin');
+				pageLayout.beforePadding = extractMarginPadding(regionBefore, 'padding');
+			}
+
+			// Extract region-after extent and margins
+			const regionAfter = master.getElementsByTagNameNS("*", "region-after")[0];
+			if (regionAfter) {
+				pageLayout.afterExtent = regionAfter.getAttribute('extent');
+				pageLayout.afterMargin = extractMarginPadding(regionAfter, 'margin');
+				pageLayout.afterPadding = extractMarginPadding(regionAfter, 'padding');
+			}
+
+			const regionBody = master.getElementsByTagNameNS("*", "region-body")[0];
 			if (regionBody) {
 				// Check for margin attribute (shorthand) or individual margins
 				const margin = regionBody.getAttribute('margin');
@@ -1640,6 +2023,59 @@ function renderPreview() {
 		console.log("--- Render Complete ---");
 	}
 
+	// Parse CSS length value to pixels (supports mm, in, pt, cm, px)
+	function parseLengthToPx(value) {
+		if (!value) return 0;
+		const match = String(value).trim().match(/^([\d.]+)\s*(mm|in|pt|cm|px|em)?$/);
+		if (!match) return 0;
+		const num = parseFloat(match[1]);
+		const unit = match[2] || 'px';
+		switch (unit) {
+			case 'mm': return num * 3.7795;
+			case 'cm': return num * 37.795;
+			case 'in': return num * 96;
+			case 'pt': return num * 1.3333;
+			case 'em': return num * 16;
+			default:   return num;
+		}
+	}
+
+	// Parse CSS margin shorthand into { top, right, bottom, left }
+	function parseMarginShorthand(margin) {
+		const defaults = { top: '0', right: '0', bottom: '0', left: '0' };
+		if (!margin) return defaults;
+		const parts = margin.trim().split(/\s+/);
+		switch (parts.length) {
+			case 1: return { top: parts[0], right: parts[0], bottom: parts[0], left: parts[0] };
+			case 2: return { top: parts[0], right: parts[1], bottom: parts[0], left: parts[1] };
+			case 3: return { top: parts[0], right: parts[1], bottom: parts[2], left: parts[1] };
+			case 4: return { top: parts[0], right: parts[1], bottom: parts[2], left: parts[3] };
+			default: return defaults;
+		}
+	}
+
+	// Combine two FO length values into a single CSS px value (for merging margin + padding)
+	function combineLengths(a, b) {
+		const pxA = parseLengthToPx(a);
+		const pxB = parseLengthToPx(b);
+		if (pxA === 0 && pxB === 0) return null;
+		return `${pxA + pxB}px`;
+	}
+
+	// Extract margin or padding attributes from an FO element (shorthand + individual sides)
+	function extractMarginPadding(el, prop) {
+		const shorthand = el.getAttribute(prop);
+		const top = el.getAttribute(`${prop}-top`);
+		const right = el.getAttribute(`${prop}-right`);
+		const bottom = el.getAttribute(`${prop}-bottom`);
+		const left = el.getAttribute(`${prop}-left`);
+		if (shorthand) return parseMarginShorthand(shorthand);
+		if (top || right || bottom || left) {
+			return { top: top || '0', right: right || '0', bottom: bottom || '0', left: left || '0' };
+		}
+		return null;
+	}
+
 	function createPageWithRegions(staticContents, pageLayout = {}) {
 		const page = document.createElement('div');
 		page.className = 'xsl-page';
@@ -1652,21 +2088,46 @@ function renderPreview() {
 		if (pageLayout['font-style']) page.style.fontStyle = pageLayout['font-style'];
 		if (pageLayout['line-height']) page.style.lineHeight = pageLayout['line-height'];
 
+		// Parse body margin into individual sides for delta calculation
+		const bodyMarginParts = parseMarginShorthand(pageLayout.bodyMargin);
+		const beforeExtentPx = parseLengthToPx(pageLayout.beforeExtent);
+		const afterExtentPx = parseLengthToPx(pageLayout.afterExtent);
+
 		// Header (region-before)
 		if (staticContents['xsl-region-before']) {
 			const header = document.createElement('div');
 			header.className = 'xsl-region-before';
+			if (pageLayout.beforeExtent) {
+				header.style.height = pageLayout.beforeExtent;
+			}
+			// FO margins and padding both become CSS padding (keeps border at region boundary)
+			const bm = pageLayout.beforeMargin;
+			const bp = pageLayout.beforePadding;
+			header.style.paddingTop = combineLengths(bm?.top, bp?.top) || '0';
+			header.style.paddingBottom = combineLengths(bm?.bottom, bp?.bottom) || '0';
+			header.style.paddingLeft = combineLengths(bm?.left, bp?.left) || bodyMarginParts.left;
+			header.style.paddingRight = combineLengths(bm?.right, bp?.right) || bodyMarginParts.right;
 			header.appendChild(staticContents['xsl-region-before'].cloneNode(true));
 			page.appendChild(header);
 		}
 
-		// Body
+		// Body — delta: region-body margin minus total region height (extent + margins)
 		const body = document.createElement('div');
 		body.className = 'xsl-region-body';
 		body.contentEditable = 'true';
-		// Apply dynamic margin/padding from fo:region-body
 		if (pageLayout.bodyMargin) {
-			body.style.padding = pageLayout.bodyMargin;
+			const topPx = parseLengthToPx(bodyMarginParts.top);
+			const bottomPx = parseLengthToPx(bodyMarginParts.bottom);
+			// Total before height = extent + margin-top + margin-bottom
+			const bm = pageLayout.beforeMargin;
+			const beforeTotalPx = beforeExtentPx + parseLengthToPx(bm?.top) + parseLengthToPx(bm?.bottom);
+			// Total after height = extent + margin-top + margin-bottom
+			const am = pageLayout.afterMargin;
+			const afterTotalPx = afterExtentPx + parseLengthToPx(am?.top) + parseLengthToPx(am?.bottom);
+			// Delta: body margin from page edge minus total region space
+			const deltaTop = staticContents['xsl-region-before'] ? Math.max(0, topPx - beforeTotalPx) : topPx;
+			const deltaBottom = staticContents['xsl-region-after'] ? Math.max(0, bottomPx - afterTotalPx) : bottomPx;
+			body.style.padding = `${deltaTop}px ${bodyMarginParts.right} ${deltaBottom}px ${bodyMarginParts.left}`;
 		}
 		page.appendChild(body);
 
@@ -1674,6 +2135,16 @@ function renderPreview() {
 		if (staticContents['xsl-region-after']) {
 			const footer = document.createElement('div');
 			footer.className = 'xsl-region-after';
+			if (pageLayout.afterExtent) {
+				footer.style.height = pageLayout.afterExtent;
+			}
+			// FO margins and padding both become CSS padding (keeps border at region boundary)
+			const am = pageLayout.afterMargin;
+			const ap = pageLayout.afterPadding;
+			footer.style.paddingTop = combineLengths(am?.top, ap?.top) || '0';
+			footer.style.paddingBottom = combineLengths(am?.bottom, ap?.bottom) || '0';
+			footer.style.paddingLeft = combineLengths(am?.left, ap?.left) || bodyMarginParts.left;
+			footer.style.paddingRight = combineLengths(am?.right, ap?.right) || bodyMarginParts.right;
 			footer.appendChild(staticContents['xsl-region-after'].cloneNode(true));
 			page.appendChild(footer);
 		}
@@ -1910,14 +2381,17 @@ function renderPreview() {
 		'block': '<fo:block>\n    \n</fo:block>',
 		'inline': '<fo:inline></fo:inline>',
 		'inline-container': '<fo:inline-container>\n    <fo:block>\n        \n    </fo:block>\n</fo:inline-container>',
+		'block-container': '<fo:block-container>\n    <fo:block>\n        \n    </fo:block>\n</fo:block-container>',
 		'leader': '<fo:leader leader-pattern="dots"/>',
 		'graphic': '<fo:external-graphic src="" content-width="50pt"/>',
 		'template': '<xsl:template name="templateName">\n    \n</xsl:template>',
 		'call-template': '<xsl:call-template name=""/>',
 		'for-each': '<xsl:for-each select="">\n    \n</xsl:for-each>',
+		'sort': '<xsl:sort select="" order="ascending"/>',
 		'if': '<xsl:if test="">\n    \n</xsl:if>',
 		'choose': '<xsl:choose>\n    <xsl:when test="">\n        \n    </xsl:when>\n    <xsl:otherwise>\n        \n    </xsl:otherwise>\n</xsl:choose>',
-		'value-of': '<xsl:value-of select=""/>'
+		'value-of': '<xsl:value-of select=""/>',
+		'variable': '<xsl:variable name="" select=""/>'
 	};
 
 	function insertSnippet(type) {
@@ -1930,7 +2404,14 @@ function renderPreview() {
 				showBlockHelpDialog();
 				return;
 			}
-			// Add more help dialogs here as needed
+			if (type === 'graphic') {
+				showGraphicHelpDialog();
+				return;
+			}
+			if (type === 'inline-container') {
+				showContainerHelpDialog();
+				return;
+			}
 		}
 
 		// Default: insert basic snippet
@@ -2001,6 +2482,7 @@ function renderPreview() {
 			</div>
 		`;
 		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
 	}
 
 	function closeTableDialog() {
@@ -2117,6 +2599,7 @@ function renderPreview() {
 			</div>
 		`;
 		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
 		// Focus the textarea
 		setTimeout(() => document.getElementById('comment-text').focus(), 50);
 	}
@@ -2216,6 +2699,7 @@ function renderPreview() {
 			</div>
 		`;
 		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
 		updateAttrSetPreview();
 		setTimeout(() => document.getElementById('attrset-name').focus(), 50);
 	}
@@ -2326,6 +2810,31 @@ function renderPreview() {
 
 	// ===== HELP MODE DIALOGS =====
 
+	const GRAPHIC_ATTRIBUTES = [
+		{ name: 'src', default: "url('logo.png')", desc: 'Image source URL' },
+		{ name: 'width', default: '100%', desc: 'Display width' },
+		{ name: 'content-width', default: 'scale-to-fit', desc: 'Content scaling width' },
+		{ name: 'scaling', default: 'uniform', desc: 'Scaling mode (uniform or non-uniform)' },
+		{ name: 'content-height', default: 'scale-to-fit', desc: 'Content scaling height' },
+		{ name: 'height', default: 'auto', desc: 'Display height' },
+		{ name: 'text-align', default: 'center', desc: 'Horizontal alignment' },
+		{ name: 'display-align', default: 'center', desc: 'Vertical alignment' },
+		{ name: 'padding', default: '0pt', desc: 'Padding (all sides)' },
+		{ name: 'border', default: '1pt solid black', desc: 'Border' }
+	];
+
+	const CONTAINER_ATTRIBUTES = [
+		{ name: 'width', default: '50%', desc: 'Container width' },
+		{ name: 'height', default: 'auto', desc: 'Container height' },
+		{ name: 'display-align', default: 'center', desc: 'Vertical alignment of content' },
+		{ name: 'text-align', default: 'center', desc: 'Horizontal alignment of content' },
+		{ name: 'padding', default: '3pt', desc: 'Padding (all sides)' },
+		{ name: 'border', default: '1pt solid black', desc: 'Border' },
+		{ name: 'background-color', default: '#f0f0f0', desc: 'Background color' },
+		{ name: 'overflow', default: 'hidden', desc: 'Overflow behavior' },
+		{ name: 'reference-orientation', default: '0', desc: 'Rotation angle (0, 90, 180, 270)' }
+	];
+
 	const BLOCK_ATTRIBUTES = [
 		{ name: 'color', default: '#000000', desc: 'Text color' },
 		{ name: 'background-color', default: '#f0f0f0', desc: 'Background' },
@@ -2388,6 +2897,7 @@ function renderPreview() {
 			</div>
 		`;
 		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
 
 		// Add Escape key support
 		const handleKeydown = (e) => {
@@ -2438,6 +2948,167 @@ function renderPreview() {
 		closeBlockHelpDialog();
 	}
 
+	// ===== GRAPHIC BUILDER DIALOG =====
+
+	function showGraphicHelpDialog() {
+		const savedSettings = loadHelpSettings('graphic');
+
+		const attrRows = GRAPHIC_ATTRIBUTES.map((attr, idx) => {
+			const saved = savedSettings[attr.name];
+			const isChecked = saved !== undefined ? saved.checked : (attr.name === 'src' || attr.name === 'width' || attr.name === 'content-width' || attr.name === 'scaling');
+			const value = saved?.value ?? attr.default;
+			return `
+				<div class="help-attr-row">
+					<input type="checkbox" id="graphic-attr-${idx}" data-attr="${attr.name}" ${isChecked ? 'checked' : ''}>
+					<span class="attr-name" title="${attr.desc}">${attr.name}</span>
+					<input type="text" id="graphic-val-${idx}" value="${value}" placeholder="${attr.default}">
+				</div>
+			`;
+		}).join('');
+
+		const overlay = document.createElement('div');
+		overlay.className = 'table-dialog-overlay';
+		overlay.id = 'graphic-help-dialog-overlay';
+		overlay.innerHTML = `
+			<div class="help-dialog">
+				<h3>Insert fo:external-graphic</h3>
+				<div class="help-subtitle">Select attributes to include (check to enable)</div>
+				<div class="help-attr-list">
+					${attrRows}
+				</div>
+				<div class="help-dialog-buttons">
+					<button onclick="closeGraphicHelpDialog()">Cancel</button>
+					<button onclick="insertGraphicFromHelpDialog()" class="btn-primary">Insert</button>
+				</div>
+			</div>
+		`;
+		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
+
+		const handleKeydown = (e) => {
+			if (e.key === 'Escape') {
+				closeGraphicHelpDialog();
+				document.removeEventListener('keydown', handleKeydown);
+			}
+		};
+		document.addEventListener('keydown', handleKeydown);
+	}
+
+	function closeGraphicHelpDialog() {
+		const overlay = document.getElementById('graphic-help-dialog-overlay');
+		if (overlay) overlay.remove();
+	}
+
+	function insertGraphicFromHelpDialog() {
+		const selectedAttrs = [];
+		const settings = {};
+
+		GRAPHIC_ATTRIBUTES.forEach((attr, idx) => {
+			const checkbox = document.getElementById(`graphic-attr-${idx}`);
+			const valueInput = document.getElementById(`graphic-val-${idx}`);
+
+			settings[attr.name] = {
+				checked: checkbox.checked,
+				value: valueInput.value.trim() || attr.default
+			};
+
+			if (checkbox.checked && valueInput.value.trim()) {
+				selectedAttrs.push(`${attr.name}="${valueInput.value.trim()}"`);
+			}
+		});
+
+		saveHelpSettings('graphic', settings);
+
+		const graphicXsl = `<fo:external-graphic ${selectedAttrs.join(' ')}/>`;
+
+		const textarea = document.getElementById('xslInput');
+		insertAtCursor(textarea, graphicXsl);
+		closeGraphicHelpDialog();
+	}
+
+	// ===== CONTAINER BUILDER DIALOG =====
+
+	function showContainerHelpDialog() {
+		const savedSettings = loadHelpSettings('container');
+
+		const attrRows = CONTAINER_ATTRIBUTES.map((attr, idx) => {
+			const saved = savedSettings[attr.name];
+			const isChecked = saved !== undefined ? saved.checked : (attr.name === 'width');
+			const value = saved?.value ?? attr.default;
+			return `
+				<div class="help-attr-row">
+					<input type="checkbox" id="container-attr-${idx}" data-attr="${attr.name}" ${isChecked ? 'checked' : ''}>
+					<span class="attr-name" title="${attr.desc}">${attr.name}</span>
+					<input type="text" id="container-val-${idx}" value="${value}" placeholder="${attr.default}">
+				</div>
+			`;
+		}).join('');
+
+		const overlay = document.createElement('div');
+		overlay.className = 'table-dialog-overlay';
+		overlay.id = 'container-help-dialog-overlay';
+		overlay.innerHTML = `
+			<div class="help-dialog">
+				<h3>Insert fo:inline-container</h3>
+				<div class="help-subtitle">Select attributes to include (check to enable)</div>
+				<div class="help-attr-list">
+					${attrRows}
+				</div>
+				<div class="help-dialog-buttons">
+					<button onclick="closeContainerHelpDialog()">Cancel</button>
+					<button onclick="insertContainerFromHelpDialog()" class="btn-primary">Insert</button>
+				</div>
+			</div>
+		`;
+		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
+
+		const handleKeydown = (e) => {
+			if (e.key === 'Escape') {
+				closeContainerHelpDialog();
+				document.removeEventListener('keydown', handleKeydown);
+			}
+		};
+		document.addEventListener('keydown', handleKeydown);
+	}
+
+	function closeContainerHelpDialog() {
+		const overlay = document.getElementById('container-help-dialog-overlay');
+		if (overlay) overlay.remove();
+	}
+
+	function insertContainerFromHelpDialog() {
+		const selectedAttrs = [];
+		const settings = {};
+
+		CONTAINER_ATTRIBUTES.forEach((attr, idx) => {
+			const checkbox = document.getElementById(`container-attr-${idx}`);
+			const valueInput = document.getElementById(`container-val-${idx}`);
+
+			settings[attr.name] = {
+				checked: checkbox.checked,
+				value: valueInput.value.trim() || attr.default
+			};
+
+			if (checkbox.checked && valueInput.value.trim()) {
+				selectedAttrs.push(`${attr.name}="${valueInput.value.trim()}"`);
+			}
+		});
+
+		saveHelpSettings('container', settings);
+
+		let containerXsl;
+		if (selectedAttrs.length > 0) {
+			containerXsl = `<fo:inline-container ${selectedAttrs.join(' ')}>\n    <fo:block>\n        \n    </fo:block>\n</fo:inline-container>`;
+		} else {
+			containerXsl = '<fo:inline-container>\n    <fo:block>\n        \n    </fo:block>\n</fo:inline-container>';
+		}
+
+		const textarea = document.getElementById('xslInput');
+		insertAtCursor(textarea, containerXsl);
+		closeContainerHelpDialog();
+	}
+
 	// ===== TEMPLATE CREATION DIALOG =====
 
 	function showTemplateDialog() {
@@ -2461,6 +3132,7 @@ function renderPreview() {
 			</div>
 		`;
 		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
 		// Focus the input after a small delay and add Enter key support
 		setTimeout(() => {
 			const input = document.getElementById('template-name-input');
@@ -2551,6 +3223,7 @@ function renderPreview() {
 			</div>
 		`;
 		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
 
 		// Add keyboard support
 		setTimeout(() => {
@@ -3011,6 +3684,40 @@ function renderPreview() {
 		}, 1500);
 	}
 
+// Helper: Apply xsl:sort specifications to an array of nodes
+function applySortSpecs(nodeArray, sortSpecs, xmlCtx) {
+    // Build sort key extractors from sort specs (applied in reverse priority — last spec is least significant)
+    const specs = sortSpecs.map(s => ({
+        select: s.getAttribute('select') || '.',
+        dataType: s.getAttribute('data-type') || 'text',
+        order: s.getAttribute('order') || 'ascending'
+    }));
+
+    return nodeArray.slice().sort((a, b) => {
+        for (const spec of specs) {
+            const doc = a.ownerDocument || a;
+            let valA, valB;
+            try {
+                valA = doc.evaluate(spec.select, a, null, XPathResult.STRING_TYPE, null).stringValue;
+                valB = doc.evaluate(spec.select, b, null, XPathResult.STRING_TYPE, null).stringValue;
+            } catch(e) {
+                valA = ''; valB = '';
+            }
+
+            let cmp;
+            if (spec.dataType === 'number') {
+                cmp = (parseFloat(valA) || 0) - (parseFloat(valB) || 0);
+            } else {
+                cmp = valA.localeCompare(valB);
+            }
+
+            if (spec.order === 'descending') cmp = -cmp;
+            if (cmp !== 0) return cmp;
+        }
+        return 0;
+    });
+}
+
 // Helper: Evaluate Attribute Value Templates (AVTs)
 // Replaces {$param} and {xpath} patterns with their values
 function evaluateAVT(template, dataContext) {
@@ -3019,12 +3726,20 @@ function evaluateAVT(template, dataContext) {
     return template.replace(/\{([^}]+)\}/g, (match, expr) => {
         expr = expr.trim();
         if (expr.startsWith('$')) {
-            // Parameter reference
+            // Variable/parameter reference
             const paramName = expr.substring(1);
-            if (dataContext._params && dataContext._params[paramName] !== undefined) {
-                return dataContext._params[paramName];
+            // Check variables first, then params, walking up the context chain
+            let ctx = dataContext;
+            while (ctx) {
+                if (ctx._variables && ctx._variables[paramName] !== undefined) {
+                    return ctx._variables[paramName];
+                }
+                if (ctx._params && ctx._params[paramName] !== undefined) {
+                    return ctx._params[paramName];
+                }
+                ctx = ctx._xmlContext;
             }
-            return match; // Return original if param not found
+            return match; // Return original if not found
         } else {
             // XPath expression
             const xmlCtx = dataContext._xmlContext || dataContext;
@@ -3058,13 +3773,27 @@ function mapToHtml(xmlNode, dataContext) {
             const selectAttr = xmlNode.getAttribute('select');
             let val;
 
-            // Check if it's a parameter reference ($paramName)
+            // Check if it's a variable/parameter reference ($name)
             if (selectAttr.startsWith('$')) {
                 const paramName = selectAttr.substring(1);
-                if (dataContext._params && dataContext._params[paramName] !== undefined) {
-                    val = dataContext._params[paramName];
-                } else {
-                    val = `[$${paramName}]`; // Placeholder for undefined params
+                // Check variables first, then params, walking up the context chain
+                let resolved = false;
+                let ctx = dataContext;
+                while (ctx) {
+                    if (ctx._variables && ctx._variables[paramName] !== undefined) {
+                        val = ctx._variables[paramName];
+                        resolved = true;
+                        break;
+                    }
+                    if (ctx._params && ctx._params[paramName] !== undefined) {
+                        val = ctx._params[paramName];
+                        resolved = true;
+                        break;
+                    }
+                    ctx = ctx._xmlContext;
+                }
+                if (!resolved) {
+                    val = `[$${paramName}]`; // Placeholder for undefined
                 }
             } else {
                 // Regular XPath evaluation
@@ -3081,10 +3810,105 @@ function mapToHtml(xmlNode, dataContext) {
         if (ln === "for-each") {
             const frag = document.createDocumentFragment();
             const xmlCtx = dataContext._xmlContext || dataContext;
-            const nodes = (xmlCtx.ownerDocument || xmlCtx).evaluate(xmlNode.getAttribute('select'), xmlCtx, null, 7, null);
+            const selectExpr = xmlNode.getAttribute('select');
+
+            // Check if select uses tokenize() — create virtual text nodes for iteration
+            const tokenizeMatch = selectExpr.match(/^\s*tokenize\s*\(/);
+            if (tokenizeMatch) {
+                const doc = xmlCtx.ownerDocument || xmlCtx;
+                // Parse tokenize args using the same balanced-paren approach
+                const argsStart = selectExpr.indexOf('(') + 1;
+                let depth = 1, i = argsStart, args = [], argStart = argsStart;
+                while (i < selectExpr.length && depth > 0) {
+                    const ch = selectExpr[i];
+                    if (ch === '(') depth++;
+                    else if (ch === ')') { depth--; if (depth === 0) { args.push(selectExpr.substring(argStart, i)); break; } }
+                    else if (ch === ',' && depth === 1) { args.push(selectExpr.substring(argStart, i)); argStart = i + 1; }
+                    else if (ch === "'" || ch === '"') { const q = ch; i++; while (i < selectExpr.length && selectExpr[i] !== q) i++; }
+                    i++;
+                }
+                const inputExpr = resolveXPath2Functions(args[0].trim(), xmlCtx);
+                const patternExpr = args.length > 1 ? resolveXPath2Functions(args[1].trim(), xmlCtx) : "'\\\\s+'";
+                const input = doc.evaluate(inputExpr, xmlCtx, null, XPathResult.STRING_TYPE, null).stringValue;
+                const pattern = doc.evaluate(patternExpr, xmlCtx, null, XPathResult.STRING_TYPE, null).stringValue;
+                const tokens = input.split(new RegExp(pattern));
+
+                // Create a temporary XML doc with <token> elements for each result
+                const tmpDoc = new DOMParser().parseFromString(
+                    '<tokens>' + tokens.map(t => '<token>' + t.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</token>').join('') + '</tokens>',
+                    'text/xml'
+                );
+                const tokenNodes = tmpDoc.documentElement.childNodes;
+                for (let ti = 0; ti < tokenNodes.length; ti++) {
+                    Array.from(xmlNode.childNodes).forEach(c => {
+                        const res = mapToHtml(c, tokenNodes[ti]);
+                        if (res instanceof Node) frag.appendChild(res);
+                    });
+                }
+                return frag;
+            }
+
+            // Check if select uses distinct-values() — create virtual nodes with unique values
+            const distinctMatch = selectExpr.match(/^\s*distinct-values\s*\(/);
+            if (distinctMatch) {
+                const doc = xmlCtx.ownerDocument || xmlCtx;
+                const argsStart = selectExpr.indexOf('(') + 1;
+                let depth = 1, di = argsStart;
+                let dvArgs = [], argStart = argsStart;
+                while (di < selectExpr.length && depth > 0) {
+                    const ch = selectExpr[di];
+                    if (ch === '(') depth++;
+                    else if (ch === ')') { depth--; if (depth === 0) { dvArgs.push(selectExpr.substring(argStart, di)); break; } }
+                    else if (ch === ',' && depth === 1) { dvArgs.push(selectExpr.substring(argStart, di)); argStart = di + 1; }
+                    else if (ch === "'" || ch === '"') { const q = ch; di++; while (di < selectExpr.length && selectExpr[di] !== q) di++; }
+                    di++;
+                }
+                const innerExpr = resolveXPath2Functions(dvArgs[0].trim(), xmlCtx);
+                const ns = doc.evaluate(innerExpr, xmlCtx, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+                const seen = new Set();
+                const unique = [];
+                for (let j = 0; j < ns.snapshotLength; j++) {
+                    const val = ns.snapshotItem(j).textContent;
+                    if (!seen.has(val)) { seen.add(val); unique.push(val); }
+                }
+                const tmpDoc = new DOMParser().parseFromString(
+                    '<items>' + unique.map(v => '<item>' + v.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</item>').join('') + '</items>',
+                    'text/xml'
+                );
+                const itemNodes = tmpDoc.documentElement.childNodes;
+                for (let ti = 0; ti < itemNodes.length; ti++) {
+                    Array.from(xmlNode.childNodes).forEach(c => {
+                        const res = mapToHtml(c, itemNodes[ti]);
+                        if (res instanceof Node) frag.appendChild(res);
+                    });
+                }
+                return frag;
+            }
+
+            const nodes = (xmlCtx.ownerDocument || xmlCtx).evaluate(selectExpr, xmlCtx, null, 7, null);
+
+            // Collect nodes into array for potential sorting
+            let nodeArray = [];
             for (let i = 0; i < nodes.snapshotLength; i++) {
-                Array.from(xmlNode.childNodes).forEach(c => {
-                    const res = mapToHtml(c, nodes.snapshotItem(i));
+                nodeArray.push(nodes.snapshotItem(i));
+            }
+
+            // Check for xsl:sort children
+            const sortSpecs = Array.from(xmlNode.childNodes).filter(c =>
+                c.namespaceURI?.includes("Transform") && c.localName === "sort"
+            );
+            if (sortSpecs.length > 0) {
+                nodeArray = applySortSpecs(nodeArray, sortSpecs, xmlCtx);
+            }
+
+            // Get non-sort children for body processing
+            const bodyChildren = Array.from(xmlNode.childNodes).filter(c =>
+                !(c.namespaceURI?.includes("Transform") && c.localName === "sort")
+            );
+
+            for (let i = 0; i < nodeArray.length; i++) {
+                bodyChildren.forEach(c => {
+                    const res = mapToHtml(c, nodeArray[i]);
                     if (res instanceof Node) frag.appendChild(res);
                 });
             }
@@ -3133,6 +3957,29 @@ function mapToHtml(xmlNode, dataContext) {
                 err.innerText = `[Template "${name}" Not Found]`;
                 return err;
             }
+        }
+
+        if (ln === "variable") {
+            const varName = xmlNode.getAttribute('name');
+            const selectAttr = xmlNode.getAttribute('select');
+            let varValue;
+
+            if (selectAttr) {
+                varValue = evaluateXPath(selectAttr, dataContext);
+            } else {
+                // Inline content — render children, extract text
+                const frag = document.createDocumentFragment();
+                Array.from(xmlNode.childNodes).forEach(c => {
+                    const res = mapToHtml(c, dataContext);
+                    if (res instanceof Node) frag.appendChild(res);
+                });
+                varValue = frag.textContent;
+            }
+
+            // Store on context — visible to subsequent siblings
+            if (!dataContext._variables) dataContext._variables = {};
+            dataContext._variables[varName] = varValue;
+            return null;
         }
 
         if (ln === "attribute") {
@@ -3227,7 +4074,12 @@ function mapToHtml(xmlNode, dataContext) {
         'inline': 'span',
         'inline-container': 'span',
         'block': 'div',
-        'basic-link': 'a'
+        'basic-link': 'a',
+        'list-block': 'div',
+        'list-item': 'div',
+        'list-item-label': 'div',
+        'list-item-body': 'div',
+        'block-container': 'div'
     };
 
     const el = document.createElement(tagMap[ln] || 'div');
@@ -3314,6 +4166,11 @@ function mapToHtml(xmlNode, dataContext) {
         if (ln === 'inline-container') {
             el.style.display = 'inline-block';
             el.style.verticalAlign = 'middle';
+        }
+
+        if (ln === 'block-container') {
+            el.style.display = 'block';
+            el.style.overflow = 'hidden';
         }
 
         if (ln === 'external-graphic') {
@@ -3405,6 +4262,37 @@ function mapToHtml(xmlNode, dataContext) {
                 el.style.textDecoration = 'underline';
             }
             el.style.cursor = 'pointer';
+        }
+
+        if (ln === 'list-block') {
+            el.style.display = 'table';
+            el.style.width = '100%';
+            const provDist = xmlNode.getAttribute('provisional-distance-between-starts');
+            if (provDist) el.dataset.labelWidth = provDist;
+        }
+
+        if (ln === 'list-item') {
+            el.style.display = 'table-row';
+        }
+
+        if (ln === 'list-item-label') {
+            el.style.display = 'table-cell';
+            el.style.verticalAlign = 'top';
+            // Walk up to find list-block ancestor for provisional width
+            let ancestor = xmlNode.parentNode;
+            while (ancestor && ancestor.localName !== 'list-block') ancestor = ancestor.parentNode;
+            const labelWidth = ancestor?.getAttribute('provisional-distance-between-starts');
+            if (labelWidth) el.style.width = labelWidth;
+            // Respect end-indent if set
+            const endIndent = xmlNode.getAttribute('end-indent');
+            if (endIndent && endIndent !== 'label-end()') el.style.paddingRight = endIndent;
+        }
+
+        if (ln === 'list-item-body') {
+            el.style.display = 'table-cell';
+            el.style.verticalAlign = 'top';
+            const startIndent = xmlNode.getAttribute('start-indent');
+            if (startIndent && startIndent !== 'body-start()') el.style.paddingLeft = startIndent;
         }
     }
 

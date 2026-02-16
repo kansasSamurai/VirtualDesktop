@@ -4015,9 +4015,8 @@ function mapToHtml(xmlNode, dataContext) {
                     val = `[$${paramName}]`; // Placeholder for undefined
                 }
             } else {
-                // Regular XPath evaluation
-                const xmlCtx = dataContext._xmlContext || dataContext;
-                val = evaluateXPath(selectAttr, xmlCtx);
+                // Regular XPath evaluation — pass full dataContext so params/variables are available
+                val = evaluateXPath(selectAttr, dataContext);
             }
 
             const span = document.createElement('span');

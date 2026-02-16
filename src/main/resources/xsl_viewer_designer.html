@@ -27,6 +27,9 @@
         .xsl-region-before { flex-shrink: 0; border-bottom: 1px dashed #ccc; background: #fafafa; overflow: hidden; }
         .xsl-region-body { flex: 1; overflow: hidden; }
         .xsl-region-after { flex-shrink: 0; border-top: 1px dashed #ccc; background: #fafafa; overflow: hidden; }
+        .margin-guide { position: absolute; pointer-events: none; box-sizing: border-box; }
+        .margin-guide-page { border: 1px dashed rgba(220, 38, 38, 0.5); z-index: 900; }
+        .margin-guide-body { border: 1px dashed rgba(37, 99, 235, 0.5); z-index: 901; }
         .fo-page-number { background-color: #e3f2fd; padding: 0 3px; border-radius: 2px; }
         .fo-page-number-citation-last { background-color: #e8f5e9; padding: 0 3px; border-radius: 2px; }
         .page-break-marker { display: none; }
@@ -821,6 +824,10 @@
 							<input type="checkbox" id="flexLeadersToggle" onchange="saveProject()">
 							Flex Leaders (fill available space)
 						</label>
+						<label title="Show dashed borders indicating page and body margin boundaries">
+							<input type="checkbox" id="marginGuidesToggle" onchange="renderPreview()">
+							Show Margin Guides
+						</label>
 					</div>
 				</div>
 			</div>
@@ -996,7 +1003,8 @@ example xml:
         'text-decoration': 'textDecoration',
         'text-indent': 'textIndent',
         'inline-progression-dimension': 'width',
-        'block-progression-dimension': 'height'
+        'block-progression-dimension': 'height',
+        'vertical-align': 'verticalAlign'
     };
 
     const XSLT_SHIMS = {
@@ -2366,6 +2374,28 @@ function renderPreview() {
 			footer.style.paddingRight = combineLengths(am?.right, ap?.right) || bodyMarginParts.right;
 			footer.appendChild(staticContents['xsl-region-after'].cloneNode(true));
 			page.appendChild(footer);
+		}
+
+		// Margin guides (visual overlays)
+		const showGuides = document.getElementById('marginGuidesToggle')?.checked;
+		if (showGuides && pm) {
+			const g = document.createElement('div');
+			g.className = 'margin-guide margin-guide-page';
+			g.style.top = pm.top;
+			g.style.left = pm.left;
+			g.style.right = pm.right;
+			g.style.bottom = pm.bottom;
+			page.appendChild(g);
+		}
+		if (showGuides && pageLayout.bodyMargin) {
+			body.style.position = 'relative';
+			const g = document.createElement('div');
+			g.className = 'margin-guide margin-guide-body';
+			g.style.top = body.style.paddingTop;
+			g.style.left = body.style.paddingLeft;
+			g.style.right = body.style.paddingRight;
+			g.style.bottom = body.style.paddingBottom;
+			body.appendChild(g);
 		}
 
 		return { page, body };
@@ -4387,7 +4417,7 @@ function mapToHtml(xmlNode, dataContext) {
 
         if (ln === 'inline-container') {
             el.style.display = 'inline-block';
-            el.style.verticalAlign = 'middle';
+            if (!el.style.verticalAlign) el.style.verticalAlign = 'middle';
         }
 
         if (ln === 'block-container') {

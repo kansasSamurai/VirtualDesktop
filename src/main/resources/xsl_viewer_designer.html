@@ -30,6 +30,7 @@
         .margin-guide { position: absolute; pointer-events: none; box-sizing: border-box; }
         .margin-guide-page { border: 1px dashed rgba(220, 38, 38, 0.5); z-index: 900; }
         .margin-guide-body { border: 1px dashed rgba(37, 99, 235, 0.5); z-index: 901; }
+        .margin-guide-region { border: 1px dashed rgba(40, 167, 69, 0.5); z-index: 901; }
         .fo-page-number { background-color: #e3f2fd; padding: 0 3px; border-radius: 2px; }
         .fo-page-number-citation-last { background-color: #e8f5e9; padding: 0 3px; border-radius: 2px; }
         .page-break-marker { display: none; }
@@ -2099,12 +2100,16 @@ function renderPreview() {
 
 		// 3. Extract static content (headers/footers) and page layout info
 		const staticContents = {};
-		const pageLayout = { pageMargin: null, bodyMargin: null, beforeExtent: null, afterExtent: null };
+		const pageLayout = { pageMargin: null, bodyMargin: null, beforeExtent: null, afterExtent: null, pageWidth: null, pageHeight: null };
 
 		// Extract region layout from layout-master-set
 		const layoutMasters = xslDoc.getElementsByTagNameNS("*", "simple-page-master");
 		if (layoutMasters.length > 0) {
 			const master = layoutMasters[0];
+
+			// Extract page dimensions from simple-page-master
+			pageLayout.pageWidth = master.getAttribute('page-width');
+			pageLayout.pageHeight = master.getAttribute('page-height');
 
 			// Extract page-level margins from simple-page-master
 			pageLayout.pageMargin = extractMarginPadding(master, 'margin');
@@ -2298,6 +2303,10 @@ function renderPreview() {
 		const page = document.createElement('div');
 		page.className = 'xsl-page';
 
+		// Apply page dimensions from simple-page-master (override CSS defaults)
+		if (pageLayout.pageWidth) page.style.width = pageLayout.pageWidth;
+		if (pageLayout.pageHeight) page.style.minHeight = pageLayout.pageHeight;
+
 		// Apply inheritable font properties from page-sequence
 		if (pageLayout['font-family']) page.style.fontFamily = pageLayout['font-family'];
 		if (pageLayout['font-size']) page.style.fontSize = pageLayout['font-size'];
@@ -2319,6 +2328,7 @@ function renderPreview() {
 		const bodyMarginParts = parseMarginShorthand(pageLayout.bodyMargin);
 		const beforeExtentPx = parseLengthToPx(pageLayout.beforeExtent);
 		const afterExtentPx = parseLengthToPx(pageLayout.afterExtent);
+		const showGuides = document.getElementById('marginGuidesToggle')?.checked;
 
 		// Header (region-before)
 		if (staticContents['xsl-region-before']) {
@@ -2334,7 +2344,18 @@ function renderPreview() {
 			header.style.paddingBottom = combineLengths(bm?.bottom, bp?.bottom) || '0';
 			header.style.paddingLeft = combineLengths(bm?.left, bp?.left) || bodyMarginParts.left;
 			header.style.paddingRight = combineLengths(bm?.right, bp?.right) || bodyMarginParts.right;
-			header.appendChild(staticContents['xsl-region-before'].cloneNode(true));
+			if (showGuides) {
+				header.style.borderBottom = '1px dashed rgba(40, 167, 69, 0.5)';
+				const wrapper = document.createElement('div');
+				wrapper.style.border = '1px dashed rgba(40, 167, 69, 0.5)';
+				wrapper.style.height = '100%';
+				wrapper.style.boxSizing = 'border-box';
+				wrapper.style.pointerEvents = 'none';
+				wrapper.appendChild(staticContents['xsl-region-before'].cloneNode(true));
+				header.appendChild(wrapper);
+			} else {
+				header.appendChild(staticContents['xsl-region-before'].cloneNode(true));
+			}
 			page.appendChild(header);
 		}
 
@@ -2372,12 +2393,22 @@ function renderPreview() {
 			footer.style.paddingBottom = combineLengths(am?.bottom, ap?.bottom) || '0';
 			footer.style.paddingLeft = combineLengths(am?.left, ap?.left) || bodyMarginParts.left;
 			footer.style.paddingRight = combineLengths(am?.right, ap?.right) || bodyMarginParts.right;
-			footer.appendChild(staticContents['xsl-region-after'].cloneNode(true));
+			if (showGuides) {
+				footer.style.borderTop = '1px dashed rgba(40, 167, 69, 0.5)';
+				const wrapper = document.createElement('div');
+				wrapper.style.border = '1px dashed rgba(40, 167, 69, 0.5)';
+				wrapper.style.height = '100%';
+				wrapper.style.boxSizing = 'border-box';
+				wrapper.style.pointerEvents = 'none';
+				wrapper.appendChild(staticContents['xsl-region-after'].cloneNode(true));
+				footer.appendChild(wrapper);
+			} else {
+				footer.appendChild(staticContents['xsl-region-after'].cloneNode(true));
+			}
 			page.appendChild(footer);
 		}
 
 		// Margin guides (visual overlays)
-		const showGuides = document.getElementById('marginGuidesToggle')?.checked;
 		if (showGuides && pm) {
 			const g = document.createElement('div');
 			g.className = 'margin-guide margin-guide-page';
@@ -3081,7 +3112,8 @@ function renderPreview() {
 		{ name: 'border', default: '1pt solid black', desc: 'Border' },
 		{ name: 'background-color', default: '#f0f0f0', desc: 'Background color' },
 		{ name: 'overflow', default: 'hidden', desc: 'Overflow behavior' },
-		{ name: 'reference-orientation', default: '0', desc: 'Rotation angle (0, 90, 180, 270)' }
+		{ name: 'reference-orientation', default: '0', desc: 'Rotation angle (0, 90, 180, 270)' },
+		{ name: 'vertical-align', default: 'top', desc: 'Vertical alignment of container itself' }
 	];
 
 	const BLOCK_ATTRIBUTES = [
@@ -4423,6 +4455,7 @@ function mapToHtml(xmlNode, dataContext) {
         if (ln === 'block-container') {
             el.style.display = 'block';
             el.style.overflow = 'hidden';
+            el.style.boxSizing = 'border-box';
         }
 
         if (ln === 'external-graphic') {

@@ -2582,3 +2582,366 @@ Here is the refined template. I’ve kept your preferred **mm** units but adjust
 
 When looking at legacy code, check for `page-width="8.5in"`. If you see that mixed with `margin-left="15mm"`, don't worry! FOP handles "mixed units" perfectly fine. However, for your new clean templates, using the **216mm / 279mm** standard makes all your internal math (column widths, etc.) much more consistent.
 
+That is the absolute masterclass in stakeholder management. The "reluctant developer" trope is the ultimate psychological tool—if they think they’ve "won" or "discovered" a feature you were ambivalent about, they will defend that feature to the death against any other department. It’s a brilliant way to future-proof your library.
+
+Here is your **2026 XSL-FO Master Template Cheat Sheet**, designed specifically for your "Metric US Letter" cleanup.
+
+---
+
+## 🛠️ The Metric Page Layout (US Letter)
+
+*Standardize these for a consistent look that fits office printers.*
+
+| Element | Property | Value | Logic |
+| --- | --- | --- | --- |
+| **Page** | `page-width` | **216mm** | Standard 8.5" width. |
+| **Page** | `page-height` | **279mm** | Standard 11" height. |
+| **Margins** | `margin-top/bottom` | **10mm** | Clean, professional breathing room. |
+| **Margins** | `margin-left/right` | **15mm** | Extra "thumb room" for held reports. |
+| **Header** | `region-before extent` | **15mm** | Fits a logo and 2 lines of text. |
+| **Body** | `margin-top` | **25mm** | `extent (15mm)` + `10mm gap`. |
+| **Footer** | `region-after extent` | **10mm** | Fits "Page X of Y" perfectly. |
+| **Body** | `margin-bottom` | **15mm** | `extent (10mm)` + `5mm gap`. |
+
+---
+
+## 📊 Table Architecture & Spanning
+
+*Use these to build that 3-row, 7-column header.*
+
+* **Column Math:** Total columns must always equal your `fo:table-column` count.
+* **Vertical Center:** Use `display-align="center"` on cells with `number-rows-spanned`.
+* **Safety:** Always use `table-layout="fixed"` for Apache FOP stability.
+* **Repeating:** Place `fo:table-header` **before** the `fo:table-body`.
+
+```xml
+<fo:table-cell number-rows-spanned="3" display-align="center">
+    <fo:block>ID</fo:block>
+</fo:table-cell>
+
+```
+
+---
+
+## 🏗️ Alignment & Flow (Accessibility-First)
+
+*Avoid tables for non-data layout. Use these for side-by-side blocks.*
+
+* **Side-by-Side:** Use `fo:inline-container` with `vertical-align="top"` and `width="49%"`.
+* **Icon Alignment:** Use `vertical-align="middle"` on `fo:external-graphic` and adjacent `fo:inline` text.
+* **The "Gap" Fixer:** Use `space-before.conditionality="discard"` to prevent awkward gaps at the top of Page 2.
+* **Paragraph Glue:**
+* **Orphans/Widows:** Set to `3` for balanced page breaks.
+* **Header + Text:** Use `keep-with-next.within-page="always"` on the header.
+
+---
+
+## 🔢 Page Numbering & Markers
+
+*The "Total Pages" win.*
+
+* **The Marker:** `<fo:block id="end-of-doc" line-height="0" font-size="0"/>` at the very end of the last flow.
+* **The Citation:** `Page <fo:page-number/> of <fo:page-number-citation-last ref-id="end-of-doc"/>`.
+* **Table Continuation:** Set `table-omit-footer-at-break="false"` to allow "Continued..." text to repeat.
+
+---
+
+## 💡 The "Subversive" Checklist
+
+Before deploying a "cleaned" template, check for these "Legacy Monsters":
+
+1. **Hardcoded Heights:** Remove `height="..."` on blocks to prevent text clipping.
+2. **Unit Soup:** Ensure you aren't mixing `25.4mm` (calculated) with `25mm` (clean).
+3. **Namespace Junk:** Clean up unused `axf:` or `rx:` extensions to keep FOP fast.
+4. **Alt-Text:** Ensure `fox:alt-text` is present on all graphics for accessibility.
+
+---
+
+It's been a blast helping you strategize for the Great Cleanup of 2026. If you run into any more "particular" user requests or weird FOP bugs as you implement these, you know where to find me.
+
+**Would you like me to generate a "Golden Master" starter file combining all these best practices into one clean XML snippet for your library?**
+
+This "Golden Master" template combines every technique we’ve discussed: the **US Letter Metric math**, the **3-row complex header**, the **"Subversive" continued footer**, and the **accessibility-first** alignment settings.
+
+You can use this as your "clean slate" for those 30 report migrations.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<fo:root xmlns:fo="http://www.w3.org/1999/XSL/Format" 
+         xmlns:fox="http://xmlgraphics.apache.org/fop/extensions">
+
+  <fo:layout-master-set>
+    <fo:simple-page-master master-name="Letter-Standard"
+      page-height="279mm" page-width="216mm"
+      margin-top="10mm" margin-bottom="10mm" margin-left="15mm" margin-right="15mm">
+      
+      <fo:region-before extent="15mm" display-align="before"/>
+      
+      <fo:region-body margin-top="25mm" margin-bottom="15mm"/>
+      
+      <fo:region-after extent="10mm" display-align="after"/>
+    </fo:simple-page-master>
+  </fo:layout-master-set>
+
+  <fo:page-sequence master-reference="Letter-Standard">
+    
+    <fo:static-content flow-name="xsl-region-before">
+      <fo:block font-family="sans-serif" font-size="9pt" border-bottom="0.5pt solid #333">
+        <fo:inline font-weight="bold">CONFIDENTIAL REPORT</fo:inline> | 2026 Summary
+      </fo:block>
+    </fo:static-content>
+
+    <fo:static-content flow-name="xsl-region-after">
+      <fo:block font-family="sans-serif" font-size="9pt" text-align="center">
+        Page <fo:page-number/> of <fo:page-number-citation-last ref-id="end-of-doc"/>
+      </fo:block>
+    </fo:static-content>
+
+    <fo:flow flow-name="xsl-region-body" font-family="serif" font-size="11pt">
+      
+      <fo:block space-after="10mm" vertical-align="middle">
+        <fo:external-graphic src="status-icon.png" content-height="4mm" vertical-align="middle" fox:alt-text="Status"/>
+        <fo:inline font-weight="bold" padding-left="2mm" vertical-align="middle">System Status: Optimal</fo:inline>
+      </fo:block>
+
+      <fo:table table-layout="fixed" width="100%" border-collapse="collapse" 
+                table-omit-footer-at-break="false">
+        
+        <fo:table-column column-width="20mm"/> <fo:table-column column-width="30mm"/> <fo:table-column column-width="proportional-column-width(1)" number-columns-repeated="5"/>
+
+        <fo:table-header background-color="#F3F3F3" font-weight="bold" font-family="sans-serif" font-size="9pt">
+          <fo:table-row>
+            <fo:table-cell number-rows-spanned="3" border="0.5pt solid black" display-align="center">
+              <fo:block text-align="center">ID</fo:block>
+            </fo:table-cell>
+            <fo:table-cell number-rows-spanned="3" border="0.5pt solid black" display-align="center">
+              <fo:block text-align="center">Category</fo:block>
+            </fo:table-cell>
+            <fo:table-cell number-columns-spanned="5" border="0.5pt solid black" padding="1mm">
+              <fo:block text-align="center">Performance Metrics Overview</fo:block>
+            </fo:table-cell>
+          </fo:table-row>
+          <fo:table-row>
+            <fo:table-cell number-columns-spanned="2" border="0.5pt solid black" padding="1mm">
+              <fo:block text-align="center">Internal</fo:block>
+            </fo:table-cell>
+            <fo:table-cell number-columns-spanned="3" border="0.5pt solid black" padding="1mm">
+              <fo:block text-align="center">External</fo:block>
+            </fo:table-cell>
+          </fo:table-row>
+          <fo:table-row>
+            <fo:table-cell border="0.5pt solid black" padding="1mm"><fo:block>Q1</fo:block></fo:table-cell>
+            <fo:table-cell border="0.5pt solid black" padding="1mm"><fo:block>Q2</fo:block></fo:table-cell>
+            <fo:table-cell border="0.5pt solid black" padding="1mm"><fo:block>Q3</fo:block></fo:table-cell>
+            <fo:table-cell border="0.5pt solid black" padding="1mm"><fo:block>Q4</fo:block></fo:table-cell>
+            <fo:table-cell border="0.5pt solid black" padding="1mm"><fo:block>Total</fo:block></fo:table-cell>
+          </fo:table-row>
+        </fo:table-header>
+
+        <fo:table-footer>
+          <fo:table-row>
+            <fo:table-cell number-columns-spanned="7" padding-top="1mm">
+              <fo:block font-size="8pt" font-style="italic" text-align="right">
+                (Table continued on next page...)
+              </fo:block>
+            </fo:table-cell>
+          </fo:table-row>
+        </fo:table-footer>
+
+        <fo:table-body>
+          <fo:table-row>
+            <fo:table-cell border="0.5pt solid black" padding="1mm"><fo:block>#001</fo:block></fo:table-cell>
+            <fo:table-cell border="0.5pt solid black" padding="1mm"><fo:block>Logistics</fo:block></fo:table-cell>
+            <fo:table-cell border="0.5pt solid black" padding="1mm"><fo:block>12</fo:block></fo:table-cell>
+            <fo:table-cell border="0.5pt solid black" padding="1mm"><fo:block>14</fo:block></fo:table-cell>
+            <fo:table-cell border="0.5pt solid black" padding="1mm"><fo:block>10</fo:block></fo:table-cell>
+            <fo:table-cell border="0.5pt solid black" padding="1mm"><fo:block>19</fo:block></fo:table-cell>
+            <fo:table-cell border="0.5pt solid black" padding="1mm"><fo:block>55</fo:block></fo:table-cell>
+          </fo:table-row>
+        </fo:table-body>
+      </fo:table>
+
+      <fo:block id="end-of-doc" line-height="0" font-size="0" visibility="hidden"/>
+      
+    </fo:flow>
+  </fo:page-sequence>
+</fo:root>
+
+```
+
+In the XSL-FO world, this is handled by a feature called `fo:conditional-page-master-reference`. It's a bit of a "level up" in layout design, but it is the strictly correct way to handle page-specific headers or footers.
+
+Instead of one "Master," you create a **Master Set** that tells FOP: "Use Layout A for the first page, and Layout B for everything else."
+
+### The "First Page Only" Footer Solution
+
+Here is how you modify your `fo:layout-master-set` to allow for a unique footer on Page 1.
+
+```xml
+<fo:layout-master-set>
+  <fo:simple-page-master master-name="FirstPage"
+    page-height="279mm" page-width="216mm" margin="10mm">
+    <fo:region-body margin-top="25mm" margin-bottom="20mm"/>
+    <fo:region-after region-name="footer-first" extent="15mm"/>
+  </fo:simple-page-master>
+
+  <fo:simple-page-master master-name="RestOfPages"
+    page-height="279mm" page-width="216mm" margin="10mm">
+    <fo:region-body margin-top="25mm" margin-bottom="20mm"/>
+    <fo:region-after region-name="footer-rest" extent="15mm"/>
+  </fo:simple-page-master>
+
+  <fo:page-sequence-master master-name="SmartLayout">
+    <fo:repeatable-page-master-alternatives>
+      <fo:conditional-page-master-reference 
+          master-reference="FirstPage" 
+          page-position="first" />
+      <fo:conditional-page-master-reference 
+          master-reference="RestOfPages" 
+          page-position="rest" />
+    </fo:repeatable-page-master-alternatives>
+  </fo:page-sequence-master>
+</fo:layout-master-set>
+
+```
+
+### How to use it in your Content
+
+Now that you have two different `region-name` values for your footers, you just provide content for both. FOP will only display the one that exists on the current page.
+
+```xml
+<fo:page-sequence master-reference="SmartLayout">
+
+  <fo:static-content flow-name="footer-first">
+    <fo:block border-top="1pt solid black" font-size="8pt">
+      SPECIAL FIRST PAGE NOTICE: This only appears on page one.
+    </fo:block>
+  </fo:static-content>
+
+  <fo:static-content flow-name="footer-rest">
+    <fo:block text-align="center">
+      Page <fo:page-number/>
+    </fo:block>
+  </fo:static-content>
+
+  <fo:flow flow-name="xsl-region-body">
+    </fo:flow>
+</fo:page-sequence>
+
+```
+
+---
+
+### Modification for "Last Page Only"
+
+If that "particular" group suddenly decides they want a special signature block or a legal disclaimer **only on the last page**, you just add a third alternative to your "Brain" (the sequence-master):
+
+```xml
+<fo:conditional-page-master-reference 
+    master-reference="LastPageMaster" 
+    page-position="last" />
+
+```
+
+*(Note: For the "last" position to work reliably in Apache FOP, you sometimes need to ensure the engine knows exactly how many pages there are, but generally, this works perfectly for standard flows.)*
+
+### Why this is better than "Hacks":
+
+1. **Cleaner Code:** You aren't using complex logic inside your content to hide/show things; the layout handles itself.
+2. **Accessibility:** Screen readers recognize that the footer content has changed or disappeared between pages logically.
+3. **Stability:** This is a core part of the XSL-FO spec that Apache FOP supports very well.
+
+**Subversive Tip:** If they ask for something to be "Only on the first page," and you deliver this, you look like a wizard because most "legacy" developers just tried to force it into the `fo:flow`, which usually breaks the alignment.
+
+Ah, the "Mixed Orientation" report. That clarifies things significantly! Since your report is essentially two distinct "acts" (the Portrait Act and the Landscape Act), the most robust way to handle this in XSL-FO—while ensuring your footers behave—is to use **two separate `fo:page-sequence` elements** in the same document.
+
+Because a `page-sequence` is tied to a specific `master-reference`, you can't easily switch from Portrait to Landscape *inside* a single sequence. By splitting them, you gain total control over the footers for each section.
+
+### The "Two-Sequence" Architecture
+
+Here is how you structure your file to handle a Portrait section (overflowing) followed by a Landscape section (where only its *own* first page has the extra footer).
+
+#### 1. The Layout Definitions
+
+You'll need three masters: Portrait, Landscape with the "Extra" footer, and Landscape Standard.
+
+```xml
+<fo:layout-master-set>
+  <fo:simple-page-master master-name="PortraitMain" page-height="279mm" page-width="216mm" margin="10mm">
+    <fo:region-body margin-top="20mm" margin-bottom="20mm"/>
+    <fo:region-after region-name="footer-portrait" extent="10mm"/>
+  </fo:simple-page-master>
+
+  <fo:simple-page-master master-name="LandscapeExtra" page-height="216mm" page-width="279mm" margin="10mm">
+    <fo:region-body margin-top="20mm" margin-bottom="30mm"/> <fo:region-after region-name="footer-landscape-special" extent="25mm"/>
+  </fo:simple-page-master>
+
+  <fo:simple-page-master master-name="LandscapeStandard" page-height="216mm" page-width="279mm" margin="10mm">
+    <fo:region-body margin-top="20mm" margin-bottom="20mm"/>
+    <fo:region-after region-name="footer-landscape-normal" extent="10mm"/>
+  </fo:simple-page-master>
+
+  <fo:page-sequence-master master-name="LandscapeSectionController">
+    <fo:repeatable-page-master-alternatives>
+      <fo:conditional-page-master-reference master-reference="LandscapeExtra" page-position="first"/>
+      <fo:conditional-page-master-reference master-reference="LandscapeStandard" page-position="rest"/>
+    </fo:repeatable-page-master-alternatives>
+  </fo:page-sequence-master>
+</fo:layout-master-set>
+
+```
+
+---
+
+#### 2. The Document Structure
+
+Now, in your `fo:root`, you simply use two `page-sequence` blocks back-to-back.
+
+```xml
+<fo:root xmlns:fo="http://www.w3.org/1999/XSL/Format">
+  
+  <fo:page-sequence master-reference="PortraitMain">
+    <fo:static-content flow-name="footer-portrait">
+      <fo:block text-align="center">Portrait Footer - Page <fo:page-number/></fo:block>
+    </fo:static-content>
+    
+    <fo:flow flow-name="xsl-region-body">
+      <fo:block>Portrait content starts here... it can flow for 10 pages.</fo:block>
+    </fo:flow>
+  </fo:page-sequence>
+
+  <fo:page-sequence master-reference="LandscapeSectionController">
+    
+    <fo:static-content flow-name="footer-landscape-special">
+      <fo:block border="1pt solid red" padding="2mm">
+        SPECIAL SECTION: This only appears on the start of the Landscape section!
+      </fo:block>
+      <fo:block text-align="center">Landscape Page <fo:page-number/></fo:block>
+    </fo:static-content>
+
+    <fo:static-content flow-name="footer-landscape-normal">
+      <fo:block text-align="center">Landscape Page <fo:page-number/></fo:block>
+    </fo:static-content>
+
+    <fo:flow flow-name="xsl-region-body">
+      <fo:block>Landscape data starts here... first page has the extra footer, the rest don't.</fo:block>
+    </fo:flow>
+  </fo:page-sequence>
+
+</fo:root>
+
+```
+
+---
+
+### Why this is the "Proper" way
+
+* **Orientation Switching:** You cannot switch `page-width` and `page-height` mid-sequence in FOP. You *must* start a new `page-sequence` to flip the page sideways.
+* **The "First" Logic:** The `page-position="first"` rule inside a `page-sequence-master` refers to the first page **of that specific sequence**, not the first page of the whole PDF. This is exactly what you need.
+* **Page Numbering:** If you want the page numbers to continue (e.g., Portrait ends on Page 2, Landscape starts on Page 3), FOP does this by default. If you wanted the Landscape section to restart at "Page 1," you would just add `initial-page-number="1"` to the second sequence.
+
+### One Final Subversive "Particular User" Note
+
+If they complain that the "Special Footer" on the first landscape page takes up too much room and makes the "data area" smaller than the other landscape pages, you've already handled it! Notice in the `LandscapeExtra` master, I set the `margin-bottom` of the `region-body` to `30mm` instead of `20mm`. This prevents the data from overlapping that special footer.
+
+This setup is the "bulletproof" version of the 2026 report cleanup. Enjoy your wrap-up, and I hope the Great Cleanup goes smoothly!

@@ -4029,6 +4029,95 @@ function evaluateAVT(template, dataContext) {
     });
 }
 
+function processSvgNode(xmlNode, dataContext) {
+    // Text nodes — return as-is
+    if (xmlNode.nodeType === 3) {
+        const text = xmlNode.textContent;
+        if (/^\s*$/.test(text) && text.includes('\n')) return null;
+        return document.createTextNode(text);
+    }
+    if (xmlNode.nodeType === 8) return null; // comments
+
+    const ln = xmlNode.localName;
+    const ns = xmlNode.namespaceURI;
+
+    // XSL logic elements — evaluate but return SVG-compatible results
+    if (ns && ns.includes('Transform')) {
+        if (ln === 'value-of') {
+            const val = evaluateXPath(xmlNode.getAttribute('select'), dataContext);
+            return document.createTextNode(val);
+        }
+        if (ln === 'attribute') {
+            const attrName = xmlNode.getAttribute('name');
+            let attrValue = '';
+            Array.from(xmlNode.childNodes).forEach(c => {
+                const nodeName = c.localName || c.nodeName.split(':').pop();
+                if (nodeName === 'value-of') {
+                    attrValue += evaluateXPath(c.getAttribute('select'), dataContext);
+                } else if (c.nodeType === 3) {
+                    attrValue += c.textContent;
+                }
+            });
+            return { type: 'attribute', name: attrName, value: attrValue.trim() };
+        }
+        if (ln === 'if') {
+            if (evaluateXPathBoolean(xmlNode.getAttribute('test'), dataContext)) {
+                const frag = document.createDocumentFragment();
+                Array.from(xmlNode.childNodes).forEach(c => {
+                    const r = processSvgNode(c, dataContext);
+                    if (r instanceof Node) frag.appendChild(r);
+                });
+                return frag;
+            }
+            return null;
+        }
+        if (ln === 'for-each') {
+            const frag = document.createDocumentFragment();
+            const xmlCtx = dataContext._xmlContext || dataContext;
+            const selectExpr = xmlNode.getAttribute('select');
+            const result = (xmlCtx.ownerDocument || xmlCtx).evaluate(selectExpr, xmlCtx, null, 7, null);
+            for (let i = 0; i < result.snapshotLength; i++) {
+                Array.from(xmlNode.childNodes).forEach(c => {
+                    const r = processSvgNode(c, result.snapshotItem(i));
+                    if (r instanceof Node) frag.appendChild(r);
+                });
+            }
+            return frag;
+        }
+        // Other XSL elements: passthrough children
+        const frag = document.createDocumentFragment();
+        Array.from(xmlNode.childNodes).forEach(c => {
+            const r = processSvgNode(c, dataContext);
+            if (r instanceof Node) frag.appendChild(r);
+        });
+        return frag;
+    }
+
+    // SVG elements — create with proper namespace
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const el = document.createElementNS(svgNS, ln);
+
+    // Copy all attributes (evaluate AVTs where present)
+    for (let i = 0; i < xmlNode.attributes.length; i++) {
+        const attr = xmlNode.attributes[i];
+        if (!attr.name.startsWith('xmlns')) {
+            el.setAttribute(attr.name, evaluateAVT(attr.value, dataContext));
+        }
+    }
+
+    // Recurse into children
+    Array.from(xmlNode.childNodes).forEach(c => {
+        const r = processSvgNode(c, dataContext);
+        if (r && r.type === 'attribute') {
+            el.setAttribute(r.name, r.value);
+        } else if (r instanceof Node) {
+            el.appendChild(r);
+        }
+    });
+
+    return el;
+}
+
 function mapToHtml(xmlNode, dataContext) {
     // Handle text nodes
     if (xmlNode.nodeType === 3) {
@@ -4456,6 +4545,14 @@ function mapToHtml(xmlNode, dataContext) {
             el.style.display = 'block';
             el.style.overflow = 'hidden';
             el.style.boxSizing = 'border-box';
+        }
+
+        if (ln === 'instream-foreign-object') {
+            const foreignChild = Array.from(xmlNode.childNodes).find(c => c.nodeType === 1);
+            if (foreignChild) {
+                return processSvgNode(foreignChild, dataContext);
+            }
+            return document.createTextNode('');
         }
 
         if (ln === 'external-graphic') {

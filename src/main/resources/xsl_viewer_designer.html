@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <title>XSL-FO Designer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <style>
@@ -27,6 +28,8 @@
         .xsl-region-before { flex-shrink: 0; border-bottom: 1px dashed #ccc; background: #fafafa; overflow: hidden; }
         .xsl-region-body { flex: 1; overflow: hidden; }
         .xsl-region-after { flex-shrink: 0; border-top: 1px dashed #ccc; background: #fafafa; overflow: hidden; }
+        .xsl-page-overflow-indicator { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(220,38,38,0.15)); height: 80px; pointer-events: none; z-index: 950; }
+        .xsl-page-overflow-badge { position: absolute; bottom: 4px; right: 8px; background: #dc3545; color: white; font-size: 9px; padding: 2px 8px; border-radius: 3px; z-index: 951; font-family: system-ui, sans-serif; pointer-events: none; }
         .margin-guide { position: absolute; pointer-events: none; box-sizing: border-box; }
         .margin-guide-page { border: 1px dashed rgba(220, 38, 38, 0.5); z-index: 900; }
         .margin-guide-body { border: 1px dashed rgba(37, 99, 235, 0.5); z-index: 901; }
@@ -61,7 +64,6 @@
         .snippet-label {
             font-size: 0.6rem;
             color: #888;
-            width: 28px;
             text-transform: uppercase;
         }
         .snippet-toolbar button {
@@ -226,6 +228,22 @@
             background: #555;
             color: white;
         }
+        .project-actions .btn-export {
+            background: #6a1b9a;
+            color: white;
+            border-color: #7b1fa2;
+        }
+        .project-actions .btn-export:hover {
+            background: #7b1fa2;
+        }
+        .project-actions .btn-import {
+            background: #e65100;
+            color: white;
+            border-color: #ef6c00;
+        }
+        .project-actions .btn-import:hover {
+            background: #ef6c00;
+        }
         .project-list-header {
             font-size: 0.7rem;
             color: #888;
@@ -349,6 +367,91 @@
             display: flex;
             gap: 10px;
             justify-content: flex-end;
+        }
+        /* Analysis Button Badge */
+        .analysis-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.25);
+            color: white;
+            font-size: 9px;
+            font-weight: bold;
+            padding: 1px 6px;
+            border-radius: 8px;
+            margin-left: 6px;
+            vertical-align: middle;
+            line-height: 14px;
+        }
+        /* Analysis Dialog Styles */
+        .analysis-dialog {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            color: #ccc;
+            min-width: 480px;
+            max-width: 600px;
+            max-height: 80vh;
+            align-self: flex-start;
+            margin-top: 50px;
+            display: flex;
+            flex-direction: column;
+        }
+        .analysis-dialog h3 {
+            margin: 0 0 5px 0;
+            color: white;
+        }
+        .analysis-dialog .analysis-subtitle {
+            font-size: 0.7rem;
+            color: #888;
+            margin-bottom: 15px;
+        }
+        .analysis-findings {
+            overflow-y: auto;
+            flex: 1;
+        }
+        .analysis-group-header {
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #888;
+            margin: 12px 0 6px 0;
+            letter-spacing: 0.5px;
+        }
+        .analysis-finding {
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            border-radius: 4px;
+            background: #363636;
+            border-left: 3px solid #888;
+        }
+        .analysis-finding.warning { border-left-color: #ff9800; }
+        .analysis-finding.info { border-left-color: #42a5f5; }
+        .analysis-finding-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .analysis-finding-header i { font-size: 0.85rem; }
+        .analysis-finding.warning .analysis-finding-header i { color: #ff9800; }
+        .analysis-finding.info .analysis-finding-header i { color: #42a5f5; }
+        .analysis-finding-id {
+            font-size: 0.65rem;
+            font-weight: bold;
+            background: #555;
+            color: #ddd;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+        .analysis-finding-title {
+            font-size: 0.8rem;
+            color: white;
+            font-weight: 600;
+        }
+        .analysis-finding-detail {
+            font-size: 0.72rem;
+            color: #aaa;
+            margin-left: 26px;
         }
         /* Template Navigator Bar */
         .template-nav-bar {
@@ -653,6 +756,12 @@
         }
         #btn-layout-designer { margin-left: 10px; background: #e65100; color: white; }
         #btn-exit-layout { margin-left: 10px; background: #c62828; color: white; display: none; }
+        /* Source mapping hover highlight */
+        .hover-highlight [data-source-id]:hover {
+            outline: 2px dashed rgba(79, 195, 247, 0.6);
+            outline-offset: 1px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body onload="initProject()">
@@ -662,8 +771,12 @@
     <div>
         <span id="render-status" class="status-msg"></span>
         <span id="save-status" class="status-msg"></span>
-        <button class="btn-primary" onclick="renderPreview()">Render Preview & Save</button>
+        <button class="btn-primary" onclick="renderPreview()">Render</button>
         <button onclick="showProjectDialog()" style="background:#6a1b9a; color:white; margin-left:10px;">📁 Projects</button>
+        <button onclick="saveCurrentProject()" style="background:#2e7d32; color:white; border:1px solid #388e3c; margin-left:4px;" title="Save current project (or Save As if new)">💾 Save</button>
+        <button id="analysis-btn" onclick="showAnalysisDialog()" style="background:#555; color:#999; margin-left:10px; cursor:default;" title="No analysis available — render first" disabled>
+            <i class="fa-solid fa-shield-halved"></i> Analysis
+        </button>
         <button id="btn-layout-designer" onclick="enterLayoutMode()">LAYOUT DESIGNER</button>
         <button id="btn-exit-layout" onclick="exitLayoutMode()">EXIT LAYOUT</button>
     </div>
@@ -689,19 +802,26 @@
 				<button onclick="showTableDialog()" title="Insert fo:table">table...</button>
 				<button onclick="insertSnippet('leader')" title="Insert fo:leader">leader</button>
 				<button onclick="insertSnippet('graphic')" title="Insert fo:external-graphic">graphic</button>
+			</div>
+			<div class="snippet-row">
+				<span class="snippet-label">FO Helpers:</span>
+				<button onclick="showSvgDialog()" title="Insert fo:instream-foreign-object with SVG">SVG...</button>
+				<button onclick="showSvgDebugDialog()" title="Insert SVG debug overlay grid" style="background:#5a2a5a;">SVG debug...</button>
+				<button onclick="insertLoremIpsum()" title="Insert fo:block with lorem ipsum text" style="background:#2a5a5a;">lorem ipsum</button>
+				<button onclick="insertDebugPageBreak()" title="Insert debug page break (stripped on copy)" style="background:#5a2a2a;">page break</button>
 				<button onclick="showCommentDialog()" title="Insert XSL comment" style="background:#5a5a2a;">comment</button>
 			</div>
 			<div class="snippet-row">
 				<span class="snippet-label">XSL:</span>
-				<button onclick="showTemplateDialog()" title="Insert xsl:template">template...</button>
-				<button onclick="showCallTemplateDialog()" title="Insert xsl:call-template">call...</button>
-				<button onclick="insertSnippet('for-each')" title="Insert xsl:for-each">for-each</button>
-				<button onclick="insertSnippet('sort')" title="Insert xsl:sort">sort</button>
-				<button onclick="insertSnippet('if')" title="Insert xsl:if">if</button>
-				<button onclick="insertSnippet('choose')" title="Insert xsl:choose">choose</button>
 				<button onclick="insertSnippet('value-of')" title="Insert xsl:value-of">value-of</button>
+				<button onclick="insertSnippet('for-each')" title="Insert xsl:for-each">for-each</button>
+				<button onclick="insertSnippet('choose')" title="Insert xsl:choose">choose</button>
+				<button onclick="insertSnippet('if')" title="Insert xsl:if">if</button>
+				<button onclick="insertSnippet('sort')" title="Insert xsl:sort">sort</button>
 				<button onclick="insertSnippet('variable')" title="Insert xsl:variable">variable</button>
 				<button onclick="showAttrSetDialog()" title="Insert xsl:attribute-set">attr set...</button>
+				<button onclick="showTemplateDialog()" title="Insert xsl:template">template...</button>
+				<button onclick="showCallTemplateDialog()" title="Insert xsl:call-template">call...</button>
 			</div>
 		</div>
 
@@ -829,13 +949,17 @@
 							<input type="checkbox" id="marginGuidesToggle" onchange="renderPreview()">
 							Show Margin Guides
 						</label>
+						<label title="Highlight FO elements on hover with a dashed outline">
+							<input type="checkbox" id="hoverHighlightToggle" checked onchange="toggleHoverHighlight()">
+							Hover Highlight (source mapping)
+						</label>
 					</div>
 				</div>
 			</div>
 		</div>
 
 		<div style="padding: 10px; background: #252526; border-top: 1px solid #444;">
-			<button onclick="copyXsltToClipboard()" style="width: 100%; background: #007acc; color: white; border: none; padding: 8px; cursor: pointer; font-weight: bold;">
+			<button onclick="copyXsltToClipboard(this)" style="width: 100%; background: #007acc; color: white; border: none; padding: 8px; cursor: pointer; font-weight: bold;">
 				COPY XSLT TO CLIPBOARD
 			</button>
 		</div>
@@ -954,6 +1078,9 @@ example xml:
 	let currentProjectId = null;  // ID of currently loaded project (null = unsaved)
 	let lastSavedState = null;    // Snapshot of last saved state for dirty checking
 	let sidebarExpanded = false;  // Whether sidebar is in expanded mode
+	let currentSourceMap = [];    // Source mapping: FO element offsets in original XSL text
+	const unsupportedFoElements = new Set();  // Tracks unmapped FO elements per render (W001)
+	let currentAnalysisFindings = [];         // Latest analysis findings
     const MISSING_IMAGE_SVG = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZGVkZWRlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iOCIgZmlsbD0iI2FhYSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TUlTU0lORzwvdGV4dD48L3N2Zz4=";
     // Well-known placeholder image: border + X pattern, used with src="placeholder" for design-time layout roughing
     const PLACEHOLDER_IMAGE_SVG = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" preserveAspectRatio="none"><rect x="1" y="1" width="198" height="198" fill="#f5f5f5" stroke="#999" stroke-width="1"/><line x1="1" y1="1" x2="199" y2="199" stroke="#ccc" stroke-width="1"/><line x1="199" y1="1" x2="1" y2="199" stroke="#ccc" stroke-width="1"/></svg>')}`;
@@ -1005,7 +1132,8 @@ example xml:
         'text-indent': 'textIndent',
         'inline-progression-dimension': 'width',
         'block-progression-dimension': 'height',
-        'vertical-align': 'verticalAlign'
+        'vertical-align': 'verticalAlign',
+        'overflow': 'overflow'
     };
 
     const XSLT_SHIMS = {
@@ -1047,6 +1175,7 @@ example xml:
 
 			// 2c. Load Toggle States
 			if(document.getElementById('flexLeadersToggle')) document.getElementById('flexLeadersToggle').checked = data.flexLeaders === true; // Default to false
+			if(document.getElementById('hoverHighlightToggle')) document.getElementById('hoverHighlightToggle').checked = data.hoverHighlight !== false;
 			if(document.getElementById('helpModeToggle')) document.getElementById('helpModeToggle').checked = data.helpMode !== false; // Default to true
 
 			// 2d. Restore sidebar expanded state and width
@@ -1110,6 +1239,7 @@ example xml:
             img: document.getElementById('imageMapInput').value, // Save Images
 			shims: document.getElementById('shimInput')?.value || '', // Save Shims
 			flexLeaders: document.getElementById('flexLeadersToggle')?.checked ?? true, // Save toggle
+			hoverHighlight: document.getElementById('hoverHighlightToggle')?.checked ?? true,
 			helpMode: document.getElementById('helpModeToggle')?.checked ?? true, // Save help mode
 			sidebarExpanded: sidebarExpanded, // Save sidebar expanded state
 			expandedWidth: document.getElementById('expandedWidthInput')?.value || '1040', // Save expanded width
@@ -1148,6 +1278,7 @@ example xml:
 			img: document.getElementById('imageMapInput').value,
 			shims: document.getElementById('shimInput')?.value || '',
 			flexLeaders: document.getElementById('flexLeadersToggle')?.checked ?? true,
+			hoverHighlight: document.getElementById('hoverHighlightToggle')?.checked ?? true,
 			library: library,
 			templates: templates,
 			activeTemplate: activeTemplate,
@@ -1195,6 +1326,13 @@ example xml:
 					</button>
 					<button class="btn-new" onclick="newProject()" title="Start a new blank project">
 						New Project
+					</button>
+					<span style="border-left:1px solid #555;margin:0 2px;"></span>
+					<button class="btn-export" onclick="exportProject()" title="Export project to .json file">
+						Export
+					</button>
+					<button class="btn-import" onclick="importProject()" title="Import project from .json file">
+						Import
 					</button>
 				</div>
 				<div class="project-list-header">Saved Projects (${projectList.length})</div>
@@ -1322,6 +1460,7 @@ example xml:
 		document.getElementById('imageMapInput').value = data.img || '';
 		if (document.getElementById('shimInput')) document.getElementById('shimInput').value = data.shims || '';
 		if (document.getElementById('flexLeadersToggle')) document.getElementById('flexLeadersToggle').checked = data.flexLeaders === true;
+		if (document.getElementById('hoverHighlightToggle')) document.getElementById('hoverHighlightToggle').checked = data.hoverHighlight !== false;
 
 		library = data.library || {};
 		templates = data.templates || {};
@@ -1403,6 +1542,7 @@ example xml:
 		document.getElementById('imageMapInput').value = '';
 		if (document.getElementById('shimInput')) document.getElementById('shimInput').value = '';
 		if (document.getElementById('flexLeadersToggle')) document.getElementById('flexLeadersToggle').checked = false;
+		if (document.getElementById('hoverHighlightToggle')) document.getElementById('hoverHighlightToggle').checked = true;
 
 		library = {};
 		templates = {};
@@ -1424,6 +1564,113 @@ example xml:
 		showSaveConfirmation('New project started');
 	}
 
+	function exportProject() {
+		const state = getCurrentState();
+		const index = getProjectsIndex();
+		const projectName = currentProjectId ? (index[currentProjectId]?.name || 'untitled') : 'untitled';
+
+		state._exportVersion = 1;
+		state._exportDate = new Date().toISOString();
+		state._projectName = projectName;
+
+		const json = JSON.stringify(state, null, 2);
+		const blob = new Blob([json], { type: 'application/json' });
+		const url = URL.createObjectURL(blob);
+
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = projectName.replace(/[^a-z0-9_\-]/gi, '_') + '.xslviewer.json';
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+
+		showSaveConfirmation('Exported "' + projectName + '"');
+	}
+
+	function importProject() {
+		const input = document.createElement('input');
+		input.type = 'file';
+		input.accept = '.json';
+		input.onchange = function() {
+			const file = input.files[0];
+			if (!file) return;
+
+			const reader = new FileReader();
+			reader.onload = function(e) {
+				let data;
+				try {
+					data = JSON.parse(e.target.result);
+				} catch (err) {
+					alert('Invalid JSON file.');
+					return;
+				}
+
+				if (!data.xsl && data.xsl !== '') {
+					alert('This file does not appear to be a valid XSL Viewer project (missing "xsl" field).');
+					return;
+				}
+
+				// Check for unsaved changes
+				if (hasUnsavedChanges()) {
+					const index = getProjectsIndex();
+					const currentName = currentProjectId ? index[currentProjectId]?.name : 'current project';
+					const choice = confirm(
+						`You have unsaved changes in ${currentName || 'the current project'}.\n\n` +
+						`Click OK to discard changes and import.\n` +
+						`Click Cancel to go back and save first.`
+					);
+					if (!choice) return;
+				}
+
+				// Apply to UI (same pattern as loadProject)
+				document.getElementById('xslInput').value = data.xsl || '';
+				document.getElementById('xmlInput').value = data.xml || '';
+				document.getElementById('mapInput').value = data.map || '';
+				document.getElementById('imageMapInput').value = data.img || '';
+				if (document.getElementById('shimInput')) document.getElementById('shimInput').value = data.shims || '';
+				if (document.getElementById('flexLeadersToggle')) document.getElementById('flexLeadersToggle').checked = data.flexLeaders === true;
+				if (document.getElementById('hoverHighlightToggle')) document.getElementById('hoverHighlightToggle').checked = data.hoverHighlight !== false;
+
+				library = data.library || {};
+				templates = data.templates || {};
+				activeTemplate = data.activeTemplate || null;
+				attrSets = data.attrSets || {};
+				activeAttrSet = data.activeAttrSet || null;
+
+				renderLibUI();
+
+				// Imported file is not tied to any saved project
+				currentProjectId = null;
+				lastSavedState = null;
+
+				// Save as working state
+				saveProject();
+
+				// Refresh UI
+				if (data.xsl) renderPreview();
+				refreshTemplateNav();
+				refreshAttrSetNav();
+				if (activeTemplate && templates[activeTemplate]) {
+					showTemplateEditor(activeTemplate, templates[activeTemplate]);
+				} else {
+					hideTemplateEditor();
+				}
+				if (activeAttrSet && attrSets[activeAttrSet]) {
+					showAttrSetEditor(activeAttrSet, attrSets[activeAttrSet]);
+				} else {
+					hideAttrSetEditor();
+				}
+
+				closeProjectDialog();
+				const importedName = data._projectName || file.name;
+				showSaveConfirmation('Imported "' + importedName + '"');
+			};
+			reader.readAsText(file);
+		};
+		input.click();
+	}
+
 	function showSaveConfirmation(message) {
 		const status = document.getElementById('save-status');
 		if (status) {
@@ -1435,14 +1682,21 @@ example xml:
 		}
 	}
 
-	async function copyXsltToClipboard() {
-		const xslContent = document.getElementById('xslInput').value;
+	async function copyXsltToClipboard(btn) {
+		let xslContent = document.getElementById('xslInput').value;
+
+		// Strip debug page breaks before copying
+		const debugBreakRegex = /\s*<!-- @debug-page-break -->.*?<!-- \/@debug-page-break -->\s*/gs;
+		const debugCount = (xslContent.match(debugBreakRegex) || []).length;
+		xslContent = xslContent.replace(debugBreakRegex, '\n');
+
 		try {
 			await navigator.clipboard.writeText(xslContent);
-			// Visual feedback
-			const btn = event.target;
 			const originalText = btn.innerText;
-			btn.innerText = "✓ COPIED!";
+			const msg = debugCount > 0
+				? `✓ COPIED! (${debugCount} debug break${debugCount > 1 ? 's' : ''} stripped)`
+				: '✓ COPIED!';
+			btn.innerText = msg;
 			btn.style.background = "#28a745";
 			setTimeout(() => {
 				btn.innerText = originalText;
@@ -2036,13 +2290,33 @@ example xml:
 		}
 	}
 
+function injectSourceIds(xslText) {
+	const sourceMap = [];
+	let id = 0;
+	const tagged = xslText.replace(/<fo:([a-zA-Z-]+)/g, (match, tagName, offset) => {
+		sourceMap.push({ id, offset, tagName: 'fo:' + tagName });
+		return `${match} __sid="${id++}"`;
+	});
+	return { tagged, sourceMap };
+}
+
+function scrollTextareaToOffset(textarea, offset) {
+	const text = textarea.value.substring(0, offset);
+	const lineNumber = text.split('\n').length - 1;
+	const lineHeight = parseInt(getComputedStyle(textarea).lineHeight) || 16;
+	textarea.scrollTop = Math.max(0, lineNumber * lineHeight - textarea.clientHeight / 3);
+}
+
 function renderPreview() {
 		saveProject();
 		console.log("--- Starting Render Process ---");
-		
-		// 1. Get the raw string and pre-process it immediately
-		let xslStr = document.getElementById('xslInput').value;
-		xslStr = preProcessXslt(xslStr); 
+		unsupportedFoElements.clear();
+
+		// 1. Inject source IDs into FO elements, then pre-process
+		const rawXsl = document.getElementById('xslInput').value;
+		const { tagged, sourceMap } = injectSourceIds(rawXsl);
+		currentSourceMap = sourceMap;
+		let xslStr = preProcessXslt(tagged);
 		
 		const xmlStr = document.getElementById('xmlInput').value || "<r/>";
 		const parser = new DOMParser();
@@ -2103,39 +2377,36 @@ function renderPreview() {
 		const pageLayout = { pageMargin: null, bodyMargin: null, beforeExtent: null, afterExtent: null, pageWidth: null, pageHeight: null };
 
 		// Extract region layout from layout-master-set
+		// Build a map of all simple-page-masters keyed by master-name
+		const pageMasters = {};
 		const layoutMasters = xslDoc.getElementsByTagNameNS("*", "simple-page-master");
-		if (layoutMasters.length > 0) {
-			const master = layoutMasters[0];
+		Array.from(layoutMasters).forEach(master => {
+			const masterName = master.getAttribute('master-name');
+			const layout = { pageMargin: null, bodyMargin: null, beforeExtent: null, afterExtent: null, pageWidth: null, pageHeight: null };
 
-			// Extract page dimensions from simple-page-master
-			pageLayout.pageWidth = master.getAttribute('page-width');
-			pageLayout.pageHeight = master.getAttribute('page-height');
+			layout.pageWidth = master.getAttribute('page-width');
+			layout.pageHeight = master.getAttribute('page-height');
 
-			// Extract page-level margins from simple-page-master
-			pageLayout.pageMargin = extractMarginPadding(master, 'margin');
-			if (pageLayout.pageMargin) {
-				console.log(`Page margins: T=${pageLayout.pageMargin.top} R=${pageLayout.pageMargin.right} B=${pageLayout.pageMargin.bottom} L=${pageLayout.pageMargin.left}`);
-			}
+			layout.pageMargin = extractMarginPadding(master, 'margin');
 
-			// Extract region-before extent and margins
 			const regionBefore = master.getElementsByTagNameNS("*", "region-before")[0];
 			if (regionBefore) {
-				pageLayout.beforeExtent = regionBefore.getAttribute('extent');
-				pageLayout.beforeMargin = extractMarginPadding(regionBefore, 'margin');
-				pageLayout.beforePadding = extractMarginPadding(regionBefore, 'padding');
+				layout.beforeExtent = regionBefore.getAttribute('extent');
+				layout.beforeMargin = extractMarginPadding(regionBefore, 'margin');
+				layout.beforePadding = extractMarginPadding(regionBefore, 'padding');
+				layout.beforeRegionName = regionBefore.getAttribute('region-name');
 			}
 
-			// Extract region-after extent and margins
 			const regionAfter = master.getElementsByTagNameNS("*", "region-after")[0];
 			if (regionAfter) {
-				pageLayout.afterExtent = regionAfter.getAttribute('extent');
-				pageLayout.afterMargin = extractMarginPadding(regionAfter, 'margin');
-				pageLayout.afterPadding = extractMarginPadding(regionAfter, 'padding');
+				layout.afterExtent = regionAfter.getAttribute('extent');
+				layout.afterMargin = extractMarginPadding(regionAfter, 'margin');
+				layout.afterPadding = extractMarginPadding(regionAfter, 'padding');
+				layout.afterRegionName = regionAfter.getAttribute('region-name');
 			}
 
 			const regionBody = master.getElementsByTagNameNS("*", "region-body")[0];
 			if (regionBody) {
-				// Check for margin attribute (shorthand) or individual margins
 				const margin = regionBody.getAttribute('margin');
 				const marginTop = regionBody.getAttribute('margin-top');
 				const marginRight = regionBody.getAttribute('margin-right');
@@ -2143,12 +2414,62 @@ function renderPreview() {
 				const marginLeft = regionBody.getAttribute('margin-left');
 
 				if (margin) {
-					pageLayout.bodyMargin = margin;
+					layout.bodyMargin = margin;
 				} else if (marginTop || marginRight || marginBottom || marginLeft) {
-					pageLayout.bodyMargin = `${marginTop || '0'} ${marginRight || '0'} ${marginBottom || '0'} ${marginLeft || '0'}`;
+					layout.bodyMargin = `${marginTop || '0'} ${marginRight || '0'} ${marginBottom || '0'} ${marginLeft || '0'}`;
 				}
-				console.log(`Region-body margin: ${pageLayout.bodyMargin}`);
 			}
+
+			if (masterName) {
+				pageMasters[masterName] = layout;
+				console.log(`Page master "${masterName}": ${layout.pageWidth} x ${layout.pageHeight}`);
+			}
+		});
+
+		// Build a map of page-sequence-master names → conditional position map
+		const pageSeqMasters = {};
+		const psmElements = xslDoc.getElementsByTagNameNS("*", "page-sequence-master");
+		Array.from(psmElements).forEach(psm => {
+			const psmName = psm.getAttribute('master-name');
+			if (!psmName) return;
+			const positionMap = { first: null, rest: null, last: null, default: null };
+
+			// Check for single-page-master-reference (simpler variant — no conditions)
+			const singleRefs = psm.getElementsByTagNameNS("*", "single-page-master-reference");
+			if (singleRefs.length > 0) {
+				const ref = singleRefs[0].getAttribute('master-reference');
+				if (ref && pageMasters[ref]) {
+					positionMap.default = ref;
+				}
+			}
+
+			// Parse conditional-page-master-reference elements
+			const refs = psm.getElementsByTagNameNS("*", "conditional-page-master-reference");
+			Array.from(refs).forEach(cpmr => {
+				const ref = cpmr.getAttribute('master-reference');
+				if (!ref || !pageMasters[ref]) return;
+				const pos = cpmr.getAttribute('page-position') || 'any';
+				switch (pos) {
+					case 'first': positionMap.first = ref; break;
+					case 'rest': positionMap.rest = ref; break;
+					case 'last': positionMap.last = ref; break;
+					case 'any': positionMap.default = ref; break;
+					default: positionMap.default = positionMap.default || ref; break;
+				}
+			});
+
+			// Only store if at least one position resolved
+			if (positionMap.first || positionMap.rest || positionMap.last || positionMap.default) {
+				pageSeqMasters[psmName] = positionMap;
+				console.log(`Page-sequence-master "${psmName}" → positions:`,
+					Object.entries(positionMap).filter(([,v]) => v).map(([k,v]) => `${k}="${v}"`).join(', '));
+			}
+		});
+
+		// Use first master as default fallback
+		if (layoutMasters.length > 0) {
+			const firstMasterName = layoutMasters[0].getAttribute('master-name');
+			Object.assign(pageLayout, pageMasters[firstMasterName]);
 		}
 
 		const pageSequences = xslDoc.getElementsByTagNameNS("*", "page-sequence");
@@ -2158,9 +2479,19 @@ function renderPreview() {
 		Array.from(pageSequences).forEach((pageSeq, seqIndex) => {
 			console.log(`Processing page-sequence ${seqIndex + 1}...`);
 
+			// Resolve the page master for this sequence
+			const masterRef = pageSeq.getAttribute('master-reference');
+			const resolvedRef = masterRef && pageMasters[masterRef] ? masterRef : null;
+			const conditionalMasters = masterRef && pageSeqMasters[masterRef] ? pageSeqMasters[masterRef] : null;
+			// Primary layout = first available conditional master, or direct ref, or fallback
+			const primaryRef = conditionalMasters
+				? (conditionalMasters.first || conditionalMasters.rest || conditionalMasters.default)
+				: resolvedRef;
+			const masterLayout = primaryRef ? pageMasters[primaryRef] : pageLayout;
+
 			// Create per-sequence static contents and layout
 			const seqStaticContents = {};
-			const seqLayout = { ...pageLayout }; // Start with base layout
+			const seqLayout = { ...masterLayout }; // Start with this sequence's master layout
 
 			// Extract inheritable font properties from this page-sequence
 			const inheritableProps = ['font-family', 'font-size', 'color', 'font-weight', 'font-style', 'line-height'];
@@ -2172,21 +2503,115 @@ function renderPreview() {
 				}
 			});
 
-			// Extract static-content for this page-sequence
+			// Build region-name maps for each conditional master position
+			function buildRegionNameMap(layout) {
+				const map = {};
+				if (layout.beforeRegionName && layout.beforeRegionName !== 'xsl-region-before') {
+					map[layout.beforeRegionName] = 'xsl-region-before';
+				}
+				if (layout.afterRegionName && layout.afterRegionName !== 'xsl-region-after') {
+					map[layout.afterRegionName] = 'xsl-region-after';
+				}
+				return map;
+			}
+
+			// Primary region name map (from the master used for content flow)
+			const regionNameMap = buildRegionNameMap(seqLayout);
+
+			// Build per-position region maps and layouts for conditional masters
+			const conditionalStaticContents = {};
+			const positionRegionMaps = {};
+			if (conditionalMasters) {
+				['first', 'rest', 'last'].forEach(pos => {
+					const ref = conditionalMasters[pos];
+					if (ref && pageMasters[ref]) {
+						const posLayout = { ...pageMasters[ref] };
+						// Inherit font props from page-sequence
+						inheritableProps.forEach(prop => {
+							const val = pageSeq.getAttribute(prop);
+							if (val) posLayout[prop] = val;
+						});
+						conditionalStaticContents[pos] = { before: null, after: null, layout: posLayout };
+						positionRegionMaps[pos] = buildRegionNameMap(posLayout);
+					}
+				});
+			}
+
+			// Extract static-content and route to the correct position
 			const statics = pageSeq.getElementsByTagNameNS("*", "static-content");
 			Array.from(statics).forEach(sc => {
 				const flowName = sc.getAttribute('flow-name');
-				if (flowName) {
-					console.log(`  Found static-content for: ${flowName}`);
-					seqStaticContents[flowName] = mapToHtml(sc, xmlDataDoc);
+				if (!flowName) return;
+
+				let routed = false;
+				// Try routing to conditional position masters first
+				for (const pos of ['first', 'rest', 'last']) {
+					const posMap = positionRegionMaps[pos];
+					if (!posMap) continue;
+					const posLayout = conditionalStaticContents[pos]?.layout;
+					// Match if flow-name matches this position's custom region name
+					if (posMap[flowName]) {
+						const resolvedName = posMap[flowName];
+						console.log(`  Static-content "${flowName}" → ${pos} master (resolved to ${resolvedName})`);
+						const key = resolvedName === 'xsl-region-before' ? 'before' : 'after';
+						conditionalStaticContents[pos][key] = mapToHtml(sc, xmlDataDoc);
+						routed = true;
+					} else if (posLayout && (flowName === posLayout.beforeRegionName || flowName === posLayout.afterRegionName)) {
+						// Direct match on region name (already standard name)
+						const key = flowName === posLayout.beforeRegionName || flowName === 'xsl-region-before' ? 'before' : 'after';
+						conditionalStaticContents[pos][key] = mapToHtml(sc, xmlDataDoc);
+						routed = true;
+					}
+				}
+
+				if (!routed) {
+					// Falls to default/primary master
+					const resolvedName = regionNameMap[flowName] || flowName;
+					console.log(`  Found static-content for: ${flowName}${resolvedName !== flowName ? ` (resolved to ${resolvedName})` : ''}`);
+					seqStaticContents[resolvedName] = mapToHtml(sc, xmlDataDoc);
 				}
 			});
+
+			// For positions that didn't get their own statics, inherit from default
+			if (conditionalMasters) {
+				['first', 'rest', 'last'].forEach(pos => {
+					if (!conditionalStaticContents[pos]) return;
+					if (!conditionalStaticContents[pos].before && seqStaticContents['xsl-region-before']) {
+						conditionalStaticContents[pos].before = seqStaticContents['xsl-region-before'];
+					}
+					if (!conditionalStaticContents[pos].after && seqStaticContents['xsl-region-after']) {
+						conditionalStaticContents[pos].after = seqStaticContents['xsl-region-after'];
+					}
+				});
+			}
 
 			// Store for use by paginateCanvas
 			// For first sequence, use global staticContents; for others, we'll handle via markers
 			if (seqIndex === 0) {
 				Object.assign(staticContents, seqStaticContents);
 				Object.assign(pageLayout, seqLayout);
+			}
+
+			// Serialize conditional data for passing through markers
+			const conditionalData = conditionalMasters ? {
+				masters: conditionalMasters,
+				statics: {}
+			} : null;
+			if (conditionalData) {
+				['first', 'rest', 'last'].forEach(pos => {
+					if (conditionalStaticContents[pos]) {
+						conditionalData.statics[pos] = {
+							before: conditionalStaticContents[pos].before?.outerHTML || '',
+							after: conditionalStaticContents[pos].after?.outerHTML || '',
+							layout: conditionalStaticContents[pos].layout
+						};
+					}
+				});
+			}
+
+			// Store conditional data for first sequence as module-level
+			if (seqIndex === 0 && conditionalData) {
+				staticContents._conditionalData = conditionalData;
 			}
 
 			// Add page-break marker before subsequent sequences
@@ -2201,6 +2626,9 @@ function renderPreview() {
 					'xsl-region-after': seqStaticContents['xsl-region-after']?.outerHTML || ''
 				});
 				seqBreak.dataset.pageLayout = JSON.stringify(seqLayout);
+				if (conditionalData) {
+					seqBreak.dataset.conditionalData = JSON.stringify(conditionalData);
+				}
 				canvas.appendChild(seqBreak);
 			}
 
@@ -2229,9 +2657,36 @@ function renderPreview() {
 		// (needed because contentEditable regions can interfere with normal link behavior)
 		setupLinkHandlers(canvas);
 
+		// Post-process: Click-to-source navigation for source-mapped elements
+		canvas.addEventListener('click', function(e) {
+			const target = e.target.closest('[data-source-id]');
+			if (!target) return;
+			const entry = currentSourceMap[parseInt(target.dataset.sourceId)];
+			if (!entry) return;
+
+			e.preventDefault();
+			e.stopPropagation();
+
+			// Switch to XSLT tab if not already active
+			const xslTab = document.querySelector('.tab[onclick*="xslInput"]') || document.querySelector('.tab');
+			if (xslTab) xslTab.click();
+
+			const textarea = document.getElementById('xslInput');
+			const text = textarea.value;
+			const tagEnd = text.indexOf('>', entry.offset);
+			textarea.focus();
+			textarea.setSelectionRange(entry.offset, tagEnd > entry.offset ? tagEnd + 1 : entry.offset + entry.tagName.length);
+			scrollTextareaToOffset(textarea, entry.offset);
+		});
+
 		// Post-process: Enable flex-based leaders if toggle is on
 		if (document.getElementById('flexLeadersToggle')?.checked) {
 			enableFlexLeaders(canvas);
+		}
+
+		// Post-process: Apply hover highlight class if toggle is on
+		if (document.getElementById('hoverHighlightToggle')?.checked) {
+			canvas.classList.add('hover-highlight');
 		}
 
 		// Update render timestamp
@@ -2242,6 +2697,19 @@ function renderPreview() {
 
 		// Refresh template navigator
 		refreshTemplateNav();
+
+		// Run XSL analysis
+		const findings = analyzeXsl(xslDoc);
+		// Merge W001 findings from unsupported element tracking
+		for (const elName of unsupportedFoElements) {
+			findings.push({
+				id: 'W001', severity: 'warning',
+				title: `Unsupported FO element: fo:${elName}`,
+				detail: `The element fo:${elName} has no mapping in the viewer and was rendered as a generic container.`
+			});
+		}
+		currentAnalysisFindings = findings;
+		updateAnalysisButton(findings);
 
 		console.log("--- Render Complete ---");
 	}
@@ -2304,8 +2772,13 @@ function renderPreview() {
 		page.className = 'xsl-page';
 
 		// Apply page dimensions from simple-page-master (override CSS defaults)
+		// Use fixed height (not min-height) so overflow detection works —
+		// the flex body will be constrained and overflow: hidden will clip content
 		if (pageLayout.pageWidth) page.style.width = pageLayout.pageWidth;
-		if (pageLayout.pageHeight) page.style.minHeight = pageLayout.pageHeight;
+		if (pageLayout.pageHeight) {
+			page.style.height = pageLayout.pageHeight;
+			page.style.minHeight = 'unset';
+		}
 
 		// Apply inheritable font properties from page-sequence
 		if (pageLayout['font-family']) page.style.fontFamily = pageLayout['font-family'];
@@ -2432,6 +2905,40 @@ function renderPreview() {
 		return { page, body };
 	}
 
+	// Resolve which static contents and layout to use for a given page position
+	function resolvePageMaster(seqPageIndex, conditionalData, defaultStatics, defaultLayout) {
+		if (!conditionalData) return { statics: defaultStatics, layout: defaultLayout };
+
+		function hydrateStatics(posData) {
+			const statics = {};
+			if (posData.before) {
+				const temp = document.createElement('div');
+				temp.innerHTML = posData.before;
+				statics['xsl-region-before'] = temp.firstChild;
+			}
+			if (posData.after) {
+				const temp = document.createElement('div');
+				temp.innerHTML = posData.after;
+				statics['xsl-region-after'] = temp.firstChild;
+			}
+			return statics;
+		}
+
+		if (seqPageIndex === 0 && conditionalData.statics.first) {
+			return {
+				statics: hydrateStatics(conditionalData.statics.first),
+				layout: conditionalData.statics.first.layout || defaultLayout
+			};
+		}
+		if (seqPageIndex > 0 && conditionalData.statics.rest) {
+			return {
+				statics: hydrateStatics(conditionalData.statics.rest),
+				layout: conditionalData.statics.rest.layout || defaultLayout
+			};
+		}
+		return { statics: defaultStatics, layout: defaultLayout };
+	}
+
 	function paginateCanvas(canvas, staticContents = {}, pageLayout = {}) {
 		// Collect all content from canvas into a temporary container
 		const tempContainer = document.createElement('div');
@@ -2439,35 +2946,64 @@ function renderPreview() {
 			tempContainer.appendChild(canvas.firstChild);
 		}
 
+		// Extract conditional data for first sequence
+		const conditionalData = staticContents._conditionalData || null;
+
 		// Find all page-break markers
 		const markers = tempContainer.querySelectorAll('.page-break-marker');
 
 		if (markers.length === 0) {
 			// No page breaks - wrap all content in a single page with regions
-			const { page, body } = createPageWithRegions(staticContents, pageLayout);
+			const resolved = resolvePageMaster(0, conditionalData, staticContents, pageLayout);
+			const { page, body } = createPageWithRegions(resolved.statics, resolved.layout);
+			page.dataset.sequenceIndex = '0';
 			while (tempContainer.firstChild) {
 				body.appendChild(tempContainer.firstChild);
 			}
 			canvas.appendChild(page);
+			applyLastPageMasters(canvas, conditionalData, 0);
 			updatePageNumbers(canvas);
 			relocateAbsoluteElements(canvas);
+			detectOverflow(canvas);
 			return;
 		}
 
-		// Split content at page-break markers
-		let { page: currentPage, body: currentBody } = createPageWithRegions(staticContents, pageLayout);
+		// Resolve first page of first sequence with conditional master
+		const firstResolved = resolvePageMaster(0, conditionalData, staticContents, pageLayout);
+		let { page: currentPage, body: currentBody } = createPageWithRegions(firstResolved.statics, firstResolved.layout);
+		currentPage.dataset.sequenceIndex = '0';
+		if (conditionalData && conditionalData.statics.last) {
+			currentPage.dataset.conditionalLastData = JSON.stringify(conditionalData.statics.last);
+		}
 
 		// Process all nodes, splitting at markers
 		const allNodes = Array.from(tempContainer.childNodes);
-		splitAtMarkers(allNodes, canvas, currentPage, currentBody, staticContents, pageLayout);
+		splitAtMarkers(allNodes, canvas, currentPage, currentBody, staticContents, pageLayout, conditionalData, 0, 1);
+		applyLastPageMasters(canvas);
 		updatePageNumbers(canvas);
 		relocateAbsoluteElements(canvas);
+		detectOverflow(canvas);
 	}
 
-	function splitAtMarkers(nodes, canvas, currentPage, currentBody, staticContents, pageLayout = {}) {
+	function splitAtMarkers(nodes, canvas, currentPage, currentBody, staticContents, pageLayout = {}, conditionalData = null, seqIndex = 0, seqPageIndex = 1) {
 		// Track current static contents and layout (may change at page-sequence boundaries)
 		let currentStaticContents = staticContents;
 		let currentLayout = pageLayout;
+		let currentConditionalData = conditionalData;
+		let currentSeqIndex = seqIndex;
+		let currentSeqPageIndex = seqPageIndex; // 0-based page within current sequence (page 0 already created)
+
+		function createNextPage() {
+			const resolved = resolvePageMaster(currentSeqPageIndex, currentConditionalData, currentStaticContents, currentLayout);
+			const newPage = createPageWithRegions(resolved.statics, resolved.layout);
+			newPage.page.dataset.sequenceIndex = String(currentSeqIndex);
+			// Tag page with "last" conditional data for post-processing
+			if (currentConditionalData && currentConditionalData.statics.last) {
+				newPage.page.dataset.conditionalLastData = JSON.stringify(currentConditionalData.statics.last);
+			}
+			currentSeqPageIndex++;
+			return newPage;
+		}
 
 		nodes.forEach(node => {
 			if (node.classList && node.classList.contains('page-break-marker')) {
@@ -2495,13 +3031,19 @@ function renderPreview() {
 							currentStaticContents['xsl-region-after'] = temp.firstChild;
 						}
 						currentLayout = { ...pageLayout, ...seqLayout };
-						console.log(`Switched to page-sequence ${node.dataset.sequenceIndex} static contents`);
+
+						// Parse conditional data for this new sequence
+						currentConditionalData = node.dataset.conditionalData
+							? JSON.parse(node.dataset.conditionalData) : null;
+						currentSeqIndex = parseInt(node.dataset.sequenceIndex) || 0;
+						currentSeqPageIndex = 0; // Reset page counter for new sequence
+						console.log(`Switched to page-sequence ${currentSeqIndex} static contents`);
 					} catch (e) {
 						console.warn('Failed to parse page-sequence static contents:', e);
 					}
 				}
 
-				const newPage = createPageWithRegions(currentStaticContents, currentLayout);
+				const newPage = createNextPage();
 				currentPage = newPage.page;
 				currentBody = newPage.body;
 			} else if (node.nodeType === 1 && node.querySelector && node.querySelector('.page-break-marker')) {
@@ -2517,7 +3059,7 @@ function renderPreview() {
 						if (currentBody.childNodes.length > 0) {
 							canvas.appendChild(currentPage);
 						}
-						const newPage = createPageWithRegions(currentStaticContents, currentLayout);
+						const newPage = createNextPage();
 						currentPage = newPage.page;
 						currentBody = newPage.body;
 						// Create new wrapper for continued content
@@ -2525,7 +3067,7 @@ function renderPreview() {
 						currentBody.appendChild(newWrapper);
 					} else if (child.nodeType === 1 && child.querySelector && child.querySelector('.page-break-marker')) {
 						// Nested page breaks - recurse
-						const nestedResult = splitAtMarkersNested(child, canvas, currentPage, currentBody, node, currentStaticContents, currentLayout);
+						const nestedResult = splitAtMarkersNested(child, canvas, currentPage, currentBody, node, currentStaticContents, currentLayout, createNextPage);
 						currentPage = nestedResult.currentPage;
 						currentBody = nestedResult.currentBody;
 					} else {
@@ -2550,7 +3092,7 @@ function renderPreview() {
 		}
 	}
 
-	function splitAtMarkersNested(node, canvas, currentPage, currentBody, parentTemplate, staticContents, pageLayout = {}) {
+	function splitAtMarkersNested(node, canvas, currentPage, currentBody, parentTemplate, staticContents, pageLayout = {}, createNextPage) {
 		const childNodes = Array.from(node.childNodes);
 		const wrapper = node.cloneNode(false);
 		const parentWrapper = currentBody.lastElementChild;
@@ -2563,7 +3105,7 @@ function renderPreview() {
 		childNodes.forEach(child => {
 			if (child.classList && child.classList.contains('page-break-marker')) {
 				canvas.appendChild(currentPage);
-				const newPage = createPageWithRegions(staticContents, pageLayout);
+				const newPage = createNextPage ? createNextPage() : createPageWithRegions(staticContents, pageLayout);
 				currentPage = newPage.page;
 				currentBody = newPage.body;
 				// Recreate parent structure
@@ -2580,6 +3122,80 @@ function renderPreview() {
 		});
 
 		return { currentPage, currentBody };
+	}
+
+	// Post-processing: apply "last" page master to the final page of each sequence
+	function applyLastPageMasters(canvas, singlePageConditionalData, singlePageSeqIndex) {
+		const pages = Array.from(canvas.querySelectorAll('.xsl-page'));
+		if (pages.length === 0) return;
+
+		// Group pages by sequence index
+		const sequences = {};
+		pages.forEach(page => {
+			const si = page.dataset.sequenceIndex || '0';
+			if (!sequences[si]) sequences[si] = [];
+			sequences[si].push(page);
+		});
+
+		// For single-page case with explicit conditionalData passed in
+		if (singlePageConditionalData && pages.length === 1) {
+			const lastData = singlePageConditionalData.statics.last;
+			if (lastData) {
+				replacePageRegions(pages[0], lastData);
+			}
+			return;
+		}
+
+		// For multi-page case, find last page per sequence
+		Object.entries(sequences).forEach(([seqIdx, seqPages]) => {
+			if (seqPages.length <= 1) return; // Don't apply "last" to single-page sequences (first wins)
+			const lastPage = seqPages[seqPages.length - 1];
+			const lastData = lastPage.dataset.conditionalLastData;
+			if (lastData) {
+				try {
+					replacePageRegions(lastPage, JSON.parse(lastData));
+				} catch (e) {
+					console.warn('Failed to apply last page master:', e);
+				}
+			}
+		});
+	}
+
+	function replacePageRegions(page, lastData) {
+		// Replace header
+		if (lastData.before) {
+			const header = page.querySelector('.xsl-region-before');
+			if (header) {
+				const temp = document.createElement('div');
+				temp.innerHTML = lastData.before;
+				const newContent = temp.firstChild;
+				header.innerHTML = '';
+				if (newContent) {
+					while (newContent.firstChild) header.appendChild(newContent.firstChild);
+				}
+			}
+		}
+		// Replace footer
+		if (lastData.after) {
+			const footer = page.querySelector('.xsl-region-after');
+			if (footer) {
+				const temp = document.createElement('div');
+				temp.innerHTML = lastData.after;
+				const newContent = temp.firstChild;
+				footer.innerHTML = '';
+				if (newContent) {
+					while (newContent.firstChild) footer.appendChild(newContent.firstChild);
+				}
+			}
+		}
+		// Apply layout changes (extent, margins) if provided
+		if (lastData.layout) {
+			const layout = lastData.layout;
+			const header = page.querySelector('.xsl-region-before');
+			if (header && layout.beforeExtent) header.style.height = layout.beforeExtent;
+			const footer = page.querySelector('.xsl-region-after');
+			if (footer && layout.afterExtent) footer.style.height = layout.afterExtent;
+		}
 	}
 
 	function updatePageNumbers(canvas) {
@@ -2624,6 +3240,14 @@ function renderPreview() {
 		});
 	}
 
+	function toggleHoverHighlight() {
+		const canvas = document.getElementById('xsl-canvas');
+		const on = document.getElementById('hoverHighlightToggle')?.checked;
+		if (on) canvas.classList.add('hover-highlight');
+		else canvas.classList.remove('hover-highlight');
+		saveProject();
+	}
+
 	function enableFlexLeaders(canvas) {
 		// Find all fill-mode leaders and convert their parent blocks to flex containers
 		canvas.querySelectorAll('.fo-leader-fill').forEach(leader => {
@@ -2655,7 +3279,38 @@ function renderPreview() {
 		});
 	}
 
+	function detectOverflow(canvas) {
+		canvas.querySelectorAll('.xsl-page').forEach((page, idx) => {
+			const body = page.querySelector('.xsl-region-body');
+			if (!body) return;
+			if (body.scrollHeight > body.clientHeight + 1) { // +1 for sub-pixel tolerance
+				body.style.position = 'relative';
+				const indicator = document.createElement('div');
+				indicator.className = 'xsl-page-overflow-indicator';
+				body.appendChild(indicator);
+				const badge = document.createElement('div');
+				badge.className = 'xsl-page-overflow-badge';
+				const overflowPx = Math.round(body.scrollHeight - body.clientHeight);
+				badge.textContent = `Content overflow (~${overflowPx}px)`;
+				body.appendChild(badge);
+				console.warn(`Page ${idx + 1}: content overflows by ~${overflowPx}px`);
+			}
+		});
+	}
+
 	// ===== SNIPPET INSERTION HELPERS =====
+
+	const LOREM_IPSUM = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.';
+
+	function insertLoremIpsum() {
+		const textarea = document.getElementById('xslInput');
+		insertAtCursor(textarea, `<fo:block>${LOREM_IPSUM}</fo:block>`);
+	}
+
+	function insertDebugPageBreak() {
+		const textarea = document.getElementById('xslInput');
+		insertAtCursor(textarea, '<!-- @debug-page-break --><fo:block break-before="page"/><!-- /@debug-page-break -->');
+	}
 
 	const SNIPPETS = {
 		'block': '<fo:block>\n    \n</fo:block>',
@@ -3305,6 +3960,244 @@ function renderPreview() {
 		const textarea = document.getElementById('xslInput');
 		insertAtCursor(textarea, graphicXsl);
 		closeGraphicHelpDialog();
+	}
+
+	// ===== SVG BUILDER DIALOG =====
+
+	const SVG_ATTRIBUTES = [
+		{ name: 'content-width', default: 'scale-to-fit', desc: 'Content scaling width' },
+		{ name: 'content-height', default: 'scale-to-fit', desc: 'Content scaling height' },
+		{ name: 'width', default: '80mm', desc: 'Display width' },
+		{ name: 'height', default: '24mm', desc: 'Display height' },
+		{ name: 'overflow', default: 'hidden', desc: 'Overflow behavior' }
+	];
+
+	function showSvgDialog() {
+		const savedSettings = loadHelpSettings('svg');
+		const doubleLock = savedSettings._doubleLock !== undefined ? savedSettings._doubleLock : true;
+
+		const attrRows = SVG_ATTRIBUTES.map((attr, idx) => {
+			const saved = savedSettings[attr.name];
+			const isChecked = saved !== undefined ? saved.checked : true;
+			const value = saved?.value ?? attr.default;
+			return `
+				<div class="help-attr-row">
+					<input type="checkbox" id="svg-attr-${idx}" data-attr="${attr.name}" ${isChecked ? 'checked' : ''}>
+					<span class="attr-name" title="${attr.desc}">${attr.name}</span>
+					<input type="text" id="svg-val-${idx}" value="${value}" placeholder="${attr.default}">
+				</div>
+			`;
+		}).join('');
+
+		const overlay = document.createElement('div');
+		overlay.className = 'table-dialog-overlay';
+		overlay.id = 'svg-dialog-overlay';
+		overlay.innerHTML = `
+			<div class="help-dialog">
+				<h3>Insert fo:instream-foreign-object (SVG)</h3>
+				<div class="help-subtitle">Select attributes to include (check to enable)</div>
+				<div class="help-attr-list">
+					${attrRows}
+				</div>
+				<div style="margin: 10px 0; padding: 8px; background: #2a2a2a; border-radius: 4px;">
+					<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+						<input type="checkbox" id="svg-double-lock" ${doubleLock ? 'checked' : ''}>
+						<span>Double-Lock SVG</span>
+					</label>
+					<div style="font-size: 11px; color: #888; margin-top: 4px; margin-left: 26px;">
+						Sets both FO container and SVG element sizing for strict dimension control
+					</div>
+				</div>
+				<div class="help-dialog-buttons">
+					<button onclick="closeSvgDialog()">Cancel</button>
+					<button onclick="insertSvgFromDialog()" class="btn-primary">Insert</button>
+				</div>
+			</div>
+		`;
+		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
+
+		// Double-lock toggle disables/enables content-width (idx 0) and overflow (idx 4)
+		const lockCheckbox = document.getElementById('svg-double-lock');
+		function applyDoubleLockState() {
+			const locked = lockCheckbox.checked;
+			[0, 4].forEach(idx => {
+				const cb = document.getElementById(`svg-attr-${idx}`);
+				const val = document.getElementById(`svg-val-${idx}`);
+				cb.disabled = !locked;
+				val.disabled = !locked;
+				if (!locked) cb.checked = false;
+				const row = cb.closest('.help-attr-row');
+				if (row) row.style.opacity = locked ? '1' : '0.4';
+			});
+		}
+		applyDoubleLockState();
+		lockCheckbox.addEventListener('change', applyDoubleLockState);
+
+		const handleKeydown = (e) => {
+			if (e.key === 'Escape') {
+				closeSvgDialog();
+				document.removeEventListener('keydown', handleKeydown);
+			}
+		};
+		document.addEventListener('keydown', handleKeydown);
+	}
+
+	function closeSvgDialog() {
+		const overlay = document.getElementById('svg-dialog-overlay');
+		if (overlay) overlay.remove();
+	}
+
+	function insertSvgFromDialog() {
+		const selectedAttrs = [];
+		const settings = {};
+		const doubleLock = document.getElementById('svg-double-lock').checked;
+		settings._doubleLock = doubleLock;
+
+		SVG_ATTRIBUTES.forEach((attr, idx) => {
+			const checkbox = document.getElementById(`svg-attr-${idx}`);
+			const valueInput = document.getElementById(`svg-val-${idx}`);
+
+			// Skip locked-out attrs when double-lock is off
+			if (!doubleLock && (idx === 0 || idx === 4)) {
+				settings[attr.name] = { checked: false, value: attr.default };
+				return;
+			}
+
+			settings[attr.name] = {
+				checked: checkbox.checked,
+				value: valueInput.value.trim() || attr.default
+			};
+
+			if (checkbox.checked && valueInput.value.trim()) {
+				selectedAttrs.push(`${attr.name}="${valueInput.value.trim()}"`);
+			}
+		});
+
+		saveHelpSettings('svg', settings);
+
+		const foAttrs = selectedAttrs.length ? '\n    ' + selectedAttrs.join('\n    ') : '';
+		let svgContent;
+
+		if (doubleLock) {
+			svgContent = `<fo:instream-foreign-object${foAttrs}>
+  <svg:svg viewBox="0 0 200 60"
+           preserveAspectRatio="xMidYMid meet"
+           width="100%"
+           height="100%"
+           xmlns:svg="http://www.w3.org/2000/svg">
+  </svg:svg>
+</fo:instream-foreign-object>`;
+		} else {
+			svgContent = `<fo:instream-foreign-object${foAttrs}>
+  <svg:svg viewBox="0 0 200 60"
+           xmlns:svg="http://www.w3.org/2000/svg">
+  </svg:svg>
+</fo:instream-foreign-object>`;
+		}
+
+		const textarea = document.getElementById('xslInput');
+		insertAtCursor(textarea, svgContent);
+		closeSvgDialog();
+	}
+
+	// ===== SVG DEBUG OVERLAY DIALOG =====
+
+	function showSvgDebugDialog() {
+		const saved = loadHelpSettings('svgdebug');
+		const minorOn = saved.minorOn !== undefined ? saved.minorOn : true;
+		const majorOn = saved.majorOn !== undefined ? saved.majorOn : true;
+		const minorSize = saved.minorSize || '10';
+		const majorSize = saved.majorSize || '50';
+
+		const overlay = document.createElement('div');
+		overlay.className = 'table-dialog-overlay';
+		overlay.id = 'svgdebug-dialog-overlay';
+		overlay.innerHTML = `
+			<div class="help-dialog">
+				<h3>Insert SVG Debug Overlay</h3>
+				<div class="help-subtitle">Configure grid layers for the debug overlay</div>
+				<div class="help-attr-list">
+					<div class="help-attr-row">
+						<input type="checkbox" id="svgdebug-minor-on" ${minorOn ? 'checked' : ''}>
+						<span class="attr-name">Minor grid</span>
+						<input type="text" id="svgdebug-minor-size" value="${minorSize}" placeholder="10" style="width:60px;">
+						<span style="color:#888;font-size:11px;margin-left:4px;">units</span>
+					</div>
+					<div class="help-attr-row">
+						<input type="checkbox" id="svgdebug-major-on" ${majorOn ? 'checked' : ''}>
+						<span class="attr-name">Major grid</span>
+						<input type="text" id="svgdebug-major-size" value="${majorSize}" placeholder="50" style="width:60px;">
+						<span style="color:#888;font-size:11px;margin-left:4px;">units</span>
+					</div>
+				</div>
+				<div style="margin:10px 0;padding:8px;background:#2a2a2a;border-radius:4px;font-size:11px;color:#aaa;">
+					Inserts a <code style="color:#ce93d8;">&lt;g id="debug-layer"&gt;</code> with grid patterns, origin marker, and bounding box. Place inside an existing <code style="color:#ce93d8;">&lt;svg:svg&gt;</code> element.
+				</div>
+				<div class="help-dialog-buttons">
+					<button onclick="closeSvgDebugDialog()">Cancel</button>
+					<button onclick="insertSvgDebugFromDialog()" class="btn-primary">Insert</button>
+				</div>
+			</div>
+		`;
+		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
+
+		const handleKeydown = (e) => {
+			if (e.key === 'Escape') {
+				closeSvgDebugDialog();
+				document.removeEventListener('keydown', handleKeydown);
+			}
+		};
+		document.addEventListener('keydown', handleKeydown);
+	}
+
+	function closeSvgDebugDialog() {
+		const overlay = document.getElementById('svgdebug-dialog-overlay');
+		if (overlay) overlay.remove();
+	}
+
+	function insertSvgDebugFromDialog() {
+		const minorOn = document.getElementById('svgdebug-minor-on').checked;
+		const majorOn = document.getElementById('svgdebug-major-on').checked;
+		const minorSize = parseInt(document.getElementById('svgdebug-minor-size').value, 10) || 10;
+		const majorSize = parseInt(document.getElementById('svgdebug-major-size').value, 10) || 50;
+
+		saveHelpSettings('svgdebug', { minorOn, majorOn, minorSize: String(minorSize), majorSize: String(majorSize) });
+
+		let defs = '';
+		let rects = '';
+
+		if (minorOn) {
+			defs += `\n      <pattern id="debug-grid-minor" width="${minorSize}" height="${minorSize}" patternUnits="userSpaceOnUse">` +
+				`\n          <path d="M ${minorSize} 0 L 0 0 0 ${minorSize}" fill="none" stroke="rgba(255,0,0,0.2)" stroke-width="0.8"/>` +
+				`\n      </pattern>`;
+			rects += `\n      <rect width="100%" height="100%" fill="url(#debug-grid-minor)"/>`;
+		}
+
+		if (majorOn) {
+			defs += `\n      <pattern id="debug-grid-major" width="${majorSize}" height="${majorSize}" patternUnits="userSpaceOnUse">` +
+				`\n          <path d="M ${majorSize} 0 L 0 0 0 ${majorSize}" fill="none" stroke="rgba(255,0,0,0.5)" stroke-width="1.5"/>` +
+				`\n      </pattern>`;
+			rects += `\n      <rect width="100%" height="100%" fill="url(#debug-grid-major)"/>`;
+		}
+
+		if (!minorOn && !majorOn) {
+			alert('Select at least one grid layer.');
+			return;
+		}
+
+		const snippet = `<g id="debug-layer" opacity="0.6">
+  <defs>${defs}
+  </defs>${rects}
+  <rect x="0" y="0" width="4" height="4" fill="red" stroke="white" stroke-width="0.5"/>
+  <text x="5" y="5" font-size="4" fill="red" font-family="monospace">0,0</text>
+  <rect x="0" y="0" width="100%" height="100%" fill="none" stroke="magenta" stroke-width="1" stroke-dasharray="2,1"/>
+</g>`;
+
+		const textarea = document.getElementById('xslInput');
+		insertAtCursor(textarea, snippet);
+		closeSvgDebugDialog();
 	}
 
 	// ===== CONTAINER BUILDER DIALOG =====
@@ -4029,14 +4922,15 @@ function evaluateAVT(template, dataContext) {
     });
 }
 
+// DOM Node type constants reference: https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeType
 function processSvgNode(xmlNode, dataContext) {
-    // Text nodes — return as-is
-    if (xmlNode.nodeType === 3) {
+    // Text nodes and CDATA sections — return as-is
+    if (xmlNode.nodeType === Node.TEXT_NODE || xmlNode.nodeType === Node.CDATA_SECTION_NODE) {
         const text = xmlNode.textContent;
         if (/^\s*$/.test(text) && text.includes('\n')) return null;
         return document.createTextNode(text);
     }
-    if (xmlNode.nodeType === 8) return null; // comments
+    if (xmlNode.nodeType === Node.COMMENT_NODE) return null;
 
     const ln = xmlNode.localName;
     const ns = xmlNode.namespaceURI;
@@ -4054,7 +4948,7 @@ function processSvgNode(xmlNode, dataContext) {
                 const nodeName = c.localName || c.nodeName.split(':').pop();
                 if (nodeName === 'value-of') {
                     attrValue += evaluateXPath(c.getAttribute('select'), dataContext);
-                } else if (c.nodeType === 3) {
+                } else if (c.nodeType === Node.TEXT_NODE || c.nodeType === Node.CDATA_SECTION_NODE) {
                     attrValue += c.textContent;
                 }
             });
@@ -4098,11 +4992,24 @@ function processSvgNode(xmlNode, dataContext) {
     const el = document.createElementNS(svgNS, ln);
 
     // Copy all attributes (evaluate AVTs where present)
+    const SVG_LENGTH_ATTRS = new Set(['width', 'height', 'x', 'y', 'cx', 'cy', 'r', 'rx', 'ry']);
+    const SVG_INVALID_LENGTHS = new Set(['auto', 'inherit', 'initial', 'unset', 'scale-to-fit', 'scale-down-to-fit']);
     for (let i = 0; i < xmlNode.attributes.length; i++) {
         const attr = xmlNode.attributes[i];
-        if (!attr.name.startsWith('xmlns')) {
-            el.setAttribute(attr.name, evaluateAVT(attr.value, dataContext));
+        if (attr.name.startsWith('xmlns')) continue;
+        const val = evaluateAVT(attr.value, dataContext);
+        if (SVG_LENGTH_ATTRS.has(attr.name) && SVG_INVALID_LENGTHS.has(val.toLowerCase().trim())) {
+            let sourceHint = '';
+            let node = xmlNode;
+            while (node && node.nodeType === Node.ELEMENT_NODE) {
+                const id = node.getAttribute('id');
+                if (id) { sourceHint = ` (nearest id="${id}" on <${node.localName}>)`; break; }
+                node = node.parentNode;
+            }
+            console.warn(`SVG warning: <${ln}> attribute ${attr.name}="${val}" is not a valid SVG length — skipped.${sourceHint}`);
+            continue;
         }
+        el.setAttribute(attr.name, val);
     }
 
     // Recurse into children
@@ -4119,8 +5026,8 @@ function processSvgNode(xmlNode, dataContext) {
 }
 
 function mapToHtml(xmlNode, dataContext) {
-    // Handle text nodes
-    if (xmlNode.nodeType === 3) {
+    // Handle text nodes and CDATA sections
+    if (xmlNode.nodeType === Node.TEXT_NODE || xmlNode.nodeType === Node.CDATA_SECTION_NODE) {
         const text = xmlNode.textContent;
         // Skip whitespace-only text nodes that contain newlines (XML formatting/indentation)
         // This prevents unwanted gaps between inline-block elements like inline-container
@@ -4130,8 +5037,7 @@ function mapToHtml(xmlNode, dataContext) {
         return document.createTextNode(text);
     }
 
-    // Skip comment nodes (nodeType 8)
-    if (xmlNode.nodeType === 8) return null;
+    if (xmlNode.nodeType === Node.COMMENT_NODE) return null;
 
     const ln = xmlNode.localName;
     const ns = xmlNode.namespaceURI;
@@ -4305,8 +5211,13 @@ function mapToHtml(xmlNode, dataContext) {
                             // xsl:with-param select="xpath"
                             params[paramName] = evaluateXPath(selectAttr, dataContext);
                         } else {
-                            // xsl:with-param with text content
-                            params[paramName] = child.textContent.trim();
+                            // xsl:with-param with inline content — render children to evaluate XSL logic
+                            const frag = document.createDocumentFragment();
+                            Array.from(child.childNodes).forEach(c => {
+                                const res = mapToHtml(c, dataContext);
+                                if (res instanceof Node) frag.appendChild(res);
+                            });
+                            params[paramName] = frag.textContent.trim();
                         }
                     }
                 });
@@ -4326,6 +5237,34 @@ function mapToHtml(xmlNode, dataContext) {
                 err.innerText = `[Template "${name}" Not Found]`;
                 return err;
             }
+        }
+
+        if (ln === "param") {
+            const paramName = xmlNode.getAttribute('name');
+            // Only set default if not already provided by with-param
+            let alreadyProvided = false;
+            let ctx = dataContext;
+            while (ctx) {
+                if (ctx._params && ctx._params[paramName] !== undefined) { alreadyProvided = true; break; }
+                ctx = ctx._xmlContext;
+            }
+            if (!alreadyProvided) {
+                const selectAttr = xmlNode.getAttribute('select');
+                let paramValue;
+                if (selectAttr) {
+                    paramValue = evaluateXPath(selectAttr, dataContext);
+                } else {
+                    const frag = document.createDocumentFragment();
+                    Array.from(xmlNode.childNodes).forEach(c => {
+                        const res = mapToHtml(c, dataContext);
+                        if (res instanceof Node) frag.appendChild(res);
+                    });
+                    paramValue = frag.textContent;
+                }
+                if (!dataContext._params) dataContext._params = {};
+                dataContext._params[paramName] = paramValue;
+            }
+            return null;
         }
 
         if (ln === "variable") {
@@ -4358,7 +5297,7 @@ function mapToHtml(xmlNode, dataContext) {
                 const nodeName = c.localName || c.nodeName.split(':').pop();
                 if (nodeName === "value-of") {
                     attrValue += evaluateXPath(c.getAttribute('select'), dataContext);
-                } else if (c.nodeType === 3) {
+                } else if (c.nodeType === Node.TEXT_NODE || c.nodeType === Node.CDATA_SECTION_NODE) {
                     attrValue += c.textContent;
                 }
             });
@@ -4455,7 +5394,18 @@ function mapToHtml(xmlNode, dataContext) {
         'block-container': 'div'
     };
 
+    const W001_EXCLUDE = ['flow'];
+    if (!tagMap[ln] && xmlNode.namespaceURI === 'http://www.w3.org/1999/XSL/Format' && !W001_EXCLUDE.includes(ln)) {
+        unsupportedFoElements.add(ln);
+    }
     const el = document.createElement(tagMap[ln] || 'div');
+
+    // Propagate source ID from XML to HTML for source mapping
+    const sid = xmlNode.getAttribute('__sid');
+    if (sid !== null) {
+        el.dataset.sourceId = sid;
+        el.title = 'fo:' + ln;
+    }
 
     // Check for page breaks (applies to fo:block elements)
     let pageBreakBefore = false;
@@ -4494,6 +5444,16 @@ function mapToHtml(xmlNode, dataContext) {
         for (let [foAttr, jsProp] of Object.entries(SUPPORTED_FO_STYLES)) {
             const val = xmlNode.getAttribute(foAttr);
             if (val) el.style[jsProp] = evaluateAVT(val, dataContext);
+            // Handle FO compound property qualifiers: .fixed, .minimum, .maximum, .optimum
+            // e.g. block-progression-dimension.fixed="15mm" → height: 15mm
+            //       block-progression-dimension.minimum="10mm" → minHeight: 10mm
+            for (const [suffix, prefix] of [['.fixed',''], ['.optimum',''], ['.minimum','min'], ['.maximum','max']]) {
+                const qualVal = xmlNode.getAttribute(foAttr + suffix);
+                if (qualVal) {
+                    const cssProp = prefix ? prefix + jsProp[0].toUpperCase() + jsProp.slice(1) : jsProp;
+                    el.style[cssProp] = evaluateAVT(qualVal, dataContext);
+                }
+            }
         }
 
         // 3. Special Case: display-align (vertical alignment for block containers)
@@ -4548,7 +5508,7 @@ function mapToHtml(xmlNode, dataContext) {
         }
 
         if (ln === 'instream-foreign-object') {
-            const foreignChild = Array.from(xmlNode.childNodes).find(c => c.nodeType === 1);
+            const foreignChild = Array.from(xmlNode.childNodes).find(c => c.nodeType === Node.ELEMENT_NODE);
             if (foreignChild) {
                 return processSvgNode(foreignChild, dataContext);
             }
@@ -5212,8 +6172,6 @@ function addRegionAfter() {
 }
 
 // --- Phase 3: Body Elements ---
-
-const LOREM_IPSUM = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.';
 
 function addBlock() {
     const body = layoutElements.regionBody;
@@ -6224,6 +7182,267 @@ function removeSelectedElement() {
     }
     layoutCanvas.discardActiveObject();
     onLayoutSelectionCleared();
+}
+
+// ===== XSL ANALYSIS =====
+
+function analyzeXsl(xslDoc) {
+	const findings = [];
+
+	// W002: column-count on region-body
+	const regionBodies = xslDoc.getElementsByTagNameNS("*", "region-body");
+	Array.from(regionBodies).forEach(rb => {
+		const colCount = rb.getAttribute('column-count');
+		if (colCount && parseInt(colCount) > 1) {
+			findings.push({
+				id: 'W002', severity: 'warning',
+				title: 'column-count not supported',
+				detail: `region-body specifies column-count="${colCount}". The viewer renders single-column only.`
+			});
+		}
+	});
+
+	// W003: reference-orientation
+	const allElements = xslDoc.getElementsByTagNameNS("*", "*");
+	Array.from(allElements).forEach(el => {
+		const refOr = el.getAttribute('reference-orientation');
+		if (refOr && refOr !== '0') {
+			const ln = el.localName;
+			findings.push({
+				id: 'W003', severity: 'warning',
+				title: 'reference-orientation not supported',
+				detail: `fo:${ln} specifies reference-orientation="${refOr}". The viewer ignores rotation.`
+			});
+		}
+	});
+
+	// W004: writing-mode on page masters
+	const pageMasterEls = xslDoc.getElementsByTagNameNS("*", "simple-page-master");
+	Array.from(pageMasterEls).forEach(pm => {
+		const wm = pm.getAttribute('writing-mode');
+		if (wm && wm !== 'lr-tb' && wm !== 'lr') {
+			findings.push({
+				id: 'W004', severity: 'warning',
+				title: 'writing-mode not supported',
+				detail: `Page master "${pm.getAttribute('master-name') || '(unnamed)'}" specifies writing-mode="${wm}". The viewer uses lr-tb only.`
+			});
+		}
+	});
+
+	// W005: conditional-page-master-reference
+	const conditionalRefs = xslDoc.getElementsByTagNameNS("*", "conditional-page-master-reference");
+	if (conditionalRefs.length > 0) {
+		const positions = Array.from(conditionalRefs).map(r => r.getAttribute('page-position') || 'any');
+		const hasOddEven = positions.some(p => p === 'odd' || p === 'even');
+		const supportedPositions = positions.filter(p => ['first', 'rest', 'last', 'any'].includes(p));
+		if (hasOddEven) {
+			findings.push({
+				id: 'W005', severity: 'warning',
+				title: 'Odd/even page masters not supported',
+				detail: `Found ${conditionalRefs.length} conditional-page-master-reference element(s). Odd/even page-position values are not supported; first/rest/last are supported.`
+			});
+		} else {
+			findings.push({
+				id: 'W005', severity: 'info',
+				title: 'Conditional page masters supported',
+				detail: `Found ${conditionalRefs.length} conditional-page-master-reference element(s) with positions: ${[...new Set(supportedPositions)].join(', ')}. These are fully supported.`
+			});
+		}
+	}
+
+	// I001: Custom region names
+	Array.from(pageMasterEls).forEach(pm => {
+		const masterName = pm.getAttribute('master-name') || '(unnamed)';
+		const rb = pm.getElementsByTagNameNS("*", "region-before")[0];
+		const ra = pm.getElementsByTagNameNS("*", "region-after")[0];
+		if (rb) {
+			const rn = rb.getAttribute('region-name');
+			if (rn && rn !== 'xsl-region-before') {
+				findings.push({
+					id: 'I001', severity: 'info',
+					title: `Custom region name: ${rn}`,
+					detail: `region-before in master "${masterName}" uses custom name "${rn}" (resolved to xsl-region-before).`
+				});
+			}
+		}
+		if (ra) {
+			const rn = ra.getAttribute('region-name');
+			if (rn && rn !== 'xsl-region-after') {
+				findings.push({
+					id: 'I001', severity: 'info',
+					title: `Custom region name: ${rn}`,
+					detail: `region-after in master "${masterName}" uses custom name "${rn}" (resolved to xsl-region-after).`
+				});
+			}
+		}
+	});
+
+	// I002: Multiple page masters
+	if (pageMasterEls.length > 1) {
+		findings.push({
+			id: 'I002', severity: 'info',
+			title: 'Multiple page masters',
+			detail: `Template defines ${pageMasterEls.length} simple-page-master elements with potentially different dimensions.`
+		});
+	}
+
+	// I003: page-sequence-master present
+	const psmEls = xslDoc.getElementsByTagNameNS("*", "page-sequence-master");
+	if (psmEls.length > 0) {
+		findings.push({
+			id: 'I003', severity: 'info',
+			title: 'page-sequence-master present',
+			detail: `Found ${psmEls.length} page-sequence-master element(s) providing conditional page master selection.`
+		});
+	}
+
+	// I004: External resource references
+	const graphics = xslDoc.getElementsByTagNameNS("*", "external-graphic");
+	Array.from(graphics).forEach(g => {
+		const src = g.getAttribute('src') || '';
+		if (/https?:\/\//i.test(src)) {
+			findings.push({
+				id: 'I004', severity: 'info',
+				title: 'External resource reference',
+				detail: `fo:external-graphic references external URL: ${src.substring(0, 80)}${src.length > 80 ? '...' : ''}`
+			});
+		}
+	});
+
+	return findings;
+}
+
+function updateAnalysisButton(findings) {
+	const btn = document.getElementById('analysis-btn');
+	if (!btn) return;
+
+	const warnings = findings.filter(f => f.severity === 'warning');
+	const infos = findings.filter(f => f.severity === 'info');
+	const total = findings.length;
+
+	// Remove any existing badge
+	const existingBadge = btn.querySelector('.analysis-badge');
+	if (existingBadge) existingBadge.remove();
+
+	if (total === 0) {
+		// Clean state — green tint
+		btn.style.background = '#2e7d32';
+		btn.style.color = 'white';
+		btn.style.cursor = 'pointer';
+		btn.disabled = false;
+		btn.title = 'No issues found';
+	} else {
+		// Findings — amber if warnings, blue-ish if info only
+		if (warnings.length > 0) {
+			btn.style.background = '#e65100';
+			btn.style.color = 'white';
+		} else {
+			btn.style.background = '#1565c0';
+			btn.style.color = 'white';
+		}
+		btn.style.cursor = 'pointer';
+		btn.disabled = false;
+		btn.title = `${warnings.length} warning(s), ${infos.length} info(s)`;
+
+		// Add badge
+		const badge = document.createElement('span');
+		badge.className = 'analysis-badge';
+		badge.textContent = total;
+		btn.appendChild(badge);
+	}
+}
+
+function showAnalysisDialog() {
+	const findings = currentAnalysisFindings;
+
+	// Close existing dialog if any
+	const existing = document.getElementById('analysis-dialog-overlay');
+	if (existing) existing.remove();
+
+	const warnings = findings.filter(f => f.severity === 'warning');
+	const infos = findings.filter(f => f.severity === 'info');
+
+	const overlay = document.createElement('div');
+	overlay.className = 'table-dialog-overlay';
+	overlay.id = 'analysis-dialog-overlay';
+
+	let findingsHtml = '';
+
+	if (findings.length === 0) {
+		findingsHtml = '<div style="text-align:center; padding:20px; color:#888;">No issues found. Template looks clean.</div>';
+	} else {
+		if (warnings.length > 0) {
+			findingsHtml += '<div class="analysis-group-header">Warnings</div>';
+			warnings.forEach(f => {
+				findingsHtml += `
+					<div class="analysis-finding warning">
+						<div class="analysis-finding-header">
+							<i class="fa-solid fa-triangle-exclamation"></i>
+							<span class="analysis-finding-id">${f.id}</span>
+							<span class="analysis-finding-title">${f.title}</span>
+						</div>
+						<div class="analysis-finding-detail">${f.detail}</div>
+					</div>`;
+			});
+		}
+		if (infos.length > 0) {
+			findingsHtml += '<div class="analysis-group-header">Info</div>';
+			infos.forEach(f => {
+				findingsHtml += `
+					<div class="analysis-finding info">
+						<div class="analysis-finding-header">
+							<i class="fa-solid fa-circle-info"></i>
+							<span class="analysis-finding-id">${f.id}</span>
+							<span class="analysis-finding-title">${f.title}</span>
+						</div>
+						<div class="analysis-finding-detail">${f.detail}</div>
+					</div>`;
+			});
+		}
+	}
+
+	overlay.innerHTML = `
+		<div class="analysis-dialog">
+			<h3><i class="fa-solid fa-shield-halved" style="margin-right:8px;"></i>XSL Analysis</h3>
+			<div class="analysis-subtitle">${warnings.length} warning(s), ${infos.length} info finding(s)</div>
+			<div class="analysis-findings">${findingsHtml}</div>
+			<div style="margin-top:15px; display:flex; gap:10px; justify-content:flex-end;">
+				<button onclick="copyAnalysisFindings()">Copy</button>
+				<button onclick="closeAnalysisDialog()" class="btn-primary">Close</button>
+			</div>
+		</div>
+	`;
+	document.body.appendChild(overlay);
+
+	// Close on Escape
+	overlay.addEventListener('keydown', e => {
+		if (e.key === 'Escape') closeAnalysisDialog();
+	});
+	// Close on backdrop click
+	overlay.addEventListener('click', e => {
+		if (e.target === overlay) closeAnalysisDialog();
+	});
+	// Focus the close button
+	overlay.querySelector('.btn-primary')?.focus();
+}
+
+function closeAnalysisDialog() {
+	const overlay = document.getElementById('analysis-dialog-overlay');
+	if (overlay) overlay.remove();
+}
+
+function copyAnalysisFindings() {
+	const lines = currentAnalysisFindings.map(f =>
+		`[${f.severity.toUpperCase()}] ${f.id}: ${f.title}\n  ${f.detail}`
+	);
+	const text = lines.length > 0 ? lines.join('\n\n') : 'No findings.';
+	navigator.clipboard.writeText(text).then(() => {
+		const btn = document.querySelector('#analysis-dialog-overlay button');
+		if (btn && btn.textContent === 'Copy') {
+			btn.textContent = 'Copied!';
+			setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+		}
+	});
 }
 </script>
 </body>

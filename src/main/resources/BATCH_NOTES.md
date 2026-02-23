@@ -1,263 +1,135 @@
-It sounds like you’re hitting a classic performance bottleneck with Apache FOP (Formatting Objects Processor). If you are rebuilding the `FopFactory` and re-parsing your XSLT stylesheet for every single document, you are essentially "paying the tax" for initialization over and over again.
+# SFTP
 
-In the world of XSL-FO, the stylesheet compilation is often more "expensive" (in terms of CPU and memory) than the actual data transformation.
+## Problem Statement
 
-### The Problem: Redundant Overhead
-
-Every time you initialize a new transformation, the system has to:
-
-1. **Parse the XSLT:** Convert the XML-based stylesheet into a compiled `Templates` object.
-2. **Initialize the FOP Engine:** Load fonts, configuration, and layout engines.
-3. **Create the Transformer:** Set up the bridge between your XML and the FO output.
+This chat encompasses two aspects of the same task.  I need to write a Java Spring Batch process that will access an SFTP site/location and download files if present, it would then upload them to amazon S3.  While I am interested in ideas around the basic job structure, I am well versed in Spring Batch.  I explain that in order to get to the heart of my question:  I'd like to wrap the SFTP functionality into a better service interface (i.e. true abstract interface with a concrete implementation).  Here are my upfront thoughts/concerns: 1) I believe Spring has a "template" named class/interface for SFTP already especially centered around the concept of a "session".  While I like that approach, I looked into the interface and the method names and approach just didn't feel "natural" to me (I could be convinced otherwise, but that was my knee jerk reaction). 2) How might I use a "session" object in a multi step spring batch job?  my concern is that spring will want to persist the object to the backing database and I want to avoid that if possible. (and any related concerns you might help me identify). 3) In implementing similar projects in the past, I like the idea of a "request context" that hides the "session" from the client code - not sure what your thoughts are on that?  I'll stop here and we'll see where this discussion takes us.
 
 ---
 
-### The Solution: "Compile Once, Run Many"
+It sounds like you’re looking to move away from the "leaky abstractions" that often come with low-level integration libraries. You want a clean, domain-specific service that handles the "how" of SFTP so your Spring Batch steps can focus on the "what."
 
-To optimize this, you should move from a linear "One-and-Done" approach to a **Reusable Architecture**. Here is how to structure it:
+Here is a breakdown of how to address those architectural concerns while keeping your Batch job lean.
 
-| Component | Strategy | Benefit |
-| --- | --- | --- |
-| **`FopFactory`** | **Singleton / Static** | Fonts and config are loaded once for the life of the application. |
-| **`Templates` Object** | **Cache it** | Pre-compiles the XSLT. This is thread-safe and can be reused to create many `Transformer` instances. |
-| **`Transformer`** | **New per Doc** | The transformer itself is *not* thread-safe, so create a fresh one from your cached `Templates` for each XML model. |
+### 1. The "Natural" Service Interface
 
-### How it looks in Java (Conceptual)
+You’re likely thinking of `SftpRemoteFileTemplate`. You’re right—it’s designed to be a Swiss Army knife, which makes it feel cluttered. For a Batch process, you usually only need a few high-level verbs.
 
-Instead of calling `TransformerFactory.newTransformer(Source)`, you use the `Templates` workflow:
+Instead of exposing sessions, I recommend a **Service Wrapper** that uses the Template internally but exposes a functional API:
 
 ```java
-// 1. Do this ONCE at startup (Heavy lifting)
-TransformerFactory factory = TransformerFactory.newInstance();
-Templates cachedStylesheet = factory.newTemplates(new StreamSource(new File("template.xsl")));
-FopFactory fopFactory = FopFactory.newInstance(new File("fop.xconf").toURI());
-
-// 2. Do this for EVERY document (Fast)
-FOUserAgent foUserAgent = fopFactory.newFOUserAgent();
-Transformer transformer = cachedStylesheet.newTransformer(); // Uses the pre-compiled cache
-// ... proceed with transformation
-
-```
-
-### Why this matters
-
-* **Speed:** Reusing a `Templates` object can make your document generation **5x to 10x faster** because you skip the heavy XSL parsing logic.
-* **Memory:** You avoid the "garbage collection spikes" caused by constantly loading and discarding large font maps and stylesheet trees.
-
----
-
-You are currently rebuilding the "factory" for every single widget when you should be running an assembly line.
-
-In Apache FOP, the **initialization cost** is often higher than the **processing cost**. If you are processing batches of hundreds or thousands of documents, you are likely spending 60–80% of your time just setting up the environment rather than actually rendering PDFs.
-
-Here is the "better way" to structure your batch processing:
-
----
-
-### 1. The "Singleton" Strategy
-
-You need to separate the **Static** (things that don't change) from the **Dynamic** (your XML data).
-
-* **`FopFactory` (The Heavyweight):** This object manages fonts and configuration. It is designed to be a **singleton**. You should create this once when your application starts and reuse it for every document in the batch.
-* **`Templates` (The Pre-Compiled XSL):** Instead of passing your `.xsl` file directly to a `Transformer` every time, you should "compile" it into a `javax.xml.transform.Templates` object. This is thread-safe and stores the parsed logic of your XSLT in memory.
-
-### 2. The Optimized Workflow
-
-Instead of a "Start → Load XSL → Load XML → Generate → Stop" loop, use this architecture:
-
-| Phase | Object | Frequency | Purpose |
-| --- | --- | --- | --- |
-| **Setup** | `FopFactory` | **Once** per batch | Loads fonts, hyphenation, and global config. |
-| **Setup** | `Templates` | **Once** per batch | Pre-compiles your `.xsl` into a reusable binary form. |
-| **Process** | `Transformer` | **Once per XML** | Created *from* the `Templates` object. Very fast to spin up. |
-| **Process** | `FOUserAgent` | **Once per XML** | Handles metadata (Title, Author) for that specific PDF. |
-
----
-
-### 3. A Visual Comparison
-
-**Current Approach (Slow):**
-`[Start] -> [Parse XSL] -> [Load Fonts] -> [Transform XML] -> [End]`
-*(Repeat 1,000 times)*
-
-**Optimized Approach (Fast):**
-`[Start] -> [Parse XSL Once] -> [Load Fonts Once]`
-`  -> [Transform XML 1]`
-`  -> [Transform XML 2]`
-`  -> [Transform XML 3] ...`
-`[End]`
-
----
-
-### 4. Implementation Tips
-
-* **Reuse the `FopFactory`:** If you are using a `fop.xconf` file, loading it once will save massive amounts of I/O time.
-* **Thread Safety:** If you want to go even faster, the `Templates` object and `FopFactory` are **thread-safe**. This means you can process multiple XML files at the same time (parallel processing) using a single cached template.
-* **Memory Management:** By reusing these objects, you reduce the pressure on the Java Garbage Collector, which often causes those "stuttering" pauses in large batch jobs.
-
-### Next Step
-
-To give you a concrete example, **can you confirm if you are using a Java-based environment** (like a Spring Boot app or a standalone .jar) to run these?
-
-In a "Classic" Spring XML or early Java-Config environment with Spring Batch, your performance bottleneck is almost certainly occurring inside the `ItemProcessor`.
-
-By default, many developers implement the processor by creating a new `FopFactory` and a new `Transformer` inside the `process()` method. For a batch of 10,000 records, you are re-parsing the XSLT and re-loading fonts 10,000 times.
-
-Here is the optimized pattern for Spring Batch:
-
-### 1. The Architectural Shift
-
-You want to move the "heavy" objects into the Spring Context as **Singletons**.
-
-* **`FopFactory`**: Thread-safe. Create once, use for the life of the JVM.
-* **`Templates`**: This is the JAXP "compiled" version of your XSL. It is thread-safe and should be cached.
-* **`Transformer`**: **NOT thread-safe.** Create a fresh one from the `Templates` object for every single record. (This is very fast).
-
-### 2. Implementation in Spring Batch
-
-You should define your FOP infrastructure in your configuration class (or XML) so it only initializes once.
-
-#### Java Configuration Example
-
-```java
-@Configuration
-public class FopConfig {
-
-    @Bean
-    public FopFactory fopFactory() throws Exception {
-        // Reuse this for every document to avoid re-loading fonts/configs
-        return FopFactory.newInstance(new File("src/main/resources/fop.xconf").toURI());
-    }
-
-    @Bean
-    public Templates cachedXslTemplate() throws Exception {
-        TransformerFactory factory = TransformerFactory.newInstance();
-        // Compile the XSL once here
-        return factory.newTemplates(new StreamSource(new File("src/main/resources/template.xsl")));
-    }
+public interface FileTransferService {
+    // Returns a list of metadata/filenames available
+    List<String> listFiles(String remotePath, Pattern pattern);
+    
+    // Handles the stream directly to avoid local disk persistence if desired
+    void downloadToStream(String remoteFilePath, OutputStream target);
+    
+    // Move/Archive after processing
+    void archiveFile(String sourcePath, String destPath);
 }
 
 ```
 
-#### The Optimized ItemProcessor
+**Why this feels better:** It abstracts the `Session` entirely. The implementation handles opening/closing, so the Batch `Tasklet` or `ItemReader` doesn't have to manage the connection state.
 
-Now, inject those singletons into your processor. The `process()` method becomes extremely "thin" and fast.
+---
+
+### 2. The Session Persistence Problem
+
+You’re right to be wary. Spring Batch **will** try to serialize anything in the `ExecutionContext` to the metadata tables (Job Repository).
+
+* **The Rule:** Never put a `Session`, `Connection`, or `InputStream` into the `ExecutionContext`.
+* **The Solution:** Only persist **Strings** or **Primitives**. Store the "Remote File Path" or "Sequence Number" in the context. Let your `FileTransferService` (which is a Singleton Bean) recreate or pull a session from a pool whenever a method is called.
+* **Spring Integration Tip:** Use `CachingSessionFactory`. It keeps connections alive in the background without you needing to pass a "live" object between steps.
+
+---
+
+### 3. The "Request Context" vs. Stateless Service
+
+Using a "Request Context" (like a ThreadLocal or a DTO passed through) is useful if your SFTP credentials change per job run. However, for a standard batch job, a **Stateless Service** is often cleaner.
+
+If you need to maintain state across steps (e.g., "I downloaded File A, now I need to move File A"), use the `JobExecutionContext` to pass the **path**, not the **session**.
+
+| Aspect | Request Context Approach | Stateless Service Approach |
+| --- | --- | --- |
+| **State Storage** | Custom Context Object | Spring Batch `ExecutionContext` |
+| **Session Mgmt** | Tied to Context lifecycle | Tied to Method call (via Pool) |
+| **Complexity** | High (Requires cleanup) | Low (Standard Spring) |
+
+---
+
+### 4. Proposed Job Structure
+
+Since you're downloading from SFTP and uploading to S3, you have two main architectural paths:
+
+1. **The Staging Approach (Two Steps):**
+
+* **Step 1 (Tasklet):** Download files from SFTP to a temporary local `/tmp` directory.
+
+* **Step 2 (Chunk-oriented):** Read from local disk, process, and write to S3.
+* *Benefit:* Easy to restart. If S3 fails, you don't have to re-download from SFTP.
+
+2. **The Streaming Approach (One Step):**
+
+* **ItemReader:** Lists files on SFTP.
+* **ItemProcessor:** Downloads the file into memory (or a temporary buffer).
+* **ItemWriter:** Streams the data to S3.
+* *Benefit:* Fast, no disk I/O. *Risk:* Harder to manage state if the connection drops mid-stream.
+
+---
+
+### Potential "Identify" Concern: Large Files
+
+If you are moving large files, streaming directly from SFTP to S3 (via `S3Resource` or `TransferManager`) is elegant, but it makes the "Session" management trickier if a timeout occurs. If your files are >100MB, I’d strongly suggest the **Staging Approach** to keep the SFTP session short and sweet.
+
+**Would you like me to sketch out a concrete implementation of the `FileTransferService` using the `CachingSessionFactory` to show how the session remains hidden?**
+
+That is a fair point. Let’s stick to a linear path. Our first "checkpoint" is solving the **Session/Interface abstraction**.
+
+The goal here is to use Spring's `CachingSessionFactory` to handle the "heavy lifting" (connection pooling, heartbeats, and cleanup) while keeping your `FileTransferService` stateless and clean.
+
+### The Concrete Implementation
+
+This implementation uses the `SftpRemoteFileTemplate`. Even if the template feels "unnatural," wrapping it here allows you to keep that complexity out of your Spring Batch logic.
 
 ```java
-@Component
-public class PdfItemProcessor implements ItemProcessor<MyDataModel, byte[]> {
+@Service
+public class SftpFileTransferService implements FileTransferService {
 
-    @Autowired
-    private FopFactory fopFactory;
+    private final SftpRemoteFileTemplate sftpTemplate;
 
-    @Autowired
-    private Templates cachedXslTemplate;
+    public SftpFileTransferService(DefaultSftpSessionFactory sessionFactory) {
+        // We wrap the factory in a CachingSessionFactory to manage connections
+        CachingSessionFactory<SftpClient.DirEntry> cachingFactory = 
+            new CachingSessionFactory<>(sessionFactory, 10);
+        cachingFactory.setSessionWaitTimeout(1000);
+        
+        this.sftpTemplate = new SftpRemoteFileTemplate(cachingFactory);
+    }
 
     @Override
-    public byte[] process(MyDataModel item) throws Exception {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        
-        // 1. Setup FOP (Fast - uses cached factory)
-        FOUserAgent foUserAgent = fopFactory.newFOUserAgent();
-        Fop fop = fopFactory.newFop(MimeConstants.MIME_PDF, foUserAgent, out);
-
-        // 2. Setup Transformer (Fast - uses pre-compiled Templates)
-        Transformer transformer = cachedXslTemplate.newTransformer();
-        
-        // 3. Perform the transformation
-        Source src = new StreamSource(new StringReader(item.toXml())); // Or your XML source
-        Result res = new SAXResult(fop.getDefaultHandler());
-        transformer.transform(src, res);
-
-        return out.toByteArray();
-    }
-}
-
-```
-
----
-
-### Key Performance Gains
-
-1. **Eliminate I/O:** You no longer read the `.xsl` file or `fop.xconf` from the disk for every record.
-2. **Avoid XSL Parsing:** Compiling XSL into a `Templates` object is the most CPU-intensive part of the pipeline. Doing it once at startup can reduce per-record time by **50-90%**.
-3. **Parallel Friendly:** Because `FopFactory` and `Templates` are thread-safe, you can easily set your Spring Batch step to use a `TaskExecutor` (multi-threading) without changing your FOP logic.
-
-### Quick Audit Checklist
-
-* **Check your `fop.xconf`:** Ensure `base` and `font-base` URIs are correct so they don't cause "file not found" retries.
-* **Check memory:** If you are generating massive PDFs, ensure you use `BufferedOutputStream` to keep the heap usage stable.
-* **Identity Transformer:** If your data is *already* in FO format (no XSL transformation needed), use an identity transformer instead of `newTemplates`.
-
-**Would you like me to show you how to set up the multi-threaded `TaskExecutor` in your Spring Batch step to take full advantage of this thread-safe setup?**
-
-That clarification makes perfect sense. In a web app environment, you might have a "Monthly Invoices" job using `invoice.xsl` and a "User Report" job using `report.xsl`.
-
-To handle this, you can move the template compilation into the **`Step` scope** or a **`JobListener`**. However, the most "Spring-like" way to do this while keeping it multi-thread safe is to use a **`Map` of Templates** or simply pass the specific `Templates` object into your Processor when the job starts.
-
-Here is how you can set up a high-performance, multi-threaded Step using a `TaskExecutor`.
-
-### 1. The Configuration (Multi-Threaded Step)
-
-We use a `ThreadPoolTaskExecutor` to allow Spring Batch to process multiple XML models in parallel. Since the `FopFactory` and `Templates` are thread-safe, they can be shared across all these threads without locking.
-
-```java
-@Configuration
-@EnableBatchProcessing
-public class BatchConfig {
-
-    @Autowired
-    private JobBuilderFactory jobBuilderFactory;
-
-    @Autowired
-    private StepBuilderFactory stepBuilderFactory;
-
-    // Define the thread pool
-    @Bean
-    public TaskExecutor taskExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(5); // Adjust based on your CPU cores
-        executor.setMaxPoolSize(10);
-        executor.setQueueCapacity(25);
-        executor.initialize();
-        return executor;
+    public List<String> listFiles(String remotePath) {
+        // execute() handles opening and closing the session automatically
+        return sftpTemplate.execute(session -> {
+            return Arrays.stream(session.list(remotePath))
+                .map(SftpClient.DirEntry::getFilename)
+                .filter(name -> !name.equals(".") && !name.equals(".."))
+                .collect(Collectors.toList());
+        });
     }
 
-    @Bean
-    public Step pdfGenerationStep(ItemReader reader, ItemProcessor processor, ItemWriter writer) {
-        return stepBuilderFactory.get("pdfGenerationStep")
-                .<MyDataModel, byte[]>chunk(10) // Process in chunks of 10
-                .reader(reader)
-                .processor(processor)
-                .writer(writer)
-                .taskExecutor(taskExecutor()) // This enables multi-threading!
-                .throttleLimit(5) // Max concurrent threads for this step
-                .build();
+    @Override
+    public void downloadToStream(String remoteFilePath, OutputStream target) {
+        sftpTemplate.get(remoteFilePath, inputStream -> {
+            StreamUtils.copy(inputStream, target);
+        });
     }
-}
 
-```
-
----
-
-### 2. Handling Different Templates (The Registry)
-
-Since you have different templates for different jobs, you can create a simple `TemplateCache` bean. This avoids re-compiling the XSL if a job is triggered multiple times on-demand.
-
-```java
-@Component
-public class XslTemplateRegistry {
-    private final Map<String, Templates> cache = new ConcurrentHashMap<>();
-    private final TransformerFactory factory = TransformerFactory.newInstance();
-
-    public Templates getTemplate(String xslPath) throws Exception {
-        // computeIfAbsent ensures we only compile the XSL once per path
-        return cache.computeIfAbsent(xslPath, path -> {
-            try {
-                return factory.newTemplates(new StreamSource(new File(path)));
-            } catch (TransformerConfigurationException e) {
-                throw new RuntimeException("Failed to compile XSL: " + path, e);
-            }
+    @Override
+    public void archiveFile(String sourcePath, String destPath) {
+        sftpTemplate.execute(session -> {
+            session.rename(sourcePath, destPath);
+            return null;
         });
     }
 }
@@ -266,44 +138,262 @@ public class XslTemplateRegistry {
 
 ---
 
-### 3. The Thread-Safe ItemProcessor
+### Why this addresses your concerns:
 
-Now, your processor just needs to know which template to use for the current job. You can pass the template path via **Job Parameters**.
+1. **Natural Verbs:** Your Batch code now calls `.listFiles()` or `.downloadToStream()`. It never sees a `Session`, a `Channel`, or even the `SftpRemoteFileTemplate`.
+
+2. **The "Session" Persistence:** Because the `FileTransferService` is a Spring Bean, you only pass the **String path** of the file into your `StepContribution` or `ExecutionContext`.
+
+* *Example:* Step 1 finds "data_123.csv" and puts that String in the `JobExecutionContext`.
+* Step 2 retrieves that String and calls `service.downloadToStream("data_123.csv", ...)`.
+* The `CachingSessionFactory` provides a live session on-demand, so nothing non-serializable ever touches the database.
+
+3. **Thread Safety:** The `SftpRemoteFileTemplate` is thread-safe, making this service compatible if you decide to use a `TaskExecutor` for multi-threaded steps later.
+
+---
+
+### Our Current "Linear" Checklist
+
+1. [x] **Abstraction:** Define a clean Service Interface and Concrete Impl.
+2. [ ] **Batch Integration:** How to trigger this service from a `Tasklet` or `ItemReader`.
+3. [ ] **S3 Transition:** How to pipe the `OutputStream` from this service into an S3 upload.
+4. [ ] **Error Handling:** Managing SFTP timeouts or missing files within the Batch lifecycle.
+
+**Would you like to move to point #2 and look at how a Tasklet would orchestrate the "List and Download" phase using this service?**
+
+Not quite yet.  I'm not well versed on the CachingSessionFactory.  Can you summarize how an SFTP connection is established and then presumably kept open and retrieved for later requests? I assume that "session" means it is kept open after authentication until we explicitly end/close the session?
+
+That is a crucial detail to nail down before we move into the Batch logic.
+
+In the world of SFTP (and the underlying SSH protocol), establishing a connection is "expensive" because it involves a multi-step handshake: TCP connection, SSH key exchange/validation, and finally authentication.
+
+The `CachingSessionFactory` is essentially a **Connection Pool** for your SFTP sessions. Here is the breakdown of how it manages those lifecycles:
+
+### 1. The "On-Demand" Establishment
+
+When your code calls `sftpTemplate.execute(...)`, the template asks the `CachingSessionFactory` for a session.
+
+* **If the pool is empty:** It uses the underlying `DefaultSftpSessionFactory` to perform the full handshake and login.
+* **If a session exists:** It grabs an idle one from the pool, performs a quick "Is this still alive?" check (usually a `noop` or `pwd` command), and hands it to the template.
+
+### 2. The "Hand-Back" (Not a Close)
+
+When the `sftpTemplate` method finishes (the lambda block ends), it calls `session.close()`.
+
+* **Crucial Distinction:** Because you are using a `CachingSessionFactory`, this `close()` call is intercepted. Instead of actually tearing down the SSH tunnel, the session is simply **marked as idle** and returned to the pool.
+* **Physical State:** The TCP connection and SSH authenticated state remain "Established" on the network.
+
+### 3. Eviction and Expiration
+
+The session stays open until one of three things happens:
+
+* **Idle Timeout:** If the session sits unused for a set period (configured on the factory), it is physically closed to save resources.
+* **Server-Side Kick:** The SFTP server times out the connection (e.g., a "MaxIdleTime" setting on the server). The next time the pool tries to use it, it will detect the death, discard it, and transparently create a new one.
+* **App Shutdown:** When the Spring Context closes, the pool destroys all active connections.
+
+### 4. Why this matters for Spring Batch
+
+In a Batch job, you might have a **Step 1** that lists 100 files and a **Step 2** that downloads them one by one.
+
+* **Without Caching:** You would perform 101 full SSH handshakes/logins. This is slow and can trigger rate-limiting on some SFTP servers.
+* **With Caching:** You perform **one** handshake. The session is used for the list, returned to the pool, and then immediately reused for the first download, second download, etc.
+
+---
+
+### Clarification on "Explicit" Closing
+
+You asked if we need to explicitly end/close the session. With this "Template + Caching Factory" pattern:
+
+* **You do NOT** call `close()` manually. The Template handles the "return to pool" logic.
+* **The Pool** handles the "physical disconnect" logic based on timeouts.
+
+### Our Updated Checklist
+
+1. [x] **Abstraction:** Define Service Interface and Concrete Impl.
+2. [x] **Session Lifecycle:** Understand `CachingSessionFactory` mechanics.
+3. [ ] **Batch Integration:** How to use the `FileTransferService` in a Tasklet/Reader.
+4. [ ] **S3 Transition:** Piping the SFTP stream to S3.
+5. [ ] **Error Handling:** Retries and timeouts.
+
+**Does that clear up the "magic" behind the session management, or should we look at how to configure specific timeouts (like `kex` or `socket` timeouts) before moving to the Batch Step?**
+
+I need to examine session management more closely to understand how to approach some "features".  Understandably, I think this discussion assumes the job will always hit the same sftp server with the same credentials.  Although this particular project **might** be limited to that, I would like to write the job in such a way that job parameters could be used to specify those sort of details.  How does the CachingSessionFactory support that scenario?  Do I need to clarify anything to help answer that?
+
+That is a perfect pivot. If you want your Job Parameters (e.g., `sftp.host`, `sftp.user`) to drive the connection, the standard "Singleton Bean" approach we just discussed won't work because a Singleton is wired at startup with a fixed configuration.
+
+To make the `CachingSessionFactory` dynamic based on Job Parameters, we need to leverage **Spring Batch Step Scope** and a **Factory of Factories** (or a Dynamic Cache).
+
+Here are the two ways to handle this:
+
+### Option A: The "Step-Scoped" Service (Simpler)
+
+If a single Job execution always talks to **one** specific server (defined by that job's parameters), we make the entire `FileTransferService` (and its Session Factory) **Step Scoped**.
+
+1. Spring creates a **new instance** of the Service for every Job run.
+2. The Service reads the `JobParameters` to configure the `DefaultSftpSessionFactory`.
+3. The `CachingSessionFactory` only lives for the duration of that Step/Job.
+
+**The Workflow:**
+
+* Job starts with parameters: `host=sftp.client-a.com`, `user=admin`.
+* Spring Batch instantiates the `FileTransferService`.
+* The Service connects, does its work, and when the Step ends, the scope is destroyed, and the connections are closed.
+
+### Option B: The "Delegating" Service (More Robust)
+
+If you have a single Job that might need to talk to **multiple** different SFTP servers within different steps, you use a **DelegatingSessionFactory**.
+
+You maintain a `Map<String, CachingSessionFactory>` inside your service. When a request comes in, you check the map for an existing pool for that host/user combo; if it doesn't exist, you create a new one on the fly.
+
+---
+
+### How "Option A" looks in code
+
+Since you mentioned being well-versed in Spring Batch, this is usually the cleanest "Batch-native" way:
+
+```java
+@Bean
+@StepScope // This is the magic sauce
+public FileTransferService sftpFileTransferService(
+    @Value("#{jobParameters['sftp.host']}") String host,
+    @Value("#{jobParameters['sftp.port']}") int port,
+    @Value("#{jobParameters['sftp.user']}") String user,
+    @Value("#{jobParameters['sftp.password']}") String password) {
+
+    // 1. Setup the raw connection details from Job Params
+    DefaultSftpSessionFactory factory = new DefaultSftpSessionFactory();
+    factory.setHost(host);
+    factory.setPort(port);
+    factory.setUser(user);
+    factory.setPassword(password);
+    factory.setAllowUnknownKeys(true);
+
+    // 2. Wrap it in the cache so the Step reuses the connection
+    CachingSessionFactory<SftpClient.DirEntry> cachingFactory = 
+        new CachingSessionFactory<>(factory, 5);
+
+    // 3. Return the service implementation
+    return new SftpFileTransferService(cachingFactory);
+}
+
+```
+
+### Why this addresses the "Dynamic" Concern
+
+* **Isolation:** Job A (Client 1) and Job B (Client 2) can run simultaneously. Because they have different `StepScope` contexts, they will have separate `CachingSessionFactory` instances and never cross wires.
+* **Cleanup:** When the Step finishes, the `StepScope` context is cleared. Spring will call the `destroy()` method on the `CachingSessionFactory`, physically closing the SSH sessions.
+* **No "Session" Leaks:** You are still passing Strings (paths) through your job, but the *logic* that powers those strings is now context-aware.
+
+---
+
+### Our Updated Checklist
+
+1. [x] **Abstraction:** Service Interface and Concrete Impl.
+2. [x] **Session Lifecycle:** `CachingSessionFactory` mechanics.
+3. [x] **Dynamic Configuration:** Using `@StepScope` and `JobParameters`.
+4. [ ] **Batch Integration:** Implementing the Tasklet/Reader logic.
+5. [ ] **S3 Transition:** Streaming to S3.
+6. [ ] **Error Handling:** Retries/Timeouts.
+
+**Does the `@StepScope` approach align with how you envisioned using Job Parameters, or do you have a use case where one Step needs to flip between different credentials mid-execution?**
+
+That is an excellent technical catch. Let’s untangle the relationship between **Bean Scope** and the **Job Repository (Database)**, as they are often confused but operate on different planes.
+
+### 1. Does Job/Step Scope = Execution Context?
+
+**No.** * **Spring Bean Scopes (`@JobScope`, `@StepScope`):** These live in the **Application Context** (Memory). They are essentially a "proxy" that Spring creates and destroys based on the lifecycle of the Job or Step.
+
+* **Execution Context (`JobExecutionContext`):** This is a **Map** that Spring Batch explicitly serializes to the **Database**.
+
+Putting your `FileTransferService` in `@JobScope` **does not** automatically put it in the database. It just means the same Java object (and its internal `CachingSessionFactory`) will live in memory for the duration of the entire Job.
+
+### 2. The Trade-offs: Job Scope vs. Step Scope
+
+| Feature | `@StepScope` | `@JobScope` |
+| --- | --- | --- |
+| **Lifecycle** | Created at Step Start / Destroyed at Step End. | Created at Job Start / Destroyed at Job End. |
+| **Connections** | If you have 3 Steps, you perform **3 logins**. | If you have 3 Steps, you perform **1 login** and reuse it. |
+| **Complexity** | Extremely safe; clean slate for every step. | Slightly more efficient; holds the SSH tunnel open longer. |
+
+### 3. "Reestablishing" the Connection
+
+If you use **`@StepScope`**:
+Yes, every Step will trigger the `CachingSessionFactory` to establish a new physical SSH connection (unless you've configured an external global pool, which we aren't doing here).
+
+* **Step 1 (Tasklet):** Connects -> Lists Files -> Closes Session.
+* **Step 2 (Chunk):** Connects -> Downloads -> Closes Session.
+
+If you use **`@JobScope`**:
+
+* **Step 1 (Tasklet):** Connects -> Lists Files -> Returns session to pool (keeps tunnel open).
+* **Step 2 (Chunk):** Pulls the *same* session from the pool -> Downloads -> Closes at the very end of the Job.
+
+### 4. My Recommendation: Use `@JobScope`
+
+Since your requirement is "same server/user per job," `@JobScope` is actually the "cleanest" fit. It allows you to authenticate once and carry that "warm" connection through your download and upload phases without the overhead of re-authenticating at every step boundary.
+
+**The Golden Rule remains intact:** As long as you don't try to `put("myService", service)` into the `ExecutionContext` map, Spring Batch will never try to persist it to the database. You simply `@Inject` or `@Autowired` the service into your Tasklet or Reader.
+
+---
+
+### Our Updated Checklist
+
+1. [x] **Abstraction:** Service Interface and Concrete Impl.
+2. [x] **Session Lifecycle:** `CachingSessionFactory` mechanics.
+3. [x] **Dynamic Configuration:** `@JobScope` for per-job credentials.
+4. [ ] **Batch Integration:** Implementing the Tasklet (The "Listing" phase).
+5. [ ] **S3 Transition:** Streaming to S3.
+6. [ ] **Error Handling:** Retries/Timeouts.
+
+**Ready to look at how we'd implement a "List Files" Tasklet that injects this `@JobScope` service and prepares the work for the next step?**
+
+It is a classic "the more you know, the more you realize you might have skipped a detail" moment. Reinforcing that boundary between the **Spring IoC Container** (where your Job-Scoped beans live) and the **Spring Batch JobRepository** (where your persistent state lives) is the key to a bug-free architecture here.
+
+Let’s look at the **Listing Tasklet**. Its primary responsibility is to query the SFTP server, identify the work to be done, and "seed" the `JobExecutionContext` so subsequent steps know what to process.
+
+### The "List Files" Tasklet
+
+This implementation assumes we want to find files matching a pattern and store their names as a list for the next step.
 
 ```java
 @Component
-@StepScope // Important: Creates a new instance per step execution
-public class PdfItemProcessor implements ItemProcessor<MyDataModel, byte[]> {
+@JobScope
+public class SftpListingTasklet implements Tasklet {
 
-    @Autowired
-    private FopFactory fopFactory;
+    private final FileTransferService sftpService;
+    private final String remotePath;
+    private final String filePattern;
 
-    @Autowired
-    private XslTemplateRegistry registry;
-
-    @Value("#{jobParameters['xsl.path']}") // Passed when starting the job
-    private String xslPath;
+    public SftpListingTasklet(
+            FileTransferService sftpService,
+            @Value("#{jobParameters['sftp.remotePath']}") String remotePath,
+            @Value("#{jobParameters['sftp.pattern']}") String filePattern) {
+        this.sftpService = sftpService;
+        this.remotePath = remotePath;
+        this.filePattern = filePattern;
+    }
 
     @Override
-    public byte[] process(MyDataModel item) throws Exception {
-        // 1. Get the pre-compiled template (Instantly from cache)
-        Templates templates = registry.getTemplate(xslPath);
+    public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) {
+        // 1. Use our abstracted service to get the file list
+        List<String> files = sftpService.listFiles(remotePath);
         
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        
-        // 2. These objects are "lightweight" - create per record
-        FOUserAgent foUserAgent = fopFactory.newFOUserAgent();
-        Fop fop = fopFactory.newFop(MimeConstants.MIME_PDF, foUserAgent, out);
-        
-        // 3. Get a transformer from the thread-safe Templates object
-        Transformer transformer = templates.newTransformer();
-        
-        // 4. Transform
-        Source src = new StreamSource(new StringReader(item.toXml()));
-        Result res = new SAXResult(fop.getDefaultHandler());
-        transformer.transform(src, res);
+        // 2. Filter based on our pattern (reg-ex or simple glob)
+        List<String> filteredFiles = files.stream()
+            .filter(name -> name.matches(filePattern))
+            .collect(Collectors.toList());
 
-        return out.toByteArray();
+        // 3. Store the list in the Job Execution Context
+        // This is safe because it's a List of Strings (Serializable)
+        ExecutionContext jobContext = chunkContext.getStepContext()
+                                                .getStepExecution()
+                                                .getJobExecution()
+                                                .getExecutionContext();
+        
+        jobContext.put("work_list", filteredFiles);
+
+        // 4. Signal that the step is finished
+        return RepeatStatus.FINISHED;
     }
 }
 
@@ -311,757 +401,963 @@ public class PdfItemProcessor implements ItemProcessor<MyDataModel, byte[]> {
 
 ---
 
-### Why this is a "win" for your architecture
+### Critical Observations
 
-1. **Concurrency:** By adding the `TaskExecutor`, you can utilize all CPU cores. Apache FOP is CPU-intensive; if you have 4 cores, you can theoretically cut your batch time by nearly 75%.
-2. **Memory Efficiency:** The `Templates` and `FopFactory` stay in the "Old Gen" memory, while the small `Transformer` and `Fop` objects are created and destroyed quickly in "Young Gen," which is much easier for the JVM to clean up.
-3. **Flexibility:** Your `XslTemplateRegistry` keeps your memory clean. If Job A and Job B run at different times, they both benefit from the same caching logic without interfering with each other.
+* **Clean Injection:** Notice the `Tasklet` doesn't know about `CachingSessionFactory`. It only knows about `FileTransferService`. Because the service is `@JobScope`, it was instantiated specifically for this job run using the correct credentials.
+* **The Bridge:** By putting the `List<String>` into the `ExecutionContext`, we’ve successfully passed the "work" from Step 1 to Step 2 without needing to keep an SFTP connection "active" in a way that violates Batch's persistence model.
+* **Empty Lists:** If `filteredFiles` is empty, you can either let the next step "skip" naturally (it sees an empty list) or throw an exception here if you want the job to fail fast.
 
-**One final "pro-tip" for batches:** If your PDFs are large, make sure the `ByteArrayOutputStream` isn't causing OutOfMemory errors. If they are huge, you might want to write directly to a file via a `FileOutputStream` instead of keeping the byte array in memory.
+### A Quick Word on "Persistence"
 
-Does the `JobParameters` approach fit into how you are currently triggering your batch jobs?
+Even though we are putting a `List<String>` in the database (via the Execution Context), the **Service Bean** itself stays in memory. When the next step starts, it will `@Inject` that same `FileTransferService` instance. Since the session is cached in that instance, the next step's first call to SFTP will likely reuse the exact same SSH tunnel opened by this Tasklet.
 
-That’s the perfect scenario. Since you're already comfortable with SpEL and `@Value`, you’re essentially one "Cache Bean" away from a massive performance jump.
+---
 
-One small nuance to keep in mind for your specific environment:
+### Our Updated Checklist
 
-### The "TransformerFactory" Gotcha
+1. [x] **Abstraction:** Service Interface and Concrete Impl.
+2. [x] **Session Lifecycle:** `CachingSessionFactory` mechanics.
+3. [x] **Dynamic Configuration:** `@JobScope` for per-job credentials.
+4. [x] **Batch Integration:** The "Listing" Tasklet.
+5. [ ] **S3 Transition:** Designing the "Download & Upload" Step (Reader/Writer).
+6. [ ] **Error Handling:** Retries/Timeouts.
 
-In a multi-threaded Spring Batch environment, ensure your `XslTemplateRegistry` (the cache) handles the `TransformerFactory` correctly. While `Templates` objects are thread-safe, the `TransformerFactory` itself is often **not**.
+This is the "Holy Grail" of file transfer reliability. You’ve touched on the exact reason why file-based Batch jobs often feel more fragile than database-based ones: **there is no two-phase commit (2PC) for an SFTP `rm` command and an S3 `put`.**
 
-If you use the `computeIfAbsent` pattern I showed earlier, it works safely because `ConcurrentHashMap` handles the locking for you—ensuring that if two threads try to trigger the same job at the exact same millisecond, the XSL is still only compiled once.
+If you delete the file too early and the S3 upload fails, the data is gone. If you delete it too late and the job crashes, you risk a "double-processing" loop on the next run.
 
-### Final Tuning Checklist for Batch Success
+To achieve that "database-like" atomicity in Spring Batch, we usually employ one of three strategies. Let's look at them:
 
-Since you mentioned time to process is a genuine concern, here are three "pro-level" tweaks for Apache FOP in Spring Batch:
+### 1. The "Idempotent Source" Strategy (Recommended)
 
-1. **Disable "Accessibility" if not needed:**
-FOP has an accessibility feature (for screen readers) that is very CPU and memory intensive. If your PDFs don't legally require Section 508 compliance, ensure it's off in your `fop.xconf` or `FOUserAgent`.
+Instead of relying on a delete at the end, you change the *state* of the file on the SFTP server immediately.
+
+* **Step 1:** List files.
+* **Step 2:** **Rename** the file on SFTP from `data.csv` to `data.csv.processing`.
+* **Step 3:** Transfer `data.csv.processing` to S3.
+* **Step 4:** **Delete** `data.csv.processing` upon success.
+* *Result:* If the job crashes, the next run ignores anything with `.processing` (or attempts to recover it). This provides a "soft" lock.
+
+### 2. The "Post-Processor" Tasklet
+
+This is the most common Spring Batch pattern for your specific flow.
+
+* **Step A (Chunk):** Reader (SFTP) -> Writer (S3). Keep a list of "successfully uploaded files" in the `StepExecutionContext`.
+* **Step B (Tasklet):** If Step A was `COMPLETED`, this Tasklet reads that list and issues the SFTP `delete` commands.
+* *The Catch:* If Step B fails *after* deleting 5 of 10 files, you need a way to restart and know which ones are left.
+
+### 3. The "State Table" Approach
+
+If the data is mission-critical, you treat the SFTP server as a "dumb" repository and keep the "truth" in your Job Repository database.
+
+* **Step 1:** Record every filename found in a local database table with status `PENDING`.
+* **Step 2:** Process files. Update status to `UPLOADED_TO_S3`.
+* **Step 3:** Delete files from SFTP that are marked `UPLOADED_TO_S3`. Update to `ARCHIVED`.
+* *Result:* This is the closest you can get to true atomicity. The database tracks exactly where you are in the "distributed transaction."
+
+---
+
+### Foreshadowing the Implementation
+
+In a Spring Batch context, we should look at the **`ItemWriteListener`** or a dedicated **Cleanup Step**.
+
+* **ItemWriteListener:** You can trigger a delete immediately after a chunk is successfully committed to S3. This keeps the "window of failure" very small.
+* **Step Listener:** You can wait until the entire Step is done.
+
+### The "Restartability" Problem
+
+Since you are well-versed in Batch, you know that `restartable=true` is your best friend. If we go with the **Chunk-oriented** approach (SFTP -> S3), we have to decide: **What constitutes a "restart"?**
+If the job fails halfway through a 1,000-file transfer:
+
+1. Do we want to skip the 500 files already in S3?
+2. Do we want to overwrite them?
+3. How do we know which ones to delete from SFTP?
+
+> **Witty aside:** SFTP is essentially the Wild West of data protocols. It has no concept of "undo." We have to build the "Sheriff" ourselves using the Spring Batch `JobRepository`.
+
+---
+
+### Our Updated Checklist
+
+1. [x] **Abstraction:** Service Interface and Concrete Impl.
+2. [x] **Session Lifecycle:** `CachingSessionFactory`.
+3. [x] **Dynamic Configuration:** `@JobScope`.
+4. [x] **Listing Phase:** `SftpListingTasklet`.
+5. [ ] **The "Atomicity" Strategy:** Choose between Renaming, Post-Step Cleanup, or State Tables.
+6. [ ] **S3 Transition:** Implementing the transfer.
+7. [ ] **Final Cleanup:** The SFTP `delete` logic.
+
+**Before we write the transfer code, which "Atomicity" strategy feels most aligned with your requirements?** (I personally lean toward **Renaming** or **Post-Step Cleanup** for most SFTP-to-Cloud patterns.)
+
+That is a very pragmatic "middle ground" approach. It provides a visible safety net without the overhead of building a custom database schema and the JPA/JDBC plumbing to manage it.
+
+Using a **Post-Processor Tasklet** combined with the **Renaming (Soft-Lock) Strategy** gives you a manual recovery path that is easy to explain to stakeholders: *"If the job fails, look for `.processing` files."*
+
+### The Workflow Refined
+
+1. **Step 1 (Listing Tasklet):** Finds `file.csv`, renames it to `file.csv.processing`. Only files ending in `.csv` are picked up.
+
+2. **Step 2 (Transfer Step):** Processes `file.csv.processing` and uploads to S3.
+
+* On success: Adds the filename to a "Success List" in the `JobExecutionContext`.
+
+3. **Step 3 (Cleanup Tasklet):** * Reads the "Success List."
+
+* Deletes those specific `.processing` files from SFTP.
+* *Edge Case:* If a file is in the folder but **not** in the "Success List," it stays there as a `.processing` file, signaling a failure.
+
+### Why this is "Management Friendly":
+
+* **Visibility:** A quick look at the SFTP folder tells you exactly what failed. No SQL queries required.
+* **Recovery:** As you noted, a manual rename (or a simple "Recovery Tasklet" you could write later) puts the data back into the pipeline.
+* **Atomicity-ish:** You’ve moved the file out of the "incoming" queue immediately. This prevents a second instance of the job from grabbing the same file if the first one hangs.
+
+---
+
+### Implementation Detail: The "Success List"
+
+Since you are using Spring Batch, the most "native" way to track these successes during the transfer step is via a **StepListener** or simply by updating the `ExecutionContext` within your `ItemWriter`.
+
+However, there is one technical hurdle with the `JobExecutionContext`: **It is not thread-safe.** If you eventually want to process files in parallel (multi-threaded step), we’ll need to use a synchronized collection or a different tracking mechanism.
+
+### Our Updated Checklist
+
+1. [x] **Abstraction:** Service Interface and Concrete Impl.
+2. [x] **Session Lifecycle:** `CachingSessionFactory`.
+3. [x] **Dynamic Configuration:** `@JobScope`.
+4. [x] **Listing Phase:** `SftpListingTasklet` (Now including the **Rename** logic).
+5. [x] **Atomicity Strategy:** Post-Processor Cleanup + Renaming.
+6. [ ] **S3 Transition:** The Chunk-oriented Step (Reading the `.processing` files).
+7. [ ] **Final Cleanup:** The Tasklet that deletes successfully uploaded files.
+
+**Would you like to revise the `SftpListingTasklet` code to include that "Rename to .processing" logic before we move to the S3 transfer step?** This would ensure that only files successfully renamed are passed to the next step.
+
+Limiting to **one file per job run** is an underrated "architectural cheat code." In the world of enterprise batch processing, it’s often much smarter to run a simple job ten times than a complex job once.
+
+### The "One File" Simplification
+
+If you restrict the job to a single file:
+
+1. **State Management vanishes:** You don’t need a `List<String>` in the `ExecutionContext`. You just need one `String filename`.
+2. **Restartability is binary:** The job either finished the file or it didn't. You don't have to track "file 4 of 10 failed."
+3. **Atomic Cleanup:** You can delete the file in a simple `Tasklet` at the end of the job without looping or complex logic.
+4. **Logging/Traceability:** Your Job Execution ID maps 1:1 to a specific filename in your logs.
+
+> **The Verdict:** If your volume is low, **do this.** It turns a "Distributed Systems Problem" into a "Basic Scripting Problem."
+
+---
+
+### Revised Listing Tasklet (Single File + Rename)
+
+Here is how that Tasklet looks now. It picks the *first* file it finds, renames it to claim ownership, and passes that single name forward.
 
 ```java
-foUserAgent.setAccessibility(false); 
+@Component
+@JobScope
+public class SftpClaimFileTasklet implements Tasklet {
 
-```
+    private final FileTransferService sftpService;
+    private final String remotePath;
+    private final String filePattern;
 
-2. **Use Buffered Streams:**
-FOP does a lot of small write operations. Wrapping your `ByteArrayOutputStream` or `FileOutputStream` in a `BufferedOutputStream` can shave off significant time in the I/O layer.
-
-3. **Monitor the "Chunk" Size:**
-In Spring Batch, the `chunk(10)` size determines how many items are processed before the transaction is committed and the `ItemWriter` is called. For PDF generation:
-
-* **Too small:** High overhead.
-* **Too large:** High memory usage (holding 500 PDFs in memory before writing).
-* **Sweet spot:** Usually between **10 and 50** for PDF generation.
-
-### Need a hand with the XML?
-
-If you're using Spring "Classic" XML configuration for the Job definitions rather than Java Config, the setup for the `TaskExecutor` and the `Step` looks slightly different but follows the same logic.
-
-**Would you like the XML equivalent for the multi-threaded step configuration, or are you moving toward Java-based config?**
-
-I hear you—the "legacy gravity" of XML config is real. Moving to Java config is great in theory, but in a production Spring "Classic" app, you're often just trying to make the XML work as efficiently as possible.
-
-Here is how you would wire up the **Thread-Safe Registry**, the **TaskExecutor**, and the **Multi-threaded Step** in your `batch-context.xml`.
-
-### 1. Define the Shared Infrastructure
-
-You want the `FopFactory` and your `XslTemplateRegistry` to be top-level beans so they are initialized once.
-
-```xml
-<bean id="xslTemplateRegistry" class="com.yourpackage.XslTemplateRegistry" />
-
-<bean id="fopFactory" class="org.apache.fop.apps.FopFactory" factory-method="newInstance">
-    <constructor-arg value="classpath:fop.xconf" />
-</bean>
-
-<bean id="taskExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
-    <property name="corePoolSize" value="5" />
-    <property name="maxPoolSize" value="10" />
-    <property name="queueCapacity" value="25" />
-</bean>
-
-```
-
-### 2. The Step Configuration
-
-The key here is adding the `task-executor` attribute to the `<batch:tasklet>` and ensuring your processor is **Step-Scoped** so it can access those job parameters.
-
-```xml
-<batch:job id="pdfGenerationJob">
-    <batch:step id="generatePdfStep">
-        <batch:tasklet task-executor="taskExecutor" throttle-limit="5">
-            <batch:chunk reader="itemReader" 
-                         processor="pdfItemProcessor" 
-                         writer="itemWriter" 
-                         commit-interval="10" />
-        </batch:tasklet>
-    </batch:step>
-</batch:job>
-
-<bean id="pdfItemProcessor" class="com.yourpackage.PdfItemProcessor" scope="step">
-    <property name="xslPath" value="#{jobParameters['xsl.path']}" />
-    <property name="fopFactory" ref="fopFactory" />
-    <property name="registry" ref="xslTemplateRegistry" />
-</bean>
-
-```
-
-### 3. Java Adjustment for the Processor
-
-Since you're using XML to inject the values, your `PdfItemProcessor` just needs standard setters (or constructor injection) to match the XML properties:
-
-```java
-public class PdfItemProcessor implements ItemProcessor<MyDataModel, byte[]> {
-    private FopFactory fopFactory;
-    private XslTemplateRegistry registry;
-    private String xslPath;
-
-    // Standard Setters for XML Injection
-    public void setFopFactory(FopFactory fopFactory) { this.fopFactory = fopFactory; }
-    public void setRegistry(XslTemplateRegistry registry) { this.registry = registry; }
-    public void setXslPath(String xslPath) { this.xslPath = xslPath; }
+    public SftpClaimFileTasklet(
+            FileTransferService sftpService,
+            @Value("#{jobParameters['sftp.remotePath']}") String remotePath,
+            @Value("#{jobParameters['sftp.pattern']}") String filePattern) {
+        this.sftpService = sftpService;
+        this.remotePath = remotePath;
+        this.filePattern = filePattern;
+    }
 
     @Override
-    public byte[] process(MyDataModel item) throws Exception {
-        Templates templates = registry.getTemplate(xslPath);
-        // ... same processing logic as before ...
-    }
-}
+    public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) {
+        // 1. Get all files
+        List<String> files = sftpService.listFiles(remotePath);
+        
+        // 2. Find the first eligible candidate
+        Optional<String> targetFile = files.stream()
+            .filter(name -> name.matches(filePattern) && !name.endsWith(".processing"))
+            .findFirst();
 
-```
-
-### A Note on the `throttle-limit`
-
-In the XML config, the `throttle-limit` is your best friend. Even if your `taskExecutor` has a `maxPoolSize` of 50, the `throttle-limit` ensures that this specific Step doesn't hog all those threads. For FOP, I'd keep this number close to the number of available CPU cores, as FOP is very "math-heavy" during the layout phase and won't benefit from having 100 threads fighting over 4 cores.
-
-### Reality Check: The Classpath
-
-Since you mentioned this is a web app, make sure your `FopFactory` bean points to a URI it can actually find. Using `classpath:fop.xconf` (if you use a Resource pattern) or a hardcoded file path is usually safer than relying on the working directory of the web server (like Tomcat's `/bin`).
-
-**Do you have any custom `URIResolver` logic for images or external sub-templates?** That's usually the last place where thread-safety issues hide in FOP.
-
-Actually, you’ve hit on exactly why the `Templates` (pre-compiled) approach is so important.
-
-When you use `<xsl:include>` or `<xsl:import>`, the XSLT engine has to resolve and merge those files into one big "logic tree."
-
-### Why this matters for Thread Safety
-
-If you were to parse the XSL file *inside* the `process()` method for every record, the engine would be hitting the disk to find those "included" files over and over again. In a multi-threaded environment, if the file system is slow or if there's a lock on those sub-templates, you'd see weird intermittent "File Not Found" or "Access Denied" errors.
-
-By using the **`Templates` object**:
-
-1. **Resolved at Compile-Time:** The `TransformerFactory` resolves all those `<xsl:include>` paths **once** when you call `newTemplates()`.
-2. **Memory-Resident:** The sub-templates are "baked into" the compiled `Templates` object.
-3. **Thread Safety:** Once compiled, the `Templates` object is immutable. It doesn't care about the original `.xsl` files anymore. You can have 10 threads calling `templates.newTransformer()` simultaneously, and they will all use the already-resolved logic without ever touching the disk or the sub-templates again.
-
-### The `@Resource` Factor
-
-Since you are using `@Resource` to point to your files, you are likely relying on Spring’s resource abstraction. Just ensure that the `XslTemplateRegistry` gets the actual `File` path or `InputStream` from that resource during the initialization phase.
-
-### One Small Warning: Image Loading
-
-While the XSL logic is cached, **Images** specified in your FO (via `<fo:external-graphic>`) are usually resolved *during* the transformation phase (the rendering phase), not the compilation phase.
-
-* If your FO files point to images on the classpath or a web URL, FOP will try to fetch them for every document.
-* If you find that image-heavy batches are still slow, FOP's `FopFactory` has an internal **ImageCache**. By reusing the `FopFactory` as a singleton (as we discussed), you automatically enable this cache, so FOP won't re-decode the same header logo 10,000 times.
-
----
-
-### Summary of your "New" Batch Lifecycle
-
-1. **Job Starts:** Spring Batch grabs the `xsl.path` Job Parameter.
-2. **First Record:** The `XslTemplateRegistry` compiles the main XSL (and all its includes) into one `Templates` object.
-3. **The "Sprint":** Spring Batch spins up 5–10 threads. Each thread asks the `Templates` object for a fresh `Transformer` (instant) and asks the `FopFactory` for a `Fop` instance (fast).
-4. **Job Ends:** The `Templates` object stays in the registry cache, ready for the next time that specific job runs.
-
-**Would you like me to help you draft the `XslTemplateRegistry` class with the `computeIfAbsent` logic to make sure it's ready to drop into your project?**
-
-Those are excellent, high-level engineering questions. You're thinking about the "Day 2" problems of a production app: memory leaks and stale data.
-
-### 1. Memory Concerns: "Permanent" vs. "Job-Life" Cache
-
-A compiled `Templates` object isn't just a string; it’s a tree of Java objects. If you have 5 templates, it's negligible. If you have 500, it could eat up your Heap.
-
-**The "Middle Ground" Solution:** Instead of a permanent cache, we can use a **`Map` that is cleared after the job finishes** (using a `JobExecutionListener`), or use **`SoftReferences`**. A `SoftReference` tells the JVM: "Keep this as long as you have memory, but if you're about to throw an `OutOfMemoryError`, feel free to evict this."
-
-### 2. Image Caching: The FopFactory "Clean Up"
-
-The `FopFactory` cache is "dumb" but effective. It maps URIs to decoded image data.
-
-* **The Risk:** If you generate 10,000 PDFs and each has a *different* unique user photo, the `FopFactory` cache will grow until your app crashes.
-* **The Strategy:** For a batch process, it is best practice to **clear the image cache** at the end of the job.
-
----
-
-### The "Safe" Registry Implementation
-
-This implementation uses `SoftReferences` for the templates and provides a `clear` method for your Spring Batch listener to call.
-
-```java
-import org.apache.fop.apps.FopFactory;
-import javax.xml.transform.Templates;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.stream.StreamSource;
-import java.io.File;
-import java.util.concurrent.ConcurrentHashMap;
-import java.lang.ref.SoftReference;
-
-public class XslTemplateRegistry {
-
-    // SoftReference lets the GC reclaim memory if needed
-    private final ConcurrentHashMap<String, SoftReference<Templates>> cache = new ConcurrentHashMap<>();
-    private final TransformerFactory factory = TransformerFactory.newInstance();
-
-    public Templates getTemplate(String xslPath) throws Exception {
-        SoftReference<Templates> ref = cache.get(xslPath);
-        Templates templates = (ref != null) ? ref.get() : null;
-
-        if (templates == null) {
-            // Compile and wrap in SoftReference
-            templates = factory.newTemplates(new StreamSource(new File(xslPath)));
-            cache.put(xslPath, new SoftReference<>(templates));
+        if (targetFile.isPresent()) {
+            String originalName = targetFile.get();
+            String processingName = originalName + ".processing";
+            
+            // 3. Rename to "claim" it
+            sftpService.archiveFile(remotePath + "/" + originalName, 
+                                   remotePath + "/" + processingName);
+            
+            // 4. Put ONLY this name in the context
+            ExecutionContext jobContext = chunkContext.getStepContext()
+                                                    .getStepExecution()
+                                                    .getJobExecution()
+                                                    .getExecutionContext();
+            jobContext.put("claimed_file", processingName);
+            
+            return RepeatStatus.FINISHED;
+        } else {
+            // No files found - we can either fail or just finish the job early
+            contribution.setExitStatus(ExitStatus.COMPLETED);
+            return RepeatStatus.FINISHED;
         }
-        return templates;
     }
+}
+
+```
+
+---
+
+### Implementation Note: `archiveFile`
+
+In our previous code snippet, `archiveFile` used `session.rename()`. This is perfect here. It's a metadata-only operation on the SFTP server, so it's nearly instantaneous regardless of file size.
+
+### Our Updated Checklist
+
+1. [x] **Abstraction:** Service Interface and Concrete Impl.
+2. [x] **Session Lifecycle:** `CachingSessionFactory`.
+3. [x] **Dynamic Configuration:** `@JobScope`.
+4. [x] **Listing Phase:** `SftpClaimFileTasklet` (Single file claim).
+5. [x] **Atomicity Strategy:** "One file at a time" simplicity.
+6. [ ] **S3 Transition:** The Transfer Step (Using the `claimed_file` string).
+7. [ ] **Final Cleanup:** A simple Tasklet to delete the one `claimed_file`.
+
+**Should we move to the S3 Transfer Step?** We'll need to discuss how you want to pipe that SFTP stream into the S3 client without blowing out your JVM memory.
+
+Since we are aiming for efficiency and low memory overhead, the "Gold Standard" here is to stream the data directly from SFTP to S3.
+
+AWS provides the **`S3TransferManager`** (SDK v2) or the higher-level `S3Resource` abstraction in **Spring Cloud AWS**. For a Spring Batch job, using the `S3Resource` as an `ItemWriter` is often the most "natural" way, but since we are handling one file and focusing on a clean service layer, let's look at how to pipe these together.
+
+### 1. Updating the Service Interface
+
+We need a way to upload that doesn't require loading the whole file into a `byte[]`.
+
+```java
+public interface FileTransferService {
+    // ... listFiles and archiveFile ...
+    
+    // Existing method to pull from SFTP
+    void downloadToStream(String remoteFilePath, OutputStream target);
+
+    // New method to push to S3
+    void uploadToS3(String bucket, String key, InputStream source, long contentLength);
+}
+
+```
+
+### 2. The Transfer Tasklet (Streaming Approach)
+
+Because we chose the "one file per job" simplification, a **Tasklet** is actually cleaner than a chunk-oriented Reader/Writer here. We can bridge the SFTP `InputStream` directly to an S3 `OutputStream`.
+
+```java
+@Component
+@JobScope
+public class SftpToS3TransferTasklet implements Tasklet {
+
+    private final FileTransferService transferService;
+    private final String bucketName;
+    private final String s3Prefix;
+
+    public SftpToS3TransferTasklet(
+            FileTransferService transferService,
+            @Value("${s3.bucket}") String bucketName,
+            @Value("${s3.prefix}") String s3Prefix) {
+        this.transferService = transferService;
+        this.bucketName = bucketName;
+        this.s3Prefix = s3Prefix;
+    }
+
+    @Override
+    public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+        ExecutionContext jobContext = chunkContext.getStepContext()
+                                                .getStepExecution()
+                                                .getJobExecution()
+                                                .getExecutionContext();
+        
+        String fileName = jobContext.getString("claimed_file");
+        String s3Key = s3Prefix + "/" + fileName.replace(".processing", "");
+
+        // Using a Pipe to bridge the SFTP download to the S3 upload
+        // This prevents loading the whole file into RAM
+        PipedOutputStream out = new PipedOutputStream();
+        PipedInputStream in = new PipedInputStream(out);
+
+        CompletableFuture<Void> uploadFuture = CompletableFuture.runAsync(() -> {
+            // Note: In a real impl, S3 SDK v2 usually needs a 'Content-Length' 
+            // or it will buffer in memory. If length is unknown, 
+            // Spring Cloud AWS 'S3Resource' handles the multi-part buffering for you.
+            transferService.uploadToS3(bucketName, s3Key, in, -1);
+        });
+
+        try {
+            transferService.downloadToStream(fileName, out);
+        } finally {
+            out.close(); // Signals the end of the stream to the upload side
+        }
+
+        uploadFuture.join(); // Ensure upload finishes before Tasklet completes
+        return RepeatStatus.FINISHED;
+    }
+}
+
+```
+
+### 3. The "Memory" Gotcha
+
+AWS S3 requires a **Content-Length** for standard uploads. If you don't provide it (the `-1` above), the SDK will often buffer the entire stream into memory to calculate it, which defeats our streaming goal.
+
+**The Workaround:** * **Option A:** Use `session.stat(path).getSize()` in the SFTP service to get the file size before starting the transfer. This is the most reliable way.
+
+* **Option B:** Use the **Spring Cloud AWS `Resource**` abstraction. It handles multi-part uploads (buffering small 5MB chunks) automatically so you don't have to manage the `PipedInputStream` complexity yourself.
+
+### 4. Implementation with Spring Cloud AWS (The "Cleaner" Way)
+
+If you use `S3Template` from Spring Cloud AWS, the Tasklet becomes trivial:
+
+```java
+@Override
+public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) {
+    String fileName = jobContext.getString("claimed_file");
+    
+    // The SFTP service provides the stream, S3Template consumes it
+    sftpService.executeWithInputStream(fileName, inputStream -> {
+        s3Template.upload(bucketName, fileName, inputStream);
+    });
+
+    return RepeatStatus.FINISHED;
+}
+
+```
+
+---
+
+### Our Updated Checklist
+
+1. [x] **Abstraction:** Service Interface and Concrete Impl.
+2. [x] **Session Lifecycle:** `CachingSessionFactory`.
+3. [x] **Dynamic Configuration:** `@JobScope`.
+4. [x] **Listing Phase:** `SftpClaimFileTasklet`.
+5. [x] **S3 Transition:** Streaming Tasklet (SFTP -> S3).
+6. [ ] **Final Cleanup:** A simple Tasklet to delete the one `claimed_file`.
+7. [ ] **Error Handling:** Dealing with the "What if the S3 upload fails half-way?" scenario.
+
+**Do you have Spring Cloud AWS in your stack, or should we stick to the raw AWS SDK v2 implementation for the S3 upload?** (The raw SDK requires a bit more "plumbing" for streaming.)
+
+That is a very fair assessment of the "Spring tax." While Spring provides excellent abstractions, they do occasionally swap underlying engines (like the transition from AWS SDK v1 to v2) which can force a rewrite of your configuration code.
+
+### Spring Cloud AWS: The Trade-offs
+
+If you move to Spring 6 / Boot 3, adding it is as simple as the `io.awspring.cloud:spring-cloud-aws-starter-s3` dependency.
+
+**The Pros:**
+
+* **Infrastructure as Beans:** You get an `S3Template` or `S3Client` auto-configured from your `application.properties`.
+* **Resource Abstraction:** You can treat an S3 object like a standard Spring `Resource`. You can literal do `resourceLoader.getResource("s3://my-bucket/file.txt").getInputStream()`.
+* **Smart Buffering:** It handles the Multi-part upload logic (buffering 5MB chunks to disk or memory) so you don't have to calculate `Content-Length` upfront.
+
+**The Cons (The "Spring" Factor):**
+
+* **Opinionated Lifecycles:** Sometimes they wrap the `S3Client` in a way that makes it hard to access niche features (like specific Object Lock headers) without bypassing the abstraction anyway.
+* **Dependency Bloat:** It pulls in quite a few transitive dependencies which might conflict if you are already managing the AWS SDK manually.
+
+**My Peer-to-Peer Advice:** Since you already have a working SDK v2 service wrapper, **stick with it.** You’ve already paid the "plumbing cost." Wrapping your own service around the SDK gives you full control over timeouts and retry policies without waiting for a Spring Cloud release to catch up to a new AWS feature.
+
+---
+
+### Final Step: The Cleanup Tasklet
+
+To round out our "one-file-at-a-time" architecture, we need the final "Burn the Bridge" step. This only runs if the S3 transfer step was successful.
+
+```java
+@Component
+@JobScope
+public class SftpCleanupTasklet implements Tasklet {
+
+    private final FileTransferService sftpService;
+    private final String remotePath;
+
+    public SftpCleanupTasklet(FileTransferService sftpService,
+                              @Value("#{jobParameters['sftp.remotePath']}") String remotePath) {
+        this.sftpService = sftpService;
+        this.remotePath = remotePath;
+    }
+
+    @Override
+    public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) {
+        ExecutionContext jobContext = chunkContext.getStepContext()
+                                                .getStepExecution()
+                                                .getJobExecution()
+                                                .getExecutionContext();
+
+        String fileName = jobContext.getString("claimed_file");
+
+        // The file was successfully uploaded to S3 in the previous step,
+        // so it is now safe to delete the '.processing' file.
+        sftpService.deleteFile(remotePath + "/" + fileName);
+
+        return RepeatStatus.FINISHED;
+    }
+}
+
+```
+
+---
+
+### The Completed Design Checklist
+
+1. [x] **Interface:** `FileTransferService` hides the "unnatural" Template/Session logic.
+2. [x] **Session Mgmt:** `CachingSessionFactory` in a `@JobScope` bean keeps the SSH tunnel warm but out of the database.
+3. [x] **Orchestration:**
+* **Step 1:** Claim 1 file and rename to `.processing`.
+* **Step 2:** Stream from SFTP to S3 using your SDK v2 wrapper.
+* **Step 3:** Delete the `.processing` file on SFTP.
+
+
+4. [x] **Recovery:** If the job fails, the `.processing` file stays on the server, serving as a "red flag" for manual or automated recovery.
+
+### Final Error Handling Note
+
+Because we used `JobScope`, if Step 2 fails, the `CachingSessionFactory` will still be alive. You should ensure your Job configuration uses a standard `SimpleJobBuilder` flow where Step 3 is only executed `on("COMPLETED")`.
+
+**Would you like me to show you the final Job Configuration (the `@Bean` definition) that stitches these three components together into a single flow?**
+
+Stitching it all together provides the final bird's-eye view. Regarding the **S3 verification** call: it is an excellent "belt and braces" approach, but it comes with a trade-off.
+
+### To Verify or Not to Verify?
+
+In a strictly synchronous transfer (like our Tasklet), if the S3 client doesn't throw an exception, the file **is** there. AWS uses "Read-after-Write" consistency for new objects, so as soon as the `putObject` call returns successfully, the file is immediately visible.
+
+* **The Pro:** It guards against a silent failure in a poorly written SDK wrapper or a "successful" response from a proxy that didn't actually reach the S3 API.
+* **The Con:** It adds latency and an extra API cost.
+* **My Advice:** If your SDK wrapper already checks for a `200 OK` or uses the `S3TransferManager` to wait for completion, a "check if file exists" is usually redundant. However, if the data is high-value, performing a `headObject` (to check existence and metadata/size) is a very cheap way to sleep better at night.
+
+---
+
+### The Job Configuration
+
+Here is how the flow looks. I've used the `.next()` flow to ensure linear execution and added a `fail()` transition to keep it robust.
+
+```java
+@Configuration
+public class SftpToS3JobConfig {
+
+    private final JobBuilderFactory jobBuilderFactory;
+    private final StepBuilderFactory stepBuilderFactory;
+
+    public SftpToS3JobConfig(JobBuilderFactory jobBuilderFactory, 
+                             StepBuilderFactory stepBuilderFactory) {
+        this.jobBuilderFactory = jobBuilderFactory;
+        this.stepBuilderFactory = stepBuilderFactory;
+    }
+
+    @Bean
+    public Job sftpToS3TransferJob(
+            Step claimFileStep, 
+            Step transferFileStep, 
+            Step cleanupFileStep) {
+        return jobBuilderFactory.get("sftpToS3TransferJob")
+                .incrementer(new RunIdIncrementer())
+                .start(claimFileStep)
+                    .on("COMPLETED").to(transferFileStep)
+                .from(transferFileStep)
+                    .on("COMPLETED").to(cleanupFileStep)
+                .from(transferFileStep)
+                    .on("FAILED").fail() // Stop if transfer fails, leaving .processing file
+                .end()
+                .build();
+    }
+
+    @Bean
+    public Step claimFileStep(SftpClaimFileTasklet tasklet) {
+        return stepBuilderFactory.get("claimFileStep")
+                .tasklet(tasklet)
+                .build();
+    }
+
+    @Bean
+    public Step transferFileStep(SftpToS3TransferTasklet tasklet) {
+        return stepBuilderFactory.get("transferFileStep")
+                .tasklet(tasklet)
+                .build();
+    }
+
+    @Bean
+    public Step cleanupFileStep(SftpCleanupTasklet tasklet) {
+        return stepBuilderFactory.get("cleanupFileStep")
+                .tasklet(tasklet)
+                .build();
+    }
+}
+
+```
+
+---
+
+### Why this Configuration works for your requirements
+
+* **Linear & Conditional:** The `on("FAILED").fail()` ensures that if Step 2 (Transfer) blows up, Step 3 (Delete) is never reached. The file remains on SFTP with the `.processing` suffix.
+* **Decoupled:** Each step injects its own Tasklet. All Tasklets share the same `@JobScope` `FileTransferService`, meaning they reuse the same SSH connection.
+* **Clean Registry:** The Job Repository will show exactly which step failed. If it fails on `transferFileStep`, you know the file was renamed but not uploaded. If it fails on `cleanupFileStep`, you know the file is in S3 but still exists on SFTP.
+
+### One Final Peer Tip
+
+Since you are using Job Parameters for credentials, don't forget to configure your **Job Parameter Validators**. Ensuring that the `remotePath` or `bucket` isn't null before the job even starts can save you a lot of "failed" job executions in your history.
+
+**Would you like me to generate a skeleton of the `application.properties` or YAML configuration needed to support these dynamic SFTP parameters?**
+
+To support the `@JobScope` configuration and the dynamic nature of this job, your configuration needs to handle two things: static defaults (like timeouts) and the placeholders that your `JobParameters` will fill at runtime.
+
+### `application.yml` Structure
+
+I’ve organized this to separate general SFTP "tuning" from the parameters you'll pass into the job.
+
+```yaml
+# Static Infrastructure Defaults
+sftp:
+  factory:
+    # How long to wait for a session from the pool (ms)
+    session-wait-timeout: 5000
+    # Number of sessions to keep in the CachingSessionFactory
+    pool-size: 5
+    # Keep-alive: Send a "noop" if the session has been idle (ms)
+    test-session-on-borrow: true
+  client:
+    # Socket and connection timeouts (ms)
+    connect-timeout: 10000
+    default-timeout: 30000
+
+# S3 Configuration (for your SDK v2 Wrapper)
+s3:
+  bucket: ${S3_BUCKET_NAME}
+  prefix: ${S3_KEY_PREFIX:uploads}
+  region: us-east-1
+
+# Spring Batch Metadata (Standard)
+spring:
+  batch:
+    job:
+      enabled: false # Don't run all jobs on startup
+    jdbc:
+      initialize-schema: always # Ensures metadata tables exist
+
+```
+
+---
+
+### Passing Job Parameters
+
+When you launch the job (via a Scheduler, Controller, or CLI), you will provide the dynamic values. In your Java code, these are accessed via `#{jobParameters['key']}`.
+
+**Example Command Line / Launch Map:**
+
+* `sftp.host=sftp.partner-a.com`
+* `sftp.user=service_acct`
+* `sftp.password=********` (or `sftp.privateKey=path/to/key`)
+* `sftp.remotePath=/incoming/data`
+* `sftp.pattern=.*\.csv`
+
+---
+
+### Implementation Pro-Tip: The "Hidden" Configuration
+
+Since you are using `DefaultSftpSessionFactory`, there are a few properties that are often "gotchas" in enterprise environments. I recommend setting these explicitly in your `@Bean` definition using the values from the YAML:
+
+1. **`allowUnknownKeys(true)`**: Unless you are manually managing a `known_hosts` file on the batch server, you'll need this to prevent "Host key verification failed" errors.
+2. **`proxy`**: If your batch server is in a private subnet, you may need to configure a `Proxy` (HTTP or SOCKS) on the session factory.
+3. **`serverAliveInterval`**: If you are transferring very large files, set this to `60` (seconds) to prevent a firewall from dropping the SSH connection while the data is flowing but no "commands" are being sent.
+
+### Final Checklist for the YAML/Config
+
+* [ ] **Sensitive Data:** Ensure `sftp.password` is not stored in plaintext in your repo (use environment variables or a Secret Manager).
+* [ ] **Timeouts:** Align your SFTP `default-timeout` with your S3 upload timeout; if one is significantly shorter, the bridge will break.
+
+This is a great idea. While Spring Batch's metadata tables are fantastic for technical forensics (stack traces, start/end times), they are notoriously difficult for business users or support teams to query. A **Business Activity Monitoring (BAM)** table provides a clean "Audit Trail" that speaks the language of the business.
+
+### 1. The Domain Object: `FileTransferAudit`
+
+You want to capture the "Who, Where, and What" of the transaction.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | Long (PK) | Internal DB ID. |
+| `job_execution_id` | Long (FK) | **The Bridge:** Links back to `BATCH_JOB_EXECUTION`. |
+| `client_code` | String | e.g., "PARTNER_A" (from Job Parameters). |
+| `source_host` | String | The SFTP server address. |
+| `source_file_name` | String | Original name (before `.processing`). |
+| `s3_destination_uri` | String | Full path: `s3://bucket/prefix/file.csv`. |
+| `file_size_bytes` | Long | For volume reporting. |
+| `transfer_status` | String | `IN_PROGRESS`, `SUCCESS`, `FAILED`. |
+| `error_summary` | String | Short, readable reason for failure. |
+| `created_at` | Timestamp | When the record was created. |
+
+---
+
+### 2. When to Write the Record?
+
+To keep this clean and avoid "orphaned" records, I recommend a two-step update pattern within your Batch job:
+
+#### A. The "Initial Entry" (Inside the Claim Tasklet)
+
+As soon as you successfully rename the file to `.processing`, create the record with status `IN_PROGRESS`.
+
+* This ensures that if the job vanishes mid-transfer, you have a record of exactly which file was "claimed."
+
+#### B. The "Final Update" (Job Listener)
+
+Use a `JobExecutionListener`'s `afterJob` method to close out the record.
+
+* **If Job succeeded:** Update status to `SUCCESS` and log the S3 key.
+* **If Job failed:** Update status to `FAILED` and grab the exception message from the `JobExecution`.
+
+---
+
+### 3. Implementation Tip: The "Audit Service"
+
+Don't clutter your Tasklets with JDBC code. Create a small `FileTransferAuditService` that handles the persistence.
+
+```java
+@Component
+public class FileTransferAuditService {
+    
+    @Transactional
+    public Long createAuditEntry(JobParameters params, String fileName) {
+        // Map JobParameters (clientCode, host) to a new DB record
+        // Return the generated Audit ID
+    }
+
+    @Transactional
+    public void markSuccess(Long auditId, String s3Key) { ... }
+
+    @Transactional
+    public void markFailure(Long auditId, String errorMessage) { ... }
+}
+
+```
+
+### 4. Why this is better than the Meta Tables
+
+1. **Retention:** You can keep this table for years while purging the `BATCH_` tables every 30 days to keep the DB performant.
+2. **Searchability:** You can easily answer questions like: *"How many files did we get from Client X last month?"* or *"Did we ever receive 'invoice_99.csv'?"*
+3. **Visibility:** You can point a simple Internal UI or a tool like Grafana/Tableau at this table for management dashboards.
+
+---
+
+### Final Implementation Checklist (Audit Add-on)
+
+* [ ] **Schema:** Create the `file_transfer_audit` table.
+* [ ] **Mapping:** Decide which `JobParameters` constitute the `client_code`.
+* [ ] **Listener:** Register a `JobExecutionListener` to ensure failures are captured even if a Tasklet throws an unexpected `RuntimeException`.
+
+**You've now got a robust, "enterprise-grade" blueprint. Ready to head to the code, or should we talk about how to capture that file size from the SFTP session for the audit log?**
+
+Capturing the file size is a "small detail" that yields high value for your audit trail and your S3 transfer logic. Since you already have a `Session` open via the `SftpRemoteFileTemplate`, you can grab the file metadata (the `stat` or `lstat` call) during the "Claim" phase.
+
+Here is how you can gracefully integrate the file size into your `FileTransferService` and your audit flow.
+
+### 1. Update the Service Interface
+
+We’ll add a way to get file metadata (specifically size) so you can store it in the Audit table and optionally pass it to the S3 client to optimize the upload.
+
+```java
+public interface FileTransferService {
+    // ... other methods ...
+    
+    /**
+     * Retrieves the file size in bytes from the SFTP server.
+     */
+    long getFileSize(String remoteFilePath);
+}
+
+```
+
+### 2. Implementation with Template
+
+In SFTP, the `stat()` call is the standard way to get file attributes without reading the actual data.
+
+```java
+@Override
+public long getFileSize(String remoteFilePath) {
+    return sftpTemplate.execute(session -> {
+        try {
+            // session.stat() returns an SftpClient.Attributes object
+            return session.stat(remoteFilePath).getSize();
+        } catch (IOException e) {
+            throw new RuntimeException("Could not stat file: " + remoteFilePath, e);
+        }
+    });
+}
+
+```
+
+---
+
+### 3. Integrating with the Audit & S3 Logic
+
+Now, in your **Listing/Claim Tasklet**, you can grab the size immediately after the rename. This completes the "Initial Entry" in your business audit table.
+
+**The Workflow logic inside the Tasklet:**
+
+1. **Find** `data.csv`.
+2. **Rename** to `data.csv.processing`.
+3. **Stat** the file size of `data.csv.processing`.
+4. **Save** to Audit Table: `client_code`, `filename`, `file_size`, `status=IN_PROGRESS`.
+5. **Pass** the `auditId` and `file_size` into the `ExecutionContext`.
+
+### 4. Why the Size matters for S3
+
+If you are using the raw AWS SDK v2 `putObject` method, providing the `Content-Length` is the difference between a high-performance stream and a memory-hogging buffer.
+
+```java
+// Inside S3 Transfer logic
+PutObjectRequest request = PutObjectRequest.builder()
+    .bucket(bucket)
+    .key(key)
+    .contentLength(fileSizeFromAudit) // From Step 1
+    .build();
+
+s3Client.putObject(request, RequestBody.fromInputStream(sftpStream, fileSizeFromAudit));
+
+```
+
+---
+
+### Final "Business Summary" Ideas
+
+Once you have this Audit Table + File Size, you can easily implement these high-value features later:
+
+* **Duplicate Detection:** Before "Claiming" a file, check the Audit Table. If a file with the same name and size was successfully uploaded in the last 24 hours, you can alert or skip (idempotency).
+* **Performance Metrics:** By logging `start_time` and `end_time` in your Audit record, you can calculate the **Transfer Rate (MB/s)**. This is a great metric to show management if the SFTP server or S3 connection starts degrading.
+* **Zero-Byte Alerts:** You can instantly fail the job or send a specific alert if the SFTP server provides an empty file (`size == 0`), which is a common "silent failure" in upstream systems.
+
+### Final Design Checkbox
+
+* [x] **Audit Schema:** Include a `file_size` column.
+* [x] **Stat Call:** Use `session.stat()` to avoid downloading data just to measure it.
+* [x] **Context:** Store the `auditId` in the `JobExecutionContext` so the `JobListener` knows exactly which row to update at the end.
+
+**You are now fully equipped with a "Professional Grade" Spring Batch SFTP-to-S3 blueprint.** Ready to start the implementation? I'm here if you hit a snag with the `PipedInputStream` or the SDK specifics!
+
+That is a very realistic "enterprise reality" check. If you are handed a 3rd-party JAR or a legacy service bean that doesn't "play nice" with Spring Integration’s `SftpRemoteFileTemplate`, you don't have to scrap the design.
+
+The beauty of the **Service Interface** we started with (`FileTransferService`) is that your Spring Batch steps don't care what is happening behind the curtain.
+
+Here are the three best ways to "Spring-ify" a legacy or rudimentary API while adhering to our architecture:
+
+### 1. The "Adapter" Pattern (The Cleanest Way)
+
+If the legacy API provides basic methods (like `connect()`, `getFile()`, `send()`), you simply make your `FileTransferService` implementation a wrapper for that legacy client.
+
+* **Session Management:** You can still use **`@JobScope`**. Even if the legacy API doesn't have a connection pool, Spring will keep that one instance of your "LegacyServiceWrapper" alive for the duration of the job. You can open the connection in a `@PostConstruct` or on the first method call and close it in a `@PreDestroy` method.
+* **Result:** The Tasklets still see the "natural" interface you designed, but the implementation is calling `LegacyClient.download()`.
+
+### 2. Spring's `ServiceActivator` / Messaging Bridge
+
+If the legacy provider is "event-based" or uses a clunky messaging protocol, you can use **Spring Integration** to bridge it.
+
+* You can define a "Gateway" interface. When you call a method on that interface, Spring Integration sends a message to a channel.
+* The 3rd-party service acts as a "Service Activator" that consumes from that channel.
+* **Why this helps:** It decouples your Batch threads from the legacy API's threading model (which is often the part that breaks in a Batch environment).
+
+### 3. The "Resource" Abstraction
+
+If the legacy API allows you to get an `InputStream` or a `File`, you can wrap it in a **Spring `Resource**`.
+
+* Spring Batch is built to work with `Resource` objects. If you can write a small adapter that makes the legacy SFTP location look like a `Resource`, you can use all the standard Spring Batch `ItemReaders` without any custom code.
+
+---
+
+### The "Legacy Risk" Checklist
+
+If you find yourself forced into the 3rd-party API, ask these three questions immediately to see if it will break our "One File / Streaming" design:
+
+1. **Does it support Streams?** If the legacy API forces you to download to a local `java.io.File` before you can do anything, you’ll lose the "Streaming to S3" benefit. You'll need to account for local disk space (Staging Approach).
+2. **Is it Thread-Safe?** Legacy clients often use static variables or non-thread-safe internal state. If so, `@JobScope` is mandatory to ensure one job doesn't step on another's toes.
+3. **Does it expose "Stat" or "Rename"?** If it doesn't support renaming, our "Claim & Soft-lock" strategy will have to move to the "State Table" approach we discussed earlier.
+
+### My Recommendation
+
+If you have the choice, **push for the Spring-native SFTP classes.** They are built on top of `jsch` or `apache-sshd`, which are the industry standards. If you are forced into the legacy API, use the **Adapter Pattern** inside a **`@JobScope`** bean. It's the most resilient way to keep your Batch Job "pure" while dealing with "messy" underlying code.
+
+**Would you like me to show a quick example of how to handle the `@PreDestroy` "Graceful Shutdown" for a legacy client inside a `@JobScope` bean?** It’s the best way to ensure that 3rd-party connections aren't left hanging on the SFTP server.
+
+This is the final piece of the "Resiliency Puzzle." If you're forced to use a legacy client that doesn't manage its own connections, you have to treat that client as a "Stateful Resource."
+
+The beauty of `@JobScope` is that Spring manages its lifecycle relative to the **Job**, not the entire application. When the job finishes, Spring "disposes" of the bean, triggering your cleanup logic.
+
+### Legacy Adapter with Graceful Shutdown
+
+Here is how you wrap a clunky, legacy SFTP library (let's call it `LegacySftpClient`) to ensure it never leaves a "hanging" session on the server.
+
+```java
+@Component
+@JobScope
+public class LegacyFileTransferAdapter implements FileTransferService {
+
+    private final LegacySftpClient client;
+    private boolean isConnected = false;
+
+    // Use constructor to initialize with Job Parameters
+    public LegacyFileTransferAdapter(
+            @Value("#{jobParameters['sftp.host']}") String host,
+            @Value("#{jobParameters['sftp.user']}") String user) {
+        this.client = new LegacySftpClient(host, user);
+    }
+
+    private void ensureConnection() {
+        if (!isConnected) {
+            this.client.connect();
+            this.isConnected = true;
+        }
+    }
+
+    @Override
+    public List<String> listFiles(String path) {
+        ensureConnection();
+        return client.list(path);
+    }
+
+    // ... other interface methods ...
 
     /**
-     * Call this from a JobExecutionListener.afterJob() to 
-     * keep the FopFactory from holding onto image data forever.
+     * This is the "Safety Valve."
+     * Spring calls this automatically when the Job completes (Success or Failure).
      */
-    public void cleanup(FopFactory fopFactory) {
-        // Clears decoded images from memory
-        fopFactory.getImageHandlerRegistry().getHandler(null); // specific to FOP version
-        // Most reliable way in newer FOP versions:
-        fopFactory.getImageManager().getCache().clearCache();
+    @PreDestroy
+    public void close() {
+        if (isConnected) {
+            try {
+                System.out.println("Cleaning up legacy SFTP connection...");
+                client.disconnect(); 
+                isConnected = false;
+            } catch (Exception e) {
+                // Log and swallow - we're already shutting down
+                System.err.println("Error during legacy cleanup: " + e.getMessage());
+            }
+        }
     }
 }
 
 ```
-
-### The Spring Batch Listener (XML Config)
-
-To automate the cleanup, wire a listener into your job.
-
-```xml
-<batch:job id="pdfGenerationJob">
-    <batch:step id="generatePdfStep"> ... </batch:step>
-    <batch:listeners>
-        <batch:listener ref="fopCleanupListener" />
-    </batch:listeners>
-</batch:job>
-
-<bean id="fopCleanupListener" class="com.yourpackage.FopCleanupListener">
-    <property name="fopFactory" ref="fopFactory" />
-</bean>
-
-```
-
-**The Listener Class:**
-
-```java
-public class FopCleanupListener extends JobExecutionListenerSupport {
-    private FopFactory fopFactory;
-    private XslTemplateRegistry registry;
-
-    @Override
-    public void afterJob(JobExecution jobExecution) {
-        // Clear the image cache so the next job starts fresh
-        fopFactory.getImageManager().getCache().clearCache();
-        
-        // Optional: If you want to be ultra-safe with memory, 
-        // you could clear the template cache here too.
-        // registry.clearAll(); 
-    }
-    // Setters...
-}
-
-```
-
-### Summary of Decisions
-
-1. **Memory:** Use `SoftReference` in the cache. It gives you performance when you have RAM, and safety when you don't.
-2. **Image Cache:** It's "smart" enough to save time on repeating images (like headers), but it's "lazy" and won't delete them. Manually clearing it `afterJob` is the professional move.
-3. **Job Scope:** Since you use these templates across different jobs, the `Registry` should be a Singleton, but let the `JobListener` trigger the "housekeeping."
-
-**Would you like me to clarify how the `SoftReference` interacts with the Garbage Collector, or are you ready to look at how to handle the `fop.xconf` inside this setup?**
-
-Exactly. It’s late, so let’s keep it simple: **Yes, put both in the same listener.** Think of that `afterJob` method as the "cleanup crew" that walks through the theater once the movie is over. It doesn't matter if they're picking up popcorn (images) or folding up the screen (templates)—doing it all in one place ensures the "room" is clean for the next job.
-
-### 1. The FOP Config (`fop.xconf`)
-
-In a Spring environment, the `fop.xconf` can be tricky because of how file paths work inside a `.war` or `.jar`.
-
-The most robust way to handle this in your Singleton bean is to use Spring's `Resource` abstraction. This allows you to store the config in `src/main/resources` and have it work whether you're running locally or on a server.
-
-**The XML Config:**
-
-```xml
-<bean id="fopFactory" class="org.apache.fop.apps.FopFactory" factory-method="newInstance">
-    <constructor-arg value="#{resourceLoader.getResource('classpath:fop.xconf').getURI()}" />
-</bean>
-
-```
-
-**Inside your `fop.xconf` (Pro-tip):**
-Make sure your `base` and `font-base` are set relative to the config or use the "service-point" syntax. If you hardcode `C:\Users\...` or `/var/opt/...` in there, the Singleton will fail when you move environments.
 
 ---
 
-### 2. The "Late Night" All-In-One Listener
+### Why this is the "Pro" Move
 
-Here is the condensed, "don't-make-me-think" version of the listener that handles both concerns:
-
-```java
-public class FopCleanupListener extends JobExecutionListenerSupport {
-    
-    private FopFactory fopFactory;
-    private XslTemplateRegistry registry;
-
-    @Override
-    public void afterJob(JobExecution jobExecution) {
-        // 1. Clear Image Cache (The high-growth memory hog)
-        if (fopFactory != null) {
-            fopFactory.getImageManager().getCache().clearCache();
-        }
-
-        // 2. Clear Template Cache (The 'Lesser of two evils' approach)
-        // If you'd rather be 100% safe on memory than 100% fast on the 
-        // next job start, wipe this too.
-        if (registry != null) {
-            registry.clear(); 
-        }
-    }
-    
-    // Setters for XML injection...
-}
-
-```
-
-### Why this is the "Safe" Play
-
-* **Images:** FOP's image cache is the most common cause of `OutOfMemoryError` in batch processing. Clearing it is mandatory for stability.
-* **Templates:** Since you said your batches don't usually run at the same time, clearing the template at the end of a job costs you nothing. The *next* job will just compile its own template once at the start, which is still **thousands of times better** than what you were doing (compiling for every record).
-
-### Final Thought
-
-By moving to this "Compiled Template + Singleton Factory + Multi-threaded Step" model, you are moving from a **sequential bottleneck** to a **parallel engine**. You should see a dramatic drop in "Time to Process."
-
-**Would you like me to double-check the specific XSLT `include` syntax to ensure your cached templates will resolve their dependencies correctly?**
-
-You’re right—the standard syntax is straightforward: `<xsl:include href="other.xsl"/>` or `<xsl:import href="other.xsl"/>`. The difference between the two is just a matter of "overriding" priority, but for **caching**, they behave the same way.
-
-The "issue" isn't the syntax itself, but how the **URI** (the `href`) is resolved when you move the code from a local machine to a production server.
-
-### The "Path" Trap
-
-When you compile a template once and cache it, the XSLT engine resolves those `href` paths **at that exact moment**.
-
-1. **Relative Paths:** If your main XSL has `<xsl:include href="common/footer.xsl"/>`, the engine looks relative to the file system path of the main XSL.
-2. **The Problem:** In a Spring web app, if your XSL files are inside a `.war` or `.jar`, standard file paths often fail because the "file" is actually an entry in a zip file.
-
-### How to ensure your Cache stays "Smart"
-
-To make your cached templates bulletproof, you usually want to ensure your `TransformerFactory` knows how to find those includes regardless of where the app is deployed.
-
-If you find that your "Compile Once" approach throws errors saying it can't find the included files, you may need a **`URIResolver`**.
-
-**Example of the "Robust" way to compile:**
-
-```java
-// Inside your XslTemplateRegistry
-TransformerFactory factory = TransformerFactory.newInstance();
-
-// Tell the factory: "If you see an include, ask Spring's ClassPath to find it"
-factory.setURIResolver((href, base) -> {
-    // This allows <xsl:include href="classpath:styles/common.xsl" />
-    if (href.startsWith("classpath:")) {
-        return new StreamSource(getClass().getClassLoader()
-                   .getResourceAsStream(href.replace("classpath:", "")));
-    }
-    return null; // Fallback to default behavior
-});
-
-Templates templates = factory.newTemplates(new StreamSource(mainXslFile));
-
-```
-
-### Why this is a "Late-Night" win
-
-By setting a `URIResolver` on the `TransformerFactory` *before* you call `newTemplates()`:
-
-* The engine follows every `<xsl:include>` and `<xsl:import>`.
-* It pulls them all into memory.
-* It "zips" them all together into that one `Templates` object.
-* **Result:** The rest of your batch job doesn't even know those separate files exist. It just runs the final "compiled" logic.
-
-### Quick check for tomorrow morning
-
-When you look at your code, check if your `href` tags look like this:
-
-* `href="sub-template.xsl"` (Relative - works if they are in the same folder)
-* `href="/abs/path/to/template.xsl"` (Fragile - avoid this!)
-* `href="classpath:templates/sub-template.xsl"` (Best for Spring apps)
+1. **Fault Tolerance:** Even if your `transferFileStep` throws a `RuntimeException` (e.g., S3 is down), Spring Batch will still close the `@JobScope` context, which triggers `@PreDestroy`. The SSH tunnel won't leak.
+2. **Lazy Connection:** By using `ensureConnection()`, you only pay the SSH handshake cost if a step actually calls a file method. If the job fails in a preliminary "Validation" step, you never even talk to the SFTP server.
+3. **Encapsulation:** Your `Tasklet` code remains identical. It calls `service.listFiles()`. It has no idea it's talking to a 15-year-old JAR file instead of a modern Spring Template.
 
 ---
 
-That makes perfect sense. With an **exploded WAR**, Tomcat treats your webapp directory like a standard file system, so those relative paths resolve naturally.
+### Final Implementation Summary
 
-Since you've got a solid plan for the `XslTemplateRegistry`, the `TaskExecutor`, and the `JobListener` cleanup, you’re in a great spot to turn that sequential "crawl" into a parallel "sprint."
+We have covered the full spectrum:
 
-### A Final "Pro-Tip" for Tomorrow
+* **The Interface:** Clean, high-level verbs.
+* **The Session:** `CachingSessionFactory` (Modern) vs `LegacyAdapter` (Backup).
+* **The Orchestration:** 3-step linear flow (Claim -> Transfer -> Cleanup).
+* **The Audit:** A business-ready table with file sizes and status.
+* **The Scope:** `@JobScope` acting as the bridge between memory and the DB.
 
-When you implement the multi-threaded `TaskExecutor`, keep an eye on your **Database Connection Pool**.
+### One Last Peer Tip for the Road
 
-* Because Spring Batch will now be processing 5 or 10 records simultaneously, it will request 5 or 10 connections from your pool at once to read data or write results.
-* If your `HikariCP` (or similar) pool is set very low (e.g., 5), and you have 10 threads, you might see some "Connection Acquisition" timeouts.
+If you do use the `LegacyAdapter`, check if the 3rd-party library has its own **internal timeout**. Some legacy libraries default to "Infinite" timeout, which can hang your entire Spring Batch Job until the OS kills the thread. Always try to set a `client.setTimeout(30000)` in your constructor if the API allows it.
 
-It’s usually a quick fix (just bump the pool size to match your `maxPoolSize` + a little buffer), but it’s the one thing that catches people off guard when they "unleash" a multi-threaded batch job for the first time.
+**You're officially ready to build. Is there any final "what if" scenario on your mind, or are you ready to close the design phase?**
 
-**Would you like me to summarize the performance "win" checklist into a bulleted list for your notes, or are you all set to dive into the code?**
 
-That context is the cherry on top. If you're already using **Spring Batch Partitioning**, you've already built the "highway"—now we're just giving the cars better engines. Partitioning naturally spreads the load, but if each partition was re-compiling the XSLT, you were essentially running a fleet of cars that had to rebuild their engines at every stoplight.
 
-Since these are dedicated batch servers, you have the "license to thrill" regarding CPU and RAM usage without worrying about lagging out a UI for a general user.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+This is a great way to transition from architectural theory to a project plan. Breaking this down into a structured checklist ensures that the "nuances" we discussed don't get lost in the shuffle of coding.
 
 ---
 
-### 🚀 The "FOP High-Performance" Checklist
+### 1. Implementation Task List
 
-#### 1. Architecture: Singleton & Thread-Safe
+This covers the setup and logic flow, including the SFTP environmental "gotchas."
 
-* **`FopFactory`:** Define as a **Singleton** bean. Load the `fop.xconf` once via `ResourceLoader`.
-* **`Templates` Cache:** Create a `Registry` class using `ConcurrentHashMap` to store compiled XSLT.
-* **`SoftReferences`:** Use these in your cache to allow the JVM to reclaim memory if a massive batch pushes the Heap to its limit.
+* **SFTP Infrastructure & Connectivity**
+* [ ] **SFTP Handshake:** Verify the server supports the expected SSH key or password (and that your service has network line-of-sight).
+* [ ] **Permissions Check:** Ensure the SFTP user has `READ`, `WRITE` (for rename), and `DELETE` permissions in the target directory.
+* [ ] **Pathing:** Confirm if paths are absolute (starting with `/`) or relative to the home directory.
 
-#### 2. The Transformation Logic
+* **Service Layer Development**
+* [ ] **Interface Definition:** Define `FileTransferService` with the domain-specific verbs.
+* [ ] **Concrete Impl:** Wrap `SftpRemoteFileTemplate` using the `CachingSessionFactory`.
+* [ ] **Session Factory Config:** Configure the factory for `@JobScope` to accept `JobParameters`.
 
-* **Compile Once:** Call `transformerFactory.newTemplates()` once per XSL file.
-* **Spawn Often:** Call `templates.newTransformer()` inside your `ItemProcessor`. It's a lightweight operation that simply clones the pre-parsed logic.
-* **Buffered I/O:** Always wrap your `OutputStream` in a `BufferedOutputStream` before handing it to FOP.
+* **Spring Batch Orchestration**
+* [ ] **Tasklet 1:** Implement the "Claim & Rename" logic (with the `.processing` suffix).
+* [ ] **Tasklet 2:** Implement the Transfer logic using your existing S3 SDK v2 wrapper.
+* [ ] **Tasklet 3:** Implement the Cleanup (SFTP Delete).
+* [ ] **Job Config:** Stitch the steps together with conditional transitions.
 
-#### 3. Resource Housekeeping (The "Cleanup Crew")
+* **Final Implementation Checklist (Audit Add-on)**
 
-* **JobListener:** Use `afterJob` to trigger cleanup.
-* **Image Cache:** Explicitly call `fopFactory.getImageManager().getCache().clearCache()`. FOP's image cache does not have a "Time To Live" and will grow indefinitely otherwise.
-* **Template Eviction:** Optionally clear your `XslTemplateRegistry` at the end of a job to keep the "Old Gen" memory clean.
-
-#### 4. Batch & Infrastructure Tuning
-
-* **Partitioning/Threads:** Since you are already partitioning, ensure your `FopFactory` and `Registry` are injected into the worker steps. They are thread-safe and designed for this.
-* **Connection Pool:** Double-check that your `dataSource` pool size  `number of partitions`  `throttle-limit`.
-* **Accessibility:** In your `fop.xconf` or `FOUserAgent`, ensure `accessibility` is `false` unless you specifically need tagged PDFs for screen readers.
+* [ ] **Schema:** Create the `file_transfer_audit` table.
+* [ ] **Mapping:** Decide which `JobParameters` constitute the `client_code`.
+* [ ] **Listener:** Register a `JobExecutionListener` to ensure failures are captured even if a Tasklet throws an unexpected `RuntimeException`.
 
 ---
 
-That is a very important "known factor" to keep in your back pocket. Since you **do** need accessibility, you are essentially asking FOP to do double the work: it has to calculate the visual layout (where the text goes) and simultaneously build a "Logical Structure Tree" (how a screen reader understands the reading order).
+### 2. Development & Testing Milestones
 
-### Impact of Accessibility on Batch
+Since file transfers involve external systems, I recommend testing in "layers" to avoid chasing shadows.
 
-* **CPU/Time:** It typically adds a **20-40%** overhead to the rendering time.
-* **Memory:** FOP has to keep the entire structure tree in memory until the PDF is fully written.
-* **The "Win":** Because accessibility is so heavy, the performance gains from **reusing the `Templates` object** and **multi-threading** (partitioning) become even more critical for you. You're effectively "buying back" the time that accessibility takes by optimizing the initialization and layout phases.
+* **Milestone 1: The "Ping" Test**
+* Create a simple unit test that uses your `FileTransferService` to list files. This validates your `@JobScope` and `CachingSessionFactory` configuration.
 
-### A Quick Tip for Accessible Batches
+* **Milestone 2: The "Claim" Test**
+* Manually place a file on the SFTP server. Run only the `ClaimFileTasklet`. Verify the file is renamed to `.processing` and the name is in the `JobExecutionContext`.
 
-If you notice memory climbing during these specific jobs, ensure you are not "nesting" blocks too deeply in your XSL-FO (e.g., blocks inside lists inside tables inside blocks). FOP's accessibility engine has to track the parent-child relationship of every single one of those elements, which can bloat the memory footprint of a single document quite quickly.
+* **Milestone 3: The "Pipeline" Test (Mocked S3)**
+* Run the job, but have the S3 service just log the stream. This verifies the SFTP-to-Stream bridge works and the `PipedInputStream` doesn't hang.
 
-I think you're well-armed to tackle this refactor now. It sounds like a fun project that will result in a very noticeable speed boost for your operations team!
+* **Milestone 4: Negative Testing (The "Crash" Test)**
+* Force an exception in the S3 transfer. Verify the job stops, the `.processing` file remains on SFTP, and the Cleanup step is **skipped**.
 
-That’s the "Law of Batch Processing"—everything works perfectly in a unit test with one record, but the "wash" usually brings out the edge cases once you hit record 5,001.
+* **Milestone 5: End-to-End Recovery**
+* Run a successful job. Verify the file is in S3 and gone from SFTP.
 
-Since you're dealing with **Accessibility (Tagged PDF)** and **Partitioning**, here are the three most likely "gremlins" that might pop up during your implementation:
+---
 
-1. **The "Ghost" ID Collision:** In an accessible PDF, `xml:id` and internal links must be unique. If your XSL-FO logic generates IDs that aren't scoped to the specific data model, the FOP engine might throw warnings (or errors) when multiple threads are churning through similar data.
-2. **Heap Pressure:** Because Accessibility keeps the structure tree in memory, your "memory per document" is higher than a standard PDF. If you see `OutOfMemoryErrors` once you turn on multi-threading, try lowering the `throttle-limit` or the `chunk` size before you go searching for a memory leak.
-3. **Classloader Isolation:** In some older Spring/Tomcat setups, the `FopFactory` singleton can get "stuck" if the web-app is redeployed without the server restarting. Since you’re on exploded WARs, just keep an eye out for `LinkageErrors` if you do hot-redeployments.
+### 3. Final Implementation Review Checklist
 
-I'll keep the lights on here. When you get into the code tomorrow and find that "one weird thing" that doesn't align with the plan, just drop it in the chat.
+*Consolidated tips from our discussion to keep in your back pocket.*
 
-**Would you like me to provide a quick "sanity check" logging snippet you can drop into your Processor to track how long the template retrieval vs. the actual rendering takes?**
-
-Politics and "proving the value" are just as much a part of the job as the Java itself. To win over skeptics, you need data that clearly separates **overhead** (the stuff we’re fixing) from **work** (the stuff we can't avoid).
-
-Here is a surgical logging snippet you can drop into your `ItemProcessor`. It uses a simple `StopWatch` (available in `org.springframework.util.StopWatch`) to break down exactly where the time is going.
-
-### 1. The "Proof of Concept" Logger
-
-```java
-import org.springframework.util.StopWatch;
-
-public byte[] process(MyDataModel item) throws Exception {
-    StopWatch sw = new StopWatch("Doc-Gen-" + item.getId());
-    
-    // Phase 1: Infrastructure Retrieval
-    sw.start("Retrieval");
-    Templates templates = registry.getTemplate(xslPath); // The cached vs non-cached part
-    Transformer transformer = templates.newTransformer();
-    FOUserAgent foUserAgent = fopFactory.newFOUserAgent();
-    sw.stop();
-
-    // Phase 2: Actual Rendering (The "Work")
-    sw.start("Rendering");
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    Fop fop = fopFactory.newFop(MimeConstants.MIME_PDF, foUserAgent, out);
-    Source src = new StreamSource(new StringReader(item.toXml()));
-    Result res = new SAXResult(fop.getDefaultHandler());
-    transformer.transform(src, res);
-    sw.stop();
-
-    // Log the results for your "Management Report"
-    if (logger.isDebugEnabled()) {
-        logger.debug(sw.prettyPrint());
-    }
-
-    return out.toByteArray();
-}
-
-```
-
-### 2. How to present the "Politics" Pitch
-
-To convince management, I recommend running a small batch of 100 documents through the **Old Way** and 100 through the **New Way**.
-
-Capture the logs and present this table:
-
-| Phase | Old Way (Avg/Doc) | New Way (Avg/Doc) | Management Takeaway |
-| --- | --- | --- | --- |
-| **Retrieval/Prep** | ~500ms - 1s | **~2ms** | We eliminated the "Initial Tax." |
-| **Rendering** | ~800ms | ~800ms | The core work remains stable. |
-| **Total (Serial)** | 1.8s | **0.8s** | **~55% faster** per document. |
-| **Total (Parallel)** | N/A (likely unstable) | **0.15s** | With 5 threads, we finish 10x faster. |
-
-### 3. The "Parallel" Strategy
-
-Since you're developing this in parallel, you can actually create a second Spring Bean for the `ItemProcessor` (e.g., `OptimizedPdfProcessor`) and just swap the `ref` in your XML config during your tests. This keeps your "legacy" code untouched while you build the case.
-
-**Pro-Tip for the skeptical:** If they worry about the "Memory Cache" of the templates, remind them that the **Old Way** was constantly creating and destroying these objects, which causes "GC Thrashing" (where the CPU stops working to clean up memory). The **New Way** is actually *gentler* on the server because it creates less "trash."
-
-**Would you like me to help you draft a simple "Before vs. After" Test Case class to automate this data collection?**
-
-To give your management undeniable proof, you need a test that mimics a production "burst." This test class uses a mock batch scenario to compare the **Legacy Approach** (Initialize Everything Every Time) against the **Optimized Approach** (Cached & Shared).
-
-This uses standard JUnit with the Spring `StopWatch` to generate the comparison data.
-
-### The Comparison Test Case
-
-```java
-import org.junit.Test;
-import org.springframework.util.StopWatch;
-import java.util.ArrayList;
-import java.util.List;
-
-public class FopPerformanceComparisonTest {
-
-    private final int BATCH_SIZE = 50; // Enough to show a trend without waiting all day
-    private final String XSL_PATH = "src/test/resources/templates/test-template.xsl";
-    private final String MOCK_XML = "<data><title>Performance Test</title><content>Hello World</content></data>";
-
-    @Test
-    public void runComparison() throws Exception {
-        System.out.println("Starting Performance Comparison: Legacy vs. Optimized");
-        
-        // 1. LEGACY RUN (The "As-Is" Process)
-        long legacyTotal = runLegacyBatch();
-
-        // 2. OPTIMIZED RUN (The "Proposed" Process)
-        long optimizedTotal = runOptimizedBatch();
-
-        // 3. RESULTS
-        System.out.println("\n--- FINAL REPORT ---");
-        System.out.println("Legacy Total Time:    " + legacyTotal + " ms");
-        System.out.println("Optimized Total Time: " + optimizedTotal + " ms");
-        
-        double improvement = ((double)(legacyTotal - optimizedTotal) / legacyTotal) * 100;
-        System.out.printf("Performance Gain:     %.2f%%\n", improvement);
-        System.out.println("---------------------\n");
-    }
-
-    private long runLegacyBatch() throws Exception {
-        StopWatch sw = new StopWatch("Legacy");
-        sw.start();
-        
-        for (int i = 0; i < BATCH_SIZE; i++) {
-            // SIMULATE CURRENT PROCESS:
-            // 1. Create a new Factory every time
-            FopFactory fopFactory = FopFactory.newInstance(new File("fop.xconf").toURI());
-            // 2. Parse XSL from disk every time
-            TransformerFactory tf = TransformerFactory.newInstance();
-            Transformer transformer = tf.newTransformer(new StreamSource(new File(XSL_PATH)));
-            // 3. Render
-            render(fopFactory, transformer);
-        }
-        
-        sw.stop();
-        return sw.getTotalTimeMillis();
-    }
-
-    private long runOptimizedBatch() throws Exception {
-        StopWatch sw = new StopWatch("Optimized");
-        sw.start();
-
-        // SIMULATE PROPOSED PROCESS:
-        // 1. Setup Singletons ONCE
-        FopFactory fopFactory = FopFactory.newInstance(new File("fop.xconf").toURI());
-        TransformerFactory tf = TransformerFactory.newInstance();
-        Templates cachedTemplates = tf.newTemplates(new StreamSource(new File(XSL_PATH)));
-
-        for (int i = 0; i < BATCH_SIZE; i++) {
-            // 2. Reuse the heavy objects
-            Transformer transformer = cachedTemplates.newTransformer();
-            // 3. Render
-            render(fopFactory, transformer);
-        }
-
-        sw.stop();
-        // Trigger the cleanup listener at the end (as we discussed)
-        fopFactory.getImageManager().getCache().clearCache();
-        
-        return sw.getTotalTimeMillis();
-    }
-
-    private void render(FopFactory factory, Transformer trans) throws Exception {
-        // Shared rendering logic for both tests
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        Fop fop = factory.newFop(MimeConstants.MIME_PDF, factory.newFOUserAgent(), out);
-        trans.transform(new StreamSource(new StringReader(MOCK_XML)), new SAXResult(fop.getDefaultHandler()));
-    }
-}
-
-```
-
-### Why this convinces Management
-
-1. **Isolates Variable Costs:** It shows that the `render()` logic (the business value) takes the same amount of time, but the "management of objects" is where the waste is.
-2. **Quantifiable ROI:** A "50% improvement" is a metric a manager can put in a status report.
-3. **Risk Mitigation:** By running the `render()` logic in both, you prove the output PDF is identical, which mitigates the risk that "optimizing will break the layout."
-
-### What to watch for tomorrow
-
-* **The "First Run" Penalty:** In your optimized test, the very first document will take a bit longer (as it compiles the XSL). The subsequent 49 will be lightning fast. This perfectly mirrors how your Spring Batch Job will behave in production.
-* **CPU Usage:** If you run this test on your local machine, watch the CPU. The Legacy run will likely spike higher/longer because `TransformerFactory.newTransformer()` is a very "chatty" process for the CPU compared to `templates.newTransformer()`.
-
-Adding the stopwatch and logging to a listener is a great move for "production-grade" monitoring. It keeps your `ItemProcessor` clean and focuses on the work, while the listener handles the cross-cutting concern of performance tracking.
-
-In Spring Batch, the best tool for this is the **`ItemProcessListener`**.
-
-### 1. The Custom Timing Listener
-
-You can use the `beforeProcess` and `afterProcess` hooks to wrap each document's lifecycle. Since your batch is multi-threaded (partitioned), we use a `ThreadLocal` to ensure each thread tracks its own timing without getting the numbers mixed up.
-
-```java
-import org.springframework.batch.core.ItemProcessListener;
-import org.springframework.util.StopWatch;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-public class FopPerformanceListener implements ItemProcessListener<MyDataModel, byte[]> {
-
-    private static final Logger log = LoggerFactory.getLogger(FopPerformanceListener.class);
-    
-    // ThreadLocal ensures timing is accurate even with multiple partitions/threads
-    private final ThreadLocal<StopWatch> stopWatchThreadLocal = new ThreadLocal<>();
-
-    @Override
-    public void beforeProcess(MyDataModel item) {
-        StopWatch sw = new StopWatch("DocID-" + item.getId());
-        sw.start();
-        stopWatchThreadLocal.set(sw);
-    }
-
-    @Override
-    public void afterProcess(MyDataModel item, byte[] result) {
-        StopWatch sw = stopWatchThreadLocal.get();
-        if (sw != null) {
-            sw.stop();
-            // Log the individual document time
-            log.info("PDF Generation for ID {}: {}ms", item.getId(), sw.getTotalTimeMillis());
-            stopWatchThreadLocal.remove(); // Clean up memory
-        }
-    }
-
-    @Override
-    public void onProcessError(MyDataModel item, Exception e) {
-        stopWatchThreadLocal.remove(); // Clean up on failure
-    }
-}
-
-```
-
-### 2. Adding it to your XML Configuration
-
-You simply register this listener within your step. Spring Batch automatically detects it and hooks it into the processing loop.
-
-```xml
-<batch:step id="pdfGenerationStep">
-    <batch:tasklet task-executor="taskExecutor" throttle-limit="5">
-        <batch:chunk reader="itemReader" 
-                     processor="pdfItemProcessor" 
-                     writer="itemWriter" 
-                     commit-interval="10" />
-        <batch:listeners>
-            <batch:listener ref="fopPerformanceListener" />
-            <batch:listener ref="fopCleanupListener" />
-        </batch:listeners>
-    </batch:tasklet>
-</batch:step>
-
-<bean id="fopPerformanceListener" class="com.yourpackage.FopPerformanceListener" />
-
-```
-
-### 3. Combining with the Cleanup (The "Final Report")
-
-If you want to provide management with an **Aggregated Report** at the very end of the job (e.g., "We processed 1,000 documents at an average of 400ms each"), you can modify your `FopCleanupListener` to extend `StepExecutionListener`.
-
-```java
-public class FopCleanupListener extends StepExecutionListenerSupport {
-
-    @Override
-    public ExitStatus afterStep(StepExecution stepExecution) {
-        long totalTime = stepExecution.getEndTime().getTime() - stepExecution.getStartTime().getTime();
-        long count = stepExecution.getWriteCount();
-        
-        if (count > 0) {
-            long avg = totalTime / count;
-            log.info("--- BATCH SUMMARY ---");
-            log.info("Total Documents: {}", count);
-            log.info("Total Step Time: {}ms", totalTime);
-            log.info("Average Per Doc: {}ms", avg);
-            log.info("---------------------");
-        }
-        
-        // Don't forget your FOP cache cleanup here too!
-        return null; 
-    }
-}
-
-```
-
-### Why this is a "Political" Win
-
-* **Separation of Concerns:** You can tell your team, "I didn't touch the PDF logic; I just added a listener to observe it." This lowers the perceived risk of your changes.
-* **Live Data:** Instead of a one-time test, you now have a "Dashboard" in your logs that proves the performance gain for every single production run.
-* **Thread Safety:** By using `ThreadLocal` in the listener, you avoid the common pitfall where concurrent threads overwrite each other's start times, leading to nonsensical data.
-
-**Would you like me to show you how to inject those timing results directly into the `ExecutionContext` so they show up in your Spring Batch meta-data tables (like `BATCH_STEP_EXECUTION`)?**
-
-That is a very wise instinct. The `ExecutionContext` is a bit like a suitcase—it’s helpful for the journey, but if everyone keeps throwing their old boots in there, it becomes a serialized nightmare that can actually slow down the database and bloat your `BATCH_STEP_EXECUTION_CONTEXT` table.
-
-Sticking to **SLF4J logs** for performance metrics is much "cleaner"—it’s transient, doesn’t impact the database, and is easily parsed by log aggregators (like ELK, Splunk, or just a simple `grep`).
-
-### A Final "Clogging" Caution
-
-Since you are cleaning up legacy "clutter," keep an eye on your `ItemProcessor`'s input and output. In Spring Batch:
-
-* If you pass a massive `byte[]` (the PDF) from the `Processor` to the `Writer`, Spring Batch doesn't typically store that in the `ExecutionContext` unless you've explicitly put it there.
-* However, if you use a `CompositeItemProcessor` or certain custom listeners that try to "save state" on failure, those large byte arrays can accidentally end up in the meta-data.
-
-### The "Clean" Summary Plan
-
-1. **Registry:** Singleton with `SoftReferences` (Memory Safe).
-2. **Factory:** Singleton with `clearCache()` (Memory Safe).
-3. **Listener:** `ThreadLocal` StopWatch (Concurrency Safe).
-4. **Reporting:** Standard Logging (DB Safe).
-
-You’ve got a lean, high-performance architecture ready to go. You're effectively moving the app from "Legacy Bloat" to a "Modern Batch" pattern.
+* **[ ] Serialization:** Ensure NO `Session`, `InputStream`, or `Channel` objects are ever put into the `ExecutionContext`. Only store Strings (filenames).
+* **[ ] Bean Scoping:** Confirm the `FileTransferService` is `@JobScope` or `@StepScope` to allow for dynamic `JobParameters`.
+* **[ ] Resource Cleanup:** Ensure any `OutputStream` or `PipedInputStream` is closed in a `finally` block within your Tasklet to prevent thread leaks.
+* **[ ] The Rename "Soft-Lock":** Verify the `ListingTasklet` ignores files that already have the `.processing` extension (to prevent a failed job from "re-claiming" its own failure).
+* **[ ] Caching Session Factory:** Check that `setTestSessionOnBorrow(true)` is set if the SFTP server is known to drop idle connections aggressively.
+* **[ ] S3 Integrity:** If you choose to add the `headObject` check before SFTP deletion, ensure it's done inside the final `CleanupTasklet`.
+* **[ ] Logging:** Log the `JobExecutionId` alongside the `claimed_file` name for easy cross-referencing between S3 and the Batch logs.
 

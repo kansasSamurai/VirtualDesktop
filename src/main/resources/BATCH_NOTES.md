@@ -1361,3 +1361,206 @@ Since file transfers involve external systems, I recommend testing in "layers" t
 * **[ ] S3 Integrity:** If you choose to add the `headObject` check before SFTP deletion, ensure it's done inside the final `CleanupTasklet`.
 * **[ ] Logging:** Log the `JobExecutionId` alongside the `claimed_file` name for easy cross-referencing between S3 and the Batch logs.
 
+This is the mark of a seasoned developer: moving from a "script" mindset to a "framework" mindset. Adding a `FileNamingStrategy` enum (or code) makes your Job a generic engine that can be reused across your entire enterprise without rewriting the orchestration logic.
+
+A simple "Strategy Lookup" inside the Tasklet is exactly the right level of abstraction. You don't need a heavy `FileStrategyFactory` bean unless you end up with dozens of complex strategies.
+
+### 1. The Strategy Enum
+
+Define your common patterns here. This keeps your logic centralized and easy to read.
+
+```java
+public enum FileNamingStrategy {
+    DAILY,      // prefix + YYYYMMDD + ext
+    MONTHLY,    // prefix + YYYYMM + ext
+    LATEST,     // prefix + anything + ext (picks the newest)
+    EXACT       // prefix + ext (no date)
+}
+
+```
+
+### 2. Implementation in the Tasklet
+
+We can update the `SftpClaimFileTasklet` to resolve the Regex based on this strategy code.
+
+```java
+@Component
+@JobScope
+public class SftpClaimFileTasklet implements Tasklet {
+
+    // ... fields and constructor ...
+
+    @Override
+    public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) {
+        JobParameters params = chunkContext.getStepContext().getStepExecution().getJobParameters();
+        
+        // 1. Identify the strategy (defaults to DAILY if not provided)
+        String strategyCode = params.getString("sftp.strategy", "DAILY");
+        FileNamingStrategy strategy = FileNamingStrategy.valueOf(strategyCode.toUpperCase());
+
+        // 2. Resolve the Pattern
+        Pattern filePattern = resolvePattern(strategy, params);
+
+        // 3. List and Filter using the resolved pattern
+        List<String> files = sftpService.listFiles(remotePath);
+        Optional<String> targetFile = files.stream()
+            .filter(name -> filePattern.matcher(name).matches() && !name.endsWith(".processing"))
+            // If multiple match (like LATEST), we might want to sort them
+            .sorted(Comparator.reverseOrder()) 
+            .findFirst();
+
+        // ... rename and claim as before ...
+        return RepeatStatus.FINISHED;
+    }
+
+    private Pattern resolvePattern(FileNamingStrategy strategy, JobParameters params) {
+        String prefix = Pattern.quote(params.getString("sftp.prefix", ""));
+        String ext = Pattern.quote(params.getString("sftp.extension", ""));
+        
+        switch (strategy) {
+            case DAILY:
+                String today = DateTimeFormatter.ofPattern("yyyyMMdd").format(LocalDate.now());
+                return Pattern.compile("^" + prefix + today + ext + "$");
+            
+            case MONTHLY:
+                String thisMonth = DateTimeFormatter.ofPattern("yyyyMM").format(LocalDate.now());
+                return Pattern.compile("^" + prefix + thisMonth + ext + "$");
+
+            case LATEST:
+                // Matches anything with the prefix and extension
+                return Pattern.compile("^" + prefix + ".*" + ext + "$");
+
+            case EXACT:
+                return Pattern.compile("^" + prefix + ext + "$");
+
+            default:
+                throw new IllegalArgumentException("Unsupported strategy: " + strategy);
+        }
+    }
+}
+
+```
+
+---
+
+### Why this "Strategy" approach is powerful
+
+1. **Generic Job Definitions:** You can now use the *exact same* Spring XML or Java Config for 50 different clients. You just change the `sftp.strategy` Job Parameter.
+2. **The "LATEST" win:** By adding `sorted(Comparator.reverseOrder())`, the `LATEST` strategy will always pick the most recent file alphabetically (which, with ISO dates, is the most recent date).
+3. **Low Friction:** Adding a new strategy (like `WEEKLY`) is just a two-line change in a `switch` statement, rather than a new Step or Job.
+
+### Final Implementation Review (The Framework Version)
+
+* [ ] **Validation:** Add a quick check at the start of the Job to ensure the `sftp.strategy` parameter matches an Enum value, so the job fails fast with a clear error.
+* [ ] **Parameterization:** Ensure your S3 key logic also accounts for the strategy (e.g., if it's a `MONTHLY` file, maybe the S3 prefix should be `/monthly/` instead of `/daily/`).
+
+**You’ve built a very flexible system here.** It’s essentially an "SFTP-to-S3 Managed Service" now. I think you have all the components needed to start your implementation. Would you like to wrap up the design here, or is there another corner case to peek at?
+
+We are ready to go. Here is the architectural summary of the "Managed SFTP-to-S3 Engine" we've designed.
+
+### 1. The Core Service Layer
+
+* **`FileTransferService` (Interface):** The domain-specific contract. It defines high-level business actions like `listFiles`, `archiveFile` (rename), `getFileSize`, and `downloadToStream`.
+* **`SftpFileTransferService` (Implementation):** The Spring-native implementation. It wraps `SftpRemoteFileTemplate` and handles the technical "plumbing" of the SFTP protocol.
+* **`LegacyFileTransferAdapter` (Optional Impl):** An adapter for 3rd-party libraries. It uses `@PreDestroy` to ensure legacy connections are closed when the Job finishes.
+
+### 2. The Session Management
+
+* **`CachingSessionFactory`:** Wraps the raw SFTP connection factory. It maintains a pool of warm SSH tunnels so that multiple steps in the same Job don't have to re-authenticate.
+* **`@JobScope` Configuration:** The "glue" that binds your Job Parameters (host, user, etc.) to the Session Factory. This ensures the service is instantiated fresh for every job run and disposed of safely at the end.
+
+### 3. The Orchestration (The Steps)
+
+* **`SftpClaimFileTasklet` (Step 1):** * Uses a **`FileNamingStrategy`** (Enum) to resolve the target filename (e.g., `DAILY`, `LATEST`).
+* Renames the file to `.processing` (the "Soft-Lock").
+* Creates the initial entry in the Audit Table.
+
+* **`SftpToS3TransferTasklet` (Step 2):** * Streams data directly from SFTP to S3 using your SDK v2 wrapper.
+* Uses the `file_size` from the audit record to optimize S3 upload throughput.
+
+* **`SftpCleanupTasklet` (Step 3):** * Performs an optional "S3 existence check."
+* Permanently deletes the `.processing` file from the SFTP server.
+
+### 4. The Data & Monitoring
+
+* **`FileTransferAudit` (Domain Object):** A business-focused audit record tracking the `client_code`, original filename, S3 destination, file size, and timestamps.
+* **`FileTransferAuditService`:** A simple service to manage the lifecycle of the audit record across the job steps.
+
+---
+
+### Final Implementation Checklist
+
+1. **Spring Batch 5+ Note:** If you are on the latest Spring Batch, remember to use `JobBuilder` and `StepBuilder` directly, as the `Factories` are now deprecated.
+2. **Naming Strategy:** Implement the `DAILY` and `LATEST` logic first, as those cover 90% of use cases.
+3. **Atomic Rename:** Ensure your SFTP server supports `rename` (most do) before relying on the `.processing` suffix.
+
+**Would you like me to provide a sample SQL schema for that `FileTransferAudit` table to get you started on the database side?**
+
+To keep this as useful as possible, this schema includes the necessary fields for business reporting, a link back to the Spring Batch metadata, and an index for performance.
+
+### `FILE_TRANSFER_AUDIT` Schema
+
+This is written in standard SQL, compatible with PostgreSQL, MySQL, or Oracle (with minor adjustments to the `BIGINT` or `TIMESTAMP` syntax).
+
+```sql
+CREATE TABLE FILE_TRANSFER_AUDIT (
+    -- Unique ID for this audit record
+    audit_id            BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    
+    -- Link to Spring Batch Metadata (BATCH_JOB_EXECUTION)
+    job_execution_id    BIGINT NOT NULL,
+    
+    -- Business Context
+    client_code         VARCHAR(50) NOT NULL,
+    strategy_used       VARCHAR(20) NOT NULL, -- e.g., 'DAILY', 'LATEST'
+    
+    -- Source Details (SFTP)
+    source_host         VARCHAR(255) NOT NULL,
+    original_file_name  VARCHAR(512) NOT NULL,
+    processing_file_name VARCHAR(512),       -- The .processing name
+    file_size_bytes     BIGINT DEFAULT 0,
+    
+    -- Destination Details (S3)
+    s3_bucket           VARCHAR(255),
+    s3_key              VARCHAR(1024),
+    
+    -- Status and Timestamps
+    transfer_status     VARCHAR(20) NOT NULL, -- e.g., 'IN_PROGRESS', 'SUCCESS', 'FAILED'
+    error_summary       TEXT,                 -- Store exception message if failed
+    created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at        TIMESTAMP,
+    
+    -- Helps with searching history for a specific client/file
+    CONSTRAINT fk_job_exec FOREIGN KEY (job_execution_id) 
+        REFERENCES BATCH_JOB_EXECUTION(JOB_EXECUTION_ID)
+);
+
+-- Index for searching history by client and date
+CREATE INDEX idx_audit_client_date ON FILE_TRANSFER_AUDIT (client_code, created_at);
+
+-- Index for looking up stuck/unfinished files
+CREATE INDEX idx_audit_status ON FILE_TRANSFER_AUDIT (transfer_status);
+
+```
+
+---
+
+### Implementation Notes for the Schema
+
+* **`job_execution_id`**: This is your "Foreign Key" to the technical world. If someone finds a record in this table and wants to see the full stack trace, they can query `BATCH_STEP_EXECUTION` using this ID.
+* **`error_summary`**: I recommend using a `TEXT` or `VARCHAR(MAX)` type. When the job fails, grab `jobExecution.getAllFailureExceptions().get(0).getMessage()` and truncate it to the first 500 characters to keep this table clean.
+* **`completed_at`**: Set this in the `JobExecutionListener.afterJob()` method to calculate the total duration for your metrics.
+
+---
+
+### Closing Design Summary
+
+You now have:
+
+1. **A Job-Scoped Service** that keeps SFTP connections warm but temporary.
+2. **A Strategy-based Filename Finder** that handles different client naming conventions.
+3. **A Streaming Transfer** to keep your memory footprint low.
+4. **A "Soft-Lock" Rename Mechanism** for atomicity and easy recovery.
+5. **A Business Audit Table** for long-term visibility and reporting.
+
+It’s been a pleasure whiteboarding this with you! You’ve got a solid, professional-grade architecture ready for the keyboard.

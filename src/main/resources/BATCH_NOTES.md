@@ -1564,3 +1564,132 @@ You now have:
 5. **A Business Audit Table** for long-term visibility and reporting.
 
 It’s been a pleasure whiteboarding this with you! You’ve got a solid, professional-grade architecture ready for the keyboard.
+
+**Is there anything else I can help you with before you dive into the code?**
+
+You’re right—if the person who designed the current "dumping ground" is in the room, "harsh" is an understatement! It's better to frame it as a natural progression of scale rather than a failure of design.
+
+Here are a few ways to soften that phrase while still driving home the risk of "litter" and "clutter":
+
+### 1. The "Operational Noise" Pitch (Professional & Technical)
+
+> "Moving files to an archive folder transforms the SFTP site from a **static repository of accumulated history** into a **high-signal monitored pipeline**."
+
+* **Why it works:** It implies that the old files are just "noise" making it harder to hear the "signal" (the new data).
+
+### 2. The "Stagnant vs. Fluid" Pitch (Architectural)
+
+> "It moves us away from a **stagnant directory that builds up operational clutter** and toward a **fluid, automated workflow**."
+
+* **Why it works:** "Clutter" is a gentler way of saying "litter"—it implies things are in the way, but doesn't sound like you're calling their data "trash."
+
+### 3. The "Legacy Accumulation" Pitch (Strategic)
+
+> "This transition prevents the SFTP site from becoming an **unstructured landing zone of legacy files** and establishes a **transparent, state-driven pipeline**."
+
+* **Why it works:** "Legacy accumulation" sounds like a natural byproduct of a successful company, which makes the cleanup feel like a "growth step" rather than a "fix."
+
+---
+
+### Key "Talking Points" to support the change
+
+* **"Visual Confirmation":** Tell them, "When the inbox is empty, everyone knows the day's work is done. It gives the client and our support team an immediate 'green light' at a glance."
+* **"Search Optimization":** Explain that by moving the files, we reduce the "overhead of discovery." We aren't searching through a year's worth of files to find today's—we are only looking at what's relevant.
+* **"Error Isolation":** "If a file is left in the inbox, it’s a flag. If it’s moved to Archive, it’s a success. If it’s moved to Error, it’s a task. Leaving it in the inbox keeps the status 'unknown'."
+
+### The Code Adjustment for "Move to Archive"
+
+If you convince them, your `SftpCleanupTasklet` simply calls a "move" instead of a "delete." In SFTP (via JSch or SSHD), a "move" is just a `rename` with a path change:
+
+```java
+// Logic inside Cleanup Tasklet
+String archivePath = remotePath + "/archive/" + fileName.replace(".processing", "");
+sftpService.archiveFile(remotePath + "/" + fileName, archivePath);
+
+```
+
+**Would you like me to refine the `SftpFileTransferService.archiveFile()` method to ensure it can handle creating the `/archive` directory if it doesn't already exist?** (That’s a common "day one" bug with this strategy.)
+
+---
+
+### Key Concepts for Postgres Scripting
+
+* **The `DO $$...$$` Block:** In Postgres, you cannot use `DECLARE` or `IF` in a standard `.sql` file without wrapping it in a `DO` block or a Function. This treats the code as an anonymous function.
+* **Variable Assignment:** Always use `:=` for assignment. Using `=` is reserved for comparisons in `WHERE` clauses.
+* **Output:** Use `RAISE NOTICE 'message %', variable;` to print output to the console. The `%` acts as a placeholder for variables.
+* **The `INTO` Keyword:** This is the most common way to grab data from your schema and stick it into a variable for logic processing.
+
+Since PostgreSQL handles procedural logic (variables, loops, and `IF` statements) within **PL/pgSQL** blocks rather than as raw top-level script commands, this "cheat sheet" is written as an anonymous code block (`DO` block).
+
+You can run this entire script in any Postgres editor (like pgAdmin or psql) to see how the syntax functions.
+
+```sql
+DO $$ 
+DECLARE 
+    -- 1. DECLARING VARIABLES
+    -- Syntax: name [CONSTANT] type [:= expression];
+    user_count    INTEGER := 0;
+    pi_val        CONSTANT NUMERIC := 3.14159;
+    user_name     TEXT;
+    is_active     BOOLEAN DEFAULT TRUE;
+    dynamic_row   RECORD; -- Special type for storing a full row from a query
+    
+BEGIN
+    -- 2. SETTING VARIABLES TO CONSTANTS
+    user_name := 'Gemini';
+    is_active := FALSE;
+
+    -- 3. SETTING VARIABLES FROM SQL STATEMENTS
+    -- Use 'SELECT ... INTO' to store results
+    SELECT COUNT(*) INTO user_count FROM pg_tables;
+    
+    -- You can also assign from a subquery
+    user_name := (SELECT current_user);
+
+    -- 4. LOGIC STRUCTURES (IF / THEN / ELSE)
+    IF user_count > 100 THEN
+        RAISE NOTICE 'That is a lot of tables: %', user_count;
+    ELSIF user_count > 10 THEN
+        RAISE NOTICE 'Moderate table count found.';
+    ELSE
+        RAISE NOTICE 'Database is looking a bit empty.';
+    END IF;
+
+    -- 5. CASE STATEMENTS
+    CASE 
+        WHEN is_active THEN
+            RAISE NOTICE 'Status: Active';
+        ELSE
+            RAISE NOTICE 'Status: Inactive';
+    END CASE;
+
+    -- 6. LOOPS
+    
+    -- Integer Loop (1 to 5)
+    RAISE NOTICE 'Counting...';
+    FOR i IN 1..5 LOOP
+        RAISE NOTICE 'Number: %', i;
+    END LOOP;
+
+    -- Query Loop (Iterating through a result set)
+    -- This is how you "batch" process records
+    FOR dynamic_row IN (SELECT tablename FROM pg_tables LIMIT 3) LOOP
+        RAISE NOTICE 'Found table: %', dynamic_row.tablename;
+    END LOOP;
+
+    -- 7. ERROR HANDLING (TRY/CATCH equivalent)
+    BEGIN
+        -- Intentionally divide by zero
+        user_count := 1 / 0;
+    EXCEPTION WHEN division_by_zero THEN
+        RAISE NOTICE 'Caught a division by zero error!';
+    END;
+
+-- Final end of block
+END $$;
+
+```
+
+---
+
+Would you like me to expand on the **Error Handling** section or perhaps show you how to turn this into a **reusable Function**?

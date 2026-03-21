@@ -1,8 +1,38 @@
-# doxygen
+# Doxygen
 
 ## Summary
 
-put somethere here
+Doxygen is essentially a "static analysis engine" that masquerades as a documentation tool. It doesn't just read comments; it builds an internal map (a parse tree) of your entire codebase—classes, methods, fields, and relationships—and then uses that map to generate human-readable documentation.
+
+Because it understands the structural links between code elements, it is arguably the best "forensic" tool for legacy Java systems, as it can trace dependency chains that would take hours to map manually.
+
+### Common Doxygen Command-Line Usages
+
+Unlike many modern CLI tools that take dozens of flags (`--output`, `--recursive`, etc.), Doxygen is designed to be **config-file-driven**. This is intentional; it keeps your build process repeatable and auditable.
+
+| Command | Purpose |
+| :--- | :--- |
+| `doxygen -g` | **Generate:** Creates a default `Doxyfile` in your current folder. |
+| `doxygen <filename>` | **Build:** Runs the analysis using a specific configuration file. |
+| `doxygen -u <filename>` | **Update:** Upgrades an old `Doxyfile` to the latest version, preserving your settings. |
+| `doxygen -v` | **Version:** Displays the version (good for checking if your PATH is set correctly). |
+| `doxygen -s` | **Strip:** Used with `-g` or `-u` to create a "clean" config file without all the comments (great for sharing/audits). |
+| `doxygen -` | **Pipe:** Reads the configuration from `stdin` instead of a file (the "patching" trick we used for dummy runs). |
+
+---
+
+### The "Forensic" Workflow Summary
+
+For a project of your scale, you are moving away from the "default" usage and into a more **Surgical Workflow**:
+
+1. **Configuration:** You don't use `doxygen -g` anymore. You maintain a handful of specialized `.doxconfig` files for different purposes (e.g., `audit.doxconfig`, `fast.doxconfig`).
+2. **Environment:** You treat Doxygen as a standalone binary (pointing it via PATH or full path in `tasks.json`) rather than an extension.
+3. **The "Heavy" Build:** You run this as a controlled process, typically using an overnight batch job or a `Ctrl+Shift+B` task that you specifically trigger, ensuring you aren't fighting your IDE for CPU cycles.
+4. **Verification:** You review the `WARN_LOGFILE` after every run to ensure the "forensic map" you are generating is accurate and complete, rather than just trusting the HTML output.
+
+By keeping the configuration deterministic and the output directory outside your source tree, you've essentially built a professional-grade documentation pipeline that is entirely air-gapped and immune to any "AI" interference.
+
+## Usage
 
 1. Create the Doxyfile
 

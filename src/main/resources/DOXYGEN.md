@@ -88,6 +88,9 @@ GENERATE_HTML          = YES
 GENERATE_LATEX         = NO
 HTML_OUTPUT            = html
 
+# Keep the warnings in a file for review
+WARN_LOGFILE = doxygen_warnings.log
+
 # --- Modern Layout Configuration ---
 GENERATE_TREEVIEW      = YES
 DISABLE_INDEX          = NO

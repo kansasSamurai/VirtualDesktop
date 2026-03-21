@@ -276,3 +276,103 @@ To ensure your "let it loose" run is successful:
 3. **Check your Task Manager:** Before you walk away, start the process and watch the "Memory" and "Disk" columns in Task Manager for 2–3 minutes. If memory usage stays flat and Disk I/O is steady, you're in the clear.
 
 **You are ready.** You’ve done the surgical planning that most developers skip, and you’ve set up the "safety valves." Let it run, check that `doxygen_warnings.log` in the morning, and enjoy the forensic map of your framework.
+
+That stall at **25,081/42,576** confirms exactly what we feared: **Graphviz (dot) "Explosion."**
+
+When Doxygen says it’s "Running dot," it is spawning a separate process to draw a single diagram. In a 40-year-old codebase, you likely hit a "God Class" or a deeply nested dependency where the resulting graph was so massive that Graphviz either ran out of memory or entered an infinite calculation loop trying to position the nodes.
+
+Here is the "Forensic Rescue Plan" to get this build across the finish line.
+
+### 1. Fix the "Dot" Hang (The Priority)
+
+The fact that it stalled during graph generation means the parser finished, but the drawer (Graphviz) choked. You need to put "blinkers" on the graphing engine:
+
+```ini
+# --- Add these to your .doxconfig ---
+DOT_GRAPH_MAX_NODES    = 50    # Absolute must. Prevents 1,000-node "spaghetti" graphs.
+MAX_DOT_GRAPH_DEPTH    = 3     # Limit the "blast radius" of calls.
+DOT_MULTI_TARGETS      = YES   # Allows dot to work more efficiently.
+```
+
+### 2. Address the "Not an Input File" Warnings
+
+Doxygen is a bit pedantic about the `\file` command in Java.
+
+* **The Cause:** Java developers often copy-paste headers. If a file named `UserDao.java` has a comment block saying `\file Service.java`, Doxygen panics because it can't find `Service.java` inside `UserDao.java`.
+
+* **The Fix:** Unless you are manually documenting C-style header files, **don't use `\file` in Java.** You can tell Doxygen to ignore these misplaced tags:
+
+    ```ini
+    # Turn off the noise
+    WARN_IF_DOC_ERROR      = NO
+    ```
+
+### 3. The "String" & Native Class Warnings
+
+Doxygen is complaining because it doesn't know what a `String`, `List`, or `Map` is—it only knows about the code you gave it in the `INPUT` folder.
+
+* **The Fix:** You need to tell Doxygen where the Java Standard Library documentation lives.
+
+    ```ini
+    # Add this to link to the official Java docs
+    TAGFILES += "C:/DevTools/Doxygen/Tags/jdk17.tag=https://docs.oracle.com/en/java/javase/17/docs/api/"
+    ```
+
+    *(Note: You can download these `.tag` files so it stays 100% local/air-gapped.)*
+
+### 4. The "Resume" Strategy
+
+Since the parser actually finished (it was in the "Running dot" phase), you don't necessarily have to re-parse everything.
+
+1. **Kill any lingering `dot.exe` processes** in Task Manager.
+2. Update your config with the `DOT_GRAPH_MAX_NODES = 50` limit.
+3. Set `DOT_CLEANUP = NO`.
+4. Run it again. Doxygen will see the existing XML/Map files and only try to re-render the graphs that failed.
+
+---
+
+### My Recommendation: The "Graph-Lite" Run
+
+If you just want to see the results today without another overnight wait, try this:
+
+1. Set `HAVE_DOT = NO` just to see if the HTML generates successfully.
+2. If the HTML looks good and the "Services" are all there, then turn `HAVE_DOT = YES` back on, but with the **Max Nodes = 50** limit.
+
+**Would you like me to help you find a local copy of the Java JDK tag file so you can silence those "unable to resolve link" warnings without hitting the internet?**
+
+It’s a common misconception that the JDK comes with a "Doxygen-ready" tag file. Unfortunately, **it does not**. The Javadoc tool and Doxygen are separate ecosystems; while Doxygen can parse Javadoc-style comments, it doesn't automatically know how to link to the standard library without a specifically formatted `.tag` file.
+
+Since you are maintaining a strict "no-internet" policy, you have two options to silence those warnings and get your links working:
+
+### Option 1: The "Manual Link" (Easiest)
+
+If you don't actually need the documentation for `String` or `List` to be clickable, but you just want the **warnings to stop**, you can explicitly tell Doxygen to ignore them:
+
+```ini
+# Add these to your .doxconfig
+# This tells Doxygen not to try to resolve links to things it doesn't know
+WARN_IF_UNDOCUMENTED   = NO
+WARN_NO_PARAMDOC       = NO
+```
+
+This is the "sane" approach for a 40-year-old codebase—you likely don't need documentation for `java.lang.String` anyway.
+
+### Option 2: The "Air-Gapped Tag File" (The Hard Way)
+
+If you truly want those links to work, you have to build the tag file yourself.
+
+1. **Download the Javadoc HTML** for your JDK version (e.g., JDK 17, 21, etc.) as a ZIP from Oracle or OpenJDK.
+2. **Extract it** to a local folder (e.g., `C:\DevTools\JDKDocs\17`).
+3. **Run Doxygen on the Javadoc:** You have to trick Doxygen into "reading" the HTML docs to build the index.
+    * This is actually quite difficult to get right, which is why most veteran devs avoid it.
+
+### My Recommendation for your Forensics
+
+Don't waste time generating a JDK tag file. In a forensic investigation of a legacy application, the **Standard Library** (`java.lang`, `java.util`) is rarely the source of your problems. The "spaghetti" is almost always in your own service layers, DAO wrappers, and legacy framework code.
+
+**Keep your focus on your code:**
+
+1. **Silence the noise:** Use the `WARN_IF_... = NO` settings above.
+2. **Focus on the "Dot" stall:** That is your real "forensic" blocker. Once you add `DOT_GRAPH_MAX_NODES = 50` and `MAX_DOT_GRAPH_DEPTH = 3`, Doxygen will stop choking on the complexity of your system.
+
+**Are you ready to kill those warnings and try the "Graph-Lite" build one more time?** I can help you finalize the exact `doxconfig` block to ensure you get a clean build on the next pass.

@@ -252,3 +252,27 @@ pause
 ```
 
 This way, tomorrow morning, you’ll know exactly how long it took (the "timing feel" you wanted) and you can check the `build_log.txt` for any "Patching" errors.
+
+You are right to be wary. While Doxygen has evolved significantly (switching to STL containers and dropping some older internal caching complexities in modern versions), it is **not** a streaming, disk-only engine. It fundamentally wants to hold as much of your project’s symbol tree in memory as possible to perform the complex cross-referencing required for your call graphs.
+
+### How it handles your large codebase
+
+* **The "Symbol Tree":** When you run Doxygen, it builds an internal representation (an Abstract Syntax Tree of sorts) of every class, method, and variable in the `INPUT` path. This lives in RAM.
+* **The Caching Mechanism:** Doxygen does have an internal "Lookup Cache" (`LOOKUP_CACHE_SIZE`). When it fills up, it pushes symbols to disk and retrieves them as needed. This is how it avoids crashing on massive projects, but it trades **memory usage** for **disk I/O**.
+* **The Bottleneck:** If your project is truly massive and your `LOOKUP_CACHE_SIZE` is too low, Doxygen spends its entire time swapping data between RAM and the disk (this is the "thrashing" mentioned in the logs). If it's too high, you might hit the OOM (Out of Memory) limit of your system.
+
+### Why you (hopefully) won't crash
+
+1. **64-bit Architectures:** Since you're running on a modern machine, you have a much higher memory ceiling than developers did in the early 2000s. Doxygen can comfortably address 16GB, 32GB, or more of RAM, which is usually enough for even very large enterprise Java projects.
+2. **Modern STL:** Doxygen’s move to standard STL containers (like `std::vector`, `std::map`) has made its memory footprint much more predictable and stable compared to the old custom "qtools" libraries.
+3. **The "Safety Valve":** If you do run out of RAM, the OS will start "swapping" memory to your page file. The process won't necessarily *crash*, but it will slow down to a crawl. If you see your disk usage spike and your CPU usage drop during the process, that's your sign that it's thrashing.
+
+### The "Overnight" Recommendation
+
+To ensure your "let it loose" run is successful:
+
+1. **SSD is Mandatory:** Ensure your project source and your output directory are both on an NVMe or fast SSD. Mechanical hard drives will absolutely choke during the "patching" and "caching" phases of a large build.
+2. **Clear the Output First:** If you are using `DOT_CLEANUP = NO` for incremental builds, **delete the `/docs/doxygen` folder manually before you start the overnight run.** This ensures you aren't fighting with cached files from your smaller "dummy" runs.
+3. **Check your Task Manager:** Before you walk away, start the process and watch the "Memory" and "Disk" columns in Task Manager for 2–3 minutes. If memory usage stays flat and Disk I/O is steady, you're in the clear.
+
+**You are ready.** You’ve done the surgical planning that most developers skip, and you’ve set up the "safety valves." Let it run, check that `doxygen_warnings.log` in the morning, and enjoy the forensic map of your framework.

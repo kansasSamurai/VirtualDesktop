@@ -105,4 +105,39 @@ The key differences from the HTML version:
 - **`font-size="75%"`** scales it down relative to the surrounding text, which is standard for superscripts. Adjust to taste — `65%` to `80%` are all common.
 - **`fo:inline`** is the XSL-FO equivalent of an HTML `<span>`, used here to wrap both normal and superscript runs.
 
+Here's the SQL update statement:
+
+```sql
+UPDATE your_table
+SET your_column = CONCAT(LEFT(your_column, LEN(your_column) - 1), '^', RIGHT(your_column, 1))
+WHERE your_column LIKE '%1';
+```
+
+Simple breakdown:
+- `LEFT(..., LEN(...) - 1)` grabs everything except the last character
+- `'^'` inserts the delimiter
+- `RIGHT(..., 1)` re-appends the trailing `1`
+- The `WHERE` clause limits updates to only rows ending in `1`
+
+**Note on dialect differences** — the functions used above are T-SQL (SQL Server). Minor adjustments for other databases:
+
+| Database | Length function | Notes |
+|---|---|---|
+| SQL Server | `LEN()` | As written above |
+| MySQL / MariaDB | `LENGTH()` | Also has `CONCAT`, works as-is otherwise |
+| PostgreSQL | `LENGTH()` | Use `\|\|` instead of `CONCAT`: `LEFT(...) \|\| '^' \|\| RIGHT(...)` |
+| Oracle | `LENGTH()` | Use `\|\|` and `SUBSTR` instead of `LEFT`/`RIGHT` |
+
+Let me know which database you're on if you need a dialect-specific version.
+
+Here's the PostgreSQL version:
+
+```sql
+UPDATE your_table
+SET your_column = LEFT(your_column, LENGTH(your_column) - 1) || '^' || RIGHT(your_column, 1)
+WHERE your_column LIKE '%1';
+```
+
+PostgreSQL has `LEFT`, `RIGHT`, and `LENGTH` just like SQL Server, so the only change is swapping `CONCAT()` for the `||` concatenation operator.
+
 The calling convention remains exactly the same as before.

@@ -9,6 +9,14 @@
       "autoConnect": false
     },
     {
+      "name": "HSQL Sandbox",
+      "driver": "org.hsqldb.jdbc.JDBCDriver",
+      "url": "jdbc:hsqldb:hsql://localhost:1234/sandbox",
+      "username": "SA",
+      "password": "",
+      "autoConnect": false
+    },
+    {
       "name": "MemoryDB",
       "driver": "org.hsqldb.jdbc.JDBCDriver",
       "url": "jdbc:hsqldb:mem:tempdb;sql.enforce_names=false",

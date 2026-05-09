@@ -18,7 +18,7 @@ VirtualDesktop is a Java-based virtual desktop application providing a consisten
 ## Terminology
 
 | Term | Usage | Context |
-|------|-------|---------|
+| :--- | :--- | :--- |
 | **tool** | User-facing | UI labels, documentation, user messages |
 | **vapp** | Internal only | Class names, code comments referring to internal artifacts |
 | **VirtualAppSpec** | Internal | Base class for tool specifications |
@@ -32,7 +32,7 @@ VirtualDesktop is a Java-based virtual desktop application providing a consisten
 - [BeanShell Integration] #beanshell-integration
 - [External Applications](#external-applications)
 - [Tool Configuration](#tool-configuration)
-- [UI/UX Guidelines] #uiux-guidelines 
+- [UI/UX Guidelines] #uiux-guidelines
 - [Taskbar](#taskbar)
 - [State Management (Redux-Style)](#state-management-redux-style)
 
@@ -43,12 +43,14 @@ VirtualDesktop is a Java-based virtual desktop application providing a consisten
 **Decision:** All BeanShell-enabled tools share a single interpreter instance via `BeanShellService` singleton.
 
 **Rationale:**
+
 - Memory efficiency (one interpreter vs N)
 - Inter-tool communication via shared `global.*` namespace
 - Console can inspect/modify any tool's state
 - Variables persist across tool launches
 
 **Constraints:**
+
 - Console must be injected BEFORE interpreter creation (BeanShell's `setConsole()` is incomplete)
 - `initializeEnvironment()` currently disabled due to console initialization conflicts
 - Namespace collisions possible - scripts should use unique names or scoped objects
@@ -58,15 +60,18 @@ VirtualDesktop is a Java-based virtual desktop application providing a consisten
 **Decision:** Tools can be defined entirely by BeanShell scripts via `SpecBeanShellScript`.
 
 **Patterns:**
+
 1. **Simple** - Script returns a JComponent directly (no lifecycle support)
 2. **Advanced** - Script returns `this` object with lifecycle methods (recommended)
 
 **Lifecycle methods** (all optional):
+
 - `getContent()` - Returns the JComponent to display
 - `configure(attrs)` - Called with configuration attributes from vapps-config.json
 - `launch()` - Called when the tool window is displayed
 
 **Example advanced pattern:**
+
 ```bsh
 myTool() {
     // ... create UI ...
@@ -88,6 +93,7 @@ return global.myTool;  // Return "this" for lifecycle support
 **Decision:** Tools that launch external processes or display in external JFrames show a consistent placeholder panel in the virtual desktop.
 
 **Design elements:**
+
 - Centered layout with 20px padding
 - Bold title describing the tool type
 - Italicized path/command information
@@ -105,11 +111,13 @@ return global.myTool;  // Return "this" for lifecycle support
 **Location:** `config/vapps-config.json`
 
 **Key elements:**
+
 - `menuStructure` - Defines menu organization and tool entries
 - `desktopShortcuts` - Desktop icon definitions
 - `attrs` - Custom attributes passed to `Configurable` tools
 
 **Example entry with attributes:**
+
 ```json
 {
   "class": "org.jwellman.virtualdesktop.vapps.SpecBeanShellScript",
@@ -147,6 +155,7 @@ Tools should follow these guidelines for framework compatibility:
 **Decision:** Taskbar supports grouping tools by type (class name).
 
 **Behavior:**
+
 - Model supports grouping; view optionally displays grouped/ungrouped based on user preference
 - Initial implementation: group by tool type (class)
 - Future: grouping by docking relationship
@@ -158,6 +167,7 @@ Tools should follow these guidelines for framework compatibility:
 **Decision:** Taskbar displays indicators for docking state changes.
 
 **Indicators:**
+
 - **Original panel present** - Whether the tool's original panel is still in its JInternalFrame
 - **Has external content** - Whether the JInternalFrame contains panels docked from other tools
 
@@ -174,6 +184,7 @@ Tools should follow these guidelines for framework compatibility:
 **Decision:** Adopt Redux-style state management with centralized store, actions, and unidirectional data flow.
 
 **Core Concepts:**
+
 - **Store** - Single source of truth (`AppStore` singleton)
 - **State** - Immutable state objects (`AppState`, `ToolsState`, etc.)
 - **Actions** - Named events describing state changes (`TOOL_OPENED`, `PANEL_DOCKED_IN`)
@@ -181,6 +192,7 @@ Tools should follow these guidelines for framework compatibility:
 - **Subscribers** - UI components subscribe to state changes
 
 **Rationale:**
+
 - Centralized state simplifies debugging and reasoning about application state
 - Unidirectional flow prevents state synchronization bugs
 - Action logging enables debugging and potential undo/redo
@@ -188,7 +200,7 @@ Tools should follow these guidelines for framework compatibility:
 
 #### State Model
 
-```
+```plain
 AppState
 ├── ToolsState
 │   ├── toolsById: Map<String, ToolInstance>
@@ -209,7 +221,7 @@ ToolInstance
 
 #### Package Structure
 
-```
+```plain
 org.jwellman.virtualdesktop.state/
 ├── store/     - AppStore, StoreSubscriber, Middleware
 ├── actions/   - Action, ActionTypes, payloads/
@@ -253,7 +265,7 @@ TASKBAR_GROUPING_TOGGLED, TASKBAR_TOOL_SELECTED
 ## Change Log
 
 | Date | Decision | Rationale |
-|------|----------|-----------|
+| :--- | :--- | :--- |
 | 2026-01-16 | Shared BeanShell interpreter | Memory efficiency, inter-tool communication |
 | 2026-01-16 | "tool" vs "vapp" terminology | User-facing clarity |
 | 2026-01-16 | Consistent placeholder panels | UX consistency for external tools |

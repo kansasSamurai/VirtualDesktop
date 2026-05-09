@@ -10,9 +10,11 @@
 ## 1. Introduction
 
 ### 1.1 Purpose
+
 Design and implement a modern, interpreter-agnostic console/REPL component for Java Swing that can be used with different command interpreters including BeanShell, JavaScript (Nashorn), and potentially others.
 
 ### 1.2 Goals
+
 - **Interpreter Independence** - Clean abstraction allowing any interpreter to be plugged in
 - **Modern Design** - Both API and visual design improvements over existing BeanShell console
 - **Java 8 Compatible** - Must work with Java 8 (project requirement)
@@ -20,6 +22,7 @@ Design and implement a modern, interpreter-agnostic console/REPL component for J
 - **Maintainable** - Clean separation of concerns, testable components
 
 ### 1.3 Non-Goals (Initial Release)
+
 - Full terminal emulation (PTY, ANSI escape codes)
 - Remote/networked interpreter connections
 - IDE-level debugging integration
@@ -29,13 +32,16 @@ Design and implement a modern, interpreter-agnostic console/REPL component for J
 ## 2. Background
 
 ### 2.1 Current State
+
 The VirtualDesktop project has a BeanShell console (`org.jwellman.bsh.JConsole`) that:
+
 - Is tightly coupled to BeanShell's `GUIConsoleInterface`
 - Uses `bsh.util.NameCompletion` directly for tab completion
 - Has hardcoded BeanShell-specific initialization
 - Cannot be easily reused with other interpreters
 
 ### 2.2 Problems with Current Approach
+
 1. **Coupling** - Cannot use the console with JavaScript, Groovy, etc.
 2. **Duplication** - Would need to copy/modify 900+ lines for each interpreter
 3. **Maintenance** - Bug fixes must be applied to each copy
@@ -44,7 +50,7 @@ The VirtualDesktop project has a BeanShell console (`org.jwellman.bsh.JConsole`)
 ### 2.3 Open Source Alternatives Evaluated
 
 | Library | License | Pros | Cons |
-|---------|---------|------|------|
+| :--- | :--- | :--- | :--- |
 | DragonConsole | MIT | Has CommandProcessor abstraction | Kotlin, dormant since 2022 |
 | swing-console | LGPL | Simple, embeddable | No command processing abstraction |
 | Text-IO | Apache 2.0 | Nice factory pattern | Input-gathering focused, not REPL |
@@ -58,19 +64,19 @@ The VirtualDesktop project has a BeanShell console (`org.jwellman.bsh.JConsole`)
 
 ### 3.1 High-Level Design
 
-```
+```plain
 ┌─────────────────────────────────────────────────────────────┐
 │                     GenericConsole (UI)                     │
-│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────┐    │
-│  │ConsoleText- │  │ Command     │  │  ConsoleTheme    │    │
-│  │Pane         │  │ History     │  │  (colors, font)  │    │
-│  └─────────────┘  └─────────────┘  └──────────────────┘    │
+│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────┐     │
+│  │ConsoleText- │  │ Command     │  │  ConsoleTheme    │     │
+│  │Pane         │  │ History     │  │  (colors, font)  │     │
+│  └─────────────┘  └─────────────┘  └──────────────────┘     │
 └────────────────────────────┬────────────────────────────────┘
                              │
                              ▼
-                    ┌─────────────────┐
+                    ┌──────────────────┐
                     │InterpreterAdapter│ ◄─── Abstract interface
-                    └────────┬────────┘
+                    └────────┬─────────┘
            ┌─────────────────┼─────────────────┐
            ▼                 ▼                 ▼
     ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
@@ -82,6 +88,7 @@ The VirtualDesktop project has a BeanShell console (`org.jwellman.bsh.JConsole`)
 ### 3.2 Core Interfaces
 
 #### 3.2.1 InterpreterAdapter
+
 The central abstraction for interpreter integration.
 
 ```java
@@ -142,6 +149,7 @@ public interface InterpreterAdapter {
 ```
 
 #### 3.2.2 CompletionProvider
+
 Abstraction for tab completion, decoupled from BeanShell's NameCompletion.
 
 ```java
@@ -164,6 +172,7 @@ public interface CompletionProvider {
 ```
 
 #### 3.2.3 CommandHistory
+
 Abstraction allowing for persistence options.
 
 ```java
@@ -182,6 +191,7 @@ public interface CommandHistory {
 ```
 
 #### 3.2.4 ConsoleTheme
+
 Visual customization with builder pattern.
 
 ```java
@@ -221,9 +231,11 @@ public class ConsoleTheme {
 ## 4. UI Components
 
 ### 4.1 GenericConsole
+
 Main console component, extends JScrollPane (like existing JConsole).
 
 **Responsibilities:**
+
 - Host ConsoleTextPane
 - Manage I/O streams (piped streams)
 - Handle keyboard input (Enter, Up/Down, Tab, etc.)
@@ -232,15 +244,18 @@ Main console component, extends JScrollPane (like existing JConsole).
 - Coordinate with InterpreterAdapter
 
 ### 4.2 ConsoleTextPane
+
 Protected JTextPane that prevents editing output.
 
 **Features:**
+
 - Tracks `cmdStart` position (where current command begins)
 - Overrides cut() to copy-only before cmdStart
 - Overrides paste() to force caret to end
 - Styled document support
 
 ### 4.3 BlockingPipedInputStream
+
 Thread-safe piped input stream (from existing JConsole).
 
 **Purpose:** Handles ephemeral writer threads gracefully without "broken pipe" exceptions.
@@ -250,6 +265,7 @@ Thread-safe piped input stream (from existing JConsole).
 ## 5. Interpreter Adapters
 
 ### 5.1 BeanShellAdapter
+
 Wraps `bsh.Interpreter`, integrates with `BeanShellService`.
 
 ```java
@@ -287,6 +303,7 @@ public class BeanShellAdapter implements InterpreterAdapter {
 ```
 
 ### 5.2 NashornAdapter
+
 Uses `javax.script.ScriptEngine` (Java 8 standard).
 
 ```java
@@ -323,7 +340,7 @@ public class NashornAdapter implements InterpreterAdapter {
 ### 6.1 Core Features (MVP)
 
 | Feature | Status | Priority | Notes |
-|---------|--------|----------|-------|
+| :--- | :--- | :--- | :--- |
 | InterpreterAdapter interface | Planned | P0 | Core abstraction |
 | CompletionProvider interface | Planned | P0 | Tab completion |
 | CommandHistory interface | Planned | P0 | Up/down arrows |
@@ -336,7 +353,7 @@ public class NashornAdapter implements InterpreterAdapter {
 ### 6.2 Enhanced Features (Future)
 
 | Feature | Status | Priority | Notes |
-|---------|--------|----------|-------|
+| :--- | :--- | :--- | :--- |
 | Multi-line input detection | Planned | P2 | Continuation prompts |
 | Syntax highlighting (RSyntaxTextArea) | Planned | P2 | Optional mode |
 | Persistent history | Planned | P3 | File-backed |
@@ -349,7 +366,7 @@ public class NashornAdapter implements InterpreterAdapter {
 ### 6.3 Progress Log
 
 | Date | Milestone | Notes |
-|------|-----------|-------|
+| :--- | :--- | :--- |
 | 2026-01-20 | Design document created | Initial architecture defined |
 | | | |
 
@@ -406,7 +423,7 @@ public class LegacyBeanShellBridge implements GUIConsoleInterface {
 
 ### 7.4 Initial Implementation Files
 
-```
+```plain
 virtualdesktop-java8/src/main/java/
 └── org/jwellman/
     ├── console/                              # New package - Generic Console Framework
@@ -439,6 +456,7 @@ virtualdesktop-java8/src/main/java/
 ```
 
 **File Count Summary:**
+
 - Core interfaces: 5 files
 - Implementations: 5 files
 - UI components: 5 files
@@ -450,17 +468,20 @@ virtualdesktop-java8/src/main/java/
 ## 8. Testing Strategy
 
 ### 8.1 Unit Tests
+
 - `InterpreterAdapterTest` - Mock interpreter, verify contract
 - `CommandHistoryTest` - Test navigation, bounds
 - `CompletionProviderTest` - Test completion logic
 - `ConsoleThemeTest` - Test builder, presets
 
 ### 8.2 Integration Tests
+
 - `BeanShellAdapterTest` - Real BeanShell evaluation
 - `NashornAdapterTest` - Real Nashorn evaluation
 - `GenericConsoleTest` - UI interaction tests
 
 ### 8.3 Visual/Manual Tests
+
 - Create test vapp that switches between interpreters
 - Verify styling, themes work correctly
 - Test with different Look and Feels
@@ -470,7 +491,7 @@ virtualdesktop-java8/src/main/java/
 ## 9. Design Decisions (Confirmed)
 
 | Decision | Choice | Rationale |
-|----------|--------|-----------|
+| :--- | :--- | :--- |
 | Text Component | Both JTextPane (default) + RSyntaxTextArea (option) | Flexibility for users who want syntax highlighting |
 | Initial Adapters | BeanShell + JavaScript (Nashorn) | Prove abstraction works with two interpreters |
 | Visual Themes | Essential MVP feature | Modern appearance is a key goal |
@@ -481,7 +502,7 @@ virtualdesktop-java8/src/main/java/
 
 2. **Error display** - Should errors show stack traces by default or require explicit expansion? Current thinking: configurable via ConsoleTheme or separate flag.
 
-3. **Multi-line handling** - How should continuation be indicated? Current thinking: secondary prompt (e.g., `... ` for BeanShell).
+3. **Multi-line handling** - How should continuation be indicated? Current thinking: secondary prompt (e.g., `...` for BeanShell).
 
 ---
 
@@ -490,4 +511,4 @@ virtualdesktop-java8/src/main/java/
 - Existing JConsole: `org/jwellman/bsh/JConsole.java`
 - BeanShell service pattern: `org/jwellman/virtualdesktop/bsh/BeanShellService.java`
 - VApp base: `org/jwellman/virtualdesktop/vapps/VirtualAppSpec.java`
-- RSyntaxTextArea: https://github.com/bobbylight/RSyntaxTextArea
+- RSyntaxTextArea: <https://github.com/bobbylight/RSyntaxTextArea>

@@ -22,7 +22,8 @@
           "enabled": true,
           "desktopOnly": false,
           "attrs": {
-            "tools": "SpecBeanShell,SpecObjectBrowser,SpecScriptTester,bsh:better()"
+            "rem": "SpecBeanShell; << not sure if this ever worked with the others since bsh:better requires it first but it looks like I started to try to get the interpreter/custom env up first to support my scripts 'out of the box'",
+            "tools": "SpecObjectBrowser;SpecScriptTester;bsh:better()"
           }
         },
         {

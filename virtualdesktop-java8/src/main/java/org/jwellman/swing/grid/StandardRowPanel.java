@@ -31,39 +31,48 @@ import javax.swing.UIManager;
  */
 public class StandardRowPanel extends JPanel implements Recyclable {
 
-    private static final Color EVEN_BG    = Color.WHITE;
-    private static final Color ODD_BG     = new Color(0xF4F6FA);
-    private static final Color BORDER_COL = new Color(0xE0E0E0);
-    private static final Color WARN_BG    = new Color(0xFFF8DC);
-    private static final Color ERROR_BG   = new Color(0xFFDCDC);
+    // Light theme
+    private static final Color EVEN_BG     = Color.WHITE;
+    private static final Color ODD_BG      = new Color(0xF4F6FA);
+    private static final Color BORDER_COL  = new Color(0xE0E0E0);
+    private static final Color WARN_BG     = new Color(0xFFF8DC);
+    private static final Color ERROR_BG    = new Color(0xFFDCDC);
 
-    private final List<ColumnDef>       columns;
-    private final List<JComponent>      cells = new ArrayList<>(); // JLabel or custom
-    private final Runnable              expandCollapseAction;
-    private final ListSelectionModel    selectionModel;
-    private final int[]                 columnWidths;   // shared mutable reference
-    private final Map<String, CellRenderer> cellRenderers; // shared mutable reference
-    private MouseAdapter                rowListener;
+    // Dark theme
+    private static final Color EVEN_BG_DARK    = new Color(0x2B2D30);
+    private static final Color ODD_BG_DARK     = new Color(0x313438);
+    private static final Color BORDER_COL_DARK = new Color(0x4B4E52);
+    private static final Color WARN_BG_DARK    = new Color(0x4A3D00);
+    private static final Color ERROR_BG_DARK   = new Color(0x4A1A1A);
+
+    private final List<ColumnDef>           columns;
+    private final List<JComponent>          cells = new ArrayList<>(); // JLabel or custom
+    private final Runnable                  expandCollapseAction;
+    private final ListSelectionModel        selectionModel;
+    private final int[]                     columnWidths;   // shared mutable reference
+    private final Map<String, CellRenderer> cellRenderers;  // shared mutable reference
+    private final boolean                   darkTheme;
+    private MouseAdapter                    rowListener;
 
     public StandardRowPanel(List<ColumnDef> columns) {
-        this(columns, null, null, null, null);
+        this(columns, null, null, null, null, false);
     }
 
     public StandardRowPanel(List<ColumnDef> columns, Runnable expandCollapseAction) {
-        this(columns, expandCollapseAction, null, null, null);
+        this(columns, expandCollapseAction, null, null, null, false);
     }
 
     public StandardRowPanel(List<ColumnDef> columns,
                             Runnable expandCollapseAction,
                             ListSelectionModel selectionModel) {
-        this(columns, expandCollapseAction, selectionModel, null, null);
+        this(columns, expandCollapseAction, selectionModel, null, null, false);
     }
 
     public StandardRowPanel(List<ColumnDef> columns,
                             Runnable expandCollapseAction,
                             ListSelectionModel selectionModel,
                             int[] columnWidths) {
-        this(columns, expandCollapseAction, selectionModel, columnWidths, null);
+        this(columns, expandCollapseAction, selectionModel, columnWidths, null, false);
     }
 
     public StandardRowPanel(List<ColumnDef> columns,
@@ -71,13 +80,24 @@ public class StandardRowPanel extends JPanel implements Recyclable {
                             ListSelectionModel selectionModel,
                             int[] columnWidths,
                             Map<String, CellRenderer> cellRenderers) {
+        this(columns, expandCollapseAction, selectionModel, columnWidths, cellRenderers, false);
+    }
+
+    public StandardRowPanel(List<ColumnDef> columns,
+                            Runnable expandCollapseAction,
+                            ListSelectionModel selectionModel,
+                            int[] columnWidths,
+                            Map<String, CellRenderer> cellRenderers,
+                            boolean darkTheme) {
         this.columns = columns;
         this.expandCollapseAction = expandCollapseAction;
         this.selectionModel = selectionModel;
         this.columnWidths = columnWidths;
         this.cellRenderers = cellRenderers;
+        this.darkTheme = darkTheme;
         setLayout(null);
-        setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COL));
+        setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0,
+                darkTheme ? BORDER_COL_DARK : BORDER_COL));
         setOpaque(true);
 
         for (int i = 0; i < columns.size(); i++) {
@@ -111,7 +131,7 @@ public class StandardRowPanel extends JPanel implements Recyclable {
                 add(blank);
             }
         }
-        setBackground(EVEN_BG);
+        setBackground(darkTheme ? EVEN_BG_DARK : EVEN_BG);
     }
 
     @Override
@@ -124,12 +144,14 @@ public class StandardRowPanel extends JPanel implements Recyclable {
         }
 
         // ② Background: alternating → tag override → selection
-        setBackground(rowIndex % 2 == 0 ? EVEN_BG : ODD_BG);
+        setBackground(rowIndex % 2 == 0
+                ? (darkTheme ? EVEN_BG_DARK : EVEN_BG)
+                : (darkTheme ? ODD_BG_DARK  : ODD_BG));
         String style = row.getTag("fnd-style");
         if ("warning-glow".equals(style) || "warning".equals(style)) {
-            setBackground(WARN_BG);
+            setBackground(darkTheme ? WARN_BG_DARK : WARN_BG);
         } else if ("error".equals(style)) {
-            setBackground(ERROR_BG);
+            setBackground(darkTheme ? ERROR_BG_DARK : ERROR_BG);
         }
         boolean selected = selectionModel != null && selectionModel.isSelectedIndex(rowIndex);
         final Color fgColor;

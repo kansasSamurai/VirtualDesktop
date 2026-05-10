@@ -97,6 +97,13 @@
           "desktopOnly": false
         },
         {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecSmartGrid",
+          "title": "Smart Grid",
+          "icon": "table1",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
           "class": "org.jwellman.virtualdesktop.vapps.SpecUberDragAndDrop",
           "title": "Drag & Drop Demo",
           "icon": "landscape12",

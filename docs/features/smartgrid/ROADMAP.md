@@ -9,7 +9,7 @@
 | 2 | Tree / hierarchy (depth, expand/collapse, ▶ / ▼) | ✅ Complete |
 | 3 | Proportional column widths + horizontal scroll | ✅ Complete |
 | 4 | Client-side sorting (column header click, ▲ / ▼ indicator) | ✅ Complete |
-| 5 | Client-side filtering (`GridModelFilter`, search field) | ⬜ Not started |
+| 5 | Client-side filtering (`GridModelFilter`, search field) | ✅ Complete |
 | 6 | Tree enhancements (lazy children, keyboard expand/collapse) | ⬜ Not started |
 | 7 | VApp integration (`SpecSmartGrid`, `ActionFactory`) | ⬜ Not started |
 | 8 | Variable row height (`RowHeightProvider`) | ⬜ Not started |
@@ -229,7 +229,7 @@ public enum SortOrder { NONE, ASCENDING, DESCENDING }
 
 ---
 
-## Phase 5 — Client-Side Filtering
+## Phase 5 — Client-Side Filtering ✅
 
 **Why**: Quick text filtering over large datasets is the most common grid interaction.
 

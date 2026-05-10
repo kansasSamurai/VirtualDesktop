@@ -52,26 +52,43 @@ public class SmartGridDemo {
         } catch (Exception ignored) {}
 
         SwingUtilities.invokeLater(() -> {
-            JTabbedPane tabs = new JTabbedPane();
-            tabs.addTab("Table", buildTableTab());
-            tabs.addTab("Tree",  buildTreeTab());
-            tabs.addTab("List",  buildListTab());
-            tabs.addTab("Paged", buildPagedTab());
-
             JFrame frame = new JFrame("SmartGrid MVP Demo");
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             frame.setSize(820, 570);
-            frame.add(tabs);
+            frame.add(createDemoTabs());
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
         });
+    }
+
+    /**
+     * Builds and returns the full four-tab demo pane using the light theme.
+     * Public so that {@code SpecSmartGrid} (and any other host) can embed it
+     * without duplicating the setup logic.
+     */
+    public static JTabbedPane createDemoTabs() {
+        return createDemoTabs(false);
+    }
+
+    /**
+     * Builds and returns the full four-tab demo pane.
+     *
+     * @param darkTheme {@code true} to apply SmartGrid's dark colour palette
+     */
+    public static JTabbedPane createDemoTabs(boolean darkTheme) {
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.addTab("Table", buildTableTab(darkTheme));
+        tabs.addTab("Tree",  buildTreeTab(darkTheme));
+        tabs.addTab("List",  buildListTab(darkTheme));
+        tabs.addTab("Paged", buildPagedTab(darkTheme));
+        return tabs;
     }
 
     // -------------------------------------------------------------------------
     // Tab 1: flat table — 1,000 rows, proportional column widths
     // -------------------------------------------------------------------------
 
-    private static JPanel buildTableTab() {
+    private static JPanel buildTableTab(boolean darkTheme) {
         final DefaultGridModel model = new DefaultGridModel()
             .addColumn(new ColumnDef("id",     "ID",          50, true,  true, null))
             .addColumn(new ColumnDef("name",   "Name",       220, true,  true, null))
@@ -93,7 +110,7 @@ public class SmartGridDemo {
         }
 
         final int totalRows = model.getRowCount();
-        SmartGrid grid = new SmartGrid(model);
+        SmartGrid grid = new SmartGrid(model, darkTheme);
         grid.registerFormatter("currency", v -> String.format("$%,d", ((Number) v).longValue()));
         grid.setColumnFiltersVisible(true); // per-column filter row beneath headers
 
@@ -144,7 +161,7 @@ public class SmartGridDemo {
     // Tab 2: tree / hierarchy
     // -------------------------------------------------------------------------
 
-    private static JPanel buildTreeTab() {
+    private static JPanel buildTreeTab(boolean darkTheme) {
         DefaultGridModel model = new DefaultGridModel()
             .addColumn(new ColumnDef("name",   "Name / Department", 240, false, true, null))
             .addColumn(new ColumnDef("role",   "Role",              180, false, true, null))
@@ -178,7 +195,7 @@ public class SmartGridDemo {
             }
         }
 
-        SmartGrid grid = new SmartGrid(model);
+        SmartGrid grid = new SmartGrid(model, darkTheme);
         return wrap(grid, "Click a department row to expand / collapse its employees");
     }
 
@@ -186,7 +203,7 @@ public class SmartGridDemo {
     // Tab 3: single-column list
     // -------------------------------------------------------------------------
 
-    private static JPanel buildListTab() {
+    private static JPanel buildListTab(boolean darkTheme) {
         DefaultGridModel model = new DefaultGridModel()
             .addColumn(new ColumnDef("name", "Programming Languages", 400, false, true, null));
 
@@ -200,7 +217,7 @@ public class SmartGridDemo {
             .put("name", "Groovy  (used in this application)")
             .setTag("fnd-style", "warning-glow"));
 
-        SmartGrid grid = new SmartGrid(model);
+        SmartGrid grid = new SmartGrid(model, darkTheme);
         return wrap(grid, "Single-column SmartGrid — a list is just a 1-column table sharing the unified model");
     }
 
@@ -208,7 +225,7 @@ public class SmartGridDemo {
     // Tab 4: explicit pagination with column-aligned footer aggregates
     // -------------------------------------------------------------------------
 
-    private static JPanel buildPagedTab() {
+    private static JPanel buildPagedTab(boolean darkTheme) {
         DefaultGridModel model = new DefaultGridModel()
             .addColumn(new ColumnDef("id",     "ID",          50, true,  true, null))
             .addColumn(new ColumnDef("name",   "Name",       220, true,  true, null))
@@ -225,7 +242,7 @@ public class SmartGridDemo {
                 .put("status", STATUSES[i % STATUSES.length]));
         }
 
-        SmartGrid grid = new SmartGrid(model);
+        SmartGrid grid = new SmartGrid(model, darkTheme);
         grid.registerFormatter("currency", v -> String.format("$%,d", ((Number) v).longValue()));
 
         // Footer: row count on "name", salary sum (raw Number) on "salary", active count on "status"

@@ -61,9 +61,21 @@ import javax.swing.event.ListSelectionListener;
  */
 public class SmartGrid extends JPanel implements GridModelListener {
 
-    private static final Color HEADER_BG    = new Color(0x3C4B64);
-    private static final Color FOOTER_BG    = new Color(0xECEFF4);
-    private static final Color FILTER_ROW_BG = new Color(0xE8EDF5);
+    // Light theme palette
+    private static final Color HEADER_BG_LIGHT     = new Color(0x3C4B64);
+    private static final Color FOOTER_BG_LIGHT     = new Color(0xECEFF4);
+    private static final Color FILTER_ROW_BG_LIGHT = new Color(0xE8EDF5);
+
+    // Dark theme palette
+    private static final Color HEADER_BG_DARK     = new Color(0x2D3548);
+    private static final Color FOOTER_BG_DARK     = new Color(0x282A2D);
+    private static final Color FILTER_ROW_BG_DARK = new Color(0x32363B);
+
+    // Active palette — selected at construction time
+    private final Color   headerBg;
+    private final Color   footerBg;
+    private final Color   filterRowBg;
+    private final boolean darkTheme;
 
     private final GridModel model;
     private final DefaultListSelectionModel selectionModel =
@@ -107,8 +119,19 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private JPanel        footerPanel   = null;
     private PaginationBar paginationBar = null;
 
+    /** Constructs a SmartGrid with the light (default) theme. */
     public SmartGrid(GridModel model) {
-        this.model = model;
+        this(model, false);
+    }
+
+    /** Constructs a SmartGrid with the specified theme. */
+    public SmartGrid(GridModel model, boolean darkTheme) {
+        this.model     = model;
+        this.darkTheme = darkTheme;
+        this.headerBg    = darkTheme ? HEADER_BG_DARK     : HEADER_BG_LIGHT;
+        this.footerBg    = darkTheme ? FOOTER_BG_DARK     : FOOTER_BG_LIGHT;
+        this.filterRowBg = darkTheme ? FILTER_ROW_BG_DARK : FILTER_ROW_BG_LIGHT;
+
         this.model.addGridModelListener(this);
 
         selectionModel.addListSelectionListener(e -> {
@@ -128,6 +151,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
         final DefaultListSelectionModel sm = selectionModel;
         final int[] widths = columnWidths;
         final Map<String, CellRenderer> renderers = cellRenderers;
+        final boolean dark = darkTheme;
         this.pool = new ComponentPool(() -> new StandardRowPanel(cols,
             () -> {
                 if (capturedModel instanceof DefaultGridModel) {
@@ -136,7 +160,8 @@ public class SmartGrid extends JPanel implements GridModelListener {
             },
             sm,
             widths,
-            renderers));
+            renderers,
+            dark));
 
         setLayout(new BorderLayout());
 
@@ -604,7 +629,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private JPanel buildHeaderLabelRow(List<ColumnDef> cols) {
         int totalColWidth = totalColumnWidth();
         JPanel header = new JPanel(null);
-        header.setBackground(HEADER_BG);
+        header.setBackground(headerBg);
         header.setPreferredSize(new Dimension(totalColWidth, rowHeight));
         int x = 0;
         for (int i = 0; i < cols.size(); i++) {
@@ -633,7 +658,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
         int totalColWidth = totalColumnWidth();
         int filterHeight  = rowHeight - 2;
         JPanel filterRow  = new JPanel(null);
-        filterRow.setBackground(FILTER_ROW_BG);
+        filterRow.setBackground(filterRowBg);
         filterRow.setPreferredSize(new Dimension(totalColWidth, filterHeight));
         int x = 0;
         for (int i = 0; i < cols.size() && i < columnFilterFields.length; i++) {
@@ -694,7 +719,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private JPanel buildFooter(List<ColumnDef> cols) {
         int totalColWidth = totalColumnWidth();
         JPanel footer = new JPanel(null);
-        footer.setBackground(FOOTER_BG);
+        footer.setBackground(footerBg);
         footer.setPreferredSize(new Dimension(totalColWidth, rowHeight));
         List<GridRow> pageRows = getPageRows();
         int x = 0;
@@ -801,7 +826,13 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
         @Override
         public Dimension getPreferredScrollableViewportSize() {
-            return getPreferredSize();
+            // Return a compact viewport hint used by JScrollPane when pack() is called.
+            // getPreferredSize() (the full virtual height) is still used for scrollbar math;
+            // this method mirrors the JTable pattern of keeping the two concerns separate.
+            int totalColWidth = totalColumnWidth();
+            int vpWidth = scrollPane.getViewport().getWidth();
+            int w = Math.max(totalColWidth, vpWidth > 0 ? vpWidth : 400);
+            return new Dimension(w, 400);
         }
 
         @Override

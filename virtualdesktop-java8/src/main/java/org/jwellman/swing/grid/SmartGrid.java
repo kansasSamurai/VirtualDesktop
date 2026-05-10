@@ -6,6 +6,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Rectangle;
+import java.awt.event.HierarchyEvent;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListSelectionModel;
@@ -83,6 +84,17 @@ public class SmartGrid extends JPanel implements GridModelListener {
             @Override
             public void stateChanged(ChangeEvent e) {
                 refresh();
+            }
+        });
+
+        // Tab-switch fix: when this panel transitions from hidden to showing
+        // (e.g., user clicks a JTabbedPane tab), the viewport ChangeListener
+        // doesn't fire because the viewport size didn't change.  The hierarchy
+        // listener catches the SHOWING_CHANGED event and forces a refresh.
+        addHierarchyListener(e -> {
+            if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0
+                    && isShowing()) {
+                SwingUtilities.invokeLater(SmartGrid.this::refresh);
             }
         });
 

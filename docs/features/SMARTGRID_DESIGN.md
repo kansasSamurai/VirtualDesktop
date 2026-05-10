@@ -263,6 +263,11 @@ Mode is a configuration concern on the grid component, not a model concern — t
 
 ## Performance Constraints
 
+### Implementation Notes
+The performance credit really goes to the recycler architecture: the JVM only ever manages ~20 row panels regardless of dataset size, so the cost of "live components" essentially disappears. A traditional JTable with 1,000 live buttons would crater; SmartGrid with 100,000 rows costs the same as 20.
+
+The unified model is paying off too — the tree tab shares DefaultGridModel and StandardRowPanel with the flat table with zero extra code paths. The only tree-specific logic is computeVisibleRows() (13 lines) and the buildTreePrefix() helper (4 lines).
+
 - Pool size: `ceil(viewportHeight / rowHeight) + BUFFER` (e.g., buffer = 5)
 - `find(id)` cache: O(1) after first call per `id` per component instance
 - Ghost listener prevention: mandatory in `prepareForReuse()`

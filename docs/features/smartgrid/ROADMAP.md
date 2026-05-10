@@ -130,6 +130,24 @@ all rows — no behavioral change for existing flat-table use.
 
 ---
 
+Verification Steps
+
+ 1. Compile — mvn compile in virtualdesktop-java8/; expect zero errors
+ 2. Run SmartGridDemo and exercise the Tree tab:
+   - All five department rows visible (collapsed); employee rows hidden
+   - Click Engineering → 13 employee rows appear below it; scrollbar grows
+   - Click Engineering again → employees collapse; scrollbar shrinks
+   - Expand two departments simultaneously; verify correct employee sets
+   - Select an employee row while a department is expanded; verify selection
+ highlight persists after scrolling
+ 3. Run the List tab:
+   - 38 language rows + 2 warning-glow entries visible
+   - Selection toolbar works normally (single-column Select All / Ctrl+Click)
+ 4. Run the Table tab:
+   - Confirm no regression — flat 1,000-row data unaffected by visible-row logic
+   
+---
+
 ## Phase 3 — Proportional Column Widths
 
 **Why**: `GridLayout(1, N)` gives every column equal width; `ColumnDef.preferredWidth`

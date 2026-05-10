@@ -19,6 +19,76 @@
 | 8 | Variable row height (`RowHeightProvider`) | ⬜ End | Deferred by design — touches core scroll math |
 | 12 | Header panel refactor: persistent panels, in-place bound updates | ⬜ End | |
 | 13 | Filter search cache with configurable row-count threshold | ⬜ End | |
+| 14 | Structured filter expressions (`FilterExpression` alongside lambda) | ⬜ Future | Enables query folding — see `docs/features/query-folding/DISCUSSION.md` |
+
+---
+
+## Positioning: SmartGrid vs. Legacy JTable
+
+### Where SmartGrid clearly wins
+
+The live-component model is the decisive advantage for any row that needs real
+interaction. A `JTable` with an actual interactive `JButton` in a cell requires
+synchronizing a renderer (paints the button) with an editor (activates on click),
+both stateless, both pretending to be something they're not. `FeaturedRowPanel`
+just *has* a button. That's not a marginal improvement — it's a different category
+of problem solved.
+
+Heterogeneous row types, the unified list/table/tree model, declarative `fnd-type`
+dispatch, integrated filtering with composed predicates, the footer/pagination
+infrastructure, the `CellRenderer` registry for per-column formatting — none of
+these exist in `JTable` without significant third-party libraries or painful custom
+subclassing.
+
+### Where JTable still holds ground
+
+**Extreme-scale pure display.** `JTable`'s stamping model creates exactly one
+renderer component regardless of row count. At 5,000,000 rows of read-only data,
+the memory delta is real. SmartGrid's ~20 live JPanels is still very small, but
+it's non-zero overhead per visible row whereas `JTable` is genuinely constant.
+
+**Accessibility.** `JTable` implements the `Accessible` interface with full screen
+reader support, keyboard focus traversal at the cell level, and ARIA-equivalent
+metadata. SmartGrid has none of this. For enterprise applications in regulated
+industries this is a disqualifier. *Full industry accessibility is not on this
+roadmap until there is commercial motivation to add it — speed and power-user
+ergonomics are the primary drivers for this component.*
+
+**Out-of-the-box behaviors.** Column drag-to-reorder, `Ctrl+C` to copy selected
+rows as tab-separated text, built-in print support via `JTable.print()` — none of
+these exist in SmartGrid yet.
+
+**Cell-level keyboard navigation.** Arrow keys moving a cursor through individual
+cells, `Tab` moving focus cell-by-cell — `JTable` does this natively. SmartGrid's
+interaction unit is the whole row.
+
+### Gaps worth filling (priority order)
+
+**Keyboard row selection** (`↑↓` to move the selected row, `Shift+↑↓` to extend)
+is the single highest-value missing feature for power users — it's what separates
+"feels like a professional grid" from "works with mouse only."
+
+**`Ctrl+C` clipboard copy** of selected rows as tab-separated text is a one-method
+addition that pays enormous dividends for forensic/data-analysis workflows. Select
+10 rows, paste into Excel — a complete workflow for the target user.
+
+**Column resizing by mouse drag** is noted in Phase 12 as essentially already
+designed (update `columnWidths[i]` in a `MouseMotionListener`). Given the payoff
+in perceived polish it is closer than it appears.
+
+### The honest positioning
+
+SmartGrid is what `JTable` would have been if Swing had been designed in 2010
+rather than 1997 — it trades `JTable`'s extreme memory parsimony for developer
+ergonomics and visual richness. For a desktop framework aimed at power users who
+need forensic tools, data visualization, and rapid customization, it is clearly
+the right choice. For a regulated enterprise application with accessibility
+requirements and millions of rows of static data, `JTable` or a commercial grid
+is still correct.
+
+The proof that the vision is sound: the gap between "out of the box" and "custom"
+has almost disappeared. `FeaturedRowPanel` took 20 lines and one method call. That
+ratio — expressive power per line of user code — is where `JTable` never got close.
 
 ---
 

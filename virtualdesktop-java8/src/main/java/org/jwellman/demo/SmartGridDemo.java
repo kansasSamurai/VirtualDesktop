@@ -2,6 +2,7 @@ package org.jwellman.demo;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -18,19 +19,12 @@ import org.jwellman.swing.grid.GridRow;
 import org.jwellman.swing.grid.SmartGrid;
 
 /**
- * Three-tab demo for SmartGrid MVP:
+ * Four-tab demo for SmartGrid:
  *
- *  Tab "Table" — 1,000-row flat employee dataset; demonstrates viewport
- *                virtualization (~20 live components regardless of row count).
- *
- *  Tab "Tree"  — departments with child employees; demonstrates expand/collapse
- *                on the same SmartGrid component with no extra code paths.
- *
- *  Tab "List"  — single-column view; demonstrates that a list is simply a
- *                1-column SmartGrid sharing the unified model.
- *
- * Every tab has a "Select All" / "Clear" toolbar and a live selection-count label.
- * Selection state survives scrolling (it lives in ListSelectionModel, not the component).
+ *  "Table" — 1,000 flat rows; viewport virtualization; proportional column widths
+ *  "Tree"  — departments + employees; expand/collapse; unified model
+ *  "List"  — single-column SmartGrid; demonstrates list-is-a-table
+ *  "Paged" — 1,000 rows / 50 per page; footer aggregates; pagination bar
  */
 public class SmartGridDemo {
 
@@ -58,10 +52,11 @@ public class SmartGridDemo {
             tabs.addTab("Table", buildTableTab());
             tabs.addTab("Tree",  buildTreeTab());
             tabs.addTab("List",  buildListTab());
+            tabs.addTab("Paged", buildPagedTab());
 
             JFrame frame = new JFrame("SmartGrid MVP Demo");
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-            frame.setSize(800, 550);
+            frame.setSize(820, 570);
             frame.add(tabs);
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
@@ -69,15 +64,15 @@ public class SmartGridDemo {
     }
 
     // -------------------------------------------------------------------------
-    // Tab 1: flat table
+    // Tab 1: flat table — 1,000 rows, proportional column widths
     // -------------------------------------------------------------------------
 
     private static JPanel buildTableTab() {
         DefaultGridModel model = new DefaultGridModel()
-            .addColumn(new ColumnDef("id",     "ID",         60,  false, true, null))
-            .addColumn(new ColumnDef("name",   "Name",       180, false, true, null))
-            .addColumn(new ColumnDef("dept",   "Department", 160, false, true, null))
-            .addColumn(new ColumnDef("salary", "Salary",     100, false, true, null))
+            .addColumn(new ColumnDef("id",     "ID",          50, false, true, null))
+            .addColumn(new ColumnDef("name",   "Name",       220, false, true, null))
+            .addColumn(new ColumnDef("dept",   "Department", 180, false, true, null))
+            .addColumn(new ColumnDef("salary", "Salary",     110, false, true, null))
             .addColumn(new ColumnDef("status", "Status",      80, false, true, null));
 
         for (int i = 1; i <= 1000; i++) {
@@ -92,7 +87,7 @@ public class SmartGridDemo {
         }
 
         SmartGrid grid = new SmartGrid(model);
-        return wrap(grid, "1,000 rows — only ~20 live components via viewport virtualization");
+        return wrap(grid, "1,000 rows — ~20 live components via viewport virtualization; columns proportional");
     }
 
     // -------------------------------------------------------------------------
@@ -101,9 +96,9 @@ public class SmartGridDemo {
 
     private static JPanel buildTreeTab() {
         DefaultGridModel model = new DefaultGridModel()
-            .addColumn(new ColumnDef("name",   "Name / Department", 220, false, true, null))
-            .addColumn(new ColumnDef("role",   "Role",              160, false, true, null))
-            .addColumn(new ColumnDef("salary", "Salary",            100, false, true, null));
+            .addColumn(new ColumnDef("name",   "Name / Department", 240, false, true, null))
+            .addColumn(new ColumnDef("role",   "Role",              180, false, true, null))
+            .addColumn(new ColumnDef("salary", "Salary",            110, false, true, null));
 
         String[][] deptData = {
             {"Engineering",     "13"},
@@ -121,23 +116,20 @@ public class SmartGridDemo {
                 .put("name",   dept[0])
                 .put("role",   count + " employees")
                 .put("salary", "")
-                .setDepth(0)
-                .setHasChildren(true)
-                .setExpanded(false));
+                .setDepth(0).setHasChildren(true).setExpanded(false));
 
             for (int e = 0; e < count; e++) {
                 model.addRow(new GridRow()
                     .put("name",   "Employee " + empId)
                     .put("role",   roles[empId % roles.length])
                     .put("salary", String.format("$%,d", 55_000 + (empId * 211 % 90_000)))
-                    .setDepth(1)
-                    .setHasChildren(false));
+                    .setDepth(1).setHasChildren(false));
                 empId++;
             }
         }
 
         SmartGrid grid = new SmartGrid(model);
-        return wrap(grid, "Click a department row to expand/collapse its employees");
+        return wrap(grid, "Click a department row to expand / collapse its employees");
     }
 
     // -------------------------------------------------------------------------
@@ -159,14 +151,73 @@ public class SmartGridDemo {
             .setTag("fnd-style", "warning-glow"));
 
         SmartGrid grid = new SmartGrid(model);
-        return wrap(grid, "Single-column SmartGrid — a list is just a 1-column table");
+        return wrap(grid, "Single-column SmartGrid — a list is just a 1-column table sharing the unified model");
+    }
+
+    // -------------------------------------------------------------------------
+    // Tab 4: explicit pagination with column-aligned footer aggregates
+    // -------------------------------------------------------------------------
+
+    private static JPanel buildPagedTab() {
+        DefaultGridModel model = new DefaultGridModel()
+            .addColumn(new ColumnDef("id",     "ID",          50, false, true, null))
+            .addColumn(new ColumnDef("name",   "Name",       220, false, true, null))
+            .addColumn(new ColumnDef("dept",   "Department", 180, false, true, null))
+            .addColumn(new ColumnDef("salary", "Salary",     110, false, true, null))
+            .addColumn(new ColumnDef("status", "Status",      80, false, true, null));
+
+        for (int i = 1; i <= 1000; i++) {
+            model.addRow(new GridRow()
+                .put("id",      String.valueOf(i))
+                .put("name",    "Employee " + i)
+                .put("dept",    DEPTS[i % DEPTS.length])
+                .put("salary",  String.format("$%,d", 50_000 + (i * 173 % 100_000)))
+                .put("salaryN", 50_000 + (i * 173 % 100_000)) // numeric for aggregation
+                .put("status",  STATUSES[i % STATUSES.length]));
+        }
+
+        SmartGrid grid = new SmartGrid(model);
+
+        // Footer: row count on "name" column, salary sum on "salary", active count on "status"
+        grid.setFooterRenderer((col, pageRows, fullModel) -> {
+            JLabel lbl = new JLabel();
+            lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+            lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
+
+            switch (col.getKey()) {
+                case "name":
+                    lbl.setText(pageRows.size() + " rows");
+                    break;
+                case "salary":
+                    long sum = 0;
+                    for (GridRow r : pageRows) {
+                        Object n = r.get("salaryN");
+                        if (n instanceof Number) sum += ((Number) n).longValue();
+                    }
+                    lbl.setText(String.format("$%,d", sum));
+                    break;
+                case "status":
+                    int active = 0;
+                    for (GridRow r : pageRows) {
+                        if ("Active".equals(r.get("status"))) active++;
+                    }
+                    lbl.setText(active + " active");
+                    break;
+                default:
+                    break;
+            }
+            return lbl;
+        });
+
+        grid.setPageSize(50); // 50 rows/page = 20 pages
+
+        return wrap(grid, "50 rows per page — footer shows per-page aggregates; navigation bar below");
     }
 
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
-    /** Wraps a SmartGrid with a selection toolbar (north) and description label (south). */
     private static JPanel wrap(SmartGrid grid, String description) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(selectionToolbar(grid), BorderLayout.NORTH);
@@ -177,7 +228,6 @@ public class SmartGridDemo {
         return panel;
     }
 
-    /** Builds a toolbar with Select All, Clear, and a live selection-count label. */
     private static JPanel selectionToolbar(SmartGrid grid) {
         JLabel status = new JLabel(" 0 rows selected");
 

@@ -2,7 +2,8 @@ package org.jwellman.swing.grid;
 
 import java.awt.Color;
 import java.awt.Font;
-import java.awt.GridLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -55,15 +56,25 @@ public class StandardRowPanel extends JPanel implements Recyclable {
         this.columns = columns;
         this.expandCollapseAction = expandCollapseAction;
         this.selectionModel = selectionModel;
-        setLayout(new GridLayout(1, columns.size()));
+        setLayout(new GridBagLayout());
         setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COL));
         setOpaque(true);
 
-        for (ColumnDef col : columns) {
+        // Proportional column widths using GridBagLayout weightx.
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill    = GridBagConstraints.BOTH;
+        gbc.gridy   = 0;
+        gbc.weighty = 1.0;
+        int total = 0;
+        for (ColumnDef col : columns) total += col.getPreferredWidth();
+        if (total == 0) total = 1;
+        for (int i = 0; i < columns.size(); i++) {
             JLabel lbl = new JLabel();
             lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
             cells.add(lbl);
-            add(lbl);
+            gbc.gridx   = i;
+            gbc.weightx = (double) columns.get(i).getPreferredWidth() / total;
+            add(lbl, gbc);
         }
     }
 

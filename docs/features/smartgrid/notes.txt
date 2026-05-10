@@ -363,5 +363,21 @@
  │ Backward compat      │ TableModelAdapter implements GridModel wrapper deferred to a future phase                    │
  └──────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────────┘
  
- 
+ Should footer cells be column-aligned (each cell sits under its column, like an aggregate row in Excel) or free-form (a     
+single panel spanning the full width, not column-aware)?
+                                                                                                                            
+ 1. Column-aligned                ┌──────────────────────────────────────────────────────────────────────────────┐
+   (Recommended)                  │ ┌────┬────────────┬─────────────┬──────────┬────────┐                        │
+  2. Free-form panel              │ │ ID │    Name    │ Department  │  Salary  │ Status │  ← header              │
+                                  │ ├────┼────────────┼─────────────┼──────────┼────────┤                        │
+                                  │ │  1 │ Employee 1 │ Engineering │  $73,129 │ Active │                        │
+                                  │ │  2 │ Employee 2 │ Marketing   │  $61,450 │ Active │                        │
+                                  │ │ .. │     ..     │     ..      │    ..    │   ..   │                        │
+                                  │ ├────┼────────────┼─────────────┼──────────┼────────┤                        │
+                                  │ │    │            │   1,000 rows│ $74.2M   │        │  ← footer              │
+                                  │ ├────┴────────────┴─────────────┴──────────┴────────┤                        │
+                                  │ │  ◀  Page 1 of 10  ▶                               │  ← pagination          │
+                                  │ └───────────────────────────────────────────────────┘                        │
+                                  └──────────────────────────────────────────────────────────────────────────────┘
+                                  
  

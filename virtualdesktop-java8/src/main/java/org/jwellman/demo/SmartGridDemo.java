@@ -69,9 +69,9 @@ public class SmartGridDemo {
 
     private static JPanel buildTableTab() {
         DefaultGridModel model = new DefaultGridModel()
-            .addColumn(new ColumnDef("id",     "ID",          50, false, true, null))
-            .addColumn(new ColumnDef("name",   "Name",       220, false, true, null))
-            .addColumn(new ColumnDef("dept",   "Department", 180, false, true, null))
+            .addColumn(new ColumnDef("id",     "ID",          50, true,  true, null))
+            .addColumn(new ColumnDef("name",   "Name",       220, true,  true, null))
+            .addColumn(new ColumnDef("dept",   "Department", 180, true,  true, null))
             .addColumn(new ColumnDef("salary", "Salary",     110, false, true, null))
             .addColumn(new ColumnDef("status", "Status",      80, false, true, null));
 
@@ -160,9 +160,9 @@ public class SmartGridDemo {
 
     private static JPanel buildPagedTab() {
         DefaultGridModel model = new DefaultGridModel()
-            .addColumn(new ColumnDef("id",     "ID",          50, false, true, null))
-            .addColumn(new ColumnDef("name",   "Name",       220, false, true, null))
-            .addColumn(new ColumnDef("dept",   "Department", 180, false, true, null))
+            .addColumn(new ColumnDef("id",     "ID",          50, true,  true, null))
+            .addColumn(new ColumnDef("name",   "Name",       220, true,  true, null))
+            .addColumn(new ColumnDef("dept",   "Department", 180, true,  true, null))
             .addColumn(new ColumnDef("salary", "Salary",     110, false, true, null))
             .addColumn(new ColumnDef("status", "Status",      80, false, true, null));
 

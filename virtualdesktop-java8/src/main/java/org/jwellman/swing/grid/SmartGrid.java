@@ -7,6 +7,8 @@ import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.HierarchyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -65,6 +67,10 @@ public class SmartGrid extends JPanel implements GridModelListener {
     // Pagination state
     private int pageSize    = 0; // 0 = disabled
     private int currentPage = 0;
+
+    // Sort state
+    private String    currentSortKey   = null;
+    private SortOrder currentSortOrder = SortOrder.NONE;
 
     // Swing components
     private JScrollPane   scrollPane;
@@ -333,13 +339,45 @@ public class SmartGrid extends JPanel implements GridModelListener {
         header.setPreferredSize(new Dimension(totalColWidth, rowHeight));
         int x = 0;
         for (int i = 0; i < cols.size(); i++) {
+            ColumnDef col = cols.get(i);
             int w = columnWidths[i];
-            JComponent cell = headerRenderer.render(cols.get(i));
+            SortOrder colSort = col.getKey().equals(currentSortKey)
+                                ? currentSortOrder : SortOrder.NONE;
+            JComponent cell = headerRenderer.render(col, colSort);
             cell.setBounds(x, 0, w, rowHeight);
+            if (col.isSortable()) {
+                final String sortKey = col.getKey();
+                cell.addMouseListener(new MouseAdapter() {
+                    @Override public void mouseClicked(MouseEvent e) {
+                        cycleSortFor(sortKey);
+                    }
+                });
+            }
             header.add(cell);
             x += w;
         }
         return header;
+    }
+
+    private void cycleSortFor(String key) {
+        if (key.equals(currentSortKey)) {
+            if (currentSortOrder == SortOrder.ASCENDING) {
+                currentSortOrder = SortOrder.DESCENDING;
+            } else {
+                currentSortOrder = SortOrder.NONE;
+                currentSortKey   = null;
+            }
+        } else {
+            currentSortKey   = key;
+            currentSortOrder = SortOrder.ASCENDING;
+        }
+        selectionModel.clearSelection();
+        if (model instanceof DefaultGridModel) {
+            ((DefaultGridModel) model).sort(currentSortKey, currentSortOrder);
+            // sort() → notifyDataChanged() → modelReset() → invokeLater(refresh)
+        }
+        // Rebuild header immediately so the indicator updates before refresh() runs
+        scrollPane.setColumnHeaderView(buildHeader(model.getColumns()));
     }
 
     private JPanel buildFooter(List<ColumnDef> cols) {

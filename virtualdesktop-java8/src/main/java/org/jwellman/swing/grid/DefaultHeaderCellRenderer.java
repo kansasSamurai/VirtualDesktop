@@ -11,13 +11,14 @@ import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
 /**
- * Default header cell: column name in CENTER, sort indicator in EAST of a
- * BorderLayout JPanel. The outer panel is transparent so the header row's
- * background colour shows through.
+ * Default header cell renderer.
  *
- * Single sort: shows ▲ or ▼ with no rank number.
- * Multi-column sort: shows 1▲, 2▼ … on each sorted column.
- * Sortable but unsorted: shows ▫ to signal the column is clickable.
+ * Layout: [column name + sort arrow — CENTER] [rank number — EAST]
+ *
+ * The sort arrow (▲ / ▼ / ▫) is placed directly after the column name so the
+ * user immediately sees whether and how the column is sorted. The rank number
+ * (1, 2, 3…) is secondary information and lives in the east corner, only visible
+ * during multi-column sort. Single-column sort shows just the arrow, no rank.
  */
 public class DefaultHeaderCellRenderer implements HeaderCellRenderer {
 
@@ -26,18 +27,20 @@ public class DefaultHeaderCellRenderer implements HeaderCellRenderer {
         JPanel cell = new JPanel(new BorderLayout());
         cell.setOpaque(false); // let the parent header panel's background show through
 
-        JLabel nameLabel = new JLabel(col.getHeader());
+        // Column name + sort arrow: primary, directly associated with the column
+        JLabel nameLabel = new JLabel(buildNameText(col.getHeader(), sortOrder, col.isSortable()));
         nameLabel.setForeground(Color.WHITE);
         nameLabel.setFont(nameLabel.getFont().deriveFont(Font.BOLD));
         nameLabel.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 4));
 
-        JLabel sortLabel = new JLabel(buildSortText(sortOrder, sortRank, col.isSortable()));
-        sortLabel.setForeground(Color.WHITE);
-        sortLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        sortLabel.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 6));
+        // Rank number: secondary, only shown during multi-column sort (rank > 0)
+        JLabel rankLabel = new JLabel(sortRank > 0 ? String.valueOf(sortRank) : "");
+        rankLabel.setForeground(Color.WHITE);
+        rankLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        rankLabel.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 6));
 
         cell.add(nameLabel, BorderLayout.CENTER);
-        cell.add(sortLabel, BorderLayout.EAST);
+        cell.add(rankLabel, BorderLayout.EAST);
 
         if (col.isSortable()) {
             cell.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -46,15 +49,9 @@ public class DefaultHeaderCellRenderer implements HeaderCellRenderer {
         return cell;
     }
 
-    /**
-     * Builds the text for the sort indicator label.
-     * Rank is shown only when greater than zero (i.e. multi-column sort is active).
-     */
-    private static String buildSortText(SortOrder order, int rank, boolean sortable) {
-        if (order == SortOrder.NONE) {
-            return sortable ? "▫" : "";
-        }
-        String arrow = (order == SortOrder.ASCENDING) ? "▲" : "▼";
-        return (rank > 0) ? rank + arrow : arrow;
+    private static String buildNameText(String header, SortOrder order, boolean sortable) {
+        if (order == SortOrder.ASCENDING)  return header + " ▲";
+        if (order == SortOrder.DESCENDING) return header + " ▼";
+        return sortable ? header + " ▫" : header;
     }
 }

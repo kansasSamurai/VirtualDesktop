@@ -872,6 +872,43 @@ public class SmartGrid extends JPanel implements GridModelListener {
     // Inner class: VirtualCanvas
     // -------------------------------------------------------------------------
 
+    /**
+     * VirtualCanvas is short because it's doing one very specific job with remarkable precision: it **lies to the JScrollPane** about its own size while only actually containing ~20 components.
+        
+        The fundamental problem is this: you want a scrollbar that represents 1,000 rows, but you can't afford 1,000 live JComponents. The naive solutions all fail — creating 1,000 JComponents crushes memory, rendering everything as painted pixels gives you dead UI, removing JScrollPane entirely means you have to reimplement all the scrollbar math yourself.
+        
+        VirtualCanvas threads the needle by exploiting a separation that already exists in JScrollPane's architecture: **the scrollbar's range is determined by the view's preferred size, not by the view's actual contents.**
+        
+        When JScrollPane asks "how tall are you?", VirtualCanvas answers via `getPreferredSize()`:
+        
+        ```java
+        return new Dimension(w, model.getRowCount() * rowHeight);  // e.g. 32,000px
+        ```
+        
+        JScrollPane believes it, creates a scrollbar spanning 32,000px, and shows a viewport window into that space. But the viewport doesn't render the canvas by asking each child component to paint itself in sequence — it renders whatever is physically at the canvas coordinates currently in view.
+        
+        VirtualCanvas exploits this by placing its ~20 real components at the **exact y coordinates** where they need to appear for the current scroll position:
+        
+        ```java
+        slots[i].setBounds(0, rowIdx * rowHeight, width, rowHeight);
+        // slot 0 at y=160, slot 1 at y=192, slot 2 at y=224...
+        ```
+        
+        When the viewport shows canvas pixels y=160 to y=640, the slot components are *already there* — physically positioned at those coordinates within the 32,000px canvas. No fake painting, no illusion. The components are exactly where JScrollPane expects them.
+        
+        Scrolling doesn't move the components through a window — it moves the viewport window to where the components already are, and the components get repositioned and rebound in `refresh()` to match the new viewport. ~20 `setBounds()` calls plus ~20 `bind()` data loads per scroll event, regardless of whether the dataset has 100 rows or 100,000.
+        
+        The `Scrollable` interface is the communication layer between VirtualCanvas and JScrollPane. Without it, JScrollPane would make wrong assumptions:
+        
+        - `getScrollableTracksViewportWidth()` tells JScrollPane whether to stretch the canvas horizontally (suppresses the horizontal scrollbar when all columns fit)
+        - `getScrollableUnitIncrement()` makes each scrollbar arrow click advance exactly one `rowHeight` — one row at a time
+        - `getScrollableBlockIncrement()` makes Page Up/Down move exactly one viewport height
+        - `getPreferredScrollableViewportSize()` is what `pack()` uses — returning a compact 400px height rather than 32,000px prevents the JInternalFrame sizing bug we fixed earlier
+        
+        The `null` layout is the final piece. Normal layout managers position children relative to each other in sequence. We need the opposite — each slot at an *absolute* y coordinate we compute ourselves. `null` layout means "I'll call `setBounds()` directly, don't touch the positions."
+        
+        The short code is deceptive because the heavy lifting is done by JScrollPane's viewport mechanism, which was already written in 1997. VirtualCanvas contributes about 30 lines, but those 30 lines precisely exploit 25 years of battle-tested scrolling infrastructure. It's less "clever algorithm" and more "finding the exact seam in the existing architecture where a small amount of code does disproportionate work."
+     */
     class VirtualCanvas extends JPanel implements Scrollable {
 
         VirtualCanvas() {

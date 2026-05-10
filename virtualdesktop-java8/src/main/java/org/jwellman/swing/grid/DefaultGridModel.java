@@ -2,6 +2,7 @@ package org.jwellman.swing.grid;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -10,7 +11,7 @@ import java.util.List;
  * {@link #computeVisibleRows()} runs three steps in order:
  *   1. Tree filter  — respects depth / expand / collapse
  *   2. Text filter  — applies {@link GridModelFilter} predicate (if set)
- *   3. Sort         — sorts the filtered result by the active sort column
+ *   3. Sort         — applies the current {@link SortSpec} list (composite comparator)
  *
  * Load rows before attaching a SmartGrid, or call {@link #notifyDataChanged()}
  * after bulk mutations.
@@ -24,9 +25,8 @@ public class DefaultGridModel implements GridModel {
     private final List<GridRow> visibleRows      = new ArrayList<>();
     private boolean             visibleRowsDirty = true;
 
-    // Sort state
-    private String    sortKey   = null;
-    private SortOrder sortOrder = SortOrder.NONE;
+    // Multi-column sort specification; index 0 = primary sort
+    private final List<SortSpec> sortSpecs = new ArrayList<>();
 
     // Filter state
     private GridModelFilter filter = null;
@@ -72,18 +72,37 @@ public class DefaultGridModel implements GridModel {
     // Sorting
     // -------------------------------------------------------------------------
 
-    public void sort(String key, SortOrder order) {
-        this.sortKey   = key;
-        this.sortOrder = (order != null) ? order : SortOrder.NONE;
+    /** Sets the full multi-column sort specification and fires a model-reset. */
+    public void sort(List<SortSpec> specs) {
+        sortSpecs.clear();
+        if (specs != null) {
+            sortSpecs.addAll(specs);
+        }
         notifyDataChanged();
     }
 
-    public String getSortKey() {
-        return sortKey;
+    /** Convenience: single-column sort (backward-compatible). */
+    public void sort(String key, SortOrder order) {
+        sortSpecs.clear();
+        if (key != null && order != null && order != SortOrder.NONE) {
+            sortSpecs.add(new SortSpec(key, order));
+        }
+        notifyDataChanged();
     }
 
+    /** Returns the primary sort key, or {@code null} if unsorted. */
+    public String getSortKey() {
+        return sortSpecs.isEmpty() ? null : sortSpecs.get(0).getKey();
+    }
+
+    /** Returns the primary sort order, or {@code NONE} if unsorted. */
     public SortOrder getSortOrder() {
-        return sortOrder;
+        return sortSpecs.isEmpty() ? SortOrder.NONE : sortSpecs.get(0).getOrder();
+    }
+
+    /** Returns an unmodifiable view of the full sort specification list. */
+    public List<SortSpec> getSortSpecs() {
+        return Collections.unmodifiableList(sortSpecs);
     }
 
     // -------------------------------------------------------------------------
@@ -171,17 +190,27 @@ public class DefaultGridModel implements GridModel {
             }
         }
 
-        // Step 3: sort — applied to the filtered result
-        if (sortKey != null && sortOrder != SortOrder.NONE) {
-            final String  key  = sortKey;
-            final boolean desc = sortOrder == SortOrder.DESCENDING;
-            Collections.sort(visibleRows, (a, b) -> {
-                int cmp = compareValues(a.get(key), b.get(key));
-                return desc ? -cmp : cmp;
-            });
+        // Step 3: multi-column sort — composite comparator over the sort spec list
+        if (!sortSpecs.isEmpty()) {
+            Collections.sort(visibleRows, buildComparator(sortSpecs));
         }
 
         visibleRowsDirty = false;
+    }
+
+    private static Comparator<GridRow> buildComparator(List<SortSpec> specs) {
+        return (a, b) -> {
+            for (SortSpec spec : specs) {
+                int cmp = compareValues(a.get(spec.getKey()), b.get(spec.getKey()));
+                if (spec.getOrder() == SortOrder.DESCENDING) {
+                    cmp = -cmp;
+                }
+                if (cmp != 0) {
+                    return cmp;
+                }
+            }
+            return 0;
+        };
     }
 
     private static int compareValues(Object a, Object b) {

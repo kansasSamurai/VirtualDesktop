@@ -101,9 +101,8 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private boolean      columnFiltersVisible = false;
     private JTextField[] columnFilterFields   = null;
 
-    // Sort state
-    private String    currentSortKey   = null;
-    private SortOrder currentSortOrder = SortOrder.NONE;
+    // Multi-column sort state; index 0 = primary sort
+    private final List<SortSpec> currentSortSpecs = new ArrayList<>();
 
     // Cell renderer registry — keyed by ColumnDef.fndType
     private final Map<String, CellRenderer> cellRenderers = new HashMap<>();
@@ -667,20 +666,31 @@ public class SmartGrid extends JPanel implements GridModelListener {
         JPanel header = new JPanel(null);
         header.setBackground(headerBg);
         header.setPreferredSize(new Dimension(totalColWidth, rowHeight));
+        boolean multiSort = currentSortSpecs.size() > 1;
         int x = 0;
         for (int i = 0; i < cols.size(); i++) {
             ColumnDef col = cols.get(i);
             int w = columnWidths[i];
-            SortOrder colSort = col.getKey().equals(currentSortKey)
-                                ? currentSortOrder : SortOrder.NONE;
-            JComponent cell = headerRenderer.render(col, colSort);
+
+            // Determine sort direction and rank for this column
+            SortOrder colSort = SortOrder.NONE;
+            int rank = 0;
+            for (int j = 0; j < currentSortSpecs.size(); j++) {
+                if (currentSortSpecs.get(j).getKey().equals(col.getKey())) {
+                    colSort = currentSortSpecs.get(j).getOrder();
+                    rank    = multiSort ? j + 1 : 0; // rank number shown only in multi-sort
+                    break;
+                }
+            }
+
+            JComponent cell = headerRenderer.render(col, colSort, rank);
             cell.setBounds(x, 0, w, rowHeight);
             if (col.isSortable()) {
                 final String sortKey = col.getKey();
                 cell.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mouseClicked(MouseEvent e) {
-                        cycleSortFor(sortKey);
+                        cycleSortFor(sortKey, e.isShiftDown());
                     }
                 });
             }
@@ -707,21 +717,48 @@ public class SmartGrid extends JPanel implements GridModelListener {
         return filterRow;
     }
 
-    private void cycleSortFor(String key) {
-        if (key.equals(currentSortKey)) {
-            if (currentSortOrder == SortOrder.ASCENDING) {
-                currentSortOrder = SortOrder.DESCENDING;
+    private void cycleSortFor(String key, boolean addToSort) {
+        // Find this column's current position in the sort spec list (-1 if absent)
+        int existingIdx = -1;
+        for (int i = 0; i < currentSortSpecs.size(); i++) {
+            if (currentSortSpecs.get(i).getKey().equals(key)) {
+                existingIdx = i;
+                break;
+            }
+        }
+
+        if (addToSort) {
+            // Shift+click: add column to multi-sort, cycle its direction, or remove it
+            if (existingIdx >= 0) {
+                SortSpec s = currentSortSpecs.get(existingIdx);
+                if (s.getOrder() == SortOrder.ASCENDING) {
+                    currentSortSpecs.set(existingIdx, new SortSpec(key, SortOrder.DESCENDING));
+                } else {
+                    currentSortSpecs.remove(existingIdx);
+                }
             } else {
-                currentSortOrder = SortOrder.NONE;
-                currentSortKey   = null;
+                currentSortSpecs.add(new SortSpec(key, SortOrder.ASCENDING));
             }
         } else {
-            currentSortKey   = key;
-            currentSortOrder = SortOrder.ASCENDING;
+            // Regular click: single-column sort, cycling NONE → ASC → DESC → NONE
+            if (existingIdx >= 0 && currentSortSpecs.size() == 1) {
+                // This column is already the sole sort — cycle its direction
+                SortSpec s = currentSortSpecs.get(0);
+                if (s.getOrder() == SortOrder.ASCENDING) {
+                    currentSortSpecs.set(0, new SortSpec(key, SortOrder.DESCENDING));
+                } else {
+                    currentSortSpecs.clear(); // DESC → NONE
+                }
+            } else {
+                // Different column clicked, or was part of multi-sort — start fresh
+                currentSortSpecs.clear();
+                currentSortSpecs.add(new SortSpec(key, SortOrder.ASCENDING));
+            }
         }
+
         Set<GridRow> selectedRows = captureSelectedRows();
         if (model instanceof DefaultGridModel) {
-            ((DefaultGridModel) model).sort(currentSortKey, currentSortOrder);
+            ((DefaultGridModel) model).sort(currentSortSpecs);
         }
         restoreSelectedRows(selectedRows);
         rebuildHeaderView(model.getColumns());

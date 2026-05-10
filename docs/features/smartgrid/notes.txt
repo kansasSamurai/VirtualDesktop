@@ -379,5 +379,13 @@ single panel spanning the full width, not column-aware)?
                                   │ │  ◀  Page 1 of 10  ▶                               │  ← pagination          │
                                   │ └───────────────────────────────────────────────────┘                        │
                                   └──────────────────────────────────────────────────────────────────────────────┘
-                                  
  
+
+Status 5/9:
+The SmartGrid now has a solid foundation: viewport virtualization, selection, tree hierarchy, proportional columns with   
+horizontal scroll, header/footer renderer interfaces, and explicit pagination — all in roughly 10 source files.
+
+
+
+
+

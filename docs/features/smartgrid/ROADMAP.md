@@ -1,5 +1,24 @@
 # SmartGrid — Feature Roadmap
 
+## Progress Summary
+
+| Phase | Feature | Status |
+|-------|---------|--------|
+| Baseline | Core interfaces, viewport recycler, `SmartGridDemo` | ✅ Complete |
+| 1 | Row selection (`ListSelectionModel`, click / Shift / Ctrl) | ✅ Complete |
+| 2 | Tree / hierarchy (depth, expand/collapse, ▶ / ▼) | ✅ Complete |
+| 3 | Proportional column widths + horizontal scroll | ✅ Complete |
+| 4 | Client-side sorting (column header click, ▲ / ▼ indicator) | ⬜ Not started |
+| 5 | Client-side filtering (`GridModelFilter`, search field) | ⬜ Not started |
+| 6 | Tree enhancements (lazy children, keyboard expand/collapse) | ⬜ Not started |
+| 7 | VApp integration (`SpecSmartGrid`, `ActionFactory`) | ⬜ Not started |
+| 8 | Variable row height (`RowHeightProvider`) | ⬜ Not started |
+| 9 | `GridComponentFactory` + `ScriptableRecyclable` (BeanShell) | ⬜ Not started |
+| 10 | Pagination (explicit page nav), footer row, renderer interfaces | ✅ Complete |
+| 11 | Bidirectional data flow / inline edit mode | ⬜ Not started |
+
+---
+
 ## Baseline (MVP — complete)
 
 The following are already implemented and working via `SmartGridDemo`:
@@ -148,34 +167,33 @@ Verification Steps
    
 ---
 
-## Phase 3 — Proportional Column Widths
+## Phase 3 — Proportional Column Widths + Horizontal Scroll ✅
 
 **Why**: `GridLayout(1, N)` gives every column equal width; `ColumnDef.preferredWidth`
 is currently ignored.
 
-### Implementation
+### Implementation (as built)
 
-**Shared approach** — `GridBagLayout` with `weightx` proportional to `preferredWidth`:
+**Rejected approach**: `GridBagLayout` with `weightx` proportional to `preferredWidth`.
+Each independent `JPanel` (row, header, footer) computes its own pixel allocation from
+floating-point fractions, producing different widths per panel and causing misalignment.
 
-```java
-// Called once in buildHeader() and StandardRowPanel constructor
-GridBagConstraints gbc = new GridBagConstraints();
-gbc.fill = GridBagConstraints.BOTH;
-gbc.gridy = 0;
-int total = columns.stream().mapToInt(ColumnDef::getPreferredWidth).sum();
-for (int i = 0; i < columns.size(); i++) {
-    gbc.gridx = i;
-    gbc.weightx = (double) columns.get(i).getPreferredWidth() / total;
-    panel.add(cells.get(i), gbc);
-}
-```
+**Actual approach** — shared mutable `int[] columnWidths` owned by `SmartGrid`:
 
-Both the header panel and `StandardRowPanel` use this same calculation, so columns
-align correctly when the component is resized.
+- `SmartGrid` computes pixel widths once per viewport-width change:
+  - If `vpWidth >= totalPref`: scale proportionally; last column absorbs rounding remainder
+  - If `vpWidth < totalPref`: use `preferredWidth` values as-is; horizontal scroll appears
+- All `StandardRowPanel` instances in the pool hold a **reference to the same array**;
+  `SmartGrid` updates it in-place, so the next `bind()` call sees the new widths automatically
+- Header, rows, and footer all use `null` layout with `setBounds(x, 0, w, rowHeight)` —
+  the only way to guarantee pixel-exact alignment across independently-painted panels
+- `VirtualCanvas.getScrollableTracksViewportWidth()` returns `false` when total column
+  width exceeds viewport, enabling the horizontal scrollbar
 
 ### Demo test
-- Update demo column preferred widths to `ID=50, Name=250, Dept=200, Salary=100, Status=80`
-- Resize the frame window and verify columns remain proportional and header stays aligned
+- Column widths in demo: `ID=50, Name=220, Dept=180, Salary=110, Status=80`
+- Resize window wider → columns scale proportionally; header / rows / footer stay aligned
+- Resize window narrower than 640px total → horizontal scrollbar appears; columns hold fixed widths
 
 ---
 
@@ -355,9 +373,24 @@ public interface RowHeightProvider {
 
 ---
 
-## Phase 10 — Pagination / Infinite Scroll
+## Phase 10 — Pagination / Footer Row / Renderer Interfaces ✅
 
 **Why**: Enables grids backed by databases or remote APIs with millions of rows.
+Also adds column-aligned footer aggregates and customisable header/footer rendering.
+
+### What was built
+
+- **`HeaderCellRenderer`** / **`FooterCellRenderer`** interfaces — per-column renderer
+  contracts; `DefaultHeaderCellRenderer` and `DefaultFooterCellRenderer` provide blanks
+- **`PaginationBar`** — ◀ ‹ [1][2][3][4][5] › ▶ with "Showing X–Y of Z rows" label;
+  window of 5 page buttons centers on current page
+- **`SmartGrid`** — `setPageSize(int)`, `goToPage(int)`, `setFooterRenderer()`,
+  `setHeaderRenderer()` public API; SOUTH panel built lazily (zero overhead when unused)
+- **Footer** — column-aligned (same `int[]` widths as header/rows); receives current
+  page's `List<GridRow>` for per-page aggregates AND the full model for global aggregates
+- **Demo "Paged" tab** — 50 rows/page, footer shows row count / salary sum / active count
+
+### Original roadmap item (deferred)
 
 ### Implementation
 

@@ -18,6 +18,7 @@ import javax.swing.event.DocumentListener;
 
 import org.jwellman.swing.grid.ColumnDef;
 import org.jwellman.swing.grid.DefaultGridModel;
+import org.jwellman.swing.grid.GridModelListener;
 import org.jwellman.swing.grid.GridRow;
 import org.jwellman.swing.grid.SmartGrid;
 
@@ -71,7 +72,7 @@ public class SmartGridDemo {
     // -------------------------------------------------------------------------
 
     private static JPanel buildTableTab() {
-        DefaultGridModel model = new DefaultGridModel()
+        final DefaultGridModel model = new DefaultGridModel()
             .addColumn(new ColumnDef("id",     "ID",          50, true,  true, null))
             .addColumn(new ColumnDef("name",   "Name",       220, true,  true, null))
             .addColumn(new ColumnDef("dept",   "Department", 180, true,  true, null))
@@ -85,17 +86,18 @@ public class SmartGridDemo {
                 .put("dept",   DEPTS[i % DEPTS.length])
                 .put("salary", 50_000 + (i * 173 % 100_000)) // raw int — formatted by CellRenderer
                 .put("status", STATUSES[i % STATUSES.length]);
-            if (i % 7 == 0) row.setTag("fnd-style", "warning-glow");
+            if (i % 7 == 0) {
+                row.setTag("fnd-style", "warning-glow");
+            }
             model.addRow(row);
         }
 
-        final DefaultGridModel tableModel = model;
+        final int totalRows = model.getRowCount();
         SmartGrid grid = new SmartGrid(model);
         grid.registerFormatter("currency", v -> String.format("$%,d", ((Number) v).longValue()));
+        grid.setColumnFiltersVisible(true); // per-column filter row beneath headers
 
-        // Filter bar
-        final int totalRows = model.getRowCount();
-        JLabel countLabel  = new JLabel("Showing " + totalRows + " of " + totalRows + " rows");
+        // Global filter bar (OR across all columns — keeps any row where ANY column matches)
         JTextField filterField = new JTextField(20);
         filterField.getDocument().addDocumentListener(new DocumentListener() {
             private void applyFilter() {
@@ -104,30 +106,31 @@ public class SmartGridDemo {
                     grid.clearFilter();
                 } else {
                     grid.setFilter(row -> {
-                        for (ColumnDef col : tableModel.getColumns()) {
+                        for (ColumnDef col : model.getColumns()) {
                             Object val = row.get(col.getKey());
-                            if (val != null && val.toString().toLowerCase().contains(text)) return true;
+                            if (val != null && val.toString().toLowerCase().contains(text)) {
+                                return true;
+                            }
                         }
                         return false;
                     });
                 }
-                countLabel.setText("Showing " + tableModel.getRowCount() + " of " + totalRows + " rows");
             }
             @Override public void insertUpdate(DocumentEvent e)  { applyFilter(); }
             @Override public void removeUpdate(DocumentEvent e)  { applyFilter(); }
             @Override public void changedUpdate(DocumentEvent e) { applyFilter(); }
         });
 
-        JPanel filterBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 2));
-        filterBar.add(new JLabel("Filter:"));
-        filterBar.add(filterField);
-        filterBar.add(countLabel);
+        JPanel globalFilterBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 2));
+        globalFilterBar.add(new JLabel("Filter:"));
+        globalFilterBar.add(filterField);
 
         JPanel north = new JPanel(new BorderLayout());
-        north.add(selectionToolbar(grid), BorderLayout.NORTH);
-        north.add(filterBar,              BorderLayout.SOUTH);
+        north.add(globalFilterBar,                      BorderLayout.NORTH);
+        north.add(selectionToolbarWithCount(grid, totalRows), BorderLayout.SOUTH);
 
-        JLabel desc = new JLabel(" 1,000 rows — filter field narrows results; sort and selection persist through filter");
+        JLabel desc = new JLabel(
+            " Global filter (any column) composes with per-column filters beneath the headers");
         desc.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
 
         JPanel tab = new JPanel(new BorderLayout());
@@ -285,7 +288,9 @@ public class SmartGridDemo {
                 int min = sm.getMinSelectionIndex();
                 int max = sm.getMaxSelectionIndex();
                 for (int i = min; i <= max && min >= 0; i++) {
-                    if (sm.isSelectedIndex(i)) count++;
+                    if (sm.isSelectedIndex(i)) {
+                        count++;
+                    }
                 }
                 status.setText(" " + count + " row(s) selected");
             }
@@ -301,6 +306,58 @@ public class SmartGridDemo {
         toolbar.add(selectAll);
         toolbar.add(clear);
         toolbar.add(status);
+        return toolbar;
+    }
+
+    /**
+     * Selection toolbar variant that also shows a live "Showing N of totalRows rows"
+     * count label, updated via a GridModelListener whenever the filter changes.
+     */
+    private static JPanel selectionToolbarWithCount(SmartGrid grid, int totalRows) {
+        JLabel status = new JLabel(" 0 rows selected");
+        JLabel count  = new JLabel("  |  Showing " + totalRows + " of " + totalRows + " rows");
+
+        grid.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                ListSelectionModel sm = grid.getSelectionModel();
+                int selected = 0;
+                int min = sm.getMinSelectionIndex();
+                int max = sm.getMaxSelectionIndex();
+                for (int i = min; i <= max && min >= 0; i++) {
+                    if (sm.isSelectedIndex(i)) {
+                        selected++;
+                    }
+                }
+                status.setText(" " + selected + " row(s) selected");
+            }
+        });
+
+        grid.getModel().addGridModelListener(new GridModelListener() {
+            @Override
+            public void rowsChanged(int firstRow, int lastRow) {
+                updateCount();
+            }
+            @Override
+            public void modelReset() {
+                updateCount();
+            }
+            private void updateCount() {
+                count.setText("  |  Showing " + grid.getModel().getRowCount()
+                              + " of " + totalRows + " rows");
+            }
+        });
+
+        JButton selectAll = new JButton("Select All");
+        selectAll.addActionListener(e -> grid.selectAll());
+
+        JButton clear = new JButton("Clear");
+        clear.addActionListener(e -> grid.clearSelection());
+
+        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 2));
+        toolbar.add(selectAll);
+        toolbar.add(clear);
+        toolbar.add(status);
+        toolbar.add(count);
         return toolbar;
     }
 }

@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.HierarchyEvent;
@@ -19,16 +20,19 @@ import java.util.function.Function;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
-import javax.swing.JLabel;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.Scrollable;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionListener;
 
 /**
@@ -42,19 +46,24 @@ import javax.swing.event.ListSelectionListener;
  *   bind() call picks up the new widths — guaranteeing pixel-exact alignment
  *   across header, rows, and footer without independent layout managers.
  *
+ * Filtering:
+ *   Two independent filter slots — {@code globalFilter} (set via setFilter()) and
+ *   {@code columnFilter} (built from per-column text fields) — are composed with AND
+ *   before being passed to the model. Either can be null (inactive).
+ *
  * Layout:
  *   JScrollPane (vertical AS_NEEDED, horizontal AS_NEEDED)
- *     columnHeaderView → header JPanel  (null layout, absolute bounds)
- *     viewport         → VirtualCanvas  (null layout, virtual height)
- *                            slot[0..N]  (StandardRowPanel, absolute bounds)
- *   SOUTH panel (optional):
- *     footer JPanel    (null layout, absolute bounds)
- *     PaginationBar
+ *     columnHeaderView → 1-row or 2-row JPanel
+ *                          row 1: label row  (sort indicators, click to sort)
+ *                          row 2: filter row (JTextFields, opt-in via setColumnFiltersVisible)
+ *     viewport         → VirtualCanvas (null layout, virtual height)
+ *   SOUTH panel (optional): footer JPanel + PaginationBar
  */
 public class SmartGrid extends JPanel implements GridModelListener {
 
-    private static final Color HEADER_BG = new Color(0x3C4B64);
-    private static final Color FOOTER_BG = new Color(0xECEFF4);
+    private static final Color HEADER_BG    = new Color(0x3C4B64);
+    private static final Color FOOTER_BG    = new Color(0xECEFF4);
+    private static final Color FILTER_ROW_BG = new Color(0xE8EDF5);
 
     private final GridModel model;
     private final DefaultListSelectionModel selectionModel =
@@ -64,15 +73,19 @@ public class SmartGrid extends JPanel implements GridModelListener {
     // Shared column-width array — updated in-place by computeColumnWidths().
     // All StandardRowPanel instances in the pool reference this same object.
     private int[] columnWidths;
-    private int   lastVpWidth = -1; // detect viewport-width changes in refresh()
+    private int   lastVpWidth = -1;
 
     // Renderer delegates — replaceable at runtime
     private HeaderCellRenderer headerRenderer = new DefaultHeaderCellRenderer();
     private FooterCellRenderer footerRenderer = null;
 
-    // Pagination state
-    private int pageSize    = 0; // 0 = disabled
-    private int currentPage = 0;
+    // Filter state — two independent slots composed with AND before passing to model
+    private GridModelFilter globalFilter = null; // set via setFilter() / clearFilter()
+    private GridModelFilter columnFilter = null; // built by reapplyColumnFilter()
+
+    // Per-column filter row (opt-in)
+    private boolean      columnFiltersVisible = false;
+    private JTextField[] columnFilterFields   = null;
 
     // Sort state
     private String    currentSortKey   = null;
@@ -80,6 +93,10 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
     // Cell renderer registry — keyed by ColumnDef.fndType
     private final Map<String, CellRenderer> cellRenderers = new HashMap<>();
+
+    // Pagination state
+    private int pageSize    = 0;
+    private int currentPage = 0;
 
     // Swing components
     private JScrollPane   scrollPane;
@@ -95,12 +112,13 @@ public class SmartGrid extends JPanel implements GridModelListener {
         this.model.addGridModelListener(this);
 
         selectionModel.addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) refresh();
+            if (!e.getValueIsAdjusting()) {
+                refresh();
+            }
         });
 
         List<ColumnDef> cols = model.getColumns();
 
-        // Initialise column widths from preferredWidth defaults (refined on first refresh)
         columnWidths = new int[cols.size()];
         for (int i = 0; i < cols.size(); i++) {
             columnWidths[i] = cols.get(i).getPreferredWidth();
@@ -130,7 +148,10 @@ public class SmartGrid extends JPanel implements GridModelListener {
         scrollPane.setColumnHeaderView(buildHeader(cols));
 
         scrollPane.getViewport().addChangeListener(new ChangeListener() {
-            @Override public void stateChanged(ChangeEvent e) { refresh(); }
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                refresh();
+            }
         });
 
         addHierarchyListener(e -> {
@@ -147,9 +168,13 @@ public class SmartGrid extends JPanel implements GridModelListener {
     // Public API — basic
     // -------------------------------------------------------------------------
 
-    public GridModel getModel() { return model; }
+    public GridModel getModel() {
+        return model;
+    }
 
-    public int getRowHeight() { return rowHeight; }
+    public int getRowHeight() {
+        return rowHeight;
+    }
 
     public void setRowHeight(int rowHeight) {
         this.rowHeight = rowHeight;
@@ -161,7 +186,9 @@ public class SmartGrid extends JPanel implements GridModelListener {
     // Public API — selection
     // -------------------------------------------------------------------------
 
-    public ListSelectionModel getSelectionModel() { return selectionModel; }
+    public ListSelectionModel getSelectionModel() {
+        return selectionModel;
+    }
 
     public void addListSelectionListener(ListSelectionListener l) {
         selectionModel.addListSelectionListener(l);
@@ -169,7 +196,9 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
     public void selectAll() {
         int n = model.getRowCount();
-        if (n > 0) selectionModel.setSelectionInterval(0, n - 1);
+        if (n > 0) {
+            selectionModel.setSelectionInterval(0, n - 1);
+        }
     }
 
     public void clearSelection() {
@@ -180,20 +209,79 @@ public class SmartGrid extends JPanel implements GridModelListener {
     // Public API — filtering
     // -------------------------------------------------------------------------
 
-    /** Applies a row filter and clears the current selection. */
+    /**
+     * Sets the global filter (tests whether ANY column matches — OR semantics).
+     * Composes with the column filter row if that is also active.
+     * Clears the current selection.
+     */
     public void setFilter(GridModelFilter f) {
         selectionModel.clearSelection();
-        if (model instanceof DefaultGridModel) {
-            ((DefaultGridModel) model).setFilter(f);
-        }
+        globalFilter = f;
+        applyComposedFilter();
     }
 
-    /** Removes the active filter and clears the current selection. */
+    /**
+     * Clears the global filter. Column filter row (if visible) remains active.
+     * Clears the current selection.
+     */
     public void clearFilter() {
         selectionModel.clearSelection();
-        if (model instanceof DefaultGridModel) {
-            ((DefaultGridModel) model).clearFilter();
+        globalFilter = null;
+        applyComposedFilter();
+    }
+
+    /**
+     * Shows or hides the per-column filter row beneath the header labels.
+     * When shown, each column gets a text field; typing ANDs with the global filter.
+     */
+    public void setColumnFiltersVisible(boolean visible) {
+        if (visible == columnFiltersVisible) {
+            return;
         }
+        columnFiltersVisible = visible;
+
+        if (visible) {
+            List<ColumnDef> cols = model.getColumns();
+            columnFilterFields = new JTextField[cols.size()];
+            for (int i = 0; i < cols.size(); i++) {
+                JTextField field = new JTextField();
+                field.getDocument().addDocumentListener(new DocumentListener() {
+                    @Override
+                    public void insertUpdate(DocumentEvent e) {
+                        reapplyColumnFilter();
+                    }
+                    @Override
+                    public void removeUpdate(DocumentEvent e) {
+                        reapplyColumnFilter();
+                    }
+                    @Override
+                    public void changedUpdate(DocumentEvent e) {
+                        reapplyColumnFilter();
+                    }
+                });
+                columnFilterFields[i] = field;
+            }
+        } else {
+            columnFilterFields = null;
+            columnFilter = null;
+            applyComposedFilter();
+        }
+
+        scrollPane.setColumnHeaderView(buildHeader(model.getColumns()));
+    }
+
+    /**
+     * Clears all per-column filter fields, which removes the column filter predicate.
+     * The global filter (if set) remains active.
+     */
+    public void clearColumnFilters() {
+        if (columnFilterFields == null) {
+            return;
+        }
+        for (JTextField field : columnFilterFields) {
+            field.setText("");
+        }
+        // DocumentListeners fire reapplyColumnFilter() per field, which is harmless
     }
 
     // -------------------------------------------------------------------------
@@ -215,19 +303,15 @@ public class SmartGrid extends JPanel implements GridModelListener {
     // -------------------------------------------------------------------------
 
     /**
-     * Registers a full {@link CellRenderer} for columns whose {@code fndType} matches
-     * {@code fndType}. The renderer receives the existing cell component and may reuse
-     * or replace it. Takes effect on the next bind cycle (next scroll or refresh).
+     * Registers a {@link CellRenderer} for columns whose {@code fndType} matches the key.
+     * The renderer receives the existing cell component and may reuse or replace it.
      */
     public void registerCellRenderer(String fndType, CellRenderer renderer) {
         cellRenderers.put(fndType, renderer);
     }
 
     /**
-     * Convenience overload: registers a formatter function that produces display text.
-     * The cell is always rendered as a left-padded {@code JLabel}; the function converts
-     * the raw {@code Object} value to the string to display.
-     *
+     * Convenience: registers a formatter function that displays a value as a styled JLabel.
      * Example: {@code grid.registerFormatter("currency",
      *     v -> String.format("$%,d", ((Number) v).longValue()))}
      */
@@ -244,11 +328,18 @@ public class SmartGrid extends JPanel implements GridModelListener {
     // Public API — pagination
     // -------------------------------------------------------------------------
 
-    public int getPageSize()    { return pageSize; }
-    public int getCurrentPage() { return currentPage; }
+    public int getPageSize() {
+        return pageSize;
+    }
+
+    public int getCurrentPage() {
+        return currentPage;
+    }
 
     public int totalPages() {
-        if (pageSize <= 0) return 1;
+        if (pageSize <= 0) {
+            return 1;
+        }
         int rows = model.getRowCount();
         return (rows == 0) ? 1 : (int) Math.ceil((double) rows / pageSize);
     }
@@ -268,7 +359,9 @@ public class SmartGrid extends JPanel implements GridModelListener {
         canvas.revalidate();
         refresh();
         refreshFooter();
-        if (paginationBar != null) paginationBar.update(currentPage, totalPages());
+        if (paginationBar != null) {
+            paginationBar.update(currentPage, totalPages());
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -286,22 +379,88 @@ public class SmartGrid extends JPanel implements GridModelListener {
             canvas.revalidate();
             refresh();
             refreshFooter();
-            if (paginationBar != null) paginationBar.update(currentPage, totalPages());
+            if (paginationBar != null) {
+                paginationBar.update(currentPage, totalPages());
+            }
         });
+    }
+
+    // -------------------------------------------------------------------------
+    // Internal — filter composition
+    // -------------------------------------------------------------------------
+
+    /** Composes globalFilter and columnFilter with AND and passes result to model. */
+    private void applyComposedFilter() {
+        if (globalFilter == null && columnFilter == null) {
+            if (model instanceof DefaultGridModel) {
+                ((DefaultGridModel) model).clearFilter();
+            }
+            return;
+        }
+        final GridModelFilter g = globalFilter;
+        final GridModelFilter c = columnFilter;
+        GridModelFilter composed = row -> {
+            if (g != null && !g.accept(row)) {
+                return false;
+            }
+            if (c != null && !c.accept(row)) {
+                return false;
+            }
+            return true;
+        };
+        if (model instanceof DefaultGridModel) {
+            ((DefaultGridModel) model).setFilter(composed);
+        }
+    }
+
+    /** Rebuilds columnFilter from current field text and calls applyComposedFilter(). */
+    private void reapplyColumnFilter() {
+        if (columnFilterFields == null) {
+            return;
+        }
+        List<ColumnDef> cols = model.getColumns();
+        boolean anyActive = false;
+        for (JTextField field : columnFilterFields) {
+            if (!field.getText().trim().isEmpty()) {
+                anyActive = true;
+                break;
+            }
+        }
+        if (!anyActive) {
+            columnFilter = null;
+        } else {
+            final JTextField[] fields = columnFilterFields;
+            columnFilter = row -> {
+                for (int i = 0; i < cols.size() && i < fields.length; i++) {
+                    String term = fields[i].getText().trim().toLowerCase();
+                    if (term.isEmpty()) {
+                        continue;
+                    }
+                    Object val = row.get(cols.get(i).getKey());
+                    if (val == null || !val.toString().toLowerCase().contains(term)) {
+                        return false;
+                    }
+                }
+                return true;
+            };
+        }
+        applyComposedFilter();
     }
 
     // -------------------------------------------------------------------------
     // Internal — column width computation
     // -------------------------------------------------------------------------
 
-    /** Updates columnWidths[] in-place based on viewport width and preferredWidths. */
     private void computeColumnWidths(int vpWidth, List<ColumnDef> cols) {
         int totalPref = 0;
-        for (ColumnDef col : cols) totalPref += col.getPreferredWidth();
-        if (totalPref <= 0) totalPref = 1;
+        for (ColumnDef col : cols) {
+            totalPref += col.getPreferredWidth();
+        }
+        if (totalPref <= 0) {
+            totalPref = 1;
+        }
 
         if (vpWidth >= totalPref) {
-            // Scale up proportionally; last column absorbs integer-rounding remainder
             int remaining = vpWidth;
             for (int i = 0; i < cols.size() - 1; i++) {
                 columnWidths[i] = (int) Math.round(
@@ -310,7 +469,6 @@ public class SmartGrid extends JPanel implements GridModelListener {
             }
             columnWidths[cols.size() - 1] = Math.max(1, remaining);
         } else {
-            // Preferred widths exceed viewport — use them as-is; horizontal scroll appears
             for (int i = 0; i < cols.size(); i++) {
                 columnWidths[i] = cols.get(i).getPreferredWidth();
             }
@@ -319,8 +477,37 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
     private int totalColumnWidth() {
         int t = 0;
-        for (int w : columnWidths) t += w;
+        for (int w : columnWidths) {
+            t += w;
+        }
         return t;
+    }
+
+    /**
+     * Sets a new columnHeaderView while preserving focus if the focus owner is one
+     * of the per-column filter fields. When a JTextField is reparented (moved from
+     * the old filter-row panel to the newly built one) Swing drops focus to the next
+     * focusable sibling; this method restores it via invokeLater.
+     */
+    private void rebuildHeaderView(List<ColumnDef> cols) {
+        int focusedFieldIdx = -1;
+        if (columnFilterFields != null) {
+            Component focused = KeyboardFocusManager
+                    .getCurrentKeyboardFocusManager().getFocusOwner();
+            for (int i = 0; i < columnFilterFields.length; i++) {
+                if (columnFilterFields[i] == focused) {
+                    focusedFieldIdx = i;
+                    break;
+                }
+            }
+        }
+
+        scrollPane.setColumnHeaderView(buildHeader(cols));
+
+        if (focusedFieldIdx >= 0) {
+            final int idx = focusedFieldIdx;
+            SwingUtilities.invokeLater(() -> columnFilterFields[idx].requestFocusInWindow());
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -328,20 +515,25 @@ public class SmartGrid extends JPanel implements GridModelListener {
     // -------------------------------------------------------------------------
 
     private void refresh() {
-        if (!isShowing()) return;
+        if (!isShowing()) {
+            return;
+        }
 
         int vpHeight = scrollPane.getViewport().getHeight();
         int vpWidth  = scrollPane.getViewport().getWidth();
         int scrollY  = scrollPane.getViewport().getViewPosition().y;
 
-        if (vpHeight <= 0 || vpWidth <= 0) return;
+        if (vpHeight <= 0 || vpWidth <= 0) {
+            return;
+        }
 
-        // Recompute column widths when viewport width changes, then rebuild header/footer
         if (vpWidth != lastVpWidth) {
             lastVpWidth = vpWidth;
             computeColumnWidths(vpWidth, model.getColumns());
-            scrollPane.setColumnHeaderView(buildHeader(model.getColumns()));
-            if (footerRenderer != null) refreshFooter();
+            rebuildHeaderView(model.getColumns());
+            if (footerRenderer != null) {
+                refreshFooter();
+            }
         }
 
         int totalColWidth = totalColumnWidth();
@@ -363,7 +555,6 @@ public class SmartGrid extends JPanel implements GridModelListener {
             int modelIdx = pageOffset + rowIdx;
             if (rowIdx < effectiveRows && modelIdx < model.getRowCount()) {
                 GridRow row = model.getRow(modelIdx);
-                // Bounds set BEFORE bind() so getHeight() returns rowHeight inside bind()
                 slots[i].setBounds(0, rowIdx * rowHeight, totalColWidth, rowHeight);
                 ((Recyclable) slots[i]).bind(row, modelIdx);
                 slots[i].setVisible(true);
@@ -393,7 +584,24 @@ public class SmartGrid extends JPanel implements GridModelListener {
     // Internal — header / footer builders (null layout, absolute bounds)
     // -------------------------------------------------------------------------
 
+    /**
+     * Builds the columnHeaderView: a single label row, or a 2-row panel (label + filter)
+     * when column filters are visible.
+     */
     private JPanel buildHeader(List<ColumnDef> cols) {
+        JPanel labelRow = buildHeaderLabelRow(cols);
+        if (!columnFiltersVisible || columnFilterFields == null) {
+            return labelRow;
+        }
+        JPanel filterRow = buildHeaderFilterRow(cols);
+        JPanel combined  = new JPanel();
+        combined.setLayout(new BoxLayout(combined, BoxLayout.Y_AXIS));
+        combined.add(labelRow);
+        combined.add(filterRow);
+        return combined;
+    }
+
+    private JPanel buildHeaderLabelRow(List<ColumnDef> cols) {
         int totalColWidth = totalColumnWidth();
         JPanel header = new JPanel(null);
         header.setBackground(HEADER_BG);
@@ -409,7 +617,8 @@ public class SmartGrid extends JPanel implements GridModelListener {
             if (col.isSortable()) {
                 final String sortKey = col.getKey();
                 cell.addMouseListener(new MouseAdapter() {
-                    @Override public void mouseClicked(MouseEvent e) {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
                         cycleSortFor(sortKey);
                     }
                 });
@@ -418,6 +627,23 @@ public class SmartGrid extends JPanel implements GridModelListener {
             x += w;
         }
         return header;
+    }
+
+    private JPanel buildHeaderFilterRow(List<ColumnDef> cols) {
+        int totalColWidth = totalColumnWidth();
+        int filterHeight  = rowHeight - 2;
+        JPanel filterRow  = new JPanel(null);
+        filterRow.setBackground(FILTER_ROW_BG);
+        filterRow.setPreferredSize(new Dimension(totalColWidth, filterHeight));
+        int x = 0;
+        for (int i = 0; i < cols.size() && i < columnFilterFields.length; i++) {
+            int w = columnWidths[i];
+            JTextField field = columnFilterFields[i];
+            field.setBounds(x + 2, 2, w - 4, filterHeight - 4);
+            filterRow.add(field);
+            x += w;
+        }
+        return filterRow;
     }
 
     private void cycleSortFor(String key) {
@@ -432,16 +658,12 @@ public class SmartGrid extends JPanel implements GridModelListener {
             currentSortKey   = key;
             currentSortOrder = SortOrder.ASCENDING;
         }
-        // Capture selected rows by object identity before the sort reorders them
         Set<GridRow> selectedRows = captureSelectedRows();
         if (model instanceof DefaultGridModel) {
             ((DefaultGridModel) model).sort(currentSortKey, currentSortOrder);
-            // sort() → notifyDataChanged() → modelReset() → invokeLater(refresh)
         }
-        // Restore selection using the new indices of the same GridRow objects
         restoreSelectedRows(selectedRows);
-        // Rebuild header immediately so the indicator updates before refresh() runs
-        scrollPane.setColumnHeaderView(buildHeader(model.getColumns()));
+        rebuildHeaderView(model.getColumns());
     }
 
     private Set<GridRow> captureSelectedRows() {
@@ -458,7 +680,9 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
     private void restoreSelectedRows(Set<GridRow> selectedRows) {
         selectionModel.clearSelection();
-        if (selectedRows.isEmpty()) return;
+        if (selectedRows.isEmpty()) {
+            return;
+        }
         int count = model.getRowCount();
         for (int i = 0; i < count; i++) {
             if (selectedRows.contains(model.getRow(i))) {
@@ -504,7 +728,9 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private void rebuildSouthPanel() {
         BorderLayout bl = (BorderLayout) getLayout();
         Component old = bl.getLayoutComponent(BorderLayout.SOUTH);
-        if (old != null) remove(old);
+        if (old != null) {
+            remove(old);
+        }
 
         southPanel    = null;
         footerPanel   = null;
@@ -513,7 +739,10 @@ public class SmartGrid extends JPanel implements GridModelListener {
         boolean hasFooter = footerRenderer != null;
         boolean hasPaging = pageSize > 0;
 
-        if (!hasFooter && !hasPaging) { revalidate(); return; }
+        if (!hasFooter && !hasPaging) {
+            revalidate();
+            return;
+        }
 
         southPanel = new JPanel();
         southPanel.setLayout(new BoxLayout(southPanel, BoxLayout.Y_AXIS));
@@ -531,7 +760,9 @@ public class SmartGrid extends JPanel implements GridModelListener {
     }
 
     private void refreshFooter() {
-        if (footerRenderer == null || southPanel == null || footerPanel == null) return;
+        if (footerRenderer == null || southPanel == null || footerPanel == null) {
+            return;
+        }
         southPanel.remove(footerPanel);
         footerPanel = buildFooter(model.getColumns());
         southPanel.add(footerPanel, 0);
@@ -583,13 +814,14 @@ public class SmartGrid extends JPanel implements GridModelListener {
             return v.height;
         }
 
-        // Tracks viewport width only when all columns fit — triggers horizontal scroll otherwise
         @Override
         public boolean getScrollableTracksViewportWidth() {
             return totalColumnWidth() <= scrollPane.getViewport().getWidth();
         }
 
         @Override
-        public boolean getScrollableTracksViewportHeight() { return false; }
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
+        }
     }
 }

@@ -16,6 +16,7 @@
 | 9 | `GridComponentFactory` + `ScriptableRecyclable` (BeanShell) | ⬜ Not started |
 | 10 | Pagination (explicit page nav), footer row, renderer interfaces | ✅ Complete |
 | 11 | Bidirectional data flow / inline edit mode | ⬜ Not started |
+| 12 | Header panel refactor: persistent panels, in-place bound updates | ⬜ Not started |
 
 ---
 
@@ -440,6 +441,57 @@ listeners using reflection (helper for all panels)
 - Add a toolbar toggle button "Edit Mode"
 - Enable; edit a row's Name field; scroll away and back — data persists in `GridRow`
 - Disable; verify fields become labels again
+
+---
+
+## Phase 12 — Header Panel Refactor: Persistent Panels, In-Place Bound Updates
+
+**Why**: The current implementation treats both a manual window resize and a
+scrollbar appearing/disappearing identically, because it only looks at one
+observable: `vpWidth != lastVpWidth`. It has no knowledge of *why* the width
+changed.
+
+When the vertical scrollbar appears or disappears, it consumes or releases roughly
+15–17 pixels of horizontal space. The viewport shrinks or grows by that amount,
+`getWidth()` returns a different value than `lastVpWidth`, and the code can't tell
+whether that's because the user dragged the window wider or because the scrollbar
+just toggled.
+
+The rebuild *is* technically correct in both cases — if the viewport width changed
+for any reason, the proportional column widths need to be recalculated, and the
+null-layout header cells need to reflect those new pixel widths. So there's no bug
+in the logic, only in the cost of how it responds.
+
+The "heavy" part is the *implementation choice*: create new `JPanel` objects, new
+`JLabel` instances, re-add all the children from scratch, and swap the whole thing
+into `columnHeaderView`. The alternative — which is what the data rows already do
+— would be to keep persistent panel references and only call `setBounds()` on the
+existing child components when widths change. That's analogous to how the slot
+JPanels are repositioned with `setBounds()` on every scroll rather than being
+recreated. Applied to the header, you'd keep the same `filterRowPanel` and just
+reposition the fields inside it, which would also eliminate the focus-loss problem
+entirely without needing the `rebuildHeaderView()` workaround.
+
+So the fix currently in place is correct, the underlying inefficiency is real, and
+the cure would be making the header panels persistent — consistent with how the
+recycler handles the data rows.
+
+### Implementation
+
+**`SmartGrid.java`**
+- Store `labelRowPanel` and (if enabled) `filterRowPanel` as persistent fields
+  created once (in constructor / `setColumnFiltersVisible(true)`)
+- On column-width change: update `setBounds()` on each child component of the
+  persistent panels; update `setPreferredSize()` on the panels themselves
+- On sort-state change: only update the text/font of the affected label cell, not
+  the entire panel
+- Remove `rebuildHeaderView()` workaround — focus loss no longer occurs because
+  `filterRowPanel` is never reparented
+
+### Expected outcome
+- No functional change visible to the user
+- Focus stays in the active filter field when the scrollbar appears/disappears
+- Slightly reduced object allocation on every viewport-width change
 
 ---
 

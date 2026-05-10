@@ -2,22 +2,23 @@
 
 ## Progress Summary
 
-| Phase | Feature | Status |
-|-------|---------|--------|
-| Baseline | Core interfaces, viewport recycler, `SmartGridDemo` | ✅ Complete |
-| 1 | Row selection (`ListSelectionModel`, click / Shift / Ctrl) | ✅ Complete |
-| 2 | Tree / hierarchy (depth, expand/collapse, ▶ / ▼) | ✅ Complete |
-| 3 | Proportional column widths + horizontal scroll | ✅ Complete |
-| 4 | Client-side sorting (column header click, ▲ / ▼ indicator) | ✅ Complete |
-| 5 | Client-side filtering (`GridModelFilter`, search field) | ✅ Complete |
-| 6 | Tree enhancements (lazy children, keyboard expand/collapse) | ⬜ Not started |
-| 7 | VApp integration (`SpecSmartGrid`, `ActionFactory`) | ⬜ Not started |
-| 8 | Variable row height (`RowHeightProvider`) | ⬜ Not started |
-| 9 | `GridComponentFactory` + `ScriptableRecyclable` (BeanShell) | ⬜ Not started |
-| 10 | Pagination (explicit page nav), footer row, renderer interfaces | ✅ Complete |
-| 11 | Bidirectional data flow / inline edit mode | ⬜ Not started |
-| 12 | Header panel refactor: persistent panels, in-place bound updates | ⬜ Not started |
-| 13 | Filter search cache with configurable row-count threshold | ⬜ Not started |
+| Phase | Feature | Status | Notes |
+|-------|---------|--------|-------|
+| Baseline | Core interfaces, viewport recycler, `SmartGridDemo` | ✅ Complete | |
+| 1 | Row selection (`ListSelectionModel`, click / Shift / Ctrl) | ✅ Complete | |
+| 2 | Tree / hierarchy (depth, expand/collapse, ▶ / ▼) | ✅ Complete | |
+| 3 | Proportional column widths + horizontal scroll | ✅ Complete | |
+| 4 | Client-side sorting (column header click, ▲ / ▼ indicator) | ✅ Complete | |
+| 5 | Client-side filtering (`GridModelFilter`, search field) | ✅ Complete | |
+| 7 | VApp integration (`SpecSmartGrid`, `ActionFactory`) | ✅ Complete | |
+| 10 | Pagination (explicit page nav), footer row, renderer interfaces | ✅ Complete | |
+| 9a | `GridComponentFactory` — registration / dispatch mechanism | ⬜ Next | Prerequisite for tree and edit mode |
+| 11 | Bidirectional data flow / inline edit mode (rudimentary) | ⬜ Next | Validates `sourceObject`; `isGroupHeader` guard |
+| 6 | Tree enhancements — implementation | ⬜ Next | Uses factory + `isGroupHeader` from above |
+| 9b | `ScriptableRecyclable` + Blueprint DSL + BeanShell integration | ⬜ Deferred | Complex; not needed for tree or edit mode |
+| 8 | Variable row height (`RowHeightProvider`) | ⬜ End | Deferred by design — touches core scroll math |
+| 12 | Header panel refactor: persistent panels, in-place bound updates | ⬜ End | |
+| 13 | Filter search cache with configurable row-count threshold | ⬜ End | |
 
 ---
 
@@ -294,7 +295,7 @@ Examples: lazy child loading, drag-to-reorder nodes, keyboard expand/collapse.
 
 ---
 
-## Phase 7 — VApp Integration
+## Phase 7 — VApp Integration ✅
 
 **Why**: Provides a real-world host for the grid inside VirtualDesktop.
 

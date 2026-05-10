@@ -1,11 +1,14 @@
 package org.jwellman.demo;
 
 import java.awt.BorderLayout;
+import java.awt.FlowLayout;
 import javax.swing.BorderFactory;
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
+import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
@@ -17,14 +20,17 @@ import org.jwellman.swing.grid.SmartGrid;
 /**
  * Three-tab demo for SmartGrid MVP:
  *
- *  Tab 1 "Table" — 1,000-row flat employee dataset; demonstrates viewport
- *                  virtualization (~20 live components regardless of row count).
+ *  Tab "Table" — 1,000-row flat employee dataset; demonstrates viewport
+ *                virtualization (~20 live components regardless of row count).
  *
- *  Tab 2 "Tree"  — departments with child employees; demonstrates expand/collapse
- *                  on the same SmartGrid component with no extra code paths.
+ *  Tab "Tree"  — departments with child employees; demonstrates expand/collapse
+ *                on the same SmartGrid component with no extra code paths.
  *
- *  Tab 3 "List"  — single-column view; demonstrates that a list is simply a
- *                  1-column SmartGrid with the same unified model.
+ *  Tab "List"  — single-column view; demonstrates that a list is simply a
+ *                1-column SmartGrid sharing the unified model.
+ *
+ * Every tab has a "Select All" / "Clear" toolbar and a live selection-count label.
+ * Selection state survives scrolling (it lives in ListSelectionModel, not the component).
  */
 public class SmartGridDemo {
 
@@ -85,8 +91,8 @@ public class SmartGridDemo {
             model.addRow(row);
         }
 
-        return wrap(new SmartGrid(model),
-            "1,000 rows — only ~20 live components exist at any time (viewport virtualization)");
+        SmartGrid grid = new SmartGrid(model);
+        return wrap(grid, "1,000 rows — only ~20 live components via viewport virtualization");
     }
 
     // -------------------------------------------------------------------------
@@ -99,7 +105,6 @@ public class SmartGridDemo {
             .addColumn(new ColumnDef("role",   "Role",              160, false, true, null))
             .addColumn(new ColumnDef("salary", "Salary",            100, false, true, null));
 
-        // { department name, employee count }
         String[][] deptData = {
             {"Engineering",     "13"},
             {"Marketing",        "7"},
@@ -131,8 +136,8 @@ public class SmartGridDemo {
             }
         }
 
-        return wrap(new SmartGrid(model),
-            "Click any department row to expand or collapse its employees");
+        SmartGrid grid = new SmartGrid(model);
+        return wrap(grid, "Click a department row to expand/collapse its employees");
     }
 
     // -------------------------------------------------------------------------
@@ -153,20 +158,52 @@ public class SmartGridDemo {
             .put("name", "Groovy  (used in this application)")
             .setTag("fnd-style", "warning-glow"));
 
-        return wrap(new SmartGrid(model),
-            "Single-column SmartGrid — a list is just a 1-column table sharing the same model");
+        SmartGrid grid = new SmartGrid(model);
+        return wrap(grid, "Single-column SmartGrid — a list is just a 1-column table");
     }
 
     // -------------------------------------------------------------------------
-    // Helper
+    // Helpers
     // -------------------------------------------------------------------------
 
+    /** Wraps a SmartGrid with a selection toolbar (north) and description label (south). */
     private static JPanel wrap(SmartGrid grid, String description) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(selectionToolbar(grid), BorderLayout.NORTH);
+        panel.add(grid, BorderLayout.CENTER);
         JLabel desc = new JLabel(" " + description);
         desc.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.add(grid, BorderLayout.CENTER);
         panel.add(desc, BorderLayout.SOUTH);
         return panel;
+    }
+
+    /** Builds a toolbar with Select All, Clear, and a live selection-count label. */
+    private static JPanel selectionToolbar(SmartGrid grid) {
+        JLabel status = new JLabel(" 0 rows selected");
+
+        grid.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                ListSelectionModel sm = grid.getSelectionModel();
+                int count = 0;
+                int min = sm.getMinSelectionIndex();
+                int max = sm.getMaxSelectionIndex();
+                for (int i = min; i <= max && min >= 0; i++) {
+                    if (sm.isSelectedIndex(i)) count++;
+                }
+                status.setText(" " + count + " row(s) selected");
+            }
+        });
+
+        JButton selectAll = new JButton("Select All");
+        selectAll.addActionListener(e -> grid.selectAll());
+
+        JButton clear = new JButton("Clear");
+        clear.addActionListener(e -> grid.clearSelection());
+
+        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 2));
+        toolbar.add(selectAll);
+        toolbar.add(clear);
+        toolbar.add(status);
+        return toolbar;
     }
 }

@@ -60,6 +60,22 @@ void bind(GridRow row, int rowIndex, ListSelectionModel selectionModel);
 
 ---
 
+Verification
+
+     Run SmartGridDemo and exercise each tab:
+
+     1. Table tab — single click selects a row (highlighted in system blue); Shift+Click
+     extends range; Ctrl+Click toggles individual rows; "Select All" selects all 1000;
+     "Clear" deselects all; status label tracks count throughout.
+     2. Tree tab — clicking a leaf employee row selects it; clicking a department row
+     selects it AND toggles its expand/collapse.
+     3. List tab — same selection behavior as Table tab with a single column.
+     4. Scroll test — select row 5, scroll down past it, scroll back; row 5 remains
+     highlighted (selection lives in the model, not the component).
+     
+
+---
+
 ## Phase 2 — Tree / Hierarchy Support ★
 
 **Why**: Moved up to priority 2 — the tree view requires different data and a

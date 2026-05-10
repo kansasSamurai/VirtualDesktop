@@ -8,14 +8,17 @@ import java.awt.GridLayout;
 import java.awt.Rectangle;
 import java.util.List;
 import javax.swing.BorderFactory;
+import javax.swing.DefaultListSelectionModel;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.ListSelectionModel;
 import javax.swing.Scrollable;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.ListSelectionListener;
 
 /**
  * SmartGrid: a Swing table component where every row is a live JPanel.
@@ -35,6 +38,8 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private static final Color HEADER_FG = Color.WHITE;
 
     private final GridModel model;
+    private final DefaultListSelectionModel selectionModel =
+            new DefaultListSelectionModel();
     private int rowHeight = 32;
     private JScrollPane scrollPane;
     private VirtualCanvas canvas;
@@ -45,13 +50,21 @@ public class SmartGrid extends JPanel implements GridModelListener {
         this.model = model;
         this.model.addGridModelListener(this);
 
+        // Repaint visible rows whenever selection changes.
+        selectionModel.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) refresh();
+        });
+
         List<ColumnDef> cols = model.getColumns();
         final GridModel capturedModel = model;
-        this.pool = new ComponentPool(() -> new StandardRowPanel(cols, () -> {
-            if (capturedModel instanceof DefaultGridModel) {
-                ((DefaultGridModel) capturedModel).notifyDataChanged();
-            }
-        }));
+        final DefaultListSelectionModel sm = selectionModel;
+        this.pool = new ComponentPool(() -> new StandardRowPanel(cols,
+            () -> {
+                if (capturedModel instanceof DefaultGridModel) {
+                    ((DefaultGridModel) capturedModel).notifyDataChanged();
+                }
+            },
+            sm));
 
         setLayout(new BorderLayout());
 
@@ -86,6 +99,21 @@ public class SmartGrid extends JPanel implements GridModelListener {
         this.rowHeight = rowHeight;
         canvas.revalidate();
         refresh();
+    }
+
+    public ListSelectionModel getSelectionModel() { return selectionModel; }
+
+    public void addListSelectionListener(ListSelectionListener l) {
+        selectionModel.addListSelectionListener(l);
+    }
+
+    public void selectAll() {
+        int n = model.getRowCount();
+        if (n > 0) selectionModel.setSelectionInterval(0, n - 1);
+    }
+
+    public void clearSelection() {
+        selectionModel.clearSelection();
     }
 
     // -------------------------------------------------------------------------

@@ -17,6 +17,7 @@
 | 10 | Pagination (explicit page nav), footer row, renderer interfaces | ✅ Complete |
 | 11 | Bidirectional data flow / inline edit mode | ⬜ Not started |
 | 12 | Header panel refactor: persistent panels, in-place bound updates | ⬜ Not started |
+| 13 | Filter search cache with configurable row-count threshold | ⬜ Not started |
 
 ---
 
@@ -492,6 +493,70 @@ recycler handles the data rows.
 - No functional change visible to the user
 - Focus stays in the active filter field when the scrollbar appears/disappears
 - Slightly reduced object allocation on every viewport-width change
+
+---
+
+## Phase 13 — Filter Search Cache with Configurable Row-Count Threshold
+
+**Why**: On every keystroke, the filter predicate runs against all visible rows, and
+for each row it calls `val.toString()` on every column value. For salary that's
+`Integer.toString(86503)` → a fresh `"86503"` String, then `.toLowerCase()` (another
+allocation since it has no uppercase, so actually the JVM may return the same
+reference — but `.contains()` is still called). Across 1000 rows × 5 columns that's
+up to 5,000 short-lived String objects per keystroke.
+
+The reason it feels fast despite that is that the JVM is specifically designed for
+this pattern. Those 5,000 strings are all allocated in Eden space (the young
+generation), never promoted to the old generation because they die before the next
+minor GC, and a minor GC on a modern JVM collects Eden in a few milliseconds. So
+you're not actually putting GC "through its paces" in the damaging sense — you're
+squarely in the fast path that generational GC was built for.
+
+That said, the instinct identifies the right future concern. At, say, 100,000 rows
+the math becomes 500,000 allocations per keystroke, and the minor GC pauses start
+becoming noticeable. The standard mitigation is a **pre-computed search cache** — a
+`String[][]` (or `Map<GridRow, String[]>`) storing the lower-cased `toString()` of
+every cell value, built once when the model loads and invalidated on data change. The
+filter predicate then compares against cached strings rather than calling `toString()`
+on every check. This is exactly what most production grid components do.
+
+### Threshold design
+
+A threshold absolutely makes sense. The cache has two costs of its own: the up-front
+build time (O(n) over all rows and columns) and the ongoing memory footprint (roughly
+`rows × columns × average-string-length` bytes of heap). For a 100-row dataset those
+costs are larger than the GC savings — you'd be trading a few hundred transient String
+allocations for permanent heap occupancy and a build step. For a 100,000-row dataset
+the cache pays for itself on the very first keystroke.
+
+A user-configurable threshold (with a sensible default, say 10,000 rows) means the
+simple path is always used for casual/small grids, and the cache only activates when
+the row count crosses into territory where GC pressure becomes real. There's one
+complication worth noting: if rows are added dynamically (lazy loading, tree expand),
+the count can cross the threshold mid-session, so the implementation needs to build
+the cache on-demand the first time a filter is applied above threshold, not just at
+construction time.
+
+### Implementation
+
+**`SmartGrid.java`**
+- Add `private int filterCacheThreshold = 10_000;` (default)
+- Add `public void setFilterCacheThreshold(int n)` API
+- Before applying a filter in `reapplyColumnFilter()` / `applyComposedFilter()`:
+  if `model.getRowCount() > filterCacheThreshold` and cache is not built, build it
+- Cache: `String[][] searchCache` — `[rowIndex][colIndex]` = `val.toString().toLowerCase()`
+- Invalidate cache on `modelReset()` (sort, filter, data change)
+- When cache is active, filter predicate reads `searchCache[i][j]` instead of
+  calling `row.get(key).toString().toLowerCase()`
+
+**`DefaultGridModel.java`**
+- No changes required — the cache lives on the SmartGrid (view) side, not the model
+
+### Expected outcome
+- Below threshold: behaviour unchanged; simple `toString()` path
+- Above threshold: single O(n) cache build on first filter keystroke;
+  subsequent keystrokes do array lookups only — no String allocation per row
+- Threshold is user-adjustable via `grid.setFilterCacheThreshold(n)` to tune per use case
 
 ---
 

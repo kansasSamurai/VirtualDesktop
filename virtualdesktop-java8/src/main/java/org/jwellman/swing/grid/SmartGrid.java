@@ -10,10 +10,14 @@ import java.awt.event.HierarchyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
+import javax.swing.JLabel;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
@@ -72,6 +76,9 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private String    currentSortKey   = null;
     private SortOrder currentSortOrder = SortOrder.NONE;
 
+    // Cell renderer registry — keyed by ColumnDef.fndType
+    private final Map<String, CellRenderer> cellRenderers = new HashMap<>();
+
     // Swing components
     private JScrollPane   scrollPane;
     private VirtualCanvas canvas;
@@ -100,6 +107,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
         final GridModel capturedModel = model;
         final DefaultListSelectionModel sm = selectionModel;
         final int[] widths = columnWidths;
+        final Map<String, CellRenderer> renderers = cellRenderers;
         this.pool = new ComponentPool(() -> new StandardRowPanel(cols,
             () -> {
                 if (capturedModel instanceof DefaultGridModel) {
@@ -107,7 +115,8 @@ public class SmartGrid extends JPanel implements GridModelListener {
                 }
             },
             sm,
-            widths));
+            widths,
+            renderers));
 
         setLayout(new BorderLayout());
 
@@ -177,6 +186,36 @@ public class SmartGrid extends JPanel implements GridModelListener {
     public void setFooterRenderer(FooterCellRenderer r) {
         this.footerRenderer = r;
         rebuildSouthPanel();
+    }
+
+    // -------------------------------------------------------------------------
+    // Public API — cell renderer registry
+    // -------------------------------------------------------------------------
+
+    /**
+     * Registers a full {@link CellRenderer} for columns whose {@code fndType} matches
+     * {@code fndType}. The renderer receives the existing cell component and may reuse
+     * or replace it. Takes effect on the next bind cycle (next scroll or refresh).
+     */
+    public void registerCellRenderer(String fndType, CellRenderer renderer) {
+        cellRenderers.put(fndType, renderer);
+    }
+
+    /**
+     * Convenience overload: registers a formatter function that produces display text.
+     * The cell is always rendered as a left-padded {@code JLabel}; the function converts
+     * the raw {@code Object} value to the string to display.
+     *
+     * Example: {@code grid.registerFormatter("currency",
+     *     v -> String.format("$%,d", ((Number) v).longValue()))}
+     */
+    public void registerFormatter(String fndType, Function<Object, String> formatter) {
+        cellRenderers.put(fndType, (col, value, row, existing) -> {
+            JLabel lbl = (existing instanceof JLabel) ? (JLabel) existing : new JLabel();
+            lbl.setText(value != null ? formatter.apply(value) : "");
+            lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+            return lbl;
+        });
     }
 
     // -------------------------------------------------------------------------

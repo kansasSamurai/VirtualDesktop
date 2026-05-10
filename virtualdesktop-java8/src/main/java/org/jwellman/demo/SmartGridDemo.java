@@ -72,7 +72,7 @@ public class SmartGridDemo {
             .addColumn(new ColumnDef("id",     "ID",          50, true,  true, null))
             .addColumn(new ColumnDef("name",   "Name",       220, true,  true, null))
             .addColumn(new ColumnDef("dept",   "Department", 180, true,  true, null))
-            .addColumn(new ColumnDef("salary", "Salary",     110, false, true, null))
+            .addColumn(new ColumnDef("salary", "Salary",     110, false, true, "currency"))
             .addColumn(new ColumnDef("status", "Status",      80, false, true, null));
 
         for (int i = 1; i <= 1000; i++) {
@@ -80,13 +80,14 @@ public class SmartGridDemo {
                 .put("id",     String.valueOf(i))
                 .put("name",   "Employee " + i)
                 .put("dept",   DEPTS[i % DEPTS.length])
-                .put("salary", String.format("$%,d", 50_000 + (i * 173 % 100_000)))
+                .put("salary", 50_000 + (i * 173 % 100_000)) // raw int — formatted by CellRenderer
                 .put("status", STATUSES[i % STATUSES.length]);
             if (i % 7 == 0) row.setTag("fnd-style", "warning-glow");
             model.addRow(row);
         }
 
         SmartGrid grid = new SmartGrid(model);
+        grid.registerFormatter("currency", v -> String.format("$%,d", ((Number) v).longValue()));
         return wrap(grid, "1,000 rows — ~20 live components via viewport virtualization; columns proportional");
     }
 
@@ -163,22 +164,22 @@ public class SmartGridDemo {
             .addColumn(new ColumnDef("id",     "ID",          50, true,  true, null))
             .addColumn(new ColumnDef("name",   "Name",       220, true,  true, null))
             .addColumn(new ColumnDef("dept",   "Department", 180, true,  true, null))
-            .addColumn(new ColumnDef("salary", "Salary",     110, false, true, null))
+            .addColumn(new ColumnDef("salary", "Salary",     110, false, true, "currency"))
             .addColumn(new ColumnDef("status", "Status",      80, false, true, null));
 
         for (int i = 1; i <= 1000; i++) {
             model.addRow(new GridRow()
-                .put("id",      String.valueOf(i))
-                .put("name",    "Employee " + i)
-                .put("dept",    DEPTS[i % DEPTS.length])
-                .put("salary",  String.format("$%,d", 50_000 + (i * 173 % 100_000)))
-                .put("salaryN", 50_000 + (i * 173 % 100_000)) // numeric for aggregation
-                .put("status",  STATUSES[i % STATUSES.length]));
+                .put("id",     String.valueOf(i))
+                .put("name",   "Employee " + i)
+                .put("dept",   DEPTS[i % DEPTS.length])
+                .put("salary", 50_000 + (i * 173 % 100_000)) // raw int — formatted by CellRenderer
+                .put("status", STATUSES[i % STATUSES.length]));
         }
 
         SmartGrid grid = new SmartGrid(model);
+        grid.registerFormatter("currency", v -> String.format("$%,d", ((Number) v).longValue()));
 
-        // Footer: row count on "name" column, salary sum on "salary", active count on "status"
+        // Footer: row count on "name", salary sum (raw Number) on "salary", active count on "status"
         grid.setFooterRenderer((col, pageRows, fullModel) -> {
             JLabel lbl = new JLabel();
             lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
@@ -191,7 +192,7 @@ public class SmartGridDemo {
                 case "salary":
                     long sum = 0;
                     for (GridRow r : pageRows) {
-                        Object n = r.get("salaryN");
+                        Object n = r.get("salary");
                         if (n instanceof Number) sum += ((Number) n).longValue();
                     }
                     lbl.setText(String.format("$%,d", sum));
@@ -209,7 +210,7 @@ public class SmartGridDemo {
             return lbl;
         });
 
-        grid.setPageSize(50); // 50 rows/page = 20 pages
+        grid.setPageSize(50);
 
         return wrap(grid, "50 rows per page — footer shows per-page aggregates; navigation bar below");
     }

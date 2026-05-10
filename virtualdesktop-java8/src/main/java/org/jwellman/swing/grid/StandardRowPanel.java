@@ -6,22 +6,28 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import javax.swing.BorderFactory;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.ListSelectionModel;
 import javax.swing.UIManager;
 
 /**
- * Default row component: a JPanel with one JLabel per column.
+ * Default row component: a JPanel with one cell component per column.
  *
- * Cell widths are set from a shared {@code int[] columnWidths} array owned by
- * SmartGrid. All row panels in the pool reference the same array, so when
- * SmartGrid recomputes widths on resize the next bind() call picks up the new
- * values automatically — guaranteeing pixel-exact column alignment across header,
- * rows, and footer.
+ * Cell rendering:
+ *   Each column is rendered by looking up its {@code fndType} in the shared
+ *   {@code cellRenderers} registry.  If a {@link CellRenderer} is registered,
+ *   it controls both the component type and value display.  Otherwise the column
+ *   falls back to a plain {@code JLabel} with optional tree-indent prefix.
  *
- * Uses {@code null} layout; cell bounds are set explicitly in bind().
+ * The {@code cellRenderers} map is a shared mutable reference owned by SmartGrid,
+ * so renderers registered after construction are visible immediately.
+ *
+ * Cell widths are set from a shared {@code int[] columnWidths} array (also owned by
+ * SmartGrid), guaranteeing pixel-exact alignment across header, rows, and footer.
  */
 public class StandardRowPanel extends JPanel implements Recyclable {
 
@@ -31,36 +37,46 @@ public class StandardRowPanel extends JPanel implements Recyclable {
     private static final Color WARN_BG    = new Color(0xFFF8DC);
     private static final Color ERROR_BG   = new Color(0xFFDCDC);
 
-    private final List<ColumnDef>    columns;
-    private final List<JLabel>       cells = new ArrayList<>();
-    private final Runnable           expandCollapseAction;
-    private final ListSelectionModel selectionModel;
-    private final int[]              columnWidths; // shared mutable reference from SmartGrid
-    private MouseAdapter             rowListener;
+    private final List<ColumnDef>       columns;
+    private final List<JComponent>      cells = new ArrayList<>(); // JLabel or custom
+    private final Runnable              expandCollapseAction;
+    private final ListSelectionModel    selectionModel;
+    private final int[]                 columnWidths;   // shared mutable reference
+    private final Map<String, CellRenderer> cellRenderers; // shared mutable reference
+    private MouseAdapter                rowListener;
 
     public StandardRowPanel(List<ColumnDef> columns) {
-        this(columns, null, null, null);
+        this(columns, null, null, null, null);
     }
 
     public StandardRowPanel(List<ColumnDef> columns, Runnable expandCollapseAction) {
-        this(columns, expandCollapseAction, null, null);
+        this(columns, expandCollapseAction, null, null, null);
     }
 
     public StandardRowPanel(List<ColumnDef> columns,
                             Runnable expandCollapseAction,
                             ListSelectionModel selectionModel) {
-        this(columns, expandCollapseAction, selectionModel, null);
+        this(columns, expandCollapseAction, selectionModel, null, null);
     }
 
     public StandardRowPanel(List<ColumnDef> columns,
                             Runnable expandCollapseAction,
                             ListSelectionModel selectionModel,
                             int[] columnWidths) {
+        this(columns, expandCollapseAction, selectionModel, columnWidths, null);
+    }
+
+    public StandardRowPanel(List<ColumnDef> columns,
+                            Runnable expandCollapseAction,
+                            ListSelectionModel selectionModel,
+                            int[] columnWidths,
+                            Map<String, CellRenderer> cellRenderers) {
         this.columns = columns;
         this.expandCollapseAction = expandCollapseAction;
         this.selectionModel = selectionModel;
-        this.columnWidths = columnWidths; // shared reference — never copy
-        setLayout(null);                  // absolute positioning; bounds set in bind()
+        this.columnWidths = columnWidths;
+        this.cellRenderers = cellRenderers;
+        setLayout(null);
         setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COL));
         setOpaque(true);
 
@@ -68,7 +84,7 @@ public class StandardRowPanel extends JPanel implements Recyclable {
             JLabel lbl = new JLabel();
             lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
             cells.add(lbl);
-            add(lbl); // bounds assigned in bind(), not by a layout manager
+            add(lbl);
         }
     }
 
@@ -78,11 +94,22 @@ public class StandardRowPanel extends JPanel implements Recyclable {
             removeMouseListener(rowListener);
             rowListener = null;
         }
-        for (JLabel lbl : cells) {
-            lbl.setText("");
-            lbl.setFont(UIManager.getFont("Label.font"));
-            lbl.setForeground(UIManager.getColor("Label.foreground"));
-            lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+        for (int i = 0; i < cells.size(); i++) {
+            JComponent cell = cells.get(i);
+            if (cell instanceof JLabel) {
+                JLabel lbl = (JLabel) cell;
+                lbl.setText("");
+                lbl.setFont(UIManager.getFont("Label.font"));
+                lbl.setForeground(UIManager.getColor("Label.foreground"));
+                lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+            } else {
+                // Custom renderer component — replace with a blank JLabel for next use
+                remove(cell);
+                JLabel blank = new JLabel();
+                blank.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+                cells.set(i, blank);
+                add(blank);
+            }
         }
         setBackground(EVEN_BG);
     }
@@ -90,27 +117,21 @@ public class StandardRowPanel extends JPanel implements Recyclable {
     @Override
     public void bind(GridRow row, int rowIndex) {
 
-        // ① Remove stale listener first — prevents double-attach when refresh()
-        //    fires synchronously inside a mousePressed handler.
+        // ① Remove stale listener before anything else
         if (rowListener != null) {
             removeMouseListener(rowListener);
             rowListener = null;
         }
 
-        // ② Base background: alternating rows
+        // ② Background: alternating → tag override → selection
         setBackground(rowIndex % 2 == 0 ? EVEN_BG : ODD_BG);
-
-        // ③ Tag-based background override
         String style = row.getTag("fnd-style");
         if ("warning-glow".equals(style) || "warning".equals(style)) {
             setBackground(WARN_BG);
         } else if ("error".equals(style)) {
             setBackground(ERROR_BG);
         }
-
-        // ④ Selection overrides everything
-        boolean selected = selectionModel != null
-                           && selectionModel.isSelectedIndex(rowIndex);
+        boolean selected = selectionModel != null && selectionModel.isSelectedIndex(rowIndex);
         final Color fgColor;
         if (selected) {
             setBackground(UIManager.getColor("Table.selectionBackground"));
@@ -119,38 +140,52 @@ public class StandardRowPanel extends JPanel implements Recyclable {
             fgColor = UIManager.getColor("Label.foreground");
         }
 
-        // ⑤ Tree indentation + expand/collapse prefix on first cell
+        // ③ Tree prefix / indent for the default rendering of column 0
         int indent    = row.getDepth() * 16;
         String prefix = buildTreePrefix(row);
-        Font base = UIManager.getFont("Label.font");
+        Font base     = UIManager.getFont("Label.font");
+        int cellH     = getHeight() > 0 ? getHeight() : 32;
 
-        for (int i = 0; i < cells.size(); i++) {
-            Object val = row.get(columns.get(i).getKey());
-            JLabel lbl = cells.get(i);
-            String text = val != null ? val.toString() : "";
-            if (i == 0 && !prefix.isEmpty()) {
-                lbl.setText(prefix + text);
-                lbl.setBorder(BorderFactory.createEmptyBorder(2, 8 + indent, 2, 8));
-            } else {
-                lbl.setText(text);
-                lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
-            }
-            lbl.setFont(base);
-            lbl.setForeground(fgColor);
-        }
-
-        // ⑥ Set absolute cell bounds from shared columnWidths array.
-        //    The panel's own bounds (and therefore getHeight()) have already been
-        //    set by SmartGrid.refresh() before bind() is called.
-        int cellH = getHeight() > 0 ? getHeight() : 32;
+        // ④ Render and position each cell
         int x = 0;
         for (int i = 0; i < cells.size(); i++) {
+            ColumnDef col = columns.get(i);
             int w = (columnWidths != null && i < columnWidths.length) ? columnWidths[i] : 80;
-            cells.get(i).setBounds(x, 0, w, cellH);
+            Object val = row.get(col.getKey());
+
+            String fndType = col.getFndType();
+            CellRenderer renderer = (cellRenderers != null && fndType != null)
+                ? cellRenderers.get(fndType) : null;
+
+            if (renderer != null) {
+                // Custom renderer path — may swap the component type
+                JComponent existing = cells.get(i);
+                JComponent newCell  = renderer.render(col, val, row, existing);
+                if (newCell != existing) {
+                    remove(existing);
+                    cells.set(i, newCell);
+                    add(newCell);
+                }
+                newCell.setBounds(x, 0, w, cellH);
+            } else {
+                // Default JLabel path
+                JLabel lbl = ensureLabel(i);
+                String text = val != null ? val.toString() : "";
+                if (i == 0 && !prefix.isEmpty()) {
+                    lbl.setText(prefix + text);
+                    lbl.setBorder(BorderFactory.createEmptyBorder(2, 8 + indent, 2, 8));
+                } else {
+                    lbl.setText(text);
+                    lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+                }
+                lbl.setFont(base);
+                lbl.setForeground(fgColor);
+                lbl.setBounds(x, 0, w, cellH);
+            }
             x += w;
         }
 
-        // ⑦ Single combined listener — mousePressed handles selection and tree expand
+        // ⑤ Combined selection + expand/collapse listener
         final GridRow        capturedRow = row;
         final int            capturedIdx = rowIndex;
         final ListSelectionModel sm      = selectionModel;
@@ -180,6 +215,21 @@ public class StandardRowPanel extends JPanel implements Recyclable {
             }
         };
         addMouseListener(rowListener);
+    }
+
+    /**
+     * Returns the cell at {@code index} as a JLabel. If a custom renderer
+     * previously placed a non-JLabel there, swaps it back to a blank JLabel.
+     */
+    private JLabel ensureLabel(int index) {
+        JComponent cell = cells.get(index);
+        if (cell instanceof JLabel) return (JLabel) cell;
+        remove(cell);
+        JLabel lbl = new JLabel();
+        lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+        cells.set(index, lbl);
+        add(lbl);
+        return lbl;
     }
 
     private String buildTreePrefix(GridRow row) {

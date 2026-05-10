@@ -11,8 +11,10 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 import javax.swing.BorderFactory;
@@ -410,13 +412,39 @@ public class SmartGrid extends JPanel implements GridModelListener {
             currentSortKey   = key;
             currentSortOrder = SortOrder.ASCENDING;
         }
-        selectionModel.clearSelection();
+        // Capture selected rows by object identity before the sort reorders them
+        Set<GridRow> selectedRows = captureSelectedRows();
         if (model instanceof DefaultGridModel) {
             ((DefaultGridModel) model).sort(currentSortKey, currentSortOrder);
             // sort() → notifyDataChanged() → modelReset() → invokeLater(refresh)
         }
+        // Restore selection using the new indices of the same GridRow objects
+        restoreSelectedRows(selectedRows);
         // Rebuild header immediately so the indicator updates before refresh() runs
         scrollPane.setColumnHeaderView(buildHeader(model.getColumns()));
+    }
+
+    private Set<GridRow> captureSelectedRows() {
+        Set<GridRow> selected = new HashSet<>();
+        int min = selectionModel.getMinSelectionIndex();
+        int max = selectionModel.getMaxSelectionIndex();
+        for (int i = min; i <= max && min >= 0; i++) {
+            if (selectionModel.isSelectedIndex(i) && i < model.getRowCount()) {
+                selected.add(model.getRow(i));
+            }
+        }
+        return selected;
+    }
+
+    private void restoreSelectedRows(Set<GridRow> selectedRows) {
+        selectionModel.clearSelection();
+        if (selectedRows.isEmpty()) return;
+        int count = model.getRowCount();
+        for (int i = 0; i < count; i++) {
+            if (selectedRows.contains(model.getRow(i))) {
+                selectionModel.addSelectionInterval(i, i);
+            }
+        }
     }
 
     private JPanel buildFooter(List<ColumnDef> cols) {

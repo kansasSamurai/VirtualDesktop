@@ -72,7 +72,7 @@ public class SmartGridDemo {
             .addColumn(new ColumnDef("id",     "ID",          50, true,  true, null))
             .addColumn(new ColumnDef("name",   "Name",       220, true,  true, null))
             .addColumn(new ColumnDef("dept",   "Department", 180, true,  true, null))
-            .addColumn(new ColumnDef("salary", "Salary",     110, false, true, "currency"))
+            .addColumn(new ColumnDef("salary", "Salary",     110, true,  true, "currency"))
             .addColumn(new ColumnDef("status", "Status",      80, false, true, null));
 
         for (int i = 1; i <= 1000; i++) {
@@ -164,7 +164,7 @@ public class SmartGridDemo {
             .addColumn(new ColumnDef("id",     "ID",          50, true,  true, null))
             .addColumn(new ColumnDef("name",   "Name",       220, true,  true, null))
             .addColumn(new ColumnDef("dept",   "Department", 180, true,  true, null))
-            .addColumn(new ColumnDef("salary", "Salary",     110, false, true, "currency"))
+            .addColumn(new ColumnDef("salary", "Salary",     110, true,  true, "currency"))
             .addColumn(new ColumnDef("status", "Status",      80, false, true, null));
 
         for (int i = 1; i <= 1000; i++) {

@@ -16,8 +16,9 @@ public class DefaultHeaderCellRenderer implements HeaderCellRenderer {
     @Override
     public JComponent render(ColumnDef col, SortOrder sortOrder) {
         String text = col.getHeader();
-        if (sortOrder == SortOrder.ASCENDING)  text += " ▲"; // ▲
-        if (sortOrder == SortOrder.DESCENDING) text += " ▼"; // ▼
+        if      (sortOrder == SortOrder.ASCENDING)  text += " ▲"; // sorted ascending
+        else if (sortOrder == SortOrder.DESCENDING) text += " ▼"; // sorted descending
+        else if (col.isSortable())                  text += " ▫"; // sortable, not currently sorted
 
         JLabel lbl = new JLabel(text);
         lbl.setForeground(Color.WHITE);

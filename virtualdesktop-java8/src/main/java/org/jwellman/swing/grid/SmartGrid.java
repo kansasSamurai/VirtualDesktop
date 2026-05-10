@@ -15,8 +15,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -114,7 +116,9 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private JScrollPane   scrollPane;
     private VirtualCanvas canvas;
     private JComponent[]  slots;
+    private String[]      slotTypes; // parallel to slots[]; null = default (StandardRowPanel) pool
     private ComponentPool pool;
+    private final Map<String, ComponentPool> typedPools = new HashMap<>();
     private JPanel        southPanel    = null;
     private JPanel        footerPanel   = null;
     private PaginationBar paginationBar = null;
@@ -324,7 +328,20 @@ public class SmartGrid extends JPanel implements GridModelListener {
     }
 
     // -------------------------------------------------------------------------
-    // Public API — cell renderer registry
+    // Public API — row renderer registry (GridComponentFactory)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Registers a row component supplier for rows whose {@code fnd-type} tag
+     * matches {@code fndType}. The component must implement {@link Recyclable}.
+     * Rows with no {@code fnd-type} tag continue to use {@link StandardRowPanel}.
+     */
+    public void registerRowRenderer(String fndType, Supplier<JComponent> supplier) {
+        typedPools.put(fndType, new ComponentPool(supplier));
+    }
+
+    // -------------------------------------------------------------------------
+    // Public API — cell renderer registry (column-level)
     // -------------------------------------------------------------------------
 
     /**
@@ -580,6 +597,17 @@ public class SmartGrid extends JPanel implements GridModelListener {
             int modelIdx = pageOffset + rowIdx;
             if (rowIdx < effectiveRows && modelIdx < model.getRowCount()) {
                 GridRow row = model.getRow(modelIdx);
+                String requiredType = row.getTag("fnd-type");
+
+                // Swap component only when the required row type changes
+                if (!Objects.equals(requiredType, slotTypes[i])) {
+                    getPoolForType(slotTypes[i]).release(slots[i]);
+                    canvas.remove(slots[i]);
+                    slots[i]     = getPoolForType(requiredType).checkout();
+                    slotTypes[i] = requiredType;
+                    canvas.add(slots[i]);
+                }
+
                 slots[i].setBounds(0, rowIdx * rowHeight, totalColWidth, rowHeight);
                 ((Recyclable) slots[i]).bind(row, modelIdx);
                 slots[i].setVisible(true);
@@ -593,16 +621,24 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
     private void reallocateSlots(int count) {
         if (slots != null) {
-            for (JComponent slot : slots) {
-                canvas.remove(slot);
-                pool.release(slot);
+            for (int i = 0; i < slots.length; i++) {
+                canvas.remove(slots[i]);
+                getPoolForType(slotTypes[i]).release(slots[i]);
             }
         }
-        slots = new JComponent[count];
+        slots     = new JComponent[count];
+        slotTypes = new String[count]; // all null = default pool
         for (int i = 0; i < count; i++) {
             slots[i] = pool.checkout();
             canvas.add(slots[i]);
         }
+    }
+
+    private ComponentPool getPoolForType(String fndType) {
+        if (fndType != null && typedPools.containsKey(fndType)) {
+            return typedPools.get(fndType);
+        }
+        return pool;
     }
 
     // -------------------------------------------------------------------------

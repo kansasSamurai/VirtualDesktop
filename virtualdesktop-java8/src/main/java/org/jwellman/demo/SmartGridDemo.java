@@ -1,6 +1,7 @@
 package org.jwellman.demo;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import javax.swing.BorderFactory;
@@ -20,6 +21,7 @@ import org.jwellman.swing.grid.ColumnDef;
 import org.jwellman.swing.grid.DefaultGridModel;
 import org.jwellman.swing.grid.GridModelListener;
 import org.jwellman.swing.grid.GridRow;
+import org.jwellman.swing.grid.Recyclable;
 import org.jwellman.swing.grid.SmartGrid;
 
 /**
@@ -106,12 +108,16 @@ public class SmartGridDemo {
             if (i % 7 == 0) {
                 row.setTag("fnd-style", "warning-glow");
             }
+            if (i % 50 == 0) {
+                row.setTag("fnd-type", "featured");
+            }
             model.addRow(row);
         }
 
         final int totalRows = model.getRowCount();
         SmartGrid grid = new SmartGrid(model, darkTheme);
         grid.registerFormatter("currency", v -> String.format("$%,d", ((Number) v).longValue()));
+        grid.registerRowRenderer("featured", FeaturedRowPanel::new);
         grid.setColumnFiltersVisible(true); // per-column filter row beneath headers
 
         // Global filter bar (OR across all columns — keeps any row where ANY column matches)
@@ -376,5 +382,43 @@ public class SmartGridDemo {
         toolbar.add(status);
         toolbar.add(count);
         return toolbar;
+    }
+
+    // -------------------------------------------------------------------------
+    // Phase 9a demo: custom row renderer registered for fnd-type = "featured"
+    // -------------------------------------------------------------------------
+
+    /**
+     * Demonstrates Phase 9a GridComponentFactory dispatch. Every 50th row in the
+     * Table tab carries fnd-type="featured" and is rendered by this panel instead
+     * of StandardRowPanel — proving the type-based pool swap works correctly.
+     */
+    static class FeaturedRowPanel extends JPanel implements Recyclable {
+
+        private static final Color BG = new Color(0x1A4A8A);
+
+        private final JLabel label = new JLabel();
+
+        FeaturedRowPanel() {
+            setLayout(null);
+            setBackground(BG);
+            setOpaque(true);
+            label.setForeground(Color.WHITE);
+            label.setFont(label.getFont().deriveFont(Font.BOLD));
+            add(label);
+        }
+
+        @Override
+        public void prepareForReuse() {
+            label.setText("");
+        }
+
+        @Override
+        public void bind(GridRow row, int rowIndex) {
+            label.setBounds(8, 0, Math.max(0, getWidth() - 16), getHeight());
+            label.setText("★  " + row.get("name")
+                          + "  —  " + row.get("dept")
+                          + "  —  " + row.get("salary"));
+        }
     }
 }

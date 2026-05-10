@@ -1011,8 +1011,232 @@ Worth noting too: this pattern — measure, detect degradation, offer a choice �
 When you're ready to implement it, the work is small: a timing wrapper in `reapplyColumnFilter()`, a threshold constant, a one-shot notification component, and the cache enable/disable toggle you'd build for Phase 13 anyway. The infrastructure and the UX flow are already implied by the roadmap.
 
 
+## Phase 9a — GridComponentFactory: Row-Level Component Dispatch                                                              
 
+### Context
 
+ Currently every row in SmartGrid uses StandardRowPanel. Phase 9a adds a
+ registration/dispatch mechanism so rows tagged with fnd-type in their tags map
+ can be rendered by a different component type. This is the prerequisite for tree
+ group header rows (Phase 6) and forms the row-level analogue of the CellRenderer
+ registry (which already handles cell-level dispatch).
+
+ The dispatch key is GridRow.getTag("fnd-type"). Rows with no fnd-type tag (or
+ fnd-type = "standard") continue to use StandardRowPanel unchanged.
+
+ ---
+
+### Design
+
+ Interface: GridComponentFactory
+
+ public interface GridComponentFactory {
+     void register(String fndType, Supplier<JComponent> supplier);
+ }
+
+ Kept minimal for 9a. Phase 9b (BeanShell) will extend it with create(String) for
+ scripted instantiation.
+
+ Multiple pools in SmartGrid
+
+ SmartGrid already holds one ComponentPool pool for StandardRowPanel. Phase 9a
+ adds a parallel Map<String, ComponentPool> typedPools keyed by fnd-type. A
+ String[] slotTypes array (parallel to JComponent[] slots) tracks the current
+ type of each visible slot.
+
+ getPoolForType(String fndType) returns typedPools.get(fndType) if registered,
+ otherwise falls back to pool (the default StandardRowPanel pool). Both null
+ and "standard" map to the default pool.
+
+ Slot type swapping in refresh()
+
+ On each frame, for each slot:
+ 1. Read row.getTag("fnd-type") to determine the required type
+ 2. Compare with slotTypes[i] (current type)
+ 3. If different: release the slot to its old pool, checkout from the new pool, update slotTypes[i]
+ 4. setBounds() then bind() as normal
+
+ For a flat table with all default-type rows, slotTypes[i] stays null for every
+ slot and no swaps ever happen — zero overhead over current behavior.
+
+ ---
+ New File: GridComponentFactory.java
+
+ package org.jwellman.swing.grid;
+
+ import java.util.function.Supplier;
+ import javax.swing.JComponent;
+
+ public interface GridComponentFactory {
+     void register(String fndType, Supplier<JComponent> supplier);
+ }
+
+ ---
+ Changes to SmartGrid.java
+
+ New fields (after existing pool declaration)
+
+ private final Map<String, ComponentPool> typedPools = new HashMap<>();
+ private String[] slotTypes; // parallel to slots[]; null = default (StandardRowPanel) pool
+
+ New public API (after registerFormatter)
+
+ /**
+  * Registers a row component supplier for rows whose {@code fnd-type} tag
+  * matches {@code fndType}. The supplier is called to create new instances;
+  * the component must implement {@link Recyclable}.
+  */
+ public void registerRowRenderer(String fndType, Supplier<JComponent> supplier) {
+     typedPools.put(fndType, new ComponentPool(supplier));
+ }
+
+ New private helper
+
+ private ComponentPool getPoolForType(String fndType) {
+     if (fndType != null && typedPools.containsKey(fndType)) {
+         return typedPools.get(fndType);
+     }
+     return pool; // default: StandardRowPanel
+ }
+
+ Update reallocateSlots(int count)
+
+ private void reallocateSlots(int count) {
+     if (slots != null) {
+         for (int i = 0; i < slots.length; i++) {
+             canvas.remove(slots[i]);
+             getPoolForType(slotTypes[i]).release(slots[i]);
+         }
+     }
+     slots     = new JComponent[count];
+     slotTypes = new String[count]; // all null = default pool
+     for (int i = 0; i < count; i++) {
+         slots[i] = pool.checkout();
+         canvas.add(slots[i]);
+     }
+ }
+
+ Update refresh() — type-aware slot swap
+
+ Replace the slot loop with:
+ for (int i = 0; i < slots.length; i++) {
+     int rowIdx   = firstRow + i;
+     int modelIdx = pageOffset + rowIdx;
+     if (rowIdx < effectiveRows && modelIdx < model.getRowCount()) {
+         GridRow row = model.getRow(modelIdx);
+         String requiredType = row.getTag("fnd-type");
+
+         // Swap component only when the required row type changes
+         if (!java.util.Objects.equals(requiredType, slotTypes[i])) {
+             getPoolForType(slotTypes[i]).release(slots[i]);
+             canvas.remove(slots[i]);
+             slots[i]     = getPoolForType(requiredType).checkout();
+             slotTypes[i] = requiredType;
+             canvas.add(slots[i]);
+         }
+
+         slots[i].setBounds(0, rowIdx * rowHeight, totalColWidth, rowHeight);
+         ((Recyclable) slots[i]).bind(row, modelIdx);
+         slots[i].setVisible(true);
+     } else {
+         slots[i].setVisible(false);
+     }
+ }
+
+ Add import
+
+ import java.util.Objects;
+
+ ---
+ Demo Verification: SmartGridDemo Table tab
+
+ Add a FeaturedRowPanel inner class (or anonymous factory) in SmartGridDemo to
+ prove dispatch works. Tag every 50th row fnd-type = "featured":
+
+ // In buildTableTab(), after existing row-building loop:
+ // (already inside the loop — add to the tagging condition)
+ if (i % 50 == 0) {
+     row.setTag("fnd-type", "featured");
+ }
+
+ // After creating the grid:
+ final int[] widths = ... ; // captured via grid.getColumnWidths() or a local reference
+ grid.registerRowRenderer("featured", () -> new FeaturedRowPanel());
+
+ FeaturedRowPanel — simple Recyclable JPanel that renders all column values on
+ one line with a distinctive dark-blue background and white bold text, proving the
+ custom renderer is selected by type dispatch:
+
+ class FeaturedRowPanel extends JPanel implements Recyclable {
+     private final JLabel label = new JLabel();
+
+     FeaturedRowPanel() {
+         setLayout(null);
+         setBackground(new Color(0x1A4A8A));
+         label.setForeground(Color.WHITE);
+         label.setFont(label.getFont().deriveFont(Font.BOLD));
+         add(label);
+     }
+
+     @Override
+     public void prepareForReuse() {
+         label.setText("");
+     }
+
+     @Override
+     public void bind(GridRow row, int rowIndex) {
+         label.setBounds(8, 0, Math.max(0, getWidth() - 16), getHeight());
+         label.setText("★  " + row.get("name") + "  —  " + row.get("dept")
+                       + "  —  " + row.get("salary"));
+     }
+ }
+
+ ---
+ File Summary
+
+ ┌───────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────┐
+ │           File            │                                          Action                                          │
+ ├───────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
+ │ GridComponentFactory.java │ New — minimal interface                                                                  │
+ ├───────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
+ │ SmartGrid.java            │ Modify — typedPools, slotTypes, registerRowRenderer(), getPoolForType(), updated         │
+ │                           │ reallocateSlots() and refresh()                                                          │
+ ├───────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
+ │ SmartGridDemo.java        │ Modify — tag every 50th row fnd-type="featured", register FeaturedRowPanel               │
+ └───────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘
+
+ ---
+ Verification
+
+ 1. Table tab — rows 50, 100, 150 ... render with dark-blue background and ★ prefix;
+ all other rows are unchanged
+ 2. Scroll test — featured rows remain visually correct as they scroll in and out
+ of the viewport; no visual corruption on adjacent standard rows
+ 3. Type swap test — scroll slowly past a featured row boundary; verify the
+ slot correctly swaps from StandardRowPanel to FeaturedRowPanel and back
+ 4. Other tabs — Tree, List, Paged unaffected (no fnd-type tags registered)
+ 5. Performance — no regression on flat table scrolling (null == null → no swap)
+ 
+---
+
+### Aftermath
+
+FeaturedRowPanel is the proof point — it's a completely ordinary 
+  JPanel with a JLabel inside, written exactly like you'd write any standalone Swing component. No renderer/editor split, no
+   stamping lifecycle to fight, no isCellEditable contract. You just describe what you want the row to look like, implement 
+  two methods (prepareForReuse and bind), and the grid handles everything else — pooling, positioning, scrolling, type
+  dispatch.                                                                                                                 
+                                                            
+  The fact that it took about 20 lines to write a fully functional custom row renderer, and that it slots into the existing
+  infrastructure via a single registerRowRenderer() call, validates the core architectural bet from the original
+  MODERN_TABLE.md conversation: treat every row as a real live component, manage the memory through recycling, and the
+  rendering problem essentially solves itself. The JTable renderer approach requires you to think in terms of painting and
+  state restoration — this approach just requires you to think in terms of normal Swing panels.
+
+  The GroupHeaderRowPanel you'll build for the tree phase will feel the same way — a JPanel with a tree zone on the left and
+   a full-width label on the right, written in plain Swing, dispatched automatically because the row carries isGroupHeader =
+   true mapped to fnd-type = "group-header" in the factory. At that point the unified model vision from the design doc will
+  be fully visible.
 
 
 

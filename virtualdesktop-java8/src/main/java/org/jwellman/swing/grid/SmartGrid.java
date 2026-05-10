@@ -4,8 +4,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.HierarchyEvent;
@@ -28,17 +26,22 @@ import javax.swing.event.ListSelectionListener;
 /**
  * SmartGrid: a Swing table component where every row is a live JPanel.
  *
- * Architecture (the "stunt double" recycler):
- *   JScrollPane
- *     columnHeaderView → header JPanel  (GridBagLayout, proportional widths)
+ * Column widths:
+ *   SmartGrid owns a shared mutable {@code int[] columnWidths} array computed
+ *   from the current viewport width and each ColumnDef's preferredWidth. Every
+ *   StandardRowPanel in the pool holds a reference to the SAME array, so when
+ *   the viewport is resized SmartGrid updates the array in-place and the next
+ *   bind() call picks up the new widths — guaranteeing pixel-exact alignment
+ *   across header, rows, and footer without independent layout managers.
+ *
+ * Layout:
+ *   JScrollPane (vertical AS_NEEDED, horizontal AS_NEEDED)
+ *     columnHeaderView → header JPanel  (null layout, absolute bounds)
  *     viewport         → VirtualCanvas  (null layout, virtual height)
  *                            slot[0..N]  (StandardRowPanel, absolute bounds)
  *   SOUTH panel (optional):
- *     footer JPanel    (GridBagLayout, same proportional widths)
+ *     footer JPanel    (null layout, absolute bounds)
  *     PaginationBar
- *
- * Only ~N+2 row components exist at any time regardless of row count.
- * On scroll, slots are repositioned and rebound — not recreated.
  */
 public class SmartGrid extends JPanel implements GridModelListener {
 
@@ -50,20 +53,25 @@ public class SmartGrid extends JPanel implements GridModelListener {
             new DefaultListSelectionModel();
     private int rowHeight = 32;
 
+    // Shared column-width array — updated in-place by computeColumnWidths().
+    // All StandardRowPanel instances in the pool reference this same object.
+    private int[] columnWidths;
+    private int   lastVpWidth = -1; // detect viewport-width changes in refresh()
+
     // Renderer delegates — replaceable at runtime
     private HeaderCellRenderer headerRenderer = new DefaultHeaderCellRenderer();
-    private FooterCellRenderer footerRenderer = null; // null = no footer
+    private FooterCellRenderer footerRenderer = null;
 
     // Pagination state
-    private int pageSize    = 0; // 0 = disabled (show all rows)
+    private int pageSize    = 0; // 0 = disabled
     private int currentPage = 0;
 
     // Swing components
-    private JScrollPane  scrollPane;
+    private JScrollPane   scrollPane;
     private VirtualCanvas canvas;
-    private JComponent[] slots;
+    private JComponent[]  slots;
     private ComponentPool pool;
-    private JPanel        southPanel    = null; // footer + pagination bar container
+    private JPanel        southPanel    = null;
     private JPanel        footerPanel   = null;
     private PaginationBar paginationBar = null;
 
@@ -76,22 +84,31 @@ public class SmartGrid extends JPanel implements GridModelListener {
         });
 
         List<ColumnDef> cols = model.getColumns();
+
+        // Initialise column widths from preferredWidth defaults (refined on first refresh)
+        columnWidths = new int[cols.size()];
+        for (int i = 0; i < cols.size(); i++) {
+            columnWidths[i] = cols.get(i).getPreferredWidth();
+        }
+
         final GridModel capturedModel = model;
         final DefaultListSelectionModel sm = selectionModel;
+        final int[] widths = columnWidths;
         this.pool = new ComponentPool(() -> new StandardRowPanel(cols,
             () -> {
                 if (capturedModel instanceof DefaultGridModel) {
                     ((DefaultGridModel) capturedModel).notifyDataChanged();
                 }
             },
-            sm));
+            sm,
+            widths));
 
         setLayout(new BorderLayout());
 
         canvas = new VirtualCanvas();
         scrollPane = new JScrollPane(canvas,
             JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-            JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+            JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setColumnHeaderView(buildHeader(cols));
 
@@ -169,7 +186,6 @@ public class SmartGrid extends JPanel implements GridModelListener {
         return (rows == 0) ? 1 : (int) Math.ceil((double) rows / pageSize);
     }
 
-    /** Sets rows per page. Pass 0 to disable pagination (show all rows). */
     public void setPageSize(int size) {
         this.pageSize    = Math.max(0, size);
         this.currentPage = 0;
@@ -208,7 +224,40 @@ public class SmartGrid extends JPanel implements GridModelListener {
     }
 
     // -------------------------------------------------------------------------
-    // Internal — refresh (recycle + rebind visible slots)
+    // Internal — column width computation
+    // -------------------------------------------------------------------------
+
+    /** Updates columnWidths[] in-place based on viewport width and preferredWidths. */
+    private void computeColumnWidths(int vpWidth, List<ColumnDef> cols) {
+        int totalPref = 0;
+        for (ColumnDef col : cols) totalPref += col.getPreferredWidth();
+        if (totalPref <= 0) totalPref = 1;
+
+        if (vpWidth >= totalPref) {
+            // Scale up proportionally; last column absorbs integer-rounding remainder
+            int remaining = vpWidth;
+            for (int i = 0; i < cols.size() - 1; i++) {
+                columnWidths[i] = (int) Math.round(
+                    (double) cols.get(i).getPreferredWidth() / totalPref * vpWidth);
+                remaining -= columnWidths[i];
+            }
+            columnWidths[cols.size() - 1] = Math.max(1, remaining);
+        } else {
+            // Preferred widths exceed viewport — use them as-is; horizontal scroll appears
+            for (int i = 0; i < cols.size(); i++) {
+                columnWidths[i] = cols.get(i).getPreferredWidth();
+            }
+        }
+    }
+
+    private int totalColumnWidth() {
+        int t = 0;
+        for (int w : columnWidths) t += w;
+        return t;
+    }
+
+    // -------------------------------------------------------------------------
+    // Internal — refresh
     // -------------------------------------------------------------------------
 
     private void refresh() {
@@ -220,6 +269,15 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
         if (vpHeight <= 0 || vpWidth <= 0) return;
 
+        // Recompute column widths when viewport width changes, then rebuild header/footer
+        if (vpWidth != lastVpWidth) {
+            lastVpWidth = vpWidth;
+            computeColumnWidths(vpWidth, model.getColumns());
+            scrollPane.setColumnHeaderView(buildHeader(model.getColumns()));
+            if (footerRenderer != null) refreshFooter();
+        }
+
+        int totalColWidth = totalColumnWidth();
         int pageOffset    = (pageSize > 0) ? currentPage * pageSize : 0;
         int effectiveRows = (pageSize > 0)
             ? Math.min(pageSize, model.getRowCount() - pageOffset)
@@ -234,13 +292,13 @@ public class SmartGrid extends JPanel implements GridModelListener {
         }
 
         for (int i = 0; i < slots.length; i++) {
-            int rowIdx   = firstRow + i;          // position within current page
-            int modelIdx = pageOffset + rowIdx;   // position in the full model
+            int rowIdx   = firstRow + i;
+            int modelIdx = pageOffset + rowIdx;
             if (rowIdx < effectiveRows && modelIdx < model.getRowCount()) {
                 GridRow row = model.getRow(modelIdx);
-                // Use model-absolute index so selection persists across page navigation.
+                // Bounds set BEFORE bind() so getHeight() returns rowHeight inside bind()
+                slots[i].setBounds(0, rowIdx * rowHeight, totalColWidth, rowHeight);
                 ((Recyclable) slots[i]).bind(row, modelIdx);
-                slots[i].setBounds(0, rowIdx * rowHeight, vpWidth, rowHeight);
                 slots[i].setVisible(true);
             } else {
                 slots[i].setVisible(false);
@@ -265,49 +323,42 @@ public class SmartGrid extends JPanel implements GridModelListener {
     }
 
     // -------------------------------------------------------------------------
-    // Internal — header / footer builders (GridBagLayout, proportional widths)
+    // Internal — header / footer builders (null layout, absolute bounds)
     // -------------------------------------------------------------------------
 
     private JPanel buildHeader(List<ColumnDef> cols) {
-        JPanel header = new JPanel(new GridBagLayout());
+        int totalColWidth = totalColumnWidth();
+        JPanel header = new JPanel(null);
         header.setBackground(HEADER_BG);
-        header.setPreferredSize(new Dimension(0, rowHeight));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.BOTH;
-        gbc.gridy = 0; gbc.weighty = 1.0;
-        int total = columnWidthTotal(cols);
+        header.setPreferredSize(new Dimension(totalColWidth, rowHeight));
+        int x = 0;
         for (int i = 0; i < cols.size(); i++) {
-            gbc.gridx   = i;
-            gbc.weightx = (double) cols.get(i).getPreferredWidth() / total;
-            header.add(headerRenderer.render(cols.get(i)), gbc);
+            int w = columnWidths[i];
+            JComponent cell = headerRenderer.render(cols.get(i));
+            cell.setBounds(x, 0, w, rowHeight);
+            header.add(cell);
+            x += w;
         }
         return header;
     }
 
     private JPanel buildFooter(List<ColumnDef> cols) {
-        JPanel footer = new JPanel(new GridBagLayout());
+        int totalColWidth = totalColumnWidth();
+        JPanel footer = new JPanel(null);
         footer.setBackground(FOOTER_BG);
-        footer.setPreferredSize(new Dimension(0, rowHeight));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.BOTH;
-        gbc.gridy = 0; gbc.weighty = 1.0;
-        int total = columnWidthTotal(cols);
+        footer.setPreferredSize(new Dimension(totalColWidth, rowHeight));
         List<GridRow> pageRows = getPageRows();
+        int x = 0;
         for (int i = 0; i < cols.size(); i++) {
-            gbc.gridx   = i;
-            gbc.weightx = (double) cols.get(i).getPreferredWidth() / total;
-            footer.add(footerRenderer.render(cols.get(i), pageRows, model), gbc);
+            int w = columnWidths[i];
+            JComponent cell = footerRenderer.render(cols.get(i), pageRows, model);
+            cell.setBounds(x, 0, w, rowHeight);
+            footer.add(cell);
+            x += w;
         }
         return footer;
     }
 
-    private static int columnWidthTotal(List<ColumnDef> cols) {
-        int total = 0;
-        for (ColumnDef col : cols) total += col.getPreferredWidth();
-        return total == 0 ? 1 : total;
-    }
-
-    /** Returns the rows for the current page (or all rows when pagination is off). */
     List<GridRow> getPageRows() {
         int offset = (pageSize > 0) ? currentPage * pageSize : 0;
         int count  = (pageSize > 0)
@@ -326,7 +377,6 @@ public class SmartGrid extends JPanel implements GridModelListener {
     // -------------------------------------------------------------------------
 
     private void rebuildSouthPanel() {
-        // Remove any existing south component
         BorderLayout bl = (BorderLayout) getLayout();
         Component old = bl.getLayoutComponent(BorderLayout.SOUTH);
         if (old != null) remove(old);
@@ -355,12 +405,11 @@ public class SmartGrid extends JPanel implements GridModelListener {
         revalidate();
     }
 
-    /** Replaces the footer panel in-place without touching the pagination bar. */
     private void refreshFooter() {
         if (footerRenderer == null || southPanel == null || footerPanel == null) return;
         southPanel.remove(footerPanel);
         footerPanel = buildFooter(model.getColumns());
-        southPanel.add(footerPanel, 0); // index 0 = above pagination bar
+        southPanel.add(footerPanel, 0);
         southPanel.revalidate();
         southPanel.repaint();
     }
@@ -383,15 +432,21 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
         @Override
         public Dimension getPreferredSize() {
-            int w = scrollPane.getViewport().getWidth();
-            if (w == 0) w = 400;
+            int totalColWidth = totalColumnWidth();
+            int vpWidth = scrollPane.getViewport().getWidth();
+            int w = Math.max(totalColWidth, vpWidth > 0 ? vpWidth : 400);
+
+            int pageOffset    = (pageSize > 0) ? currentPage * pageSize : 0;
             int effectiveRows = (pageSize > 0)
-                ? Math.min(pageSize, model.getRowCount() - currentPage * pageSize)
+                ? Math.min(pageSize, model.getRowCount() - pageOffset)
                 : model.getRowCount();
             return new Dimension(w, Math.max(0, effectiveRows) * rowHeight);
         }
 
-        @Override public Dimension getPreferredScrollableViewportSize() { return getPreferredSize(); }
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
 
         @Override
         public int getScrollableUnitIncrement(Rectangle v, int orientation, int dir) {
@@ -403,7 +458,13 @@ public class SmartGrid extends JPanel implements GridModelListener {
             return v.height;
         }
 
-        @Override public boolean getScrollableTracksViewportWidth()  { return true; }
-        @Override public boolean getScrollableTracksViewportHeight() { return false; }
+        // Tracks viewport width only when all columns fit — triggers horizontal scroll otherwise
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return totalColumnWidth() <= scrollPane.getViewport().getWidth();
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() { return false; }
     }
 }

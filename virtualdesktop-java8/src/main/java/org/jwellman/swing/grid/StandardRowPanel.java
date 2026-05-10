@@ -2,8 +2,6 @@ package org.jwellman.swing.grid;
 
 import java.awt.Color;
 import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -17,16 +15,13 @@ import javax.swing.UIManager;
 /**
  * Default row component: a JPanel with one JLabel per column.
  *
- * Supports:
- *  - Alternating-row colors and fnd-style tag-based backgrounds
- *  - Row selection via ListSelectionModel (system selection colors)
- *  - Tree indentation: first-cell left padding = depth * 16 px
- *  - Expand/collapse toggle: ▶ / ▼ prefix on first cell when hasChildren is true
+ * Cell widths are set from a shared {@code int[] columnWidths} array owned by
+ * SmartGrid. All row panels in the pool reference the same array, so when
+ * SmartGrid recomputes widths on resize the next bind() call picks up the new
+ * values automatically — guaranteeing pixel-exact column alignment across header,
+ * rows, and footer.
  *
- * A single combined MouseAdapter (mousePressed) handles both selection and
- * expand/collapse. It is attached in bind() and removed at the START of the
- * next bind() call — guarding against double-attach when a selection change
- * synchronously triggers refresh() before the event has finished dispatching.
+ * Uses {@code null} layout; cell bounds are set explicitly in bind().
  */
 public class StandardRowPanel extends JPanel implements Recyclable {
 
@@ -36,45 +31,44 @@ public class StandardRowPanel extends JPanel implements Recyclable {
     private static final Color WARN_BG    = new Color(0xFFF8DC);
     private static final Color ERROR_BG   = new Color(0xFFDCDC);
 
-    private final List<ColumnDef>   columns;
-    private final List<JLabel>      cells = new ArrayList<>();
-    private final Runnable          expandCollapseAction; // null = no tree support
-    private final ListSelectionModel selectionModel;      // null = no selection support
-    private MouseAdapter rowListener; // covers both selection and expand/collapse
+    private final List<ColumnDef>    columns;
+    private final List<JLabel>       cells = new ArrayList<>();
+    private final Runnable           expandCollapseAction;
+    private final ListSelectionModel selectionModel;
+    private final int[]              columnWidths; // shared mutable reference from SmartGrid
+    private MouseAdapter             rowListener;
 
     public StandardRowPanel(List<ColumnDef> columns) {
-        this(columns, null, null);
+        this(columns, null, null, null);
     }
 
     public StandardRowPanel(List<ColumnDef> columns, Runnable expandCollapseAction) {
-        this(columns, expandCollapseAction, null);
+        this(columns, expandCollapseAction, null, null);
     }
 
     public StandardRowPanel(List<ColumnDef> columns,
                             Runnable expandCollapseAction,
                             ListSelectionModel selectionModel) {
+        this(columns, expandCollapseAction, selectionModel, null);
+    }
+
+    public StandardRowPanel(List<ColumnDef> columns,
+                            Runnable expandCollapseAction,
+                            ListSelectionModel selectionModel,
+                            int[] columnWidths) {
         this.columns = columns;
         this.expandCollapseAction = expandCollapseAction;
         this.selectionModel = selectionModel;
-        setLayout(new GridBagLayout());
+        this.columnWidths = columnWidths; // shared reference — never copy
+        setLayout(null);                  // absolute positioning; bounds set in bind()
         setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COL));
         setOpaque(true);
 
-        // Proportional column widths using GridBagLayout weightx.
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill    = GridBagConstraints.BOTH;
-        gbc.gridy   = 0;
-        gbc.weighty = 1.0;
-        int total = 0;
-        for (ColumnDef col : columns) total += col.getPreferredWidth();
-        if (total == 0) total = 1;
         for (int i = 0; i < columns.size(); i++) {
             JLabel lbl = new JLabel();
             lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
             cells.add(lbl);
-            gbc.gridx   = i;
-            gbc.weightx = (double) columns.get(i).getPreferredWidth() / total;
-            add(lbl, gbc);
+            add(lbl); // bounds assigned in bind(), not by a layout manager
         }
     }
 
@@ -97,7 +91,7 @@ public class StandardRowPanel extends JPanel implements Recyclable {
     public void bind(GridRow row, int rowIndex) {
 
         // ① Remove stale listener first — prevents double-attach when refresh()
-        //    is triggered synchronously during a mousePressed handler.
+        //    fires synchronously inside a mousePressed handler.
         if (rowListener != null) {
             removeMouseListener(rowListener);
             rowListener = null;
@@ -114,7 +108,7 @@ public class StandardRowPanel extends JPanel implements Recyclable {
             setBackground(ERROR_BG);
         }
 
-        // ④ Selection overrides everything — uses system table colors
+        // ④ Selection overrides everything
         boolean selected = selectionModel != null
                            && selectionModel.isSelectedIndex(rowIndex);
         final Color fgColor;
@@ -139,12 +133,24 @@ public class StandardRowPanel extends JPanel implements Recyclable {
                 lbl.setBorder(BorderFactory.createEmptyBorder(2, 8 + indent, 2, 8));
             } else {
                 lbl.setText(text);
+                lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
             }
             lbl.setFont(base);
             lbl.setForeground(fgColor);
         }
 
-        // ⑥ Single combined listener — mousePressed handles both selection and tree
+        // ⑥ Set absolute cell bounds from shared columnWidths array.
+        //    The panel's own bounds (and therefore getHeight()) have already been
+        //    set by SmartGrid.refresh() before bind() is called.
+        int cellH = getHeight() > 0 ? getHeight() : 32;
+        int x = 0;
+        for (int i = 0; i < cells.size(); i++) {
+            int w = (columnWidths != null && i < columnWidths.length) ? columnWidths[i] : 80;
+            cells.get(i).setBounds(x, 0, w, cellH);
+            x += w;
+        }
+
+        // ⑦ Single combined listener — mousePressed handles selection and tree expand
         final GridRow        capturedRow = row;
         final int            capturedIdx = rowIndex;
         final ListSelectionModel sm      = selectionModel;
@@ -153,7 +159,6 @@ public class StandardRowPanel extends JPanel implements Recyclable {
         rowListener = new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                // Selection
                 if (sm != null) {
                     if (e.isControlDown() || e.isMetaDown()) {
                         if (sm.isSelectedIndex(capturedIdx))
@@ -167,9 +172,7 @@ public class StandardRowPanel extends JPanel implements Recyclable {
                     } else {
                         sm.setSelectionInterval(capturedIdx, capturedIdx);
                     }
-                    // SmartGrid's ListSelectionListener calls refresh() here (if !adjusting)
                 }
-                // Expand/collapse for tree parent rows
                 if (capturedRow.isHasChildren() && expandAct != null) {
                     capturedRow.setExpanded(!capturedRow.isExpanded());
                     expandAct.run();

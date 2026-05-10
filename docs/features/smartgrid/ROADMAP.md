@@ -8,7 +8,7 @@
 | 1 | Row selection (`ListSelectionModel`, click / Shift / Ctrl) | ✅ Complete |
 | 2 | Tree / hierarchy (depth, expand/collapse, ▶ / ▼) | ✅ Complete |
 | 3 | Proportional column widths + horizontal scroll | ✅ Complete |
-| 4 | Client-side sorting (column header click, ▲ / ▼ indicator) | ⬜ Not started |
+| 4 | Client-side sorting (column header click, ▲ / ▼ indicator) | ✅ Complete |
 | 5 | Client-side filtering (`GridModelFilter`, search field) | ⬜ Not started |
 | 6 | Tree enhancements (lazy children, keyboard expand/collapse) | ⬜ Not started |
 | 7 | VApp integration (`SpecSmartGrid`, `ActionFactory`) | ⬜ Not started |
@@ -197,7 +197,7 @@ floating-point fractions, producing different widths per panel and causing misal
 
 ---
 
-## Phase 4 — Client-Side Sorting
+## Phase 4 — Client-Side Sorting ✅
 
 **Why**: Clicking a column header to sort is a universal data-grid expectation.
 

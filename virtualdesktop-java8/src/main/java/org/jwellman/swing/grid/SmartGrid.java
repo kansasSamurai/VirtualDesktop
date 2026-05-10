@@ -177,6 +177,26 @@ public class SmartGrid extends JPanel implements GridModelListener {
     }
 
     // -------------------------------------------------------------------------
+    // Public API — filtering
+    // -------------------------------------------------------------------------
+
+    /** Applies a row filter and clears the current selection. */
+    public void setFilter(GridModelFilter f) {
+        selectionModel.clearSelection();
+        if (model instanceof DefaultGridModel) {
+            ((DefaultGridModel) model).setFilter(f);
+        }
+    }
+
+    /** Removes the active filter and clears the current selection. */
+    public void clearFilter() {
+        selectionModel.clearSelection();
+        if (model instanceof DefaultGridModel) {
+            ((DefaultGridModel) model).clearFilter();
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Public API — header / footer renderers
     // -------------------------------------------------------------------------
 

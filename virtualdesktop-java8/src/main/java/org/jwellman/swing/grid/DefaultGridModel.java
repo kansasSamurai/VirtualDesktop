@@ -5,23 +5,31 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Simple list-backed GridModel. Load all rows before attaching a SmartGrid,
- * or call {@link #notifyDataChanged()} after bulk mutations.
+ * Simple list-backed GridModel.
  *
- * Supports tree/hierarchy via depth-based visible-row filtering, and optional
- * client-side sorting applied after the tree filter step.
+ * {@link #computeVisibleRows()} runs three steps in order:
+ *   1. Tree filter  — respects depth / expand / collapse
+ *   2. Text filter  — applies {@link GridModelFilter} predicate (if set)
+ *   3. Sort         — sorts the filtered result by the active sort column
+ *
+ * Load rows before attaching a SmartGrid, or call {@link #notifyDataChanged()}
+ * after bulk mutations.
  */
 public class DefaultGridModel implements GridModel {
 
-    private final List<GridRow> rows = new ArrayList<>();
-    private final List<ColumnDef> columns = new ArrayList<>();
+    private final List<GridRow>           rows      = new ArrayList<>();
+    private final List<ColumnDef>         columns   = new ArrayList<>();
     private final List<GridModelListener> listeners = new ArrayList<>();
 
-    private final List<GridRow> visibleRows = new ArrayList<>();
-    private boolean visibleRowsDirty = true;
+    private final List<GridRow> visibleRows      = new ArrayList<>();
+    private boolean             visibleRowsDirty = true;
 
+    // Sort state
     private String    sortKey   = null;
     private SortOrder sortOrder = SortOrder.NONE;
+
+    // Filter state
+    private GridModelFilter filter = null;
 
     // -------------------------------------------------------------------------
     // Builder API
@@ -51,10 +59,7 @@ public class DefaultGridModel implements GridModel {
         return this;
     }
 
-    /**
-     * Recomputes the visible-row projection (tree filter + sort) then fires
-     * a model-reset event to all registered listeners.
-     */
+    /** Recomputes the visible-row projection then fires a model-reset event. */
     public DefaultGridModel notifyDataChanged() {
         computeVisibleRows();
         for (GridModelListener l : listeners) {
@@ -67,18 +72,38 @@ public class DefaultGridModel implements GridModel {
     // Sorting
     // -------------------------------------------------------------------------
 
-    /**
-     * Sets the active sort column and direction, then fires a model-reset.
-     * Pass {@code SortOrder.NONE} (or {@code null} key) to restore insertion order.
-     */
     public void sort(String key, SortOrder order) {
         this.sortKey   = key;
         this.sortOrder = (order != null) ? order : SortOrder.NONE;
         notifyDataChanged();
     }
 
-    public String    getSortKey()   { return sortKey; }
-    public SortOrder getSortOrder() { return sortOrder; }
+    public String getSortKey() {
+        return sortKey;
+    }
+
+    public SortOrder getSortOrder() {
+        return sortOrder;
+    }
+
+    // -------------------------------------------------------------------------
+    // Filtering
+    // -------------------------------------------------------------------------
+
+    /** Sets the active filter and fires a model-reset. Pass {@code null} to clear. */
+    public void setFilter(GridModelFilter f) {
+        this.filter = f;
+        notifyDataChanged();
+    }
+
+    /** Clears the active filter and fires a model-reset. */
+    public void clearFilter() {
+        setFilter(null);
+    }
+
+    public GridModelFilter getFilter() {
+        return filter;
+    }
 
     // -------------------------------------------------------------------------
     // GridModel
@@ -96,26 +121,42 @@ public class DefaultGridModel implements GridModel {
         return visibleRows.get(index);
     }
 
-    @Override public List<ColumnDef> getColumns() { return java.util.Collections.unmodifiableList(columns); }
-    @Override public void addGridModelListener(GridModelListener l) { listeners.add(l); }
-    @Override public void removeGridModelListener(GridModelListener l) { listeners.remove(l); }
+    @Override
+    public List<ColumnDef> getColumns() {
+        return Collections.unmodifiableList(columns);
+    }
+
+    @Override
+    public void addGridModelListener(GridModelListener l) {
+        listeners.add(l);
+    }
+
+    @Override
+    public void removeGridModelListener(GridModelListener l) {
+        listeners.remove(l);
+    }
 
     // -------------------------------------------------------------------------
-    // Visible-row computation (tree filter + sort)
+    // Visible-row computation (tree filter → text filter → sort)
     // -------------------------------------------------------------------------
 
     private void ensureVisible() {
-        if (visibleRowsDirty) computeVisibleRows();
+        if (visibleRowsDirty) {
+            computeVisibleRows();
+        }
     }
 
     private void computeVisibleRows() {
         visibleRows.clear();
 
-        // Step 1: tree filter (depth/expand logic)
+        // Step 1: tree filter — respects depth / expand / collapse
+        List<GridRow> treeVisible = new ArrayList<>();
         int hiddenDepth = Integer.MAX_VALUE;
         for (GridRow row : rows) {
-            if (row.getDepth() > hiddenDepth) continue;
-            visibleRows.add(row);
+            if (row.getDepth() > hiddenDepth) {
+                continue;
+            }
+            treeVisible.add(row);
             if (row.isHasChildren() && !row.isExpanded()) {
                 hiddenDepth = row.getDepth();
             } else {
@@ -123,9 +164,16 @@ public class DefaultGridModel implements GridModel {
             }
         }
 
-        // Step 2: sort (applies to flat data; tree structure is not preserved after sort)
+        // Step 2: text filter — skips rows that don't pass the predicate
+        for (GridRow row : treeVisible) {
+            if (filter == null || filter.accept(row)) {
+                visibleRows.add(row);
+            }
+        }
+
+        // Step 3: sort — applied to the filtered result
         if (sortKey != null && sortOrder != SortOrder.NONE) {
-            final String key  = sortKey;
+            final String  key  = sortKey;
             final boolean desc = sortOrder == SortOrder.DESCENDING;
             Collections.sort(visibleRows, (a, b) -> {
                 int cmp = compareValues(a.get(key), b.get(key));
@@ -136,10 +184,6 @@ public class DefaultGridModel implements GridModel {
         visibleRowsDirty = false;
     }
 
-    /**
-     * Compares two cell values. Tries numeric comparison after stripping
-     * formatting characters; falls back to case-insensitive string compare.
-     */
     private static int compareValues(Object a, Object b) {
         if (a == null && b == null) return 0;
         if (a == null) return -1;

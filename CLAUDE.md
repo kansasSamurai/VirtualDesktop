@@ -152,6 +152,17 @@ Desktop shortcuts are represented by `VShortcut` objects and can be saved/loaded
 
 ## Development Guidelines
 
+### Java Code Formatting
+
+Standard Java formatting conventions must be followed throughout this codebase:
+
+- **One statement per line** — never `rows.add(row); visibleRowsDirty = true; return this;` on a single line
+- **Method bodies always use braces and line breaks** — never `public int getCount() { return n; }` inline
+- **`@Override` on its own line** — not `@Override public void method() { ... }` compacted
+- **`for`/`if`/`while` blocks always use braces** — even single-statement bodies
+- Guard-clause `return` in `compareValues`-style helpers is acceptable (`if (a == null) return -1;`)
+- Getters and setters follow normal multi-line format, not the `{ return x; }` single-line style
+
 ### Writing Portable Vapps
 
 From todo.txt - guidelines for writing portable applications:

@@ -9,9 +9,12 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
+import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 import org.jwellman.swing.grid.ColumnDef;
 import org.jwellman.swing.grid.DefaultGridModel;
@@ -86,9 +89,52 @@ public class SmartGridDemo {
             model.addRow(row);
         }
 
+        final DefaultGridModel tableModel = model;
         SmartGrid grid = new SmartGrid(model);
         grid.registerFormatter("currency", v -> String.format("$%,d", ((Number) v).longValue()));
-        return wrap(grid, "1,000 rows — ~20 live components via viewport virtualization; columns proportional");
+
+        // Filter bar
+        final int totalRows = model.getRowCount();
+        JLabel countLabel  = new JLabel("Showing " + totalRows + " of " + totalRows + " rows");
+        JTextField filterField = new JTextField(20);
+        filterField.getDocument().addDocumentListener(new DocumentListener() {
+            private void applyFilter() {
+                String text = filterField.getText().trim().toLowerCase();
+                if (text.isEmpty()) {
+                    grid.clearFilter();
+                } else {
+                    grid.setFilter(row -> {
+                        for (ColumnDef col : tableModel.getColumns()) {
+                            Object val = row.get(col.getKey());
+                            if (val != null && val.toString().toLowerCase().contains(text)) return true;
+                        }
+                        return false;
+                    });
+                }
+                countLabel.setText("Showing " + tableModel.getRowCount() + " of " + totalRows + " rows");
+            }
+            @Override public void insertUpdate(DocumentEvent e)  { applyFilter(); }
+            @Override public void removeUpdate(DocumentEvent e)  { applyFilter(); }
+            @Override public void changedUpdate(DocumentEvent e) { applyFilter(); }
+        });
+
+        JPanel filterBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 2));
+        filterBar.add(new JLabel("Filter:"));
+        filterBar.add(filterField);
+        filterBar.add(countLabel);
+
+        JPanel north = new JPanel(new BorderLayout());
+        north.add(selectionToolbar(grid), BorderLayout.NORTH);
+        north.add(filterBar,              BorderLayout.SOUTH);
+
+        JLabel desc = new JLabel(" 1,000 rows — filter field narrows results; sort and selection persist through filter");
+        desc.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+
+        JPanel tab = new JPanel(new BorderLayout());
+        tab.add(north, BorderLayout.NORTH);
+        tab.add(grid,  BorderLayout.CENTER);
+        tab.add(desc,  BorderLayout.SOUTH);
+        return tab;
     }
 
     // -------------------------------------------------------------------------

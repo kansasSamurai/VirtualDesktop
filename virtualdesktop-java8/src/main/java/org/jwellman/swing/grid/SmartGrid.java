@@ -7,6 +7,7 @@ import java.awt.Dimension;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.event.ActionListener;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -23,6 +24,7 @@ import java.util.function.Supplier;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListSelectionModel;
+import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -30,6 +32,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.Scrollable;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -111,6 +114,13 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private int pageSize    = 0;
     private int currentPage = 0;
 
+    // Checkbox selection strip
+    private static final int CHECKBOX_COL_WIDTH    = 28;
+    private boolean          checkboxColumnVisible = true;
+    private JCheckBox[]      checkboxSlots         = null; // parallel to slots[]
+    private JCheckBox        headerSelectAll;               // "select all" in header; created once
+    private boolean          updatingHeaderCheckbox = false;
+
     // Swing components
     private JScrollPane   scrollPane;
     private VirtualCanvas canvas;
@@ -167,6 +177,25 @@ public class SmartGrid extends JPanel implements GridModelListener {
             renderers,
             dark));
 
+        headerSelectAll = new JCheckBox();
+        headerSelectAll.setOpaque(false);
+        headerSelectAll.setHorizontalAlignment(SwingConstants.CENTER);
+        headerSelectAll.addActionListener(e -> {
+            if (updatingHeaderCheckbox) {
+                return;
+            }
+            if (headerSelectAll.isSelected()) {
+                selectAll();
+            } else {
+                clearSelection();
+            }
+        });
+        selectionModel.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                updateHeaderCheckbox();
+            }
+        });
+
         setLayout(new BorderLayout());
 
         canvas = new VirtualCanvas();
@@ -219,6 +248,23 @@ public class SmartGrid extends JPanel implements GridModelListener {
         this.rowHeight = rowHeight;
         canvas.revalidate();
         refresh();
+    }
+
+    public boolean isCheckboxColumnVisible() {
+        return checkboxColumnVisible;
+    }
+
+    public void setCheckboxColumnVisible(boolean visible) {
+        if (this.checkboxColumnVisible == visible) {
+            return;
+        }
+        this.checkboxColumnVisible = visible;
+        if (slots != null) {
+            reallocateSlots(slots.length);
+        }
+        lastVpWidth = -1; // force column-width recompute on next refresh
+        refresh();
+        rebuildHeaderView(model.getColumns());
     }
 
     // -------------------------------------------------------------------------
@@ -522,6 +568,34 @@ public class SmartGrid extends JPanel implements GridModelListener {
     }
 
     // -------------------------------------------------------------------------
+    // Internal — checkbox strip helpers
+    // -------------------------------------------------------------------------
+
+    private int canvasLeadWidth() {
+        return checkboxColumnVisible ? CHECKBOX_COL_WIDTH : 0;
+    }
+
+    private int totalCanvasWidth() {
+        return canvasLeadWidth() + totalColumnWidth();
+    }
+
+    private void updateHeaderCheckbox() {
+        if (!checkboxColumnVisible || headerSelectAll == null) {
+            return;
+        }
+        int total = model.getRowCount();
+        int count = 0;
+        for (int i = 0; i < total; i++) {
+            if (selectionModel.isSelectedIndex(i)) {
+                count++;
+            }
+        }
+        updatingHeaderCheckbox = true;
+        headerSelectAll.setSelected(total > 0 && count == total);
+        updatingHeaderCheckbox = false;
+    }
+
+    // -------------------------------------------------------------------------
     // Internal — column width computation
     // -------------------------------------------------------------------------
 
@@ -603,7 +677,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
         if (vpWidth != lastVpWidth) {
             lastVpWidth = vpWidth;
-            computeColumnWidths(vpWidth, model.getColumns());
+            computeColumnWidths(vpWidth - canvasLeadWidth(), model.getColumns());
             rebuildHeaderView(model.getColumns());
             if (footerRenderer != null) {
                 refreshFooter();
@@ -624,6 +698,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
             reallocateSlots(visibleCount);
         }
 
+        int leadW = canvasLeadWidth();
         for (int i = 0; i < slots.length; i++) {
             int rowIdx   = firstRow + i;
             int modelIdx = pageOffset + rowIdx;
@@ -640,14 +715,35 @@ public class SmartGrid extends JPanel implements GridModelListener {
                     canvas.add(slots[i]);
                 }
 
-                slots[i].setBounds(0, rowIdx * rowHeight, totalColWidth, rowHeight);
+                slots[i].setBounds(leadW, rowIdx * rowHeight, totalColWidth, rowHeight);
                 ((Recyclable) slots[i]).bind(row, modelIdx);
                 if (slots[i] instanceof Selectable) {
                     ((Selectable) slots[i]).setSelected(selectionModel.isSelectedIndex(modelIdx));
                 }
                 slots[i].setVisible(true);
+
+                if (checkboxColumnVisible && checkboxSlots != null) {
+                    JCheckBox cb = checkboxSlots[i];
+                    for (ActionListener al : cb.getActionListeners()) {
+                        cb.removeActionListener(al);
+                    }
+                    cb.setBounds(0, rowIdx * rowHeight, CHECKBOX_COL_WIDTH, rowHeight);
+                    cb.setSelected(selectionModel.isSelectedIndex(modelIdx));
+                    final int capturedIdx = modelIdx;
+                    cb.addActionListener(ae -> {
+                        if (cb.isSelected()) {
+                            selectionModel.addSelectionInterval(capturedIdx, capturedIdx);
+                        } else {
+                            selectionModel.removeSelectionInterval(capturedIdx, capturedIdx);
+                        }
+                    });
+                    cb.setVisible(true);
+                }
             } else {
                 slots[i].setVisible(false);
+                if (checkboxSlots != null) {
+                    checkboxSlots[i].setVisible(false);
+                }
             }
         }
 
@@ -659,13 +755,23 @@ public class SmartGrid extends JPanel implements GridModelListener {
             for (int i = 0; i < slots.length; i++) {
                 canvas.remove(slots[i]);
                 getPoolForType(slotTypes[i]).release(slots[i]);
+                if (checkboxSlots != null) {
+                    canvas.remove(checkboxSlots[i]);
+                }
             }
         }
-        slots     = new JComponent[count];
-        slotTypes = new String[count]; // all null = default pool
+        slots         = new JComponent[count];
+        slotTypes     = new String[count]; // all null = default pool
+        checkboxSlots = checkboxColumnVisible ? new JCheckBox[count] : null;
         for (int i = 0; i < count; i++) {
             slots[i] = pool.checkout();
             canvas.add(slots[i]);
+            if (checkboxColumnVisible) {
+                checkboxSlots[i] = new JCheckBox();
+                checkboxSlots[i].setOpaque(false);
+                checkboxSlots[i].setHorizontalAlignment(SwingConstants.CENTER);
+                canvas.add(checkboxSlots[i]);
+            }
         }
     }
 
@@ -698,12 +804,19 @@ public class SmartGrid extends JPanel implements GridModelListener {
     }
 
     private JPanel buildHeaderLabelRow(List<ColumnDef> cols) {
+        int leadW         = canvasLeadWidth();
         int totalColWidth = totalColumnWidth();
         JPanel header = new JPanel(null);
         header.setBackground(headerBg);
-        header.setPreferredSize(new Dimension(totalColWidth, rowHeight));
+        header.setPreferredSize(new Dimension(leadW + totalColWidth, rowHeight));
+
+        if (checkboxColumnVisible) {
+            headerSelectAll.setBounds(0, 0, leadW, rowHeight);
+            header.add(headerSelectAll);
+        }
+
         boolean multiSort = currentSortSpecs.size() > 1;
-        int x = 0;
+        int x = leadW;
         for (int i = 0; i < cols.size(); i++) {
             ColumnDef col = cols.get(i);
             int w = columnWidths[i];
@@ -737,12 +850,21 @@ public class SmartGrid extends JPanel implements GridModelListener {
     }
 
     private JPanel buildHeaderFilterRow(List<ColumnDef> cols) {
+        int leadW         = canvasLeadWidth();
         int totalColWidth = totalColumnWidth();
         int filterHeight  = rowHeight - 2;
         JPanel filterRow  = new JPanel(null);
         filterRow.setBackground(filterRowBg);
-        filterRow.setPreferredSize(new Dimension(totalColWidth, filterHeight));
-        int x = 0;
+        filterRow.setPreferredSize(new Dimension(leadW + totalColWidth, filterHeight));
+
+        if (checkboxColumnVisible) {
+            JPanel spacer = new JPanel();
+            spacer.setOpaque(false);
+            spacer.setBounds(0, 0, leadW, filterHeight);
+            filterRow.add(spacer);
+        }
+
+        int x = leadW;
         for (int i = 0; i < cols.size() && i < columnFilterFields.length; i++) {
             int w = columnWidths[i];
             JTextField field = columnFilterFields[i];
@@ -826,12 +948,21 @@ public class SmartGrid extends JPanel implements GridModelListener {
     }
 
     private JPanel buildFooter(List<ColumnDef> cols) {
+        int leadW         = canvasLeadWidth();
         int totalColWidth = totalColumnWidth();
         JPanel footer = new JPanel(null);
         footer.setBackground(footerBg);
-        footer.setPreferredSize(new Dimension(totalColWidth, rowHeight));
+        footer.setPreferredSize(new Dimension(leadW + totalColWidth, rowHeight));
+
+        if (checkboxColumnVisible) {
+            JPanel spacer = new JPanel();
+            spacer.setOpaque(false);
+            spacer.setBounds(0, 0, leadW, rowHeight);
+            footer.add(spacer);
+        }
+
         List<GridRow> pageRows = getPageRows();
-        int x = 0;
+        int x = leadW;
         for (int i = 0; i < cols.size(); i++) {
             int w = columnWidths[i];
             JComponent cell = footerRenderer.render(cols.get(i), pageRows, model);
@@ -959,9 +1090,8 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
         @Override
         public Dimension getPreferredSize() {
-            int totalColWidth = totalColumnWidth();
             int vpWidth = scrollPane.getViewport().getWidth();
-            int w = Math.max(totalColWidth, vpWidth > 0 ? vpWidth : 400);
+            int w = Math.max(totalCanvasWidth(), vpWidth > 0 ? vpWidth : 400);
 
             int pageOffset    = (pageSize > 0) ? currentPage * pageSize : 0;
             int effectiveRows = (pageSize > 0)
@@ -975,9 +1105,8 @@ public class SmartGrid extends JPanel implements GridModelListener {
             // Return a compact viewport hint used by JScrollPane when pack() is called.
             // getPreferredSize() (the full virtual height) is still used for scrollbar math;
             // this method mirrors the JTable pattern of keeping the two concerns separate.
-            int totalColWidth = totalColumnWidth();
             int vpWidth = scrollPane.getViewport().getWidth();
-            int w = Math.max(totalColWidth, vpWidth > 0 ? vpWidth : 400);
+            int w = Math.max(totalCanvasWidth(), vpWidth > 0 ? vpWidth : 400);
             return new Dimension(w, 400);
         }
 
@@ -993,7 +1122,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
         @Override
         public boolean getScrollableTracksViewportWidth() {
-            return totalColumnWidth() <= scrollPane.getViewport().getWidth();
+            return totalCanvasWidth() <= scrollPane.getViewport().getWidth();
         }
 
         @Override

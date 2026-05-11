@@ -501,5 +501,68 @@ Status 5/10:
   entirely from memory. That's exactly what an in-memory grid with client-side filtering and sorting does. The database gets
    hit once instead of 12 times. The UX is better. The load is lower. Pagination loses on every dimension.  
   
+---
+
+Good instinct — it's a standard affordance and the "defend programmers from themselves" argument is real (FeaturedRowPanel just proved it). My recommendation: make the checkbox a **SmartGrid-managed selection strip** — a slim fixed-width panel that SmartGrid positions to the left of the viewport and manages directly, completely separate from the row pool.
+
+The key trade-off:
+
+**Embedded in each row panel** — simpler to route clicks through, but every custom panel (`FeaturedRowPanel`, `EditableRowPanel`, future panels) must reserve and paint the checkbox column, which pollutes the "just handle your data" contract that makes the component factory pattern clean.
+
+**SmartGrid-owned strip** — SmartGrid allocates ~20 `JCheckBox` components in a parallel pool (one per visible slot), scrolls them in sync with the canvas, wires them to the `selectionModel`, and puts a "select all" checkbox in the header. Row panels are completely unaware. The `Selectable` interface we just defined would still signal row panels for their own visual feedback, but selection truth lives in the model. This is architecturally cleaner but means two synchronized virtual lists scrolling together.
+
+The strip approach is the right long-term design — it's how professional grid components handle it (the selection column is truly orthogonal to row content). The cost is that it's a non-trivial addition: the strip needs its own scroll sync, the header needs a matching checkbox cell, and `getColumnWidths()` callers need to know the strip width to compute horizontal offsets correctly.
+
+Worth planning as its own phase. Want me to spec it out?  
   
-  
+---
+
+SmartGrid Phase 16 — Checkbox Selection Strip                                                                              
+                                                    
+Context
+
+FeaturedRowPanel needed a full Selectable implementation just to show which rows are
+selected — because there was no standardized, guaranteed selection indicator. A
+dedicated checkbox column solves this permanently: it is unambiguous, universal, and
+completely decoupled from each row panel's visual design. It also provides an
+independent click target (the checkbox itself) separate from clicking the row body.
+
+The strip is managed entirely by SmartGrid — row panels receive no new contract. It
+lives inside VirtualCanvas alongside the data slot panels, so it scrolls for free with
+no synchronization code. Enabled by default; the programmer can disable it via
+setCheckboxColumnVisible(false).
+
+---
+Architecture: strip inside VirtualCanvas
+
+SmartGrid owns a JCheckBox[] checkboxSlots array (parallel to slots[], same count).
+Each checkbox is positioned at absolute coords (0, rowIdx * rowHeight, leadW, rowHeight)
+inside VirtualCanvas. Data slots are shifted right by leadW pixels. Because all
+components live in the same null-layout VirtualCanvas, scrolling is automatic — no sync
+thread needed.
+
+VirtualCanvas (null layout, full virtual height)
+├── checkboxSlots[0]  at (0,     0*rowH, leadW, rowH)
+├── slots[0]          at (leadW, 0*rowH, dataW, rowH)
+├── checkboxSlots[1]  at (0,     1*rowH, leadW, rowH)
+├── slots[1]          at (leadW, 1*rowH, dataW, rowH)
+└── …
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

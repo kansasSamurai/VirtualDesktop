@@ -18,6 +18,7 @@ import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
+import java.util.List;
 import org.jwellman.swing.grid.ColumnDef;
 import org.jwellman.swing.grid.DefaultGridModel;
 import org.jwellman.swing.grid.GridModelListener;
@@ -118,7 +119,9 @@ public class SmartGridDemo {
         final int totalRows = model.getRowCount();
         SmartGrid grid = new SmartGrid(model, darkTheme);
         grid.registerFormatter("currency", v -> String.format("$%,d", ((Number) v).longValue()));
-        grid.registerRowRenderer("featured", FeaturedRowPanel::new);
+        final List<ColumnDef> featuredCols   = model.getColumns();
+        final int[]           featuredWidths = grid.getColumnWidths();
+        grid.registerRowRenderer("featured", () -> new FeaturedRowPanel(featuredCols, featuredWidths));
         grid.setColumnFiltersVisible(true); // per-column filter row beneath headers
 
         // Global filter bar (OR across all columns — keeps any row where ANY column matches)
@@ -395,36 +398,75 @@ public class SmartGridDemo {
     // -------------------------------------------------------------------------
 
     /**
-     * Demonstrates Phase 9a GridComponentFactory dispatch. Every 50th row in the
-     * Table tab carries fnd-type="featured" and is rendered by this panel instead
-     * of StandardRowPanel — proving the type-based pool swap works correctly.
+     * Demonstrates Phase 9a GridComponentFactory dispatch. 
+     * Every 50th row in the Table tab carries fnd-type="featured" and is rendered 
+     * by this panel instead of StandardRowPanel — proving the type-based pool swap works correctly.
+     */
+    /**
+     * Demonstrates mixing normal column cells with a spanning custom label.
+     * ID (col 0) and Status (last col) render as plain cells; the middle three
+     * columns (Name, Dept, Salary) are spanned by a single star-decorated label.
      */
     static class FeaturedRowPanel extends JPanel implements Recyclable {
 
         private static final Color BG = new Color(0x1A4A8A);
 
-        private final JLabel label = new JLabel();
+        private final List<ColumnDef> columns;
+        private final int[]           columnWidths;
+        private final JLabel          idLabel     = new JLabel();
+        private final JLabel          mainLabel   = new JLabel();
+        private final JLabel          statusLabel = new JLabel();
 
-        FeaturedRowPanel() {
+        FeaturedRowPanel(List<ColumnDef> columns, int[] columnWidths) {
+            this.columns      = columns;
+            this.columnWidths = columnWidths;
             setLayout(null);
             setBackground(BG);
             setOpaque(true);
-            label.setForeground(Color.WHITE);
-            label.setFont(label.getFont().deriveFont(Font.BOLD));
-            add(label);
+            for (JLabel lbl : new JLabel[]{ idLabel, mainLabel, statusLabel }) {
+                lbl.setForeground(Color.WHITE);
+                lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
+                add(lbl);
+            }
         }
 
         @Override
         public void prepareForReuse() {
-            label.setText("");
+            idLabel.setText("");
+            mainLabel.setText("");
+            statusLabel.setText("");
         }
 
         @Override
         public void bind(GridRow row, int rowIndex) {
-            label.setBounds(8, 0, Math.max(0, getWidth() - 16), getHeight());
-            label.setText("★  " + row.get("name")
-                          + "  —  " + row.get("dept")
-                          + "  —  " + row.get("salary"));
+            int h = getHeight();
+
+            // Column 0 — ID: normal cell width, left-padded
+            int x0 = 0;
+            int w0 = columnWidths[0];
+            idLabel.setBounds(x0 + 8, 0, w0 - 8, h);
+            idLabel.setText(str(row.get(columns.get(0).getKey())));
+
+            // Columns 1 … n-2 — spanning custom label
+            int x1    = w0;
+            int spanW = 0;
+            for (int i = 1; i < columns.size() - 1; i++) {
+                spanW += columnWidths[i];
+            }
+            mainLabel.setBounds(x1 + 8, 0, spanW - 8, h);
+            mainLabel.setText("★  " + row.get("name")
+                              + "  —  " + row.get("dept")
+                              + "  —  " + row.get("salary"));
+
+            // Last column — Status: normal cell width, left-padded
+            int xLast = x1 + spanW;
+            int wLast = columnWidths[columns.size() - 1];
+            statusLabel.setBounds(xLast + 8, 0, wLast - 8, h);
+            statusLabel.setText(str(row.get(columns.get(columns.size() - 1).getKey())));
+        }
+
+        private static String str(Object v) {
+            return v != null ? v.toString() : "";
         }
     }
 }

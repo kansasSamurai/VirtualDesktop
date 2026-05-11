@@ -201,6 +201,16 @@ public class SmartGrid extends JPanel implements GridModelListener {
         return model;
     }
 
+    /**
+     * Returns the shared mutable column-width array. Callers that hold this
+     * reference will automatically see width updates when the viewport is resized,
+     * because SmartGrid updates the array in-place — the same guarantee given to
+     * {@link StandardRowPanel} instances in the pool.
+     */
+    public int[] getColumnWidths() {
+        return columnWidths;
+    }
+
     public int getRowHeight() {
         return rowHeight;
     }

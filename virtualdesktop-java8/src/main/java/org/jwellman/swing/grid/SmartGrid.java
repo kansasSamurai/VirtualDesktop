@@ -61,6 +61,7 @@ import javax.swing.event.ListSelectionListener;
  *     viewport         → VirtualCanvas (null layout, virtual height)
  *   SOUTH panel (optional): footer JPanel + PaginationBar
  */
+@SuppressWarnings("serial")
 public class SmartGrid extends JPanel implements GridModelListener {
 
     // Light theme palette
@@ -80,8 +81,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private final boolean darkTheme;
 
     private final GridModel model;
-    private final DefaultListSelectionModel selectionModel =
-            new DefaultListSelectionModel();
+    private final DefaultListSelectionModel selectionModel = new DefaultListSelectionModel();
     private int rowHeight = 32;
 
     // Shared column-width array — updated in-place by computeColumnWidths().
@@ -642,6 +642,9 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
                 slots[i].setBounds(0, rowIdx * rowHeight, totalColWidth, rowHeight);
                 ((Recyclable) slots[i]).bind(row, modelIdx);
+                if (slots[i] instanceof Selectable) {
+                    ((Selectable) slots[i]).setSelected(selectionModel.isSelectedIndex(modelIdx));
+                }
                 slots[i].setVisible(true);
             } else {
                 slots[i].setVisible(false);

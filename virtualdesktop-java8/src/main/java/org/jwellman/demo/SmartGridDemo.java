@@ -4,6 +4,8 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -24,6 +26,7 @@ import org.jwellman.swing.grid.DefaultGridModel;
 import org.jwellman.swing.grid.GridModelListener;
 import org.jwellman.swing.grid.GridRow;
 import org.jwellman.swing.grid.Recyclable;
+import org.jwellman.swing.grid.Selectable;
 import org.jwellman.swing.grid.SmartGrid;
 
 /**
@@ -119,9 +122,11 @@ public class SmartGridDemo {
         final int totalRows = model.getRowCount();
         SmartGrid grid = new SmartGrid(model, darkTheme);
         grid.registerFormatter("currency", v -> String.format("$%,d", ((Number) v).longValue()));
-        final List<ColumnDef> featuredCols   = model.getColumns();
-        final int[]           featuredWidths = grid.getColumnWidths();
-        grid.registerRowRenderer("featured", () -> new FeaturedRowPanel(featuredCols, featuredWidths));
+        final List<ColumnDef>    featuredCols   = model.getColumns();
+        final int[]              featuredWidths = grid.getColumnWidths();
+        final ListSelectionModel featuredSm     = grid.getSelectionModel();
+        grid.registerRowRenderer("featured",
+            () -> new FeaturedRowPanel(featuredCols, featuredWidths, featuredSm));
         grid.setColumnFiltersVisible(true); // per-column filter row beneath headers
 
         // Global filter bar (OR across all columns — keeps any row where ANY column matches)
@@ -406,24 +411,33 @@ public class SmartGridDemo {
      * Demonstrates mixing normal column cells with a spanning custom label.
      * ID (col 0) and Status (last col) render as plain cells; the middle three
      * columns (Name, Dept, Salary) are spanned by a single star-decorated label.
+     *
+     * Implements {@link Selectable} so SmartGrid pushes selection state after
+     * each bind() rather than this panel needing to poll the model directly.
      */
-    static class FeaturedRowPanel extends JPanel implements Recyclable {
+    @SuppressWarnings("serial")
+    static class FeaturedRowPanel extends JPanel implements Recyclable, Selectable {
 
-        private static final Color BG = new Color(0x1A4A8A);
+        private static final Color BG       = new Color(0x1A4A8A);
+        private static final Color BG_LIGHT = UIManager.getColor("Table.selectionBackground");
+                //new Color(0x2E5FAA); // lighter blue when selected
 
-        private final List<ColumnDef> columns;
-        private final int[]           columnWidths;
-        private final JLabel          idLabel     = new JLabel();
-        private final JLabel          mainLabel   = new JLabel();
-        private final JLabel          statusLabel = new JLabel();
+        private final List<ColumnDef>    columns;
+        private final int[]              columnWidths;
+        private final ListSelectionModel selectionModel;
+        private final JLabel             idLabel     = new JLabel();
+        private final JLabel             mainLabel   = new JLabel();
+        private final JLabel             statusLabel = new JLabel();
+        private MouseAdapter             rowListener;
 
-        FeaturedRowPanel(List<ColumnDef> columns, int[] columnWidths) {
-            this.columns      = columns;
+        FeaturedRowPanel(List<ColumnDef> columns, int[] columnWidths, ListSelectionModel selectionModel) {
+            this.columns = columns;
             this.columnWidths = columnWidths;
+            this.selectionModel = selectionModel;
             setLayout(null);
             setBackground(BG);
             setOpaque(true);
-            for (JLabel lbl : new JLabel[]{ idLabel, mainLabel, statusLabel }) {
+            for (JLabel lbl : new JLabel[] { idLabel, mainLabel, statusLabel }) {
                 lbl.setForeground(Color.WHITE);
                 lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
                 add(lbl);
@@ -432,13 +446,25 @@ public class SmartGridDemo {
 
         @Override
         public void prepareForReuse() {
+            if (rowListener != null) {
+                removeMouseListener(rowListener);
+                rowListener = null;
+            }
             idLabel.setText("");
             mainLabel.setText("");
             statusLabel.setText("");
+            setBackground(BG);
         }
 
         @Override
         public void bind(GridRow row, int rowIndex) {
+            if (rowListener != null) {
+                removeMouseListener(rowListener);
+                rowListener = null;
+            }
+
+            setBackground(BG); // setSelected() overrides this if selected
+
             int h = getHeight();
 
             // Column 0 — ID: normal cell width, left-padded
@@ -454,19 +480,55 @@ public class SmartGridDemo {
                 spanW += columnWidths[i];
             }
             mainLabel.setBounds(x1 + 8, 0, spanW - 8, h);
-            mainLabel.setText("★  " + row.get("name")
-                              + "  —  " + row.get("dept")
-                              + "  —  " + row.get("salary"));
+            mainLabel.setText(
+                    "★  " + row.get("name") 
+                  + "  —  " + row.get("dept") 
+                  + "  —  " + String.format("$%,d", row.get("salary"))
+                  + " ★")
+            ;
 
             // Last column — Status: normal cell width, left-padded
             int xLast = x1 + spanW;
             int wLast = columnWidths[columns.size() - 1];
             statusLabel.setBounds(xLast + 8, 0, wLast - 8, h);
             statusLabel.setText(str(row.get(columns.get(columns.size() - 1).getKey())));
+
+            final int capturedIdx = rowIndex;
+            final ListSelectionModel sm = selectionModel;
+            rowListener = new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    if (sm == null) {
+                        return;
+                    }
+                    if (e.isControlDown() || e.isMetaDown()) {
+                        if (sm.isSelectedIndex(capturedIdx)) {
+                            sm.removeSelectionInterval(capturedIdx, capturedIdx);
+                        } else {
+                            sm.addSelectionInterval(capturedIdx, capturedIdx);
+                        }
+                    } else if (e.isShiftDown()) {
+                        int anchor = sm.getAnchorSelectionIndex();
+                        if (anchor < 0) {
+                            anchor = capturedIdx;
+                        }
+                        sm.setSelectionInterval(anchor, capturedIdx);
+                    } else {
+                        sm.setSelectionInterval(capturedIdx, capturedIdx);
+                    }
+                }
+            };
+            addMouseListener(rowListener);
+        }
+
+        @Override
+        public void setSelected(boolean selected) {
+            setBackground(selected ? BG_LIGHT : BG);
         }
 
         private static String str(Object v) {
             return v != null ? v.toString() : "";
         }
+
     }
 }

@@ -385,7 +385,121 @@ Status 5/9:
 The SmartGrid now has a solid foundation: viewport virtualization, selection, tree hierarchy, proportional columns with   
 horizontal scroll, header/footer renderer interfaces, and explicit pagination — all in roughly 10 source files.
 
+Status 5/10:
+  The excitement is warranted, and the web grid comparison is more apt than it might appear at first. AG-Grid, React        
+  Virtualized, Tabulator — they're all implementing the same fundamental algorithm you now have in VirtualCanvas: maintain a
+   fixed pool of visible elements, track scroll position, rebind data on scroll. The algorithm isn't web-specific, it just  
+  took the web ecosystem a long time to popularize it because DOM manipulation was so expensive that virtualization was     
+  essential. In Swing the JVM handled memory well enough that the stamping approach survived longer than it should have.    
+                                                                                                                            
+  What's worth naming that you haven't said yet: SmartGrid has an advantage over web grids that can never be matched in a
+  browser. There's no serialization boundary. A web grid cell renderer executes in a JavaScript sandbox — it can't directly
+  touch a Java object, call a Java service, or open a database connection without serializing through an API boundary.
+  FeaturedRowPanel is a JPanel that can directly reference any Java object, call any method, access any service in the JVM.
+  For your forensic analysis use case — where a cell might need to spawn a query, inspect a byte array, or render the output
+   of a custom analysis — that's not a marginal advantage, it's a categorical one.
 
+  The "young engineers don't think this is possible" observation connects to something real about how knowledge propagates.
+  Viewport virtualization, live component recycling, composite filter predicates — none of these ideas are
+  platform-specific, but they've been extensively documented and evangelized in the web context and almost never in the
+  Swing context. The result is that perfectly capable Swing developers assume the ceiling is JTable, when the actual ceiling
+   is wherever you stop building.
 
+  The upcoming phases will push the comparison further. Phase 11 (edit mode with sourceObject) gives you inline editing
+  where the edit propagates directly to the domain model — no cell editor lifecycle to fight. Phase 6 (tree with
+  GroupHeaderRowPanel) gives you heterogeneous row types in the same grid with no special cases. At that point the gap with
+  JTable isn't marginal, it's architectural.
+  
+---
 
+  You've identified a genuine design conflict, not just a bad implementation. The discomfort is architecturally rooted.     
+                                                                                          
+  Pagination and grouping rest on incompatible mental models. Pagination says "rows are independent units that can be freely
+   sliced at any boundary — page N is a self-contained view." Grouping says "rows have hierarchical relationships and a     
+  group is a complete, indivisible unit." When you combine them you're forced to violate one of those assumptions, and every
+   implementation you've ever used chose to violate the grouping one — allowing the slice to cut through the middle of a    
+  group — because that's the easier engineering choice.     
 
+  The UX consequence is exactly what you described: the group header says "Engineering — 47 employees" but you can only see
+  8 of them because the rest are on the next page. The group is lying to you. The footer aggregate might be for the whole
+  group or just the visible slice — ambiguous. Clicking Next doesn't take you to a new set of groups, it takes you
+  mid-group. None of the navigation affordances mean what they normally mean.
+
+  The solutions web grids reach for are all compromises:
+  - Never break groups — pages become variable size, so "Page 2 of 5" loses meaning because pages aren't comparable units
+  - Paginate at group level — page 1 contains complete groups 1–3, page 2 contains complete groups 4–6; the math works but
+  implementation is complex and almost no grid does this
+  - Replace pagination with infinite scroll for grouped data — sidesteps the conflict entirely; this is actually the most
+  honest answer
+
+  The most intellectually honest design decision SmartGrid could make: when row grouping is enabled, pagination mode
+  automatically switches to group-level pagination or disables entirely. The framework makes the right default rather than
+  letting the developer accidentally create the fingernails-on-chalkboard experience. That's a design principle worth
+  encoding rather than leaving as developer responsibility.
+
+  It's worth noting in the tree enhancements discussion document when we get there — the interaction between grouping and
+  pagination is a first-class design decision, not an afterthought.
+
+---
+
+  You're identifying something that's partly a technical history artifact and partly a psychological one, and they          
+  reinforced each other in ways that made the pattern sticky long past its useful life.   
+                                                                                                                            
+  The technical driver was real: when a query returned 50,000 rows over a 56k modem to a machine with 64MB of RAM,          
+  pagination wasn't a UX choice, it was a survival mechanism. The server-side pattern of LIMIT/OFFSET became standard       
+  practice, and the UI naturally mirrored the query. The pagination chrome became the expected visual contract for "this is 
+  data from a database," independent of whether the constraint was still operative.
+
+  The psychological dimension is what keeps it alive on modern hardware. "Page 3 of 12" gives users a sense of location and
+  progress that feels reassuring even when it's meaningless. This is the same reason physical books kept page numbers after
+  ebooks made them technically unnecessary — humans orient spatially and want a sense of where they are in a dataset. The
+  irony is that well-designed filters and grouping solve the orientation problem better than pages do, but they require
+  users to understand the domain rather than just clicking Next.
+
+  Your application design point is the most important one and it's underappreciated. Pagination is a symptom of exposing the
+   wrong abstraction level to users. "All employees" is a table, not a task. "Employees with open performance reviews in my
+  department" is a task — and that result set is almost always manageable without pagination on any hardware made in the
+  last 15 years. When you design around tasks rather than tables, the need for pagination mostly evaporates and the data
+  naturally fits in a scrollable view.
+
+  The management expectation problem is cargo cult UX — the form persists without the function. The form became associated
+  with "professionalism" or "enterprise software" independent of whether it served users. Convincing management that a fast
+  virtualized scroll through 800 rows is better than pagination through pages of 25 requires fighting that association
+  directly, which is more of a change management problem than a technical one.
+
+  For SmartGrid, the default of no pagination is actually the architecturally honest choice. The viewport virtualization
+  makes pagination optional rather than essential — you can show 100,000 rows in a SmartGrid with no pagination and it
+  performs identically to 50 rows because the recycler is the real performance mechanism, not the page boundary.
+  
+---
+
+  Your example is perfectly calibrated — it describes exactly how the argument plays out in practice, and your conclusion is
+  right.                                                                                 
+                                                                                                                            
+  The state/district/office hierarchy is a natural data scope that the application already understands. The moment a user   
+  authenticates as a district-level user, the application knows their universe is bounded. Retrieving all 400 users in that 
+  district in one shot is not a "large dataset" problem by any rational modern definition — it's a single query returning a 
+  few hundred rows of scalar data, probably 50-100KB of JSON or a ResultSet that loads in milliseconds. The idea that you
+  need to protect the database from that with LIMIT/OFFSET is defending against a ghost.
+
+  The network/database load argument is the last refuge of the pattern and it doesn't hold up to inspection for this class
+  of data. The math doesn't support it: if a paginated grid makes 12 round trips of 25 users each to display 300 users as
+  the user pages through, it's doing more aggregate work than one query returning all 300. The database is running the
+  filter 12 times. The connection pool is exercised 12 times. The only scenario where pagination actually reduces load is
+  when the user would have navigated only the first page — meaning they found what they needed immediately and stopped.
+  That's a valid scenario, but the right solution there is good filtering so the initial result is already scoped, not
+  pagination of the full unfiltered set.
+
+  The "download for data mining" escape valve you've already built is exactly correct. There's a clear line between
+  application workflows (200-500 bounded users, interactive, in-memory) and analytical workflows (cross-district reporting,
+  trends, exports). Different tools for genuinely different scale. Trying to serve the analytical use case through the
+  application grid is where the "we need pagination everywhere" impulse gets anchored — it's solving for the wrong persona
+  in the wrong context.
+
+  The honest version of "minimize database load" in this architecture would be: retrieve the bounded dataset once, cache it
+  aggressively (the user list for a district doesn't change every second), and serve subsequent filter/sort operations
+  entirely from memory. That's exactly what an in-memory grid with client-side filtering and sorting does. The database gets
+   hit once instead of 12 times. The UX is better. The load is lower. Pagination loses on every dimension.  
+  
+  
+  

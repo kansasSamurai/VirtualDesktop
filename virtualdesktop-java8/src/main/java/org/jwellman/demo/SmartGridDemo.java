@@ -7,6 +7,7 @@ import java.awt.Font;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JToggleButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
@@ -148,9 +149,14 @@ public class SmartGridDemo {
         globalFilterBar.add(new JLabel("Filter:"));
         globalFilterBar.add(filterField);
 
+        JPanel selToolbar = selectionToolbarWithCount(grid, totalRows);
+        JToggleButton editToggle = new JToggleButton("Edit Mode");
+        editToggle.addActionListener(e -> grid.setEditable(editToggle.isSelected()));
+        selToolbar.add(editToggle);
+
         JPanel north = new JPanel(new BorderLayout());
-        north.add(globalFilterBar,                      BorderLayout.NORTH);
-        north.add(selectionToolbarWithCount(grid, totalRows), BorderLayout.SOUTH);
+        north.add(globalFilterBar, BorderLayout.NORTH);
+        north.add(selToolbar,      BorderLayout.SOUTH);
 
         JLabel desc = new JLabel(
             " Global filter (any column) composes with per-column filters beneath the headers");

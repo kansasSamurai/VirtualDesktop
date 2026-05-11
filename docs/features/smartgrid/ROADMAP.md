@@ -12,7 +12,7 @@
 | 5 | Client-side filtering (`GridModelFilter`, search field) | ✅ Complete | |
 | 7 | VApp integration (`SpecSmartGrid`, `ActionFactory`) | ✅ Complete | |
 | 10 | Pagination (explicit page nav), footer row, renderer interfaces | ✅ Complete | |
-| 9a | `GridComponentFactory` — registration / dispatch mechanism | ⬜ Next | Prerequisite for tree and edit mode |
+| 9a | `GridComponentFactory` — registration / dispatch mechanism | ✅ Complete | Prerequisite for tree and edit mode |
 | 11 | Bidirectional data flow / inline edit mode (rudimentary) | ⬜ Next | Validates `sourceObject`; `isGroupHeader` guard |
 | 6 | Tree enhancements — implementation | ⬜ Next | Uses factory + `isGroupHeader` from above |
 | 9b | `ScriptableRecyclable` + Blueprint DSL + BeanShell integration | ⬜ Deferred | Complex; not needed for tree or edit mode |
@@ -414,7 +414,7 @@ public interface RowHeightProvider {
 
 ---
 
-## Phase 9 — `GridComponentFactory` + `ScriptableRecyclable`
+## Phase 9b — `ScriptableRecyclable` + Blueprint DSL + BeanShell Integration
 
 **Why**: Tag-based component dispatch + BeanShell templates enable runtime-defined row UIs.
 

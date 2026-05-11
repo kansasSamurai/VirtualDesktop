@@ -52,4 +52,25 @@ public class GridRow {
 
     public boolean isProcessing() { return processing; }
     public GridRow setProcessing(boolean processing) { this.processing = processing; return this; }
+
+    private Object  sourceObject = null;
+    private boolean groupHeader  = false;
+
+    public Object getSourceObject() {
+        return sourceObject;
+    }
+
+    public GridRow setSourceObject(Object obj) {
+        this.sourceObject = obj;
+        return this;
+    }
+
+    public boolean isGroupHeader() {
+        return groupHeader;
+    }
+
+    public GridRow setGroupHeader(boolean flag) {
+        this.groupHeader = flag;
+        return this;
+    }
 }

@@ -216,7 +216,7 @@ public class StandardRowPanel extends JPanel implements Recyclable {
         rowListener = new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (sm != null) {
+                if (sm != null && !capturedRow.isGroupHeader()) {
                     if (e.isControlDown() || e.isMetaDown()) {
                         if (sm.isSelectedIndex(capturedIdx))
                             sm.removeSelectionInterval(capturedIdx, capturedIdx);

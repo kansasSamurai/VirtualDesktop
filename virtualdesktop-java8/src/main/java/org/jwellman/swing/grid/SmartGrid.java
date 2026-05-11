@@ -118,6 +118,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private String[]      slotTypes; // parallel to slots[]; null = default (StandardRowPanel) pool
     private ComponentPool pool;
     private final Map<String, ComponentPool> typedPools = new HashMap<>();
+    private boolean editable = false;
     private JPanel        southPanel    = null;
     private JPanel        footerPanel   = null;
     private PaginationBar paginationBar = null;
@@ -337,6 +338,28 @@ public class SmartGrid extends JPanel implements GridModelListener {
      */
     public void registerRowRenderer(String fndType, Supplier<JComponent> supplier) {
         typedPools.put(fndType, new ComponentPool(supplier));
+    }
+
+    /**
+     * Enables or disables global inline edit mode. When enabled, all rows switch
+     * to {@link EditableRowPanel} (JTextField per column); edits are written back
+     * to the {@link GridRow} on focus-lost. When disabled, rows revert to the
+     * normal type-dispatch pool.
+     */
+    public void setEditable(boolean editable) {
+        if (this.editable == editable) {
+            return;
+        }
+        this.editable = editable;
+        if (editable && !typedPools.containsKey("edit")) {
+            List<ColumnDef> cols = model.getColumns();
+            registerRowRenderer("edit",
+                () -> new EditableRowPanel(cols, selectionModel, columnWidths, darkTheme));
+        }
+        if (slots != null) {
+            reallocateSlots(slots.length);
+        }
+        refresh();
     }
 
     // -------------------------------------------------------------------------
@@ -596,7 +619,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
             int modelIdx = pageOffset + rowIdx;
             if (rowIdx < effectiveRows && modelIdx < model.getRowCount()) {
                 GridRow row = model.getRow(modelIdx);
-                String requiredType = row.getTag("fnd-type");
+                String requiredType = editable ? "edit" : row.getTag("fnd-type");
 
                 // Swap component only when the required row type changes
                 if (!Objects.equals(requiredType, slotTypes[i])) {

@@ -1240,7 +1240,199 @@ FeaturedRowPanel is the proof point — it's a completely ordinary
 
 
 
+## SmartGrid Phase 11 — Bidirectional Data Flow / Inline Edit Mode                                                            
+                                                        
+### Context
 
+Phase 9a proved the typed-pool dispatch mechanism works (FeaturedRowPanel). Phase 11
+ leverages that same mechanism to add a global edit mode: clicking "Edit Mode" swaps all
+ row slots from StandardRowPanel to EditableRowPanel, which uses JTextFields instead
+ of JLabels. On focus-lost each field writes directly back into GridRow.put(key, text).
+ This validates bidirectional data flow and introduces sourceObject / isGroupHeader
+ on GridRow — both prerequisites for Phase 6 tree enhancements.
+
+ ---
+
+ New File: EditableRowPanel.java
+
+ org.jwellman.swing.grid.EditableRowPanel — JPanel implementing Recyclable.
+
+ Uses the same constructor signature shape as StandardRowPanel so it drops into the
+ existing ComponentPool(() -> new EditableRowPanel(...)) factory pattern.
+
+ Fields:
+   List<ColumnDef>          columns         (injected)
+   ListSelectionModel       selectionModel  (shared reference)
+   int[]                    columnWidths    (shared reference — updated in-place by SmartGrid)
+   boolean                  darkTheme
+   List<JTextField>         fields          (one per column, created in constructor)
+   FocusListener[]          focusListeners  (one per column, created/removed per bind cycle)
+   MouseAdapter             rowListener     (removed in prepareForReuse)
+
+ Constructor — setLayout(null). For each column: create a JTextField, set opaque,
+ border, font, foreground, add to panel. Store in fields list.
+
+ prepareForReuse():
+ 1. Remove rowListener if non-null; set to null.
+ 2. For each field: remove its focusListeners[i] if non-null; clear text; reset background.
+
+ bind(GridRow row, int rowIndex):
+ 1. Build and attach rowListener (MouseAdapter) that handles selection same as
+ StandardRowPanel — but skip selection if row.isGroupHeader().
+ 2. Apply background: alternating even/odd (or selection highlight if selected).
+ 3. For each column i:
+ a. Set fields.get(i).setText(stringOf(row.get(col.getKey()))).
+ b. Create a FocusListener that on focusLost calls row.put(col.getKey(), fields.get(i).getText()).
+ c. Store it in focusListeners[i] and add to the field.
+ d. Position: fields.get(i).setBounds(x, 2, columnWidths[i] - 2, rowHeight - 4) using
+    the same x-accumulator pattern as StandardRowPanel.
+ 4. Validate/repaint.
+
+ Helper: private static String stringOf(Object v) — returns "" if null, else v.toString().
+
+ Imports needed: javax.swing.JTextField, java.awt.event.FocusAdapter,
+ java.awt.event.FocusEvent, rest already in StandardRowPanel's import set.
+
+ ---
+ Changes to GridRow.java
+
+ Add two new fields with getters and setters:
+
+ private Object  sourceObject = null;
+ private boolean groupHeader  = false;
+
+ Accessor methods (multi-line format per project conventions):
+ public Object getSourceObject() {
+     return sourceObject;
+ }
+
+ public GridRow setSourceObject(Object obj) {
+     this.sourceObject = obj;
+     return this;
+ }
+
+ public boolean isGroupHeader() {
+     return groupHeader;
+ }
+
+ public GridRow setGroupHeader(boolean flag) {
+     this.groupHeader = flag;
+     return this;
+ }
+
+ File: org/jwellman/swing/grid/GridRow.java
+
+ ---
+ Changes to StandardRowPanel.java
+
+ In bind(), inside the mousePressed handler, wrap the selection logic with an
+ isGroupHeader guard so group header rows cannot be selected:
+
+ if (!row.isGroupHeader()) {
+     if (shiftDown) { ... }
+     else if (ctrlDown) { ... }
+     else { ... }
+     // trigger refresh
+ }
+
+ The expand/collapse toggle (for tree rows with children) remains outside the guard —
+ group headers may still be expandable even if not selectable.
+
+ File: org/jwellman/swing/grid/StandardRowPanel.java
+
+ ---
+ Changes to SmartGrid.java
+
+ New field
+
+ private boolean editable = false;
+
+ setEditable(boolean editable)
+
+ public void setEditable(boolean editable) {
+     if (this.editable == editable) {
+         return;
+     }
+     this.editable = editable;
+     if (editable && !typedPools.containsKey("edit")) {
+         List<ColumnDef> cols = model.getColumns();
+         registerRowRenderer("edit",
+             () -> new EditableRowPanel(cols, selectionModel, columnWidths, darkTheme));
+     }
+     if (slots != null) {
+         for (int i = 0; i < slotTypes.length; i++) {
+             slotTypes[i] = null;
+         }
+     }
+     refresh();
+ }
+
+ Nulling slotTypes[] forces the existing slot-swap logic in refresh() to treat every
+ slot as mismatched and swap it out from the correct pool.
+
+ Modify effective-type lookup in refresh()
+
+ In the section of refresh() that determines which pool/type to use for each slot,
+ change the effective fnd-type resolution from:
+
+ String fndType = row.getTag("fnd-type");
+
+ to:
+
+ String fndType = editable ? "edit" : row.getTag("fnd-type");
+
+ This one-line change causes all slots to migrate to the "edit" pool when editable=true,
+ and back to normal type-dispatch when editable=false.
+
+ File: org/jwellman/swing/grid/SmartGrid.java
+
+ ---
+ Changes to SmartGridDemo.java
+
+ In buildTableTab(), add a "Edit Mode" toggle button to the existing toolbar (alongside
+ Select All / Clear / status label):
+
+ JToggleButton editToggle = new JToggleButton("Edit Mode");
+ editToggle.addActionListener(e -> grid.setEditable(editToggle.isSelected()));
+ toolbar.add(editToggle);
+
+ No changes needed to other tabs — Tree, List, and Paged remain view-only.
+
+ File: org/jwellman/demo/SmartGridDemo.java
+
+ ---
+ File Summary
+
+ ┌───────────────────────┬──────────────────────────────────────────────────────────────────────────────────┐
+ │         File          │                                      Action                                      │
+ ├───────────────────────┼──────────────────────────────────────────────────────────────────────────────────┤
+ │ EditableRowPanel.java │ New — JTextField per column; FocusListener write-back to GridRow                 │
+ ├───────────────────────┼──────────────────────────────────────────────────────────────────────────────────┤
+ │ GridRow.java          │ Modify — add sourceObject (Object) + isGroupHeader (boolean)                     │
+ ├───────────────────────┼──────────────────────────────────────────────────────────────────────────────────┤
+ │ StandardRowPanel.java │ Modify — isGroupHeader guard in mousePressed selection handler                   │
+ ├───────────────────────┼──────────────────────────────────────────────────────────────────────────────────┤
+ │ SmartGrid.java        │ Modify — editable flag; setEditable(boolean); effective-type override in refresh │
+ ├───────────────────────┼──────────────────────────────────────────────────────────────────────────────────┤
+ │ SmartGridDemo.java    │ Modify — "Edit Mode" toggle button in Table tab toolbar                          │
+ └───────────────────────┴──────────────────────────────────────────────────────────────────────────────────┘
+
+ ---
+ 
+ ### Verification
+
+ 1. Toggle on — click "Edit Mode" in Table tab; all rows switch from JLabel to JTextField.
+ 2. Write-back — type new text in a Name field; click elsewhere (focus-lost fires);
+ scroll down past the row and back — the edited text persists (it lives in the GridRow).
+ 3. Toggle off — click "Edit Mode" again; all rows revert to JLabel display showing
+ the edited value.
+ 4. Selection in edit mode — clicking a row background (not a field) still selects it;
+ status bar count updates correctly.
+ 5. Other tabs — Tree, List, Paged tabs unaffected; no regression.
+ 6. isGroupHeader guard — manually tag a GridRow with setGroupHeader(true) in demo
+ data; verify clicking it does not change the selection highlight.
+ 
+ 
 
 
 

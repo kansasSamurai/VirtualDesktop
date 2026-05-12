@@ -93,6 +93,144 @@ ratio — expressive power per line of user code — is where `JTable` never got
 
 ---
 
+## Design Notes — Known Behaviors and Fixes
+
+### Re-entrant `refresh()` and Look-and-Feel layout (Fixed)
+
+**Symptom**: Rows rendered blank (checkbox visible, data panel empty) when resizing an
+internal frame that contains a SmartGrid. Reproducible only under FlatLaf; the system
+LAF did not trigger it. Blank rows persisted even after scrolling away and back.
+No console errors.
+
+**Root cause**: Two compounding problems, both rooted in `rebuildHeaderView()` being
+called from *inside* `refresh()`.
+
+When the viewport width changes, `refresh()` calls
+`scrollPane.setColumnHeaderView(buildHeader(...))`. FlatLaf performs a heavier
+synchronous layout pass than the system LAF during this call — it recomputes component
+metrics (borders, insets, focus-ring geometry) immediately rather than deferring them.
+This layout pass can change the viewport height by a pixel or two, which fires the
+viewport `ChangeListener` *synchronously*, which calls `refresh()` again before the
+outer call has computed `visibleCount` or bound any slots. The re-entrant call operates
+on the same mutable `slots[]` and `slotTypes[]` arrays, leaving the outer call with an
+inconsistent view of the world once it resumes.
+
+A second related problem: even without full re-entry, the `vpHeight` captured at the
+top of `refresh()` was stale by the time `visibleCount` was computed, because
+FlatLaf's layout inside `setColumnHeaderView` could shrink or grow the viewport.
+A slot count based on the pre-layout height means some on-screen rows have no slot
+bound to them — they show as blank canvas background.
+
+**Fix** (`SmartGrid.java`):
+
+1. **Re-entrancy guard** — `refresh()` now sets a `refreshing` flag and delegates to
+   `doRefresh()`. Any re-entrant call bails out immediately via `if (refreshing) return`.
+   The guard is cleared in a `finally` block.
+
+2. **Re-read `vpHeight` after header rebuild** — after `rebuildHeaderView()` returns,
+   `vpHeight` is re-read from the viewport before computing `visibleCount`. This ensures
+   slot allocation reflects the actual post-layout viewport height, not a transient value
+   captured before FlatLaf's layout pass ran.
+
+**Why the system LAF didn't show this**: The system (Windows) LAF delegates most layout
+measurement to the OS and does less work synchronously during `setColumnHeaderView()`.
+The ChangeListener is typically fired asynchronously or not at all for the same viewport
+resize that FlatLaf triggers synchronously.
+
+**Relevance to Phase 12**: Phase 12 (persistent header panels) will eliminate
+`rebuildHeaderView()` entirely, removing the root cause rather than just guarding
+against it. Until then, the guard and re-read are the correct mitigations.
+
+### Could FlatLaf fix this on their end?
+
+FlatLaf can't change *when* the `ChangeListener` fires — that mechanism lives entirely
+in `javax.swing.JViewport.fireStateChanged()`, which is core Swing. FlatLaf has no
+ownership of it. The listener fires whenever `JViewport.reshape()` detects a size
+change, and that call comes from Swing's own scroll pane layout manager, not from
+FlatLaf.
+
+What FlatLaf *does* own is the layout work that *causes* `reshape()` to see a size
+change. The chain is:
+
+```
+setColumnHeaderView()
+  → Swing asks the scroll pane's LayoutManager to lay out
+    → FlatLaf's layout computes component metrics (borders, insets, focus geometry)
+      → viewport gets a slightly different height than before
+        → JViewport.reshape() detects the change
+          → fireStateChanged() fires the ChangeListener
+            → refresh() re-enters
+```
+
+FlatLaf's fix opportunity is in step 3. If their `layoutContainer()` override were
+*idempotent* — meaning running it twice with the same header height produced identical
+viewport dimensions both times — then `reshape()` would see no change, and
+`fireStateChanged()` would never fire. The ChangeListener is a correct and faithful
+notification; the problem is that FlatLaf's layout is unstable enough that rebuilding
+the header (with the same height) produces a different viewport geometry than the
+previous layout computed.
+
+The system LAF avoids this because it delegates most metric computation to the OS and
+its layout is stable — rebuilding the header panel with the same row height produces
+exactly the same viewport dimensions, so `reshape()` sees no delta and stays quiet.
+
+So to directly answer: FlatLaf moving the ChangeListener call wouldn't help because
+they don't own it. But FlatLaf stabilizing their layout so it doesn't produce a
+different viewport size when nothing semantically changed *would* fix it at the root.
+That's a harder problem for them because their richer component geometry
+(anti-aliased borders, animated focus rings, precise insets) is exactly what makes
+those metrics non-trivially reproducible across consecutive layout passes.
+
+### How the geometry changes between two calls — a concrete example
+
+The most common mechanism is the horizontal scrollbar negotiation cycle. Swing's scroll
+pane layout must answer a circular question: "does the content need a horizontal
+scrollbar?" — but the answer depends on the viewport width, which depends on whether a
+vertical scrollbar is showing, which depends on the content height, which depends on
+the viewport height, which depends on whether a horizontal scrollbar is showing.
+
+Swing breaks this cycle by running the layout in a fixed sequence and committing to the
+first answer. FlatLaf's pass may reach a *different* committed answer than the prior
+pass if its starting assumptions differ by even one pixel.
+
+Concrete scenario with a 600px-wide, 400px-tall viewport and a header that is 32px
+tall:
+
+**Prior layout** (before `setColumnHeaderView` is called):
+```
+Available height        = 400px
+Header height           = 32px  (existing header)
+Horizontal scrollbar?   → content width 640 > viewport 600 → YES  → hsbHeight = 17px
+Viewport height         = 400 - 32 - 17 = 351px
+```
+Viewport settles at 351px. No `reshape()` delta. Quiet.
+
+**Layout triggered by `setColumnHeaderView`** (FlatLaf rebuilds metrics):
+During FlatLaf's synchronous layout, the *new* header panel is being committed. For a
+brief moment FlatLaf evaluates the scroll pane geometry while the header's preferred
+size has not yet been flushed from the component's internal cache — it temporarily
+reads as 0px wide. With no content width competing against the viewport width, FlatLaf
+tentatively decides:
+```
+Horizontal scrollbar?   → content width 0 < viewport 600 → NO   → hsbHeight = 0px
+Viewport height         = 400 - 32 - 0  = 368px
+```
+`JViewport.reshape()` is called with height=368. That differs from 351. `fireStateChanged()`
+fires. Our `ChangeListener` re-enters `refresh()`.
+
+On the *next* layout pass (triggered by that ChangeListener), the header's preferred
+size is now properly cached, content width is 640 again, and the layout stabilises back
+at 351px. But the damage is already done — `refresh()` was re-entered mid-execution.
+
+**The general test for your own layout managers**: after any mutation that could change
+geometry (adding a child, changing an inset), call `layoutContainer()` twice in a row
+and assert that the bounds of every managed component are identical on the second call.
+If they differ, your layout manager is non-idempotent and will trigger spurious
+`ChangeListener` or `ComponentListener` events in hosts that call layout from inside an
+event handler.
+
+---
+
 ## Baseline (MVP — complete)
 
 The following are already implemented and working via `SmartGridDemo`:

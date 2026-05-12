@@ -549,7 +549,47 @@ VirtualCanvas (null layout, full virtual height)
 └── …
 
 
+---
 
+SmartGrid Phase 6 — Tree Enhancements + Strip Abstraction
+                                                                                                                            
+Context
+                                                                                                                    
+Phase 16 (checkbox strip) proved the "parallel component array inside VirtualCanvas"                                 
+pattern works. The tree zone is the same pattern: a fixed-width left column of
+components that live in the canvas alongside data slot panels. Two concrete strips
+means defining a Strip interface now earns its keep — the checkbox strip is refactored
+to implement it, the tree zone is the second implementation, and SmartGrid manages
+List<Strip> rather than ad-hoc checkbox fields scattered through five methods.
+
+Phase 6 tree enhancements also clean up a long-standing fragility: tree
+indentation/toggle is currently baked into StandardRowPanel.bind() as a text prefix
+on column 0, which eats into that column's content width. Moving it to a dedicated
+TreeZoneStrip means data columns always start at the same x regardless of depth.
+
+---
+Part 1 — Strip Interface (new file)
+
+org.jwellman.swing.grid.Strip — public interface.
+
+public interface Strip {
+ int      getWidth();
+ boolean  isVisible();
+ void     reallocate(int slotCount, JPanel canvas);
+ void     bind(int slotIdx, int xOffset, int y, int rowHeight, int modelIdx, GridRow row);
+ void     hide(int slotIdx);
+ JComponent headerCell(int height);
+ JComponent filterSpacer(int height);
+ JComponent footerSpacer(int height);
+}
+
+- bind() receives xOffset and y so each strip can position its canvas components
+without needing a back-reference to SmartGrid.
+- hide() is called when the slot is off-screen (no visible row at that position).
+- headerCell() returns a component the size of the strip's width (select-all checkbox,
+tree collapse-all button, or empty JPanel). Caller positions it.
+- filterSpacer() / footerSpacer() return opaque-false spacer panels sized to the
+strip width.
 
 
 

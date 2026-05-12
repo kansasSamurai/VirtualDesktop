@@ -128,7 +128,8 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private String[]      slotTypes; // parallel to slots[]; null = default (StandardRowPanel) pool
     private ComponentPool pool;
     private final Map<String, ComponentPool> typedPools = new HashMap<>();
-    private boolean editable = false;
+    private boolean editable   = false;
+    private boolean refreshing = false; // re-entrancy guard
     private JPanel        southPanel    = null;
     private JPanel        footerPanel   = null;
     private PaginationBar paginationBar = null;
@@ -663,10 +664,18 @@ public class SmartGrid extends JPanel implements GridModelListener {
     // -------------------------------------------------------------------------
 
     private void refresh() {
-        if (!isShowing()) {
+        if (refreshing || !isShowing()) {
             return;
         }
+        refreshing = true;
+        try {
+            doRefresh();
+        } finally {
+            refreshing = false;
+        }
+    }
 
+    private void doRefresh() {
         int vpHeight = scrollPane.getViewport().getHeight();
         int vpWidth  = scrollPane.getViewport().getWidth();
         int scrollY  = scrollPane.getViewport().getViewPosition().y;
@@ -682,6 +691,9 @@ public class SmartGrid extends JPanel implements GridModelListener {
             if (footerRenderer != null) {
                 refreshFooter();
             }
+            // Re-read height: FlatLaf's synchronous layout inside setColumnHeaderView
+            // can change the viewport height between the initial capture and slot sizing.
+            vpHeight = scrollPane.getViewport().getHeight();
         }
 
         int totalColWidth = totalColumnWidth();
@@ -749,6 +761,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
         canvas.repaint();
     }
+
 
     private void reallocateSlots(int count) {
         if (slots != null) {

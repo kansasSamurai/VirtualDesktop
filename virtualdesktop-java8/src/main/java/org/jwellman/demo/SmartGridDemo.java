@@ -203,7 +203,8 @@ public class SmartGridDemo {
                 .put("name",   dept[0])
                 .put("role",   count + " employees")
                 .put("salary", "")
-                .setDepth(0).setHasChildren(true).setExpanded(false));
+                .setDepth(0).setHasChildren(true).setExpanded(false)
+                .setGroupHeader(true));
 
             for (int e = 0; e < count; e++) {
                 model.addRow(new GridRow()
@@ -216,7 +217,8 @@ public class SmartGridDemo {
         }
 
         SmartGrid grid = new SmartGrid(model, darkTheme);
-        return wrap(grid, "Click a department row to expand / collapse its employees");
+        grid.setTreeZoneVisible(true);
+        return wrap(grid, "Click the ▶ toggle to expand / collapse department employees");
     }
 
     // -------------------------------------------------------------------------

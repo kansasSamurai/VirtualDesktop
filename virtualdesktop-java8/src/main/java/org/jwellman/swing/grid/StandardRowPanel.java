@@ -162,11 +162,8 @@ public class StandardRowPanel extends JPanel implements Recyclable {
             fgColor = UIManager.getColor("Label.foreground");
         }
 
-        // ③ Tree prefix / indent for the default rendering of column 0
-        int indent    = row.getDepth() * 16;
-        String prefix = buildTreePrefix(row);
-        Font base     = UIManager.getFont("Label.font");
-        int cellH     = getHeight() > 0 ? getHeight() : 32;
+        Font base  = UIManager.getFont("Label.font");
+        int cellH  = getHeight() > 0 ? getHeight() : 32;
 
         // ④ Render and position each cell
         int x = 0;
@@ -193,13 +190,8 @@ public class StandardRowPanel extends JPanel implements Recyclable {
                 // Default JLabel path
                 JLabel lbl = ensureLabel(i);
                 String text = val != null ? val.toString() : "";
-                if (i == 0 && !prefix.isEmpty()) {
-                    lbl.setText(prefix + text);
-                    lbl.setBorder(BorderFactory.createEmptyBorder(2, 8 + indent, 2, 8));
-                } else {
-                    lbl.setText(text);
-                    lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
-                }
+                lbl.setText(text);
+                lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
                 lbl.setFont(base);
                 lbl.setForeground(fgColor);
                 lbl.setBounds(x, 0, w, cellH);
@@ -254,10 +246,5 @@ public class StandardRowPanel extends JPanel implements Recyclable {
         return lbl;
     }
 
-    private String buildTreePrefix(GridRow row) {
-        if (row.isHasChildren()) {
-            return row.isExpanded() ? "▼ " : "▶ ";
-        }
-        return row.getDepth() > 0 ? "  " : "";
-    }
+
 }

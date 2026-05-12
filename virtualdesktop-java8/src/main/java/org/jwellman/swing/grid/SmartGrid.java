@@ -117,6 +117,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private TreeZoneStrip     treeZoneStrip;
 
     // Swing components
+    private JPanel        toolbarPanel  = null; // created lazily by getToolbar()
     private JScrollPane   scrollPane;
     private VirtualCanvas canvas;
     private JComponent[]  slots;
@@ -209,6 +210,27 @@ public class SmartGrid extends JPanel implements GridModelListener {
             }
         });
 
+        // Fill the upper-right corner so the header band spans the full width.
+        // When the column filter row is visible the corner splits: top rowHeight px
+        // in headerBg, remainder in filterRowBg, matching the two-row header layout.
+        JPanel cornerFill = new JPanel() {
+            @Override
+            protected void paintComponent(java.awt.Graphics g) {
+                super.paintComponent(g);
+                if (columnFiltersVisible) {
+                    g.setColor(headerBg);
+                    g.fillRect(0, 0, getWidth(), rowHeight);
+                    g.setColor(filterRowBg);
+                    g.fillRect(0, rowHeight, getWidth(), Math.max(0, getHeight() - rowHeight));
+                } else {
+                    g.setColor(headerBg);
+                    g.fillRect(0, 0, getWidth(), getHeight());
+                }
+            }
+        };
+        cornerFill.setBackground(headerBg);
+        scrollPane.setCorner(JScrollPane.UPPER_RIGHT_CORNER, cornerFill);
+
         add(scrollPane, BorderLayout.CENTER);
     }
 
@@ -238,6 +260,21 @@ public class SmartGrid extends JPanel implements GridModelListener {
         this.rowHeight = rowHeight;
         canvas.revalidate();
         refresh();
+    }
+
+    /**
+     * Returns the grid's built-in toolbar panel, creating it on first call.
+     * The toolbar sits above the column header row and shares the same background
+     * colour as the headers. Add any components ({@code JLabel}, {@code JTextField},
+     * {@code JToggleButton}, etc.) directly to this panel.
+     */
+    public JPanel getToolbar() {
+        if (toolbarPanel == null) {
+            toolbarPanel = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 8, 4));
+            toolbarPanel.setBackground(headerBg);
+            add(toolbarPanel, BorderLayout.NORTH);
+        }
+        return toolbarPanel;
     }
 
     public boolean isCheckboxColumnVisible() {

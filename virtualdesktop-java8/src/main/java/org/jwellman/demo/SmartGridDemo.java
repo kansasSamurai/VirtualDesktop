@@ -119,7 +119,6 @@ public class SmartGridDemo {
             model.addRow(row);
         }
 
-        final int totalRows = model.getRowCount();
         SmartGrid grid = new SmartGrid(model, darkTheme);
         grid.registerFormatter("currency", v -> String.format("$%,d", ((Number) v).longValue()));
         final List<ColumnDef>    featuredCols   = model.getColumns();
@@ -127,9 +126,9 @@ public class SmartGridDemo {
         final ListSelectionModel featuredSm     = grid.getSelectionModel();
         grid.registerRowRenderer("featured",
             () -> new FeaturedRowPanel(featuredCols, featuredWidths, featuredSm));
-        grid.setColumnFiltersVisible(true); // per-column filter row beneath headers
+        grid.setColumnFiltersVisible(true);
 
-        // Global filter bar (OR across all columns — keeps any row where ANY column matches)
+        // Global filter field — wired to grid; lives in the grid's built-in toolbar
         JTextField filterField = new JTextField(20);
         filterField.getDocument().addDocumentListener(new DocumentListener() {
             private void applyFilter() {
@@ -153,28 +152,18 @@ public class SmartGridDemo {
             @Override public void changedUpdate(DocumentEvent e) { applyFilter(); }
         });
 
-        JPanel globalFilterBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 2));
-        globalFilterBar.add(new JLabel("Filter:"));
-        globalFilterBar.add(filterField);
-
-        JPanel selToolbar = selectionToolbarWithCount(grid, totalRows);
         JToggleButton editToggle = new JToggleButton("Edit Mode");
         editToggle.addActionListener(e -> grid.setEditable(editToggle.isSelected()));
-        selToolbar.add(editToggle);
 
-        JPanel north = new JPanel(new BorderLayout());
-        north.add(globalFilterBar, BorderLayout.NORTH);
-        north.add(selToolbar,      BorderLayout.SOUTH);
+        JLabel filterLabel = new JLabel("Filter:");
+        filterLabel.setForeground(java.awt.Color.WHITE);
 
-        JLabel desc = new JLabel(
-            " Global filter (any column) composes with per-column filters beneath the headers");
-        desc.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        JPanel toolbar = grid.getToolbar();
+        toolbar.add(filterLabel);
+        toolbar.add(filterField);
+        toolbar.add(editToggle);
 
-        JPanel tab = new JPanel(new BorderLayout());
-        tab.add(north, BorderLayout.NORTH);
-        tab.add(grid,  BorderLayout.CENTER);
-        tab.add(desc,  BorderLayout.SOUTH);
-        return tab;
+        return grid;
     }
 
     // -------------------------------------------------------------------------

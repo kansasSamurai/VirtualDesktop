@@ -22,6 +22,7 @@ import javax.swing.event.DocumentListener;
 
 import java.util.List;
 import org.jwellman.swing.grid.ColumnDef;
+import org.jwellman.swing.grid.DefaultGridComponentFactory;
 import org.jwellman.swing.grid.DefaultGridModel;
 import org.jwellman.swing.grid.GridModelListener;
 import org.jwellman.swing.grid.GridRow;
@@ -30,12 +31,13 @@ import org.jwellman.swing.grid.Selectable;
 import org.jwellman.swing.grid.SmartGrid;
 
 /**
- * Four-tab demo for SmartGrid:
+ * Demo for SmartGrid — one tab per major feature phase:
  *
- *  "Table" — 1,000 flat rows; viewport virtualization; proportional column widths
- *  "Tree"  — departments + employees; expand/collapse; unified model
- *  "List"  — single-column SmartGrid; demonstrates list-is-a-table
- *  "Paged" — 1,000 rows / 50 per page; footer aggregates; pagination bar
+ *  "Table"    — 1,000 flat rows; viewport virtualization; proportional column widths
+ *  "Tree"     — departments + employees; expand/collapse; unified model
+ *  "List"     — single-column SmartGrid; demonstrates list-is-a-table
+ *  "Paged"    — 1,000 rows / 50 per page; footer aggregates; pagination bar
+ *  "Scripted" — Phase 9b: XML blueprint + BeanShell bind scripts; every 30th row rendered by ScriptableRecyclable
  */
 public class SmartGridDemo {
 
@@ -84,10 +86,11 @@ public class SmartGridDemo {
      */
     public static JTabbedPane createDemoTabs(boolean darkTheme) {
         JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("Table", buildTableTab(darkTheme));
-        tabs.addTab("Tree",  buildTreeTab(darkTheme));
-        tabs.addTab("List",  buildListTab(darkTheme));
-        tabs.addTab("Paged", buildPagedTab(darkTheme));
+        tabs.addTab("Table",    buildTableTab(darkTheme));
+        tabs.addTab("Tree",     buildTreeTab(darkTheme));
+        tabs.addTab("List",     buildListTab(darkTheme));
+        tabs.addTab("Paged",    buildPagedTab(darkTheme));
+        tabs.addTab("Scripted", buildScriptedTab(darkTheme));
         return tabs;
     }
 
@@ -290,6 +293,82 @@ public class SmartGridDemo {
         grid.setPageSize(50);
 
         return wrap(grid, "50 rows per page — footer shows per-page aggregates; navigation bar below");
+    }
+
+    // -------------------------------------------------------------------------
+    // Tab 5: Phase 9b — ScriptableRecyclable + Blueprint DSL + BeanShell
+    // -------------------------------------------------------------------------
+
+    /**
+     * Blueprint XML for the "scripted" fnd-type row renderer.
+     * Three columns: ID (fixed 50px), main spanning label (weighted), Status (fixed 80px).
+     * Bind and prepare scripts are embedded as CDATA in &lt;script&gt; elements.
+     */
+    private static final String SCRIPTED_BLUEPRINT_XML = ""
+        + "<row>"
+        + "  <column preferred-width=\"50\">"
+        + "    <label id=\"idLabel\" text=\"\"/>"
+        + "  </column>"
+        + "  <column weight=\"1\">"
+        + "    <label id=\"mainLabel\" text=\"\"/>"
+        + "  </column>"
+        + "  <column preferred-width=\"80\">"
+        + "    <label id=\"statusLabel\" text=\"\"/>"
+        + "  </column>"
+        + "  <script name=\"bind\"><![CDATA["
+        + "    import org.jwellman.swing.grid.ComponentFinder;"
+        + "    import javax.swing.JLabel;"
+        + "    import java.awt.Color;"
+        + "    import java.awt.Font;"
+        + "    self.setBackground(new Color(0x1A3A5C));"
+        + "    JLabel idLbl   = (JLabel) ComponentFinder.find(panel, \"idLabel\");"
+        + "    JLabel mainLbl = (JLabel) ComponentFinder.find(panel, \"mainLabel\");"
+        + "    JLabel statLbl = (JLabel) ComponentFinder.find(panel, \"statusLabel\");"
+        + "    if (idLbl   != null) { idLbl.setForeground(Color.WHITE); idLbl.setText(row.get(\"id\").toString()); }"
+        + "    if (mainLbl != null) { mainLbl.setForeground(new Color(0x7EC8E3)); mainLbl.setFont(mainLbl.getFont().deriveFont(Font.BOLD)); mainLbl.setText(\"\\u00BB  \" + row.get(\"name\") + \"  /  \" + row.get(\"dept\")); }"
+        + "    if (statLbl != null) { statLbl.setForeground(Color.WHITE); statLbl.setText(row.get(\"status\").toString()); }"
+        + "  ]]></script>"
+        + "  <script name=\"prepare\"><![CDATA["
+        + "    import org.jwellman.swing.grid.ComponentFinder;"
+        + "    import javax.swing.JLabel;"
+        + "    self.setBackground(java.awt.Color.WHITE);"
+        + "    JLabel idLbl   = (JLabel) ComponentFinder.find(panel, \"idLabel\");"
+        + "    JLabel mainLbl = (JLabel) ComponentFinder.find(panel, \"mainLabel\");"
+        + "    JLabel statLbl = (JLabel) ComponentFinder.find(panel, \"statusLabel\");"
+        + "    if (idLbl   != null) { idLbl.setText(\"\"); }"
+        + "    if (mainLbl != null) { mainLbl.setText(\"\"); }"
+        + "    if (statLbl != null) { statLbl.setText(\"\"); }"
+        + "  ]]></script>"
+        + "</row>";
+
+    private static JPanel buildScriptedTab(boolean darkTheme) {
+        DefaultGridModel model = new DefaultGridModel()
+            .addColumn(new ColumnDef("id",     "ID",          50,  true,  true, null))
+            .addColumn(new ColumnDef("name",   "Name",       220,  true,  true, null))
+            .addColumn(new ColumnDef("dept",   "Department", 180,  true,  true, null))
+            .addColumn(new ColumnDef("salary", "Salary",     110,  true,  true, "currency"))
+            .addColumn(new ColumnDef("status", "Status",      80,  false, true, null));
+
+        for (int i = 1; i <= 1000; i++) {
+            GridRow row = new GridRow()
+                .put("id",     String.valueOf(i))
+                .put("name",   "Employee " + i)
+                .put("dept",   DEPTS[i % DEPTS.length])
+                .put("salary", 50_000 + (i * 173 % 100_000))
+                .put("status", STATUSES[i % STATUSES.length]);
+            if (i % 30 == 0) {
+                row.setTag("fnd-type", "scripted");
+            }
+            model.addRow(row);
+        }
+
+        SmartGrid grid = new SmartGrid(model, darkTheme);
+        grid.registerFormatter("currency", v -> String.format("$%,d", ((Number) v).longValue()));
+
+        DefaultGridComponentFactory factory = new DefaultGridComponentFactory(grid);
+        factory.create("scripted", SCRIPTED_BLUEPRINT_XML);
+
+        return wrap(grid, "Phase 9b: every 30th row uses an XML blueprint + BeanShell bind script (ScriptableRecyclable)");
     }
 
     // -------------------------------------------------------------------------

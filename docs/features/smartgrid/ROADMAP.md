@@ -584,6 +584,55 @@ public interface RowHeightProvider {
 - From BeanShell console: register a `"custom"` template; switch a SmartGrid to use it
 - Show live row UI change without restarting the application
 
+### Plan - SmartGrid Phase 9b — ScriptableRecyclable + Blueprint DSL + BeanShell Integration                                          
+                                                        
+#### Context
+
+ Phase 9a (GridComponentFactory registration/dispatch) is complete. Phase 9b extends it: any row with an
+ fnd-type tag can now be rendered by an XML-defined component tree whose bind() / prepareForReuse()
+ lifecycle is driven by inline BeanShell scripts. This enables fully runtime-defined row UIs — register a
+ new row type from the BeanShell console without restarting the app.
+
+ Prerequisites (all confirmed ✅)
+
+- GridComponentFactory interface — register(String, Supplier<JComponent>)
+- SmartGrid.registerRowRenderer() (line 437) and SmartGrid.getColumnWidths() (line 251) — wired and ready
+- Recyclable interface — bind(GridRow, int) + prepareForReuse()
+- BeanShell bsh.Interpreter is on the classpath (full interpreter, not embedded subset)
+- ComponentPool / typedPools dispatch in SmartGrid.doRefresh() — already handles typed rows
+
+---
+
+### Critical Files
+
+┌──────────────────────────────────────────────────────────┬──────────────────┐
+│                           File                           │      Action      │
+├──────────────────────────────────────────────────────────┼──────────────────┤
+│ org/jwellman/swing/grid/ComponentFinder.java             │ Create           │
+├──────────────────────────────────────────────────────────┼──────────────────┤
+│ org/jwellman/swing/grid/RowBlueprint.java                │ Create           │
+├──────────────────────────────────────────────────────────┼──────────────────┤
+│ org/jwellman/swing/grid/ScriptableRecyclable.java        │ Create           │
+├──────────────────────────────────────────────────────────┼──────────────────┤
+│ org/jwellman/swing/grid/DefaultGridComponentFactory.java │ Create           │
+├──────────────────────────────────────────────────────────┼──────────────────┤
+│ org/jwellman/demo/SmartGridDemo.java                     │ Modify (add tab) │
+└──────────────────────────────────────────────────────────┴──────────────────┘
+
+No changes required to SmartGrid.java, GridComponentFactory.java, Recyclable.java, or ComponentPool.java.
+
+---
+
+### Verification
+
+1. mvn compile in virtualdesktop-java8/ — zero errors
+2. Run SmartGridDemo — verify the new "Scripted" tab appears
+3. Scroll the Scripted tab — every 30th row shows dark-blue background with cyan main label
+4. Non-scripted rows in the same tab render normally with the standard renderer
+5. Switch between tabs — no regressions on Table, Tree, List, Paged, etc.
+6. From BeanShell console in VirtualDesktop: call factory.create("demo2", newXml) on a live grid to verify runtime
+registration works
+
 ---
 
 ## Phase 10 — Pagination / Footer Row / Renderer Interfaces ✅

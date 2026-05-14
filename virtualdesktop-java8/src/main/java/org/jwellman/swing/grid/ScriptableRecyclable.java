@@ -11,35 +11,55 @@ import javax.swing.JPanel;
  * interpreter or an injected shared interpreter (e.g. the VirtualDesktop
  * console's {@code _interpreter}).
  *
+ * All instances for a given fnd-type share a single {@link ScriptSpec}.
+ * Updating the spec (via {@link DefaultGridComponentFactory#create} called
+ * again with the same key) takes effect on every live instance on the next
+ * {@code bind()} call — no pool replacement or slot recycling required.
+ *
  * Scripts receive these variables on every call:
- *   self     — this ScriptableRecyclable; call self.find("id") to reach children,
+ *   self     — this ScriptableRecyclable; use self.find("id") to reach children
  *              or self.setBackground(Color.RED) to color the row
  *   panel    — the inner blueprint JPanel
  *   row      — the GridRow being rendered (bind script only)
  *   rowIndex — the row index (bind script only)
  *
- * The shared-interpreter path is safe because all Swing operations run on the
- * EDT serially — there is no concurrent access to the interpreter's variables.
- *
- * <p>Preferred console-friendly constructor:
+ * <p>Preferred console-friendly usage via factory (enables live swap):
  * <pre>
- *   String layout = "&lt;row&gt;&lt;label id='ts'/&gt;&lt;label id='user'/&gt;&lt;/row&gt;";
- *   String bind   = "self.find('ts').setText(row.get('timestamp'));";
- *   String reset  = "self.setBackground(null);";
  *   ScriptBridge bridge = new ScriptBridge(grid, _interpreter);
- *   new ScriptableRecyclable(layout, bind, reset, bridge)
+ *   gridFactory.create("myType", layout, bind, reset, bridge);
+ *   // later, to swap live:
+ *   gridFactory.create("myType", layout, newBind, reset, bridge);
+ *   model.notifyDataChanged();
  * </pre>
  */
 public class ScriptableRecyclable extends JPanel implements Recyclable {
 
     private final JPanel          blueprintPanel;
     private final int[]           columnWidths;
-    private       String          bindScript;
-    private       String          prepareScript;
+    private final ScriptSpec      scriptSpec;
     private       bsh.Interpreter interpreter;
 
     // -------------------------------------------------------------------------
-    // Console-friendly constructor: layout + scripts as separate strings
+    // Factory-managed constructor — ScriptSpec is shared across all pool instances
+    // -------------------------------------------------------------------------
+
+    /** Called by DefaultGridComponentFactory; shares the spec across the pool. */
+    ScriptableRecyclable(JPanel blueprintPanel, int[] columnWidths,
+                         bsh.Interpreter interpreter, ScriptSpec scriptSpec) {
+        this.blueprintPanel = blueprintPanel;
+        this.columnWidths   = columnWidths;
+        this.interpreter    = interpreter;
+        this.scriptSpec     = scriptSpec;
+        setLayout(null);
+        setOpaque(true);
+        add(blueprintPanel);
+        if (interpreter == null) {
+            initPrivateInterpreter();
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Console-friendly constructor — layout + scripts as separate strings
     // -------------------------------------------------------------------------
 
     /**
@@ -48,6 +68,11 @@ public class ScriptableRecyclable extends JPanel implements Recyclable {
      *
      * <p>Flat XML format (no &lt;column&gt; wrappers needed):
      * {@code <row><label id='ts'/><label id='user'/><button id='act' text='Undo'/></row>}
+     *
+     * <p>Note: instances created directly via this constructor each own their
+     * own {@link ScriptSpec}. For live script swapping, use
+     * {@link DefaultGridComponentFactory#create(String, String, String, String, ScriptBridge)}
+     * instead so all pool instances share one spec.
      */
     public ScriptableRecyclable(String layoutXml, String bindScript,
                                 String resetScript, ScriptBridge bridge) {
@@ -61,20 +86,19 @@ public class ScriptableRecyclable extends JPanel implements Recyclable {
         this.blueprintPanel = panel;
         this.columnWidths   = bridge.getColumnWidths();
         this.interpreter    = bridge.getInterpreter();
-        this.bindScript     = bindScript;
-        this.prepareScript  = resetScript;
+        this.scriptSpec     = new ScriptSpec(bindScript, resetScript);
         setLayout(null);
         setOpaque(true);
         add(blueprintPanel);
     }
 
     // -------------------------------------------------------------------------
-    // Programmatic constructors (used by DefaultGridComponentFactory.create())
+    // Programmatic constructors (used internally by DefaultGridComponentFactory)
     // -------------------------------------------------------------------------
 
     /** Uses a dedicated per-instance interpreter (standalone / demo mode). */
     public ScriptableRecyclable(JPanel blueprintPanel, int[] columnWidths) {
-        this(blueprintPanel, columnWidths, null);
+        this(blueprintPanel, columnWidths, (bsh.Interpreter) null);
     }
 
     /**
@@ -85,6 +109,7 @@ public class ScriptableRecyclable extends JPanel implements Recyclable {
                                 bsh.Interpreter sharedBsh) {
         this.blueprintPanel = blueprintPanel;
         this.columnWidths   = columnWidths;
+        this.scriptSpec     = new ScriptSpec(null, null);
         setLayout(null);
         setOpaque(true);
         add(blueprintPanel);
@@ -98,11 +123,11 @@ public class ScriptableRecyclable extends JPanel implements Recyclable {
     // -------------------------------------------------------------------------
 
     public void setBindScript(String script) {
-        this.bindScript = script;
+        scriptSpec.bindScript = script;
     }
 
     public void setPrepareScript(String script) {
-        this.prepareScript = script;
+        scriptSpec.resetScript = script;
     }
 
     /**
@@ -123,13 +148,14 @@ public class ScriptableRecyclable extends JPanel implements Recyclable {
         }
         RowBlueprint.applyBounds(blueprintPanel, totalWidth, getHeight());
 
-        if (bindScript != null && interpreter != null) {
+        String bs = scriptSpec.bindScript;
+        if (bs != null && interpreter != null) {
             try {
                 interpreter.set("self",     this);
                 interpreter.set("panel",    blueprintPanel);
                 interpreter.set("row",      row);
                 interpreter.set("rowIndex", rowIndex);
-                interpreter.eval(bindScript);
+                interpreter.eval(bs);
             } catch (bsh.EvalError e) {
                 System.err.println("ScriptableRecyclable bind error [row " + rowIndex + "]: " + e.getMessage());
             }
@@ -138,11 +164,12 @@ public class ScriptableRecyclable extends JPanel implements Recyclable {
 
     @Override
     public void prepareForReuse() {
-        if (prepareScript != null && interpreter != null) {
+        String rs = scriptSpec.resetScript;
+        if (rs != null && interpreter != null) {
             try {
                 interpreter.set("self",  this);
                 interpreter.set("panel", blueprintPanel);
-                interpreter.eval(prepareScript);
+                interpreter.eval(rs);
             } catch (bsh.EvalError e) {
                 System.err.println("ScriptableRecyclable prepare error: " + e.getMessage());
             }

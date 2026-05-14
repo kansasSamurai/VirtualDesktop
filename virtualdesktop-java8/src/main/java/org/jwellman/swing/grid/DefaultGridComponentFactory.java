@@ -1,5 +1,7 @@
 package org.jwellman.swing.grid;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
@@ -7,20 +9,18 @@ import javax.swing.JPanel;
 /**
  * Convenience implementation of {@link GridComponentFactory} backed by a SmartGrid.
  *
- * Also provides {@link #create(String, String)} for registering a row renderer
- * defined by an XML blueprint string, integrating {@link RowBlueprint} and
- * {@link ScriptableRecyclable}.
- *
- * <p>When constructed with a {@code bsh.Interpreter} (e.g. the VirtualDesktop
- * console's {@code _interpreter}), all scripted row instances share that
- * interpreter context — scripts can reference variables already defined in the
- * console session. When no interpreter is supplied, each pool instance gets its
- * own private interpreter (suitable for standalone / demo use).
+ * Maintains a {@link ScriptSpec} registry keyed by fnd-type. When
+ * {@link #create(String, String, String, String, ScriptBridge)} is called a second
+ * time with the same key, it updates the shared spec in-place rather than replacing
+ * the pool — all live instances of that type (in slots and in the pool) see the new
+ * scripts on their next {@code bind()} call, enabling live renderer swaps with no
+ * mixed-state artifacts.
  */
 public class DefaultGridComponentFactory implements GridComponentFactory {
 
-    private final SmartGrid        grid;
-    private final bsh.Interpreter  interpreter;
+    private final SmartGrid               grid;
+    private final bsh.Interpreter         interpreter;
+    private final Map<String, ScriptSpec> specRegistry = new HashMap<>();
 
     /** Standalone mode — each ScriptableRecyclable gets its own interpreter. */
     public DefaultGridComponentFactory(SmartGrid grid) {
@@ -33,7 +33,7 @@ public class DefaultGridComponentFactory implements GridComponentFactory {
      *
      * <p>Typical BeanShell console usage:
      * <pre>
-     *   DefaultGridComponentFactory factory =
+     *   DefaultGridComponentFactory gridFactory =
      *       new DefaultGridComponentFactory(grid, _interpreter);
      * </pre>
      */
@@ -48,45 +48,65 @@ public class DefaultGridComponentFactory implements GridComponentFactory {
     }
 
     /**
-     * Parses {@code xml} as a Blueprint DSL, extracts embedded BeanShell scripts,
-     * and registers a row renderer for {@code fndType} that produces
-     * {@link ScriptableRecyclable} instances.
+     * BeanShell-friendly registration: layout, bind, and reset as separate strings.
      *
-     * Each pool checkout re-parses the XML to produce an independent component
-     * tree — Swing prohibits a single JPanel from being added to multiple parents.
+     * <p>First call for a given {@code fndType}: creates a {@link ScriptSpec} and
+     * registers a new pool supplier.
      *
-     * @throws RuntimeException wrapping any XML parse failure
-     */
-    /**
-     * BeanShell-friendly registration: layout, bind, and reset as separate strings
-     * with a {@link ScriptBridge} providing interpreter + column widths.
+     * <p>Subsequent calls with the same {@code fndType}: updates the existing
+     * {@link ScriptSpec} in place — no pool replacement, no slot recycling needed.
+     * All live instances see the new scripts on their next {@code bind()} call.
+     * Call {@code model.notifyDataChanged()} after to trigger a repaint.
      *
-     * <p>Preferred for console use — no {@code Supplier} anonymous class needed:
      * <pre>
      *   ScriptBridge bridge = new ScriptBridge(grid, _interpreter);
-     *   gridFactory.create("delete-event", layout, bind, reset, bridge);
+     *   gridFactory.create("delete-event", layout, bindA, reset, bridge);
+     *   // live swap later:
+     *   gridFactory.create("delete-event", layout, bindB, reset, bridge);
+     *   model.notifyDataChanged();
      * </pre>
-     *
-     * Can be called again with the same {@code fndType} to swap the renderer live;
-     * call {@code model.notifyDataChanged()} after to force a refresh.
      */
     public void create(String fndType, final String layoutXml,
                        final String bindScript, final String resetScript,
                        final ScriptBridge bridge) {
+        ScriptSpec existing = specRegistry.get(fndType);
+        if (existing != null) {
+            // Update scripts in-place — all live instances see the change immediately
+            existing.bindScript  = bindScript;
+            existing.resetScript = resetScript;
+            return;
+        }
+
+        ScriptSpec spec = new ScriptSpec(bindScript, resetScript);
+        specRegistry.put(fndType, spec);
+
+        final ScriptSpec capturedSpec  = spec;
+        final int[]      sharedWidths  = bridge.getColumnWidths();
+        final bsh.Interpreter bsh      = bridge.getInterpreter();
+
         register(fndType, new Supplier<JComponent>() {
             @Override
             public JComponent get() {
-                ScriptableRecyclable sr =
-                    new ScriptableRecyclable(layoutXml, bindScript, resetScript, bridge);
-                return sr;
+                JPanel panel;
+                try {
+                    panel = RowBlueprint.buildPanel(layoutXml);
+                } catch (Exception e) {
+                    System.err.println("RowBlueprint.buildPanel failed for fnd-type="
+                            + fndType + ": " + e.getMessage());
+                    panel = new JPanel();
+                }
+                return new ScriptableRecyclable(panel, sharedWidths, bsh, capturedSpec);
             }
         });
     }
 
     /**
-     * XML-embedded-script registration: layout and scripts are all inside {@code xml}.
-     * Used by {@link org.jwellman.demo.SmartGridDemo} and the {@code <script>}-embedded
-     * blueprint path.
+     * XML-embedded-script registration: layout and scripts are all inside {@code xml}
+     * as {@code <script name="bind">} and {@code <script name="prepare">} elements.
+     * Used by {@link org.jwellman.demo.SmartGridDemo} and the embedded-blueprint path.
+     *
+     * <p>Note: this path creates its own per-call ScriptSpec and does not participate
+     * in the shared spec registry — re-calling with the same key replaces the pool.
      */
     public void create(String fndType, final String xml) {
         final String bindScript;
@@ -100,6 +120,7 @@ public class DefaultGridComponentFactory implements GridComponentFactory {
 
         final int[]           sharedWidths = grid.getColumnWidths();
         final bsh.Interpreter bsh          = this.interpreter;
+        final ScriptSpec      spec         = new ScriptSpec(bindScript, prepareScript);
 
         register(fndType, new Supplier<JComponent>() {
             @Override
@@ -112,10 +133,7 @@ public class DefaultGridComponentFactory implements GridComponentFactory {
                             + fndType + ": " + e.getMessage());
                     panel = new JPanel();
                 }
-                ScriptableRecyclable sr = new ScriptableRecyclable(panel, sharedWidths, bsh);
-                sr.setBindScript(bindScript);
-                sr.setPrepareScript(prepareScript);
-                return sr;
+                return new ScriptableRecyclable(panel, sharedWidths, bsh, spec);
             }
         });
     }

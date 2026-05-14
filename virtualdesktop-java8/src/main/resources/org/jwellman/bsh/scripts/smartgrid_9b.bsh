@@ -1,13 +1,18 @@
 // Phase 9b exercise — SmartGrid + Blueprint DSL + BeanShell
+// Demonstrates both script approaches:
+//   Style A — string-based  (quick one-liners)
+//   Style B — adapter-based (RowScript object; preferred for complex rendering)
+//
 // Run from the VirtualDesktop BeanShell console.
-// _interpreter is the active console interpreter; scripts run in that context.
-// NOTE: BeanShell does not support lambda expressions; anonymous classes are used instead.
+// _interpreter is the active console interpreter.
 
 import org.jwellman.swing.grid.ColumnDef;
 import org.jwellman.swing.grid.DefaultGridComponentFactory;
 import org.jwellman.swing.grid.DefaultGridModel;
 import org.jwellman.swing.grid.GridRow;
+import org.jwellman.swing.grid.RowScript;
 import org.jwellman.swing.grid.ScriptBridge;
+import org.jwellman.swing.grid.ScriptableRecyclable;
 import org.jwellman.swing.grid.SmartGrid;
 
 // --- 1. Build a model -------------------------------------------------------
@@ -36,7 +41,7 @@ for (int i = 1; i <= 60; i++) {
     model.addRow(row);
 }
 
-// --- 2. Layout XML (flat format — no <column> wrappers needed) --------------
+// --- 2. Layout XML ----------------------------------------------------------
 
 String layout = "<row>"
     + "<label id='ts'/>"
@@ -45,7 +50,7 @@ String layout = "<row>"
     + "<label id='detail'/>"
     + "</row>";
 
-// --- 3. Bind and reset scripts — Style A (dark red) -------------------------
+// --- 3. Style A — string-based (simple, inline) -----------------------------
 
 String bindA = ""
     + "import java.awt.Color; import javax.swing.JLabel;"
@@ -59,7 +64,7 @@ String bindA = ""
     + "((JLabel) self.find(\"detail\")).setForeground(Color.WHITE);"
     + "((JLabel) self.find(\"detail\")).setText(row.get(\"detail\").toString());";
 
-String reset = ""
+String resetA = ""
     + "import javax.swing.JLabel;"
     + "self.setBackground(java.awt.Color.WHITE);"
     + "((JLabel) self.find(\"ts\")).setText(\"\");"
@@ -67,19 +72,34 @@ String reset = ""
     + "((JLabel) self.find(\"type\")).setText(\"\");"
     + "((JLabel) self.find(\"detail\")).setText(\"\");";
 
-// --- 4. Style B (amber/orange) — registered later by the "Change Style" button
+// --- 4. Style B — adapter-based (preferred for complex rendering) -----------
+// Written as real BeanShell methods: no string escaping, full console closure.
 
-String bindB = ""
-    + "import java.awt.Color; import javax.swing.JLabel;"
-    + "self.setBackground(new Color(0x7A4000));"
-    + "((JLabel) self.find(\"ts\")).setForeground(new Color(0xFFE0A0));"
-    + "((JLabel) self.find(\"ts\")).setText(row.get(\"timestamp\").toString());"
-    + "((JLabel) self.find(\"user\")).setForeground(new Color(0xFFE0A0));"
-    + "((JLabel) self.find(\"user\")).setText(row.get(\"username\").toString());"
-    + "((JLabel) self.find(\"type\")).setForeground(new Color(0xFFD700));"
-    + "((JLabel) self.find(\"type\")).setText(\"! \" + row.get(\"type\").toString());"
-    + "((JLabel) self.find(\"detail\")).setForeground(new Color(0xFFE0A0));"
-    + "((JLabel) self.find(\"detail\")).setText(row.get(\"detail\").toString());";
+RowScript styleB = new RowScript() {
+    public void bind(ScriptableRecyclable self, GridRow row, int rowIndex) {
+        self.setBackground(new java.awt.Color(0x7A4000));
+        javax.swing.JLabel ts     = (javax.swing.JLabel) self.find("ts");
+        javax.swing.JLabel user   = (javax.swing.JLabel) self.find("user");
+        javax.swing.JLabel type   = (javax.swing.JLabel) self.find("type");
+        javax.swing.JLabel detail = (javax.swing.JLabel) self.find("detail");
+        java.awt.Color amber = new java.awt.Color(0xFFE0A0);
+        ts.setForeground(amber);
+        ts.setText(row.get("timestamp").toString());
+        user.setForeground(amber);
+        user.setText(row.get("username").toString());
+        type.setForeground(new java.awt.Color(0xFFD700));
+        type.setText("! " + row.get("type").toString());
+        detail.setForeground(amber);
+        detail.setText(row.get("detail").toString());
+    }
+    public void reset(ScriptableRecyclable self) {
+        self.setBackground(java.awt.Color.WHITE);
+        ((javax.swing.JLabel) self.find("ts")).setText("");
+        ((javax.swing.JLabel) self.find("user")).setText("");
+        ((javax.swing.JLabel) self.find("type")).setText("");
+        ((javax.swing.JLabel) self.find("detail")).setText("");
+    }
+};
 
 // --- 5. Create grid, bridge, factory ----------------------------------------
 
@@ -88,40 +108,39 @@ SmartGrid grid = new SmartGrid(model, true);
 ScriptBridge bridge = new ScriptBridge(grid, _interpreter);
 DefaultGridComponentFactory gridFactory = new DefaultGridComponentFactory(grid, _interpreter);
 
-// Register Style A — BeanShell-friendly: no Supplier or lambda needed
-gridFactory.create("delete-event", layout, bindA, reset, bridge);
+// Register Style A (string-based)
+gridFactory.create("delete-event", layout, bindA, resetA, bridge);
 
-// --- 6. Show window with a "Change Style" button ----------------------------
+// --- 6. Show window with live-swap button -----------------------------------
 
 javax.swing.JPanel toolbar = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
 
-javax.swing.JLabel styleLabel = new javax.swing.JLabel("DELETE rows: Style A (dark red)");
+javax.swing.JLabel styleLabel = new javax.swing.JLabel("Style A — string-based (dark red)");
 toolbar.add(styleLabel);
 
-javax.swing.JButton changeBtn = new javax.swing.JButton("Switch to Style B (amber)");
-changeBtn.addActionListener(new java.awt.event.ActionListener() {
+javax.swing.JButton swapBtn = new javax.swing.JButton("Swap to Style B (adapter / amber)");
+swapBtn.addActionListener(new java.awt.event.ActionListener() {
     public void actionPerformed(java.awt.event.ActionEvent e) {
-        // Re-register the same key with a different script — live runtime swap
-        gridFactory.create("delete-event", layout, bindB, reset, bridge);
-        // model.notifyDataChanged() fires the model listener which triggers SmartGrid's refresh()
+        // Re-register with the RowScript adapter — updates spec in-place, all instances see it
+        gridFactory.create("delete-event", layout, styleB, bridge);
         model.notifyDataChanged();
-        styleLabel.setText("DELETE rows: Style B (amber)");
-        changeBtn.setEnabled(false);
-        print("Re-registered 'delete-event' with Style B. Pool replaced; next refresh uses new renderer.");
+        styleLabel.setText("Style B — adapter-based (amber)");
+        swapBtn.setEnabled(false);
     }
 });
-toolbar.add(changeBtn);
+toolbar.add(swapBtn);
 
 javax.swing.JPanel content = new javax.swing.JPanel(new java.awt.BorderLayout());
 content.add(toolbar, java.awt.BorderLayout.NORTH);
 content.add(grid, java.awt.BorderLayout.CENTER);
 
-javax.swing.JFrame f = new javax.swing.JFrame("Phase 9b — Scripted Rows (Live Swap Demo)");
+javax.swing.JFrame f = new javax.swing.JFrame("Phase 9b — String vs Adapter");
 f.setDefaultCloseOperation(javax.swing.JFrame.DISPOSE_ON_CLOSE);
 f.setSize(720, 460);
 f.add(content);
 f.setLocationRelativeTo(null);
 f.setVisible(true);
 
-print("Grid open. DELETE-type rows use Style A (dark red).");
-print("Click 'Switch to Style B' to re-register the renderer live.");
+print("Grid open. DELETE rows use Style A (string-based, dark red).");
+print("Click 'Swap to Style B' to switch to adapter-based rendering (amber).");
+print("All DELETE rows update simultaneously on the next repaint.");

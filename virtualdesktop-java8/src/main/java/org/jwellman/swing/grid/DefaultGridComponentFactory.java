@@ -48,30 +48,77 @@ public class DefaultGridComponentFactory implements GridComponentFactory {
     }
 
     /**
-     * BeanShell-friendly registration: layout, bind, and reset as separate strings.
+     * Adapter-based registration: the {@link RowScript} object handles bind and
+     * reset as real BeanShell methods rather than eval'd strings.
      *
-     * <p>First call for a given {@code fndType}: creates a {@link ScriptSpec} and
-     * registers a new pool supplier.
+     * <p>Preferred for complex rendering — no string escaping, full closure over
+     * the console namespace, readable error messages.
      *
-     * <p>Subsequent calls with the same {@code fndType}: updates the existing
-     * {@link ScriptSpec} in place — no pool replacement, no slot recycling needed.
-     * All live instances see the new scripts on their next {@code bind()} call.
+     * <p>First call for a given {@code fndType}: registers the pool.
+     * Subsequent calls with the same key: swaps the adapter in the shared
+     * {@link ScriptSpec} — all live instances use the new adapter immediately.
      * Call {@code model.notifyDataChanged()} after to trigger a repaint.
      *
      * <pre>
-     *   ScriptBridge bridge = new ScriptBridge(grid, _interpreter);
-     *   gridFactory.create("delete-event", layout, bindA, reset, bridge);
-     *   // live swap later:
-     *   gridFactory.create("delete-event", layout, bindB, reset, bridge);
-     *   model.notifyDataChanged();
+     *   RowScript r = new RowScript() {
+     *       public void bind(ScriptableRecyclable self, GridRow row, int rowIndex) {
+     *           self.setBackground(new Color(0x8B0000));
+     *           ((JLabel) self.find("ts")).setText(row.get("timestamp").toString());
+     *       }
+     *       public void reset(ScriptableRecyclable self) { self.setBackground(null); }
+     *   };
+     *   gridFactory.create("delete-event", layout, r, bridge);
      * </pre>
+     */
+    public void create(String fndType, final String layoutXml,
+                       final RowScript adapter, final ScriptBridge bridge) {
+        ScriptSpec existing = specRegistry.get(fndType);
+        if (existing != null) {
+            existing.adapter = adapter;
+            return;
+        }
+
+        ScriptSpec spec = new ScriptSpec(adapter);
+        specRegistry.put(fndType, spec);
+
+        final ScriptSpec      capturedSpec = spec;
+        final int[]           sharedWidths = bridge.getColumnWidths();
+        final bsh.Interpreter bsh          = bridge.getInterpreter();
+
+        register(fndType, new Supplier<JComponent>() {
+            @Override
+            public JComponent get() {
+                JPanel panel;
+                try {
+                    panel = RowBlueprint.buildPanel(layoutXml);
+                } catch (Exception e) {
+                    System.err.println("RowBlueprint.buildPanel failed for fnd-type="
+                            + fndType + ": " + e.getMessage());
+                    panel = new JPanel();
+                }
+                return new ScriptableRecyclable(panel, sharedWidths, bsh, capturedSpec);
+            }
+        });
+    }
+
+    /**
+     * String-based registration: layout, bind, and reset as separate strings.
+     *
+     * <p>Useful for simple one-line scripts defined inline. For multi-line
+     * rendering logic, prefer
+     * {@link #create(String, String, RowScript, ScriptBridge)}.
+     *
+     * <p>First call for a given {@code fndType}: registers the pool.
+     * Subsequent calls with the same key: updates the shared {@link ScriptSpec}
+     * in place — all live instances see the new scripts on their next bind().
+     * Call {@code model.notifyDataChanged()} after to trigger a repaint.
      */
     public void create(String fndType, final String layoutXml,
                        final String bindScript, final String resetScript,
                        final ScriptBridge bridge) {
         ScriptSpec existing = specRegistry.get(fndType);
         if (existing != null) {
-            // Update scripts in-place — all live instances see the change immediately
+            existing.adapter     = null;
             existing.bindScript  = bindScript;
             existing.resetScript = resetScript;
             return;
@@ -80,9 +127,9 @@ public class DefaultGridComponentFactory implements GridComponentFactory {
         ScriptSpec spec = new ScriptSpec(bindScript, resetScript);
         specRegistry.put(fndType, spec);
 
-        final ScriptSpec capturedSpec  = spec;
-        final int[]      sharedWidths  = bridge.getColumnWidths();
-        final bsh.Interpreter bsh      = bridge.getInterpreter();
+        final ScriptSpec      capturedSpec = spec;
+        final int[]           sharedWidths = bridge.getColumnWidths();
+        final bsh.Interpreter bsh          = bridge.getInterpreter();
 
         register(fndType, new Supplier<JComponent>() {
             @Override

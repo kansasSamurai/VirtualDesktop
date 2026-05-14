@@ -148,30 +148,50 @@ public class ScriptableRecyclable extends JPanel implements Recyclable {
         }
         RowBlueprint.applyBounds(blueprintPanel, totalWidth, getHeight());
 
-        String bs = scriptSpec.bindScript;
-        if (bs != null && interpreter != null) {
+        if (scriptSpec.adapter != null) {
+            // Adapter path: direct method dispatch — no string eval overhead
             try {
-                interpreter.set("self",     this);
-                interpreter.set("panel",    blueprintPanel);
-                interpreter.set("row",      row);
-                interpreter.set("rowIndex", rowIndex);
-                interpreter.eval(bs);
-            } catch (bsh.EvalError e) {
+                scriptSpec.adapter.bind(this, row, rowIndex);
+            } catch (Exception e) {
                 System.err.println("ScriptableRecyclable bind error [row " + rowIndex + "]: " + e.getMessage());
+            }
+        } else {
+            // String path: eval bind script in the interpreter
+            String bs = scriptSpec.bindScript;
+            if (bs != null && interpreter != null) {
+                try {
+                    interpreter.set("self",     this);
+                    interpreter.set("panel",    blueprintPanel);
+                    interpreter.set("row",      row);
+                    interpreter.set("rowIndex", rowIndex);
+                    interpreter.eval(bs);
+                } catch (bsh.EvalError e) {
+                    System.err.println("ScriptableRecyclable bind error [row " + rowIndex + "]: " + e.getMessage());
+                }
             }
         }
     }
 
     @Override
     public void prepareForReuse() {
-        String rs = scriptSpec.resetScript;
-        if (rs != null && interpreter != null) {
+        if (scriptSpec.adapter != null) {
+            // Adapter path
             try {
-                interpreter.set("self",  this);
-                interpreter.set("panel", blueprintPanel);
-                interpreter.eval(rs);
-            } catch (bsh.EvalError e) {
+                scriptSpec.adapter.reset(this);
+            } catch (Exception e) {
                 System.err.println("ScriptableRecyclable prepare error: " + e.getMessage());
+            }
+        } else {
+            // String path
+            String rs = scriptSpec.resetScript;
+            if (rs != null && interpreter != null) {
+                try {
+                    interpreter.set("self",  this);
+                    interpreter.set("panel", blueprintPanel);
+                    interpreter.eval(rs);
+                } catch (bsh.EvalError e) {
+                    System.err.println("ScriptableRecyclable prepare error: " + e.getMessage());
+                }
             }
         }
     }

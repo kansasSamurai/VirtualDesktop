@@ -13,11 +13,20 @@ package org.jwellman.swing.grid;
  */
 class ScriptSpec {
 
-    String bindScript;
-    String resetScript;
+    // String-based path: scripts evaluated via BeanShell interpreter
+    String    bindScript;
+    String    resetScript;
+
+    // Adapter-based path: methods dispatched directly on the RowScript object
+    // Takes priority over string scripts when non-null.
+    RowScript adapter;
 
     ScriptSpec(String bindScript, String resetScript) {
         this.bindScript  = bindScript;
         this.resetScript = resetScript;
+    }
+
+    ScriptSpec(RowScript adapter) {
+        this.adapter = adapter;
     }
 }

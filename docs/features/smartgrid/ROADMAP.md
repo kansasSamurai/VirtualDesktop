@@ -16,7 +16,7 @@
 | 11 | Bidirectional data flow / inline edit mode (rudimentary) | ✅ Complete | |
 | 16 | Checkbox selection strip — standard chrome, left of data columns | ✅ Complete | `Selectable` interface; `setCheckboxColumnVisible(boolean)` |
 | 6 | Tree enhancements — Strip abstraction, TreeZoneStrip, GroupHeaderRowPanel | ✅ Complete | |
-| 9b | `ScriptableRecyclable` + Blueprint DSL + BeanShell integration | ⬜ Deferred | Complex; not needed for tree or edit mode |
+| 9b | `ScriptableRecyclable` + Blueprint DSL + BeanShell integration | ✅ Complete | `RowScript` adapter + string-eval paths; `ScriptBridge`; `DefaultGridComponentFactory`; live swap via shared `ScriptSpec` |
 | 8 | Variable row height (`RowHeightProvider`) | ⬜ End | Deferred by design — touches core scroll math |
 | 12 | Header panel refactor: persistent panels, in-place bound updates | ⬜ End | |
 | 13 | Filter search cache with configurable row-count threshold | ⬜ End | |

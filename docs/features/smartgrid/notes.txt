@@ -595,6 +595,143 @@ strip width.
 
 
 
+## Discussion - ScriptableRecycler
+
+Good catch — this is an important design question. Let me think through the intended flow out loud.
+
+## The Two Interpreter Models
+
+**Current implementation:** Each `ScriptableRecyclable` pool instance owns its own `new bsh.Interpreter()`. Scripts are isolated but disconnected from the desktop's live BeanShell environment.
+
+**Intended flow (as you described):** The VirtualDesktop has one central BeanShell interpreter. The user types in the BeanShell console, registers a row type, and the grid renders using scripts that run *in that same interpreter context* — meaning they can reference variables already defined in the console session.
+
+This is actually significantly more powerful. Example of what becomes possible:
+
+```java
+// Console session:
+myColor = new Color(0x1A3A5C);
+myFormatter = v -> ">> " + v.toString().toUpperCase();
+
+// ...then register a blueprint whose bind script does:
+mainLbl.setForeground(myColor);
+mainLbl.setText(myFormatter.apply(row.get("name")));
+```
+
+The scripts have access to the live console namespace — exactly the kind of scripted customization Phase 9b is aiming for.
+
+## The Safe Path (EDT is single-threaded)
+
+A shared interpreter *is* safe here because all Swing operations happen on the EDT serially. There's no race: `interpreter.set("row", row); interpreter.eval(bindScript)` completes before the next `bind()` call starts.
+
+## Proposed Minimal BeanShell Script
+
+Before touching the implementation, I'd want to write the script that exercises this end-to-end. Something like:
+
+```java
+// Phase 9b exercise script — paste into BeanShell console
+
+import org.jwellman.swing.grid.*;
+import org.jwellman.virtualdesktop.vapps.SpecSmartGrid;
+
+// 1. Get a reference to a live SmartGrid
+//    (either via SpecSmartGrid, or we expose one via a static handle)
+SmartGrid grid = SpecSmartGrid.getLastInstance();
+
+// 2. Define the blueprint — scripts reference 'row', 'panel', 'self'
+String xml = "... blueprint with <script name=\"bind\">...</script> ...";
+
+// 3. Register the row type — passing 'this' (the console's interpreter)
+DefaultGridComponentFactory factory = new DefaultGridComponentFactory(grid, this);
+factory.create("scripted", xml);
+
+// 4. Tag some rows
+for (GridRow r : grid.getModel().getAllRows()) {
+    if (Integer.parseInt(r.get("id").toString()) % 30 == 0) {
+        r.setTag("fnd-type", "scripted");
+    }
+}
+grid.refresh();
+```
+
+## Questions to Resolve Before Coding
+
+1. **How does the script get the interpreter?** The BeanShell console exposes `this` as the current `Interpreter` — is that right for your setup, or does `SpecBeanShell` / `BeanShellAdapter` expose it differently?
+
+2. **How does the script get a `SmartGrid` reference?** Options: (a) `SpecSmartGrid` exposes a static `getLastInstance()`, (b) the user creates a new grid inline in the script, (c) some other registry.
+
+3. **Should `DefaultGridComponentFactory` accept the interpreter in the constructor** (injected), or should `ScriptableRecyclable` have a `setInterpreter(bsh.Interpreter)` setter so the factory can swap it in after construction?
+
+What does your BeanShell console setup look like — is there a way to get the active interpreter handle from within a console script?
+
+That's the key piece. With `_interpreter` available, the script would look like this:
+
+```java
+// Phase 9b exercise — paste into BeanShell console
+
+import org.jwellman.swing.grid.*;
+
+// 1. Build a small model
+DefaultGridModel model = new DefaultGridModel()
+    .addColumn(new ColumnDef("id",   "ID",   50,  false, true, null))
+    .addColumn(new ColumnDef("name", "Name", 250, false, true, null))
+    .addColumn(new ColumnDef("dept", "Dept", 150, false, true, null));
+
+String[] depts = {"Engineering", "Marketing", "Sales"};
+for (int i = 1; i <= 50; i++) {
+    GridRow row = new GridRow()
+        .put("id",   String.valueOf(i))
+        .put("name", "Person " + i)
+        .put("dept", depts[i % depts.length]);
+    if (i % 5 == 0) {
+        row.setTag("fnd-type", "scripted");
+    }
+    model.addRow(row);
+}
+
+SmartGrid grid = new SmartGrid(model, false);
+
+// 2. Blueprint XML — scripts execute in _interpreter's context
+String xml = "<row>"
+    + "<column preferred-width=\"50\"><label id=\"idLbl\"/></column>"
+    + "<column weight=\"1\"><label id=\"mainLbl\"/></column>"
+    + "<column preferred-width=\"80\"><label id=\"deptLbl\"/></column>"
+    + "<script name=\"bind\"><![CDATA["
+    + "import org.jwellman.swing.grid.ComponentFinder;"
+    + "import javax.swing.JLabel; import java.awt.*;"
+    + "self.setBackground(new Color(0x1A3A5C));"
+    + "JLabel id   = (JLabel) ComponentFinder.find(panel, \"idLbl\");"
+    + "JLabel main = (JLabel) ComponentFinder.find(panel, \"mainLbl\");"
+    + "JLabel dept = (JLabel) ComponentFinder.find(panel, \"deptLbl\");"
+    + "if (id   != null) { id.setForeground(Color.WHITE); id.setText(row.get(\"id\").toString()); }"
+    + "if (main != null) { main.setForeground(new Color(0x7EC8E3)); main.setText(\">> \" + row.get(\"name\")); }"
+    + "if (dept != null) { dept.setForeground(Color.WHITE); dept.setText(row.get(\"dept\").toString()); }"
+    + "]]></script>"
+    + "</row>";
+
+// 3. Register — inject _interpreter so scripts run in this console's context
+DefaultGridComponentFactory factory = new DefaultGridComponentFactory(grid, _interpreter);
+factory.create("scripted", xml);
+
+// 4. Show in a window
+javax.swing.JFrame f = new javax.swing.JFrame("Phase 9b Test");
+f.setDefaultCloseOperation(javax.swing.JFrame.DISPOSE_ON_CLOSE);
+f.setSize(640, 400);
+f.add(grid);
+f.setLocationRelativeTo(null);
+f.setVisible(true);
+```
+
+---
+
+## Code change needed to support this
+
+`DefaultGridComponentFactory` needs a second constructor that accepts a `bsh.Interpreter`, and passes it through to `ScriptableRecyclable`. The `ScriptableRecyclable` change is small: when a shared interpreter is provided, skip creating its own and use the shared one instead. Variables `self`, `panel`, `row`, and `rowIndex` get set fresh on each `bind()` call regardless — which is safe because the EDT is single-threaded.
+
+The per-instance interpreter path (used by the demo tab) stays intact as the fallback when no interpreter is injected.
+
+Before I make those changes: does the script above match the flow you had in mind? The key thing I want to confirm is step 3 — passing `_interpreter` into the factory is the right injection point, vs. passing it into `ScriptableRecyclable` directly or some other approach.
+
+
 
 
 

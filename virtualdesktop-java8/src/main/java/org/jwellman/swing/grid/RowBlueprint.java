@@ -76,6 +76,8 @@ public class RowBlueprint {
         List<ColumnRegion> regions = new ArrayList<>();
 
         NodeList children = root.getChildNodes();
+
+        // First pass: look for explicit <column> children (structured format)
         for (int i = 0; i < children.getLength(); i++) {
             Node node = children.item(i);
             if (!(node instanceof Element)) {
@@ -109,15 +111,45 @@ public class RowBlueprint {
                 Element cEl = (Element) cNode;
                 String tag = cEl.getTagName();
                 if (tag.equals("label")) {
-                    JLabel label = buildLabel(cEl);
-                    colPanel.add(label);
+                    colPanel.add(buildLabel(cEl));
                 } else if (tag.equals("button")) {
-                    JButton button = buildButton(cEl);
-                    colPanel.add(button);
+                    colPanel.add(buildButton(cEl));
                 }
             }
 
             regions.add(region);
+        }
+
+        // Flat format: if no <column> elements found, treat each direct label/button
+        // child as an equal-weight column — simpler syntax for console use:
+        //   <row><label id='ts'/><label id='user'/><button id='act' text='Undo'/></row>
+        if (regions.isEmpty()) {
+            for (int i = 0; i < children.getLength(); i++) {
+                Node node = children.item(i);
+                if (!(node instanceof Element)) {
+                    continue;
+                }
+                Element el = (Element) node;
+                String tag = el.getTagName();
+                if (!tag.equals("label") && !tag.equals("button") && !tag.equals("script")) {
+                    continue;
+                }
+                if (tag.equals("script")) {
+                    continue;
+                }
+                ColumnRegion region = new ColumnRegion(1.0);
+                JPanel colPanel = new JPanel();
+                colPanel.setLayout(null);
+                colPanel.setOpaque(false);
+                if (tag.equals("label")) {
+                    colPanel.add(buildLabel(el));
+                } else {
+                    colPanel.add(buildButton(el));
+                }
+                region.cellPanels.add(colPanel);
+                rowPanel.add(colPanel);
+                regions.add(region);
+            }
         }
 
         rowPanel.putClientProperty("blueprint-columns", regions);

@@ -219,7 +219,14 @@ public class StandardRowPanel extends JPanel implements Recyclable {
                         if (anchor < 0) anchor = capturedIdx;
                         sm.setSelectionInterval(anchor, capturedIdx);
                     } else {
-                        sm.setSelectionInterval(capturedIdx, capturedIdx);
+                        boolean soleSelection = sm.isSelectedIndex(capturedIdx)
+                                && sm.getMinSelectionIndex() == capturedIdx
+                                && sm.getMaxSelectionIndex() == capturedIdx;
+                        if (soleSelection) {
+                            sm.clearSelection();
+                        } else {
+                            sm.setSelectionInterval(capturedIdx, capturedIdx);
+                        }
                     }
                 }
                 if (capturedRow.isHasChildren() && expandAct != null) {

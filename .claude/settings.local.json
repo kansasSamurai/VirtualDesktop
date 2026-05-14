@@ -4,7 +4,9 @@
       "Bash(find:*)",
       "Bash(git mv:*)",
       "WebFetch(domain:beanshell.github.io)",
-      "Bash(javap:*)"
+      "Bash(javap:*)",
+      "Bash(grep -E \"\\\\.\\(java|xml\\)$\")",
+      "Bash(xargs grep *)"
     ],
     "ask": [
       "Bash(mvn:*)"

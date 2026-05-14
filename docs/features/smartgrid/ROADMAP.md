@@ -21,6 +21,7 @@
 | 12 | Header panel refactor: persistent panels, in-place bound updates | ⬜ End | |
 | 13 | Filter search cache with configurable row-count threshold | ⬜ End | |
 | 14 | Structured filter expressions (`FilterExpression` alongside lambda) | ⬜ Future | Enables query folding — see `docs/features/query-folding/DISCUSSION.md` |
+| 17 | Column freezing / pinning — fixed left columns, scrolling right columns | ⬜ Future | Split-pane architecture; see phase detail below |
 
 ---
 
@@ -626,6 +627,64 @@ void fetchRows(int from, int count, GridModelListener callback);
 - Slow scroll through large dataset; verify "Loading…" placeholder rows appear and
   are replaced as pages arrive
 
+### Note: GridRow-per-row memory model and the escape hatches
+
+`DefaultGridModel` stores one `GridRow` per data row — but the situation is better
+than it might look, for a few reasons worth unpacking.
+
+**The memory math is real but bounded.** Each `GridRow` carries two `HashMap` instances
+(data + tags) plus a handful of primitive fields. At 5 columns, a LinkedHashMap is
+roughly 250–350 bytes of overhead. So:
+
+- 1,000 rows ≈ 300KB — trivial
+- 100,000 rows ≈ 30MB — manageable on a desktop
+- 1,000,000 rows — this is where it legitimately hurts
+
+**The rendering is already fine.** SmartGrid only holds ~20 live JPanels regardless of
+row count. The bottleneck is heap, not render performance — `getRow(i)` called 20 times
+per scroll event is 20 HashMap lookups, which is noise.
+
+**The design already has the escape hatch.** `GridModel` is an interface.
+`DefaultGridModel` is the convenient out-of-the-box implementation for moderate
+datasets. For a dataset of 500,000 domain objects you already have in memory, you
+implement `GridModel` directly against your own data structure and never create a
+GridRow at all — or create them transiently in `getRow(int index)` for just the 20
+visible rows:
+
+```java
+public class EmployeeGridModel implements GridModel {
+    private final List<Employee> employees; // your domain objects
+
+    @Override
+    public GridRow getRow(int index) {
+        Employee e = employees.get(index);
+        return new GridRow()           // created, used for ~1 paint cycle, GC'd
+            .put("name",   e.getName())
+            .put("salary", e.getSalary())
+            .setSourceObject(e);
+    }
+
+    @Override
+    public int getRowCount() { return employees.size(); }
+    // ...
+}
+```
+
+20 ephemeral GridRows per scroll event live entirely in Eden space and never survive a
+minor GC — which is exactly the fast path the JVM is built for.
+
+**The one real gap** is tree state: `isExpanded` and `isHasChildren` live on GridRow,
+so if GridRow is transient, the model needs to hold expansion state separately (a
+`Set<Integer>` of expanded row indices, for example). That is a solvable design
+question for whenever a custom model needs tree support.
+
+**The short verdict:** for `DefaultGridModel` as the simple case, the current design is
+fine and will stay fine into the tens of thousands of rows on a desktop. For domain
+objects you already own, `GridModel` is already the right abstraction — `sourceObject`
+is the pointer back. The lazy-loading model planned in this phase (virtual total count,
+fetch-on-demand pages) is the definitive answer for true million-row cases and sidesteps
+the GridRow-per-row question entirely by only ever materializing a page at a time.
+
 ---
 
 ## Phase 11 — Bidirectional Data Flow / Edit Mode
@@ -767,6 +826,79 @@ construction time.
 - Above threshold: single O(n) cache build on first filter keystroke;
   subsequent keystrokes do array lookups only — no String allocation per row
 - Threshold is user-adjustable via `grid.setFilterCacheThreshold(n)` to tune per use case
+
+---
+
+## Phase 17 — Column Freezing / Pinning
+
+**Why**: Frozen columns are a universal power-user feature for wide datasets — keep
+the identifying column (name, ID) visible while scrolling through many data columns.
+
+### Architecture: split panes
+
+Frozen columns require two side-by-side panes inside SmartGrid — a
+non-horizontally-scrolling left pane containing the frozen columns, and the existing
+right pane for everything else. Vertical scroll must be synchronized between them.
+This is how every professional grid (Excel, AG Grid, Handsontable) does it.
+
+```
+SmartGrid (BorderLayout)
+  ├── NORTH:  toolbar
+  ├── WEST:   frozen pane  (JScrollPane: H=NEVER, V=AS_NEEDED)
+  │             └── FrozenCanvas (VirtualCanvas variant)
+  ├── CENTER: scrolling pane  (existing JScrollPane)
+  │             └── VirtualCanvas
+  └── SOUTH:  footer / pagination
+```
+
+### Where the complexity lives
+
+The current architecture helps in three ways: null layout with absolute positioning,
+`columnWidths[]` already split-ready (just divide it at the freeze boundary), and row
+slots already typed-pool-dispatched. The hard parts are:
+
+**1. Vertical scroll sync** — two independent viewports, so you need to listen to each
+viewport's vertical position and push it to the other. This works but requires care:
+the listener fires from the model change, which means you can create a feedback loop
+(A updates B, B updates A). A guard flag (`syncingScroll`) breaks it — same pattern
+as the `refreshing` guard added for the FlatLaf re-entrancy fix.
+
+**2. Row slot split** — currently one `slots[]` array per visible row. You'd need
+`frozenSlots[]` and `scrollSlots[]` in parallel. Each frozen slot is a
+`StandardRowPanel` constructed with only the frozen `ColumnDef` list; each scroll slot
+gets the remainder. `StandardRowPanel` already accepts `List<ColumnDef>` so this is
+just passing a sublist.
+
+**3. Header / strip placement** — the frozen header panel goes above the frozen pane;
+the scrolling header stays as `columnHeaderView` of the scrolling pane. The checkbox
+and tree zone strips naturally belong on the frozen side (they're already the leftmost
+columns). The corner fill trick becomes the frozen header's right edge.
+
+**4. Column width computation** — `computeColumnWidths` runs separately for each pane
+against its own viewport width. Frozen pane: `vpWidth = sum of frozen column preferred
+widths` (fixed, no scaling). Scrolling pane: `vpWidth = viewport width of scrolling
+pane`.
+
+### What comes for free
+
+The vertical virtualization (`firstRow = scrollY / rowHeight`) is identical in both
+panes. The strip management, pool dispatch, `resolveRowType()`, and `Selectable`
+interface all apply unchanged. The freeze point is just an index into
+`model.getColumns()`.
+
+### Complexity estimate
+
+Roughly 1.5× the complexity of the checkbox strip (Phase 16): new fields, layout
+restructuring, vertical sync, two slot arrays, header split. Significant but not
+architectural — nothing needs to be un-done, only extended. Phase 12 (persistent header
+panels) would make the header split considerably cleaner; sequencing that first would
+pay off.
+
+### Key design question to resolve before implementing
+
+Should the freeze boundary be **settable at runtime** (drag to resize or toggle), or
+**construction-time only**? Runtime freeze is meaningfully more complex because it
+requires re-homing slots between the two canvases mid-session.
 
 ---
 

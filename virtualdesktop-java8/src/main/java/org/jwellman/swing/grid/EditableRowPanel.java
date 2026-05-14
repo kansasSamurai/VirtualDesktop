@@ -151,7 +151,14 @@ public class EditableRowPanel extends JPanel implements Recyclable {
                         }
                         sm.setSelectionInterval(anchor, capturedIdx);
                     } else {
-                        sm.setSelectionInterval(capturedIdx, capturedIdx);
+                        boolean soleSelection = sm.isSelectedIndex(capturedIdx)
+                                && sm.getMinSelectionIndex() == capturedIdx
+                                && sm.getMaxSelectionIndex() == capturedIdx;
+                        if (soleSelection) {
+                            sm.clearSelection();
+                        } else {
+                            sm.setSelectionInterval(capturedIdx, capturedIdx);
+                        }
                     }
                 }
             }

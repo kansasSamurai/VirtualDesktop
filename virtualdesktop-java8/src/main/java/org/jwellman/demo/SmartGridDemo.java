@@ -254,63 +254,16 @@ public class SmartGridDemo {
         toolbar.add(filterField);
         toolbar.add(editToggle);
 
-        // --- Page layout: header + card, giving SmartGrid a "larger page" context ---
-
-        Color pageBg     = darkTheme ? new Color(0x2B2D30) : new Color(0xF0F2F5);
-        Color headerBg   = darkTheme ? new Color(0x3C3F41) : Color.WHITE;
-        Color titleFg    = darkTheme ? new Color(0xE8E8E8) : new Color(0x1A1A2E);
-        Color subtitleFg = darkTheme ? new Color(0x888888) : new Color(0x666677);
-        Color borderClr  = darkTheme ? new Color(0x4A4D52) : new Color(0xC8CDD3);
-
-        JLabel titleLabel = new JLabel("Employee Directory");
-        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 18f));
-        titleLabel.setForeground(titleFg);
-
-        JLabel subtitleLabel = new JLabel(
+        return buildPage(grid,
+            "Employee Directory",
             "SmartGrid demo  ·  1,000 rows  ·  live filter & sort"
-            + "  ·  interactive cell renderers  ·  inline edit mode");
-        subtitleLabel.setFont(subtitleLabel.getFont().deriveFont(Font.PLAIN, 11f));
-        subtitleLabel.setForeground(subtitleFg);
-
-        JPanel titleArea = new JPanel();
-        titleArea.setLayout(new BoxLayout(titleArea, BoxLayout.Y_AXIS));
-        titleArea.setOpaque(false);
-        titleArea.add(titleLabel);
-        titleArea.add(Box.createVerticalStrut(4));
-        titleArea.add(subtitleLabel);
-
-        JPanel chips = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
-        chips.setOpaque(false);
-        chips.add(buildChip("Virtualized", new Color(0x2980B9)));
-        chips.add(buildChip("Sortable",    new Color(0x27AE60)));
-        chips.add(buildChip("Filterable",  new Color(0xD68910)));
-        chips.add(buildChip("Interactive", new Color(0x8E44AD)));
-        chips.add(buildChip("Edit Mode",   new Color(0xC0392B)));
-
-        JPanel header = new JPanel(new BorderLayout(16, 0));
-        header.setBackground(headerBg);
-        header.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, borderClr),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)));
-        header.add(titleArea, BorderLayout.WEST);
-        header.add(chips,     BorderLayout.EAST);
-
-        JPanel card = new JPanel(new BorderLayout());
-        card.setBorder(BorderFactory.createLineBorder(borderClr));
-        card.add(grid, BorderLayout.CENTER);
-        card.add(buildGridFooter(grid, 1000, darkTheme, borderClr), BorderLayout.SOUTH);
-
-        JPanel content = new JPanel(new BorderLayout());
-        content.setOpaque(false);
-        content.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        content.add(card, BorderLayout.CENTER);
-
-        JPanel page = new JPanel(new BorderLayout());
-        page.setBackground(pageBg);
-        page.add(header,  BorderLayout.NORTH);
-        page.add(content, BorderLayout.CENTER);
-
-        return page;
+                + "  ·  interactive cell renderers  ·  inline edit mode",
+            1000, darkTheme,
+            buildChip("Virtualized", new Color(0x2980B9)),
+            buildChip("Sortable",    new Color(0x27AE60)),
+            buildChip("Filterable",  new Color(0xD68910)),
+            buildChip("Interactive", new Color(0x8E44AD)),
+            buildChip("Edit Mode",   new Color(0xC0392B)));
     }
 
     private static JLabel buildChip(String text, Color bg) {
@@ -357,9 +310,20 @@ public class SmartGridDemo {
             }
         });
 
-        grid.getModel().addGridModelListener(e ->
-            rowCount.setText("Showing " + grid.getModel().getRowCount()
-                + " of " + totalRows + " rows"));
+        grid.getModel().addGridModelListener(new GridModelListener() {
+            @Override
+            public void rowsChanged(int firstRow, int lastRow) {
+                updateCount();
+            }
+            @Override
+            public void modelReset() {
+                updateCount();
+            }
+            private void updateCount() {
+                rowCount.setText("Showing " + grid.getModel().getRowCount()
+                    + " of " + totalRows + " rows");
+            }
+        });
 
         JPanel footer = new JPanel(new BorderLayout());
         footer.setBackground(footerBg);
@@ -369,6 +333,66 @@ public class SmartGridDemo {
         footer.add(rowCount, BorderLayout.WEST);
         footer.add(selCount, BorderLayout.EAST);
         return footer;
+    }
+
+    /**
+     * Wraps a SmartGrid in a full page layout: a header band with title, subtitle,
+     * and feature chips, followed by a bordered card containing the grid and a live
+     * status footer.  Used by every tab so the page structure stays consistent.
+     */
+    private static JPanel buildPage(SmartGrid grid, String title, String subtitle,
+                                    int totalRows, boolean darkTheme,
+                                    JLabel... featureChips) {
+        Color pageBg     = darkTheme ? new Color(0x2B2D30) : new Color(0xF0F2F5);
+        Color headerBg   = darkTheme ? new Color(0x3C3F41) : Color.WHITE;
+        Color titleFg    = darkTheme ? new Color(0xE8E8E8) : new Color(0x1A1A2E);
+        Color subtitleFg = darkTheme ? new Color(0x888888) : new Color(0x666677);
+        Color borderClr  = darkTheme ? new Color(0x4A4D52) : new Color(0xC8CDD3);
+
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 18f));
+        titleLabel.setForeground(titleFg);
+
+        JLabel subtitleLabel = new JLabel(subtitle);
+        subtitleLabel.setFont(subtitleLabel.getFont().deriveFont(Font.PLAIN, 11f));
+        subtitleLabel.setForeground(subtitleFg);
+
+        JPanel titleArea = new JPanel();
+        titleArea.setLayout(new BoxLayout(titleArea, BoxLayout.Y_AXIS));
+        titleArea.setOpaque(false);
+        titleArea.add(titleLabel);
+        titleArea.add(Box.createVerticalStrut(4));
+        titleArea.add(subtitleLabel);
+
+        JPanel chipsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+        chipsPanel.setOpaque(false);
+        for (JLabel chip : featureChips) {
+            chipsPanel.add(chip);
+        }
+
+        JPanel header = new JPanel(new BorderLayout(16, 0));
+        header.setBackground(headerBg);
+        header.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, borderClr),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)));
+        header.add(titleArea,   BorderLayout.WEST);
+        header.add(chipsPanel,  BorderLayout.EAST);
+
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBorder(BorderFactory.createLineBorder(borderClr));
+        card.add(grid, BorderLayout.CENTER);
+        card.add(buildGridFooter(grid, totalRows, darkTheme, borderClr), BorderLayout.SOUTH);
+
+        JPanel content = new JPanel(new BorderLayout());
+        content.setOpaque(false);
+        content.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        content.add(card, BorderLayout.CENTER);
+
+        JPanel page = new JPanel(new BorderLayout());
+        page.setBackground(pageBg);
+        page.add(header,  BorderLayout.NORTH);
+        page.add(content, BorderLayout.CENTER);
+        return page;
     }
 
     // -------------------------------------------------------------------------
@@ -412,7 +436,17 @@ public class SmartGridDemo {
 
         SmartGrid grid = new SmartGrid(model, darkTheme);
         grid.setTreeZoneVisible(true);
-        return wrap(grid, "Click the ▶ toggle to expand / collapse department employees");
+        // Total = 5 department headers + 43 employees across all departments
+        int totalTreeRows = deptData.length + (empId - 1);
+        return buildPage(grid,
+            "Department Hierarchy",
+            "SmartGrid tree mode  ·  5 departments  ·  43 employees"
+                + "  ·  expand/collapse  ·  group headers  ·  unified model",
+            totalTreeRows, darkTheme,
+            buildChip("Tree View",   new Color(0x2C7BB6)),
+            buildChip("Expandable",  new Color(0x1A9850)),
+            buildChip("Grouped",     new Color(0x756BB1)),
+            buildChip("Hierarchical",new Color(0xE08214)));
     }
 
     // -------------------------------------------------------------------------
@@ -433,8 +467,16 @@ public class SmartGridDemo {
             .put("name", "Groovy  (used in this application)")
             .setTag("fnd-style", "warning-glow"));
 
+        // 36 languages + 2 highlighted scripting language entries
         SmartGrid grid = new SmartGrid(model, darkTheme);
-        return wrap(grid, "Single-column SmartGrid — a list is just a 1-column table sharing the unified model");
+        return buildPage(grid,
+            "Language Catalog",
+            "SmartGrid list mode  ·  38 entries  ·  demonstrates a list is a single-column table"
+                + "  ·  same model, filter, and sort as the full table",
+            LANGUAGES.length + 2, darkTheme,
+            buildChip("List Mode",     new Color(0x2980B9)),
+            buildChip("Single Column", new Color(0x27AE60)),
+            buildChip("Unified Model", new Color(0x8E44AD)));
     }
 
     // -------------------------------------------------------------------------
@@ -494,7 +536,15 @@ public class SmartGridDemo {
 
         grid.setPageSize(50);
 
-        return wrap(grid, "50 rows per page — footer shows per-page aggregates; navigation bar below");
+        return buildPage(grid,
+            "Paginated Employee Data",
+            "SmartGrid pagination  ·  1,000 rows  ·  50 per page"
+                + "  ·  per-page footer aggregates (count, salary sum, active count)  ·  page navigation",
+            1000, darkTheme,
+            buildChip("Paginated",   new Color(0x2980B9)),
+            buildChip("Aggregates",  new Color(0x27AE60)),
+            buildChip("Navigation",  new Color(0xD68910)),
+            buildChip("Footer Row",  new Color(0x8E44AD)));
     }
 
     // -------------------------------------------------------------------------
@@ -570,7 +620,15 @@ public class SmartGridDemo {
         DefaultGridComponentFactory factory = new DefaultGridComponentFactory(grid);
         factory.create("scripted", SCRIPTED_BLUEPRINT_XML);
 
-        return wrap(grid, "Phase 9b: every 30th row uses an XML blueprint + BeanShell bind script (ScriptableRecyclable)");
+        return buildPage(grid,
+            "Scripted Row Renderers",
+            "SmartGrid BeanShell integration  ·  1,000 rows  ·  XML blueprint DSL"
+                + "  ·  every 30th row scripted  ·  live hot-swap from BeanShell console",
+            1000, darkTheme,
+            buildChip("BeanShell",     new Color(0xC0392B)),
+            buildChip("XML Blueprint", new Color(0x2980B9)),
+            buildChip("Scripted",      new Color(0x8E44AD)),
+            buildChip("Hot-Swap",      new Color(0xD68910)));
     }
 
     // -------------------------------------------------------------------------
@@ -706,7 +764,16 @@ public class SmartGridDemo {
         grid.getToolbar().add(searchLabel);
         grid.getToolbar().add(searchField);
 
-        return wrap(grid, "Log viewer — 150 rows: plain text, JSON payloads, stack traces; live search filters and highlights");
+        // Page is always dark — the grid is always dark and the surrounding chrome should match
+        return buildPage(grid,
+            "Log Viewer",
+            "SmartGrid log mining  ·  150 entries  ·  plain text, JSON payloads, stack traces"
+                + "  ·  live search filters rows and highlights matches",
+            150, true,
+            buildChip("Dark Theme",  new Color(0x34495E)),
+            buildChip("JSON Syntax", new Color(0xD68910)),
+            buildChip("Live Search", new Color(0x27AE60)),
+            buildChip("Log Mining",  new Color(0x8E44AD)));
     }
 
     // -------------------------------------------------------------------------

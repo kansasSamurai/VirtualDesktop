@@ -68,11 +68,13 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private static final Color HEADER_BG_LIGHT     = new Color(0x3C4B64);
     private static final Color FOOTER_BG_LIGHT     = new Color(0xECEFF4);
     private static final Color FILTER_ROW_BG_LIGHT = new Color(0xE8EDF5);
+    private static final Color CANVAS_BG_LIGHT     = Color.WHITE;
 
     // Dark theme palette
     private static final Color HEADER_BG_DARK     = new Color(0x2D3548);
     private static final Color FOOTER_BG_DARK     = new Color(0x282A2D);
     private static final Color FILTER_ROW_BG_DARK = new Color(0x32363B);
+    private static final Color CANVAS_BG_DARK     = new Color(0x1E1E1E);
 
     // Active palette — selected at construction time
     private final Color   headerBg;
@@ -193,6 +195,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
         setLayout(new BorderLayout());
 
         canvas = new VirtualCanvas();
+        canvas.setBackground(darkTheme ? CANVAS_BG_DARK : CANVAS_BG_LIGHT);
         scrollPane = new JScrollPane(canvas,
             JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
             JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);

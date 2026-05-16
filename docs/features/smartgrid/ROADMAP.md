@@ -22,6 +22,7 @@
 | 13 | Filter search cache with configurable row-count threshold | ⬜ End | |
 | 14 | Structured filter expressions (`FilterExpression` alongside lambda) | ⬜ Future | Enables query folding — see `docs/features/query-folding/DISCUSSION.md` |
 | 17 | Column freezing / pinning — fixed left columns, scrolling right columns | ⬜ Future | Split-pane architecture; see phase detail below |
+| 18 | Scroll repaint quality — eliminate canvas flash (blit mode + setVisible refactor) | ⬜ Future | Two-part fix; canvas-bg mitigation currently in place |
 
 ---
 
@@ -948,6 +949,24 @@ pay off.
 Should the freeze boundary be **settable at runtime** (drag to resize or toggle), or
 **construction-time only**? Runtime freeze is meaningfully more complex because it
 requires re-homing slots between the two canvases mid-session.
+
+---
+
+## Phase 18 — Scroll Repaint Quality (Eliminate the Canvas Flash)
+
+Yes, it can be prevented entirely — but it requires addressing two distinct causes, and the current canvas-background fix is a mitigation rather than a cure.
+
+**Cause 1: Blit scroll mode (the dominant one)**
+
+JScrollPane's default scroll mode is `JViewport.BLIT_SCROLL_MODE`. When you scroll, Swing uses `copyArea()` to shift the existing pixel content and then only repaints the newly exposed strip at the boundary. That strip is filled with the canvas background before the row component covers it — that's the flash at the top/bottom boundary during scroll. Switching to `JViewport.BACKINGSTORE_SCROLL_MODE` or `JViewport.SIMPLE_SCROLL_MODE` forces a full repaint from an off-screen buffer on every scroll event, eliminating the exposed strip entirely. For a virtual canvas with only ~20 live components this is cheap, and on any hardware made in the last decade the difference is imperceptible.
+
+**Cause 2: `canvas.remove()` / `canvas.add()` during slot type swap**
+
+When a slot changes from one row type to another (or after `reallocateSlots()`), SmartGrid removes the old component and adds the new one. The `remove()` marks that area dirty. Between `remove()` and the slot being repositioned and bound, the canvas background is briefly exposed. The fix here is architectural: replace `add()`/`remove()` with `setVisible(true/false)` — keep all possible typed-pool components permanently attached to the canvas, just hide or show them as needed. No gap is ever created.
+
+**For commercial quality you'd want both.** The scroll-mode change is a one-liner inside the SmartGrid constructor. The setVisible refactor is non-trivial — it means the canvas always contains the full union of all typed pools' visible slots rather than dynamically swapping them — but it also has the side benefit of eliminating the `canvas.add()` peer-creation overhead during rapid type changes.
+
+The canvas background color fix currently in place is the right "livable" solution: it makes any residual flash the same color as the rows, so it's invisible in practice even though the flash still technically happens.
 
 ---
 

@@ -94,7 +94,8 @@ public class LogRowPanel extends JPanel implements Recyclable, Selectable {
 
         contentPane = new JTextPane();
         contentPane.setEditable(false);
-        contentPane.setOpaque(false);
+        contentPane.setOpaque(true);
+        contentPane.setBackground(BG_EVEN);
         contentPane.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         contentPane.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
         add(contentPane);
@@ -149,6 +150,7 @@ public class LogRowPanel extends JPanel implements Recyclable, Selectable {
         contentPane.getHighlighter().removeAllHighlights();
         contentPane.setDocument(new DefaultStyledDocument());
         setBackground(BG_EVEN);
+        contentPane.setBackground(BG_EVEN);
     }
 
     @Override
@@ -159,7 +161,9 @@ public class LogRowPanel extends JPanel implements Recyclable, Selectable {
         }
 
         lastRowIndex = rowIndex;
-        setBackground(rowIndex % 2 == 0 ? BG_EVEN : BG_ODD);
+        Color rowBg = rowIndex % 2 == 0 ? BG_EVEN : BG_ODD;
+        setBackground(rowBg);
+        contentPane.setBackground(rowBg);
 
         int h  = Math.max(getHeight(), 64);
         int w0 = columnWidths.length > 0 ? columnWidths[0] : 80;
@@ -217,8 +221,9 @@ public class LogRowPanel extends JPanel implements Recyclable, Selectable {
 
     @Override
     public void setSelected(boolean selected) {
-        setBackground(selected ? BG_SELECTED
-                               : (lastRowIndex % 2 == 0 ? BG_EVEN : BG_ODD));
+        Color bg = selected ? BG_SELECTED : (lastRowIndex % 2 == 0 ? BG_EVEN : BG_ODD);
+        setBackground(bg);
+        contentPane.setBackground(bg);
     }
 
     // -------------------------------------------------------------------------

@@ -158,3 +158,147 @@ the JTextPane's View hierarchy to rebuild — multiplied across 20+ slots and 30
 insertions per JSON row, this causes multi-second scroll delays. A detached document
 has no UI listener, so insertions are pure data operations. `setDocument()` installs
 the finished document in one shot, triggering exactly one View rebuild per row.
+
+---
+
+## Writing High-Performance bind() Methods
+
+`bind()` is called on the EDT for every visible slot on every scroll event — typically
+16–20 calls per scroll step. At 60 fps smooth scrolling that is potentially 1,000+
+calls per second. The following practices keep it fast and correct.
+
+### 1. Allocate in the constructor, read in bind()
+
+Every object that does not change per-row belongs in the constructor: `Color`,
+`Font`, `SimpleAttributeSet`, `Border`, fixed-width layout constants. `bind()` should
+read pre-built state, not create it.
+
+```java
+// Constructor — once
+private static final Color WARN_BG = new Color(0xFF, 0xF8, 0xDC);
+private final SimpleAttributeSet keyAttr = makeAttr(JSON_KEY, true);
+
+// bind() — zero allocation
+label.setBackground(WARN_BG);
+doc.insertString(0, text, keyAttr);
+```
+
+If `bind()` contains `new Color(...)`, `new Font(...)`, or `new SimpleAttributeSet()`,
+move those to the constructor.
+
+### 2. Never block the EDT in bind()
+
+`bind()` runs on the Swing Event Dispatch Thread. Any blocking operation — database
+query, file read, network call, synchronization on a contested lock — will freeze the
+entire UI for its duration. Data must already be available in the `GridRow` when
+`bind()` is called. Fetch, parse, and pre-compute in a background thread; `bind()`
+only reads.
+
+### 3. Pre-compute search-sensitive and display-ready data at load time
+
+Avoid per-bind string transformations like `toLowerCase()`, `substring()`, or number
+formatting. These create short-lived heap objects that accumulate GC pressure at
+scroll speed. Instead:
+
+- Store display-ready strings in the `GridRow` at load time
+  (`row.put("salaryDisplay", "$" + formatted)`)
+- Store a pre-lowercased search key alongside the display value if filtering is needed
+- Formatters registered via `registerFormatter()` run once per bind — keep them cheap
+
+### 4. Update listeners, never accumulate them
+
+Any `ActionListener`, `MouseListener`, or other listener added in `bind()` must be
+removed before a new one is added. The component is recycled across rows — without
+cleanup, each scroll step adds another listener pointing at a stale row.
+
+```java
+// Wrong — listener count grows unboundedly
+button.addActionListener(e -> doSomethingWith(row));
+
+// Correct
+for (ActionListener al : button.getActionListeners()) {
+    button.removeActionListener(al);
+}
+button.addActionListener(e -> doSomethingWith(row));
+```
+
+The same applies to `MouseListener`, `FocusListener`, and any other listener type
+attached in `bind()`.
+
+### 5. Reuse existing child components (the CellRenderer recycling pattern)
+
+When a `CellRenderer` or custom panel contains sub-components, check `existing`
+before creating new ones. Swing component construction is expensive relative to a
+field update.
+
+```java
+if (existing instanceof JPanel) {
+    cell      = (JPanel)  existing;
+    nameLabel = (JLabel)  cell.getClientProperty("nameLabel");
+    msgButton = (JButton) cell.getClientProperty("msgButton");
+} else {
+    // construct once, store references via putClientProperty
+}
+nameLabel.setText(value.toString()); // update, not recreate
+```
+
+### 6. Keep bind() idempotent
+
+Calling `bind(row, idx)` twice with the same arguments must produce the same visual
+result. `prepareForReuse()` followed by `bind()` must also produce the same result
+as `bind()` alone on a component already showing that row. Stateful side effects
+(opening dialogs, firing events, modifying the model) do not belong in `bind()`.
+
+### 7. Store rowIndex for setSelected()
+
+`setSelected(boolean)` is called after every `bind()`. It needs to know the parity
+of the current row to restore the correct alternating background when deselected.
+Store `rowIndex` as an instance field in `bind()` so `setSelected()` can compute it.
+
+```java
+// In bind():
+this.lastRowIndex = rowIndex;
+
+// In setSelected():
+Color bg = selected ? BG_SELECTED : (lastRowIndex % 2 == 0 ? BG_EVEN : BG_ODD);
+setBackground(bg);
+contentPane.setBackground(bg); // keep opaque children in sync
+```
+
+### 8. Keep opaque child backgrounds in sync
+
+If a child component is `setOpaque(true)` (required when `setOpaque(false)` is
+unreliable under the system LAF), its background must be updated in `bind()`,
+`setSelected()`, and `prepareForReuse()` to match the parent panel's current
+background. An out-of-sync opaque child will paint the wrong color over borders
+or selection highlights.
+
+### 9. Position children in doLayout(), not only in bind()
+
+With null layout, child bounds set in `bind()` are correct at bind time. But if the
+viewport is resized without triggering a new `bind()` call, children keep stale
+bounds. Override `doLayout()` to recompute positions from `getWidth()` / `getHeight()`
+so resize is always correct regardless of when `bind()` last ran.
+
+### 10. Contain revalidation with isValidateRoot()
+
+If a child component has its own internal layout engine (`JTextPane`, `JEditorPane`),
+its internal state changes fire `revalidate()` calls that propagate up the component
+tree. Without a boundary, these reach `VirtualCanvas` and can re-enter the refresh
+cycle mid-bind. Override `isValidateRoot()` on the row panel to return `true` —
+this makes the row panel the revalidation boundary, containing the event within the
+slot.
+
+### Summary — bind() checklist
+
+| Check | Rule |
+|-------|------|
+| No `new Color/Font/AttributeSet` | Allocate in constructor |
+| No blocking I/O or DB calls | Data must be pre-fetched |
+| No raw `toLowerCase()` per row | Pre-compute at load time |
+| All listeners removed before adding | Prevent stale-row listener accumulation |
+| `existing` checked before constructing | Recycle sub-components |
+| `lastRowIndex` stored | setSelected() needs it |
+| Opaque child backgrounds updated | Match parent on every bind/select |
+| `doLayout()` overridden | Resize works without bind() |
+| `isValidateRoot()` returns true | Contains JTextPane revalidation |

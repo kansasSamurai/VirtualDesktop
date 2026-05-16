@@ -4,11 +4,15 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Insets;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JToggleButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -112,7 +116,7 @@ public class SmartGridDemo {
     private static JPanel buildTableTab(boolean darkTheme) {
         final DefaultGridModel model = new DefaultGridModel()
             .addColumn(new ColumnDef("id",     "ID",          50, true,  true, null))
-            .addColumn(new ColumnDef("name",   "Name",       220, true,  true, null))
+            .addColumn(new ColumnDef("name",   "Name",       220, true,  true, "name-with-msg"))
             .addColumn(new ColumnDef("dept",   "Department", 180, true,  true, null))
             .addColumn(new ColumnDef("salary", "Salary",     110, true,  true, "currency"))
             .addColumn(new ColumnDef("status", "Status",      80, false, true, null));
@@ -135,6 +139,76 @@ public class SmartGridDemo {
 
         SmartGrid grid = new SmartGrid(model, darkTheme);
         grid.registerFormatter("currency", v -> String.format("$%,d", ((Number) v).longValue()));
+
+        // CellRenderer for the name column: demonstrates a real interactive JButton
+        // embedded in a cell — something JTable's stamp-based renderer cannot do.
+        grid.registerCellRenderer("name-with-msg", (col, value, row, existing) -> {
+            JPanel cell;
+            JLabel nameLabel;
+            JButton msgButton;
+
+            if (existing instanceof JPanel) {
+                // Recycle the existing panel — just update its contents
+                cell      = (JPanel) existing;
+                nameLabel = (JLabel)  cell.getClientProperty("nameLabel");
+                msgButton = (JButton) cell.getClientProperty("msgButton");
+            } else {
+                cell = new JPanel(new BorderLayout(4, 0));
+                cell.setOpaque(false);
+                nameLabel = new JLabel();
+                msgButton = new JButton("Msg");
+                msgButton.setFont(msgButton.getFont().deriveFont(10f));
+                msgButton.setMargin(new Insets(1, 4, 1, 4));
+                msgButton.setFocusable(false);
+                cell.add(nameLabel, BorderLayout.CENTER);
+                cell.add(msgButton, BorderLayout.EAST);
+                cell.putClientProperty("nameLabel", nameLabel);
+                cell.putClientProperty("msgButton", msgButton);
+            }
+
+            nameLabel.setText(value != null ? value.toString() : "");
+
+            // Remove stale listener and attach a fresh one bound to this row's data
+            for (java.awt.event.ActionListener al : msgButton.getActionListeners()) {
+                msgButton.removeActionListener(al);
+            }
+            final String employeeName = value != null ? value.toString() : "Unknown";
+            final String employeeId   = row.get("id") != null ? row.get("id").toString() : "";
+            msgButton.addActionListener(e -> {
+                JPanel dialogPanel = new JPanel(new BorderLayout(0, 6));
+                dialogPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+                dialogPanel.add(new JLabel("To: " + employeeName + "  (ID " + employeeId + ")"),
+                        BorderLayout.NORTH);
+                JTextArea messageArea = new JTextArea(4, 32);
+                messageArea.setLineWrap(true);
+                messageArea.setWrapStyleWord(true);
+                dialogPanel.add(new JScrollPane(messageArea), BorderLayout.CENTER);
+
+                int choice = JOptionPane.showOptionDialog(
+                        SwingUtilities.getWindowAncestor(msgButton),
+                        dialogPanel,
+                        "Send Message",
+                        JOptionPane.OK_CANCEL_OPTION,
+                        JOptionPane.PLAIN_MESSAGE,
+                        null,
+                        new Object[]{"Send", "Cancel"},
+                        "Send");
+
+                if (choice == 0) {
+                    String text = messageArea.getText().trim();
+                    JOptionPane.showMessageDialog(
+                            SwingUtilities.getWindowAncestor(msgButton),
+                            text.isEmpty()
+                                ? "Message sent to " + employeeName + "."
+                                : "Message sent to " + employeeName + ":\n“" + text + "”",
+                            "Sent",
+                            JOptionPane.INFORMATION_MESSAGE);
+                }
+            });
+
+            return cell;
+        });
+
         final List<ColumnDef>    featuredCols   = model.getColumns();
         final int[]              featuredWidths = grid.getColumnWidths();
         final ListSelectionModel featuredSm     = grid.getSelectionModel();

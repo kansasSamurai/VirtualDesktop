@@ -26,6 +26,7 @@ import org.jwellman.swing.grid.DefaultGridComponentFactory;
 import org.jwellman.swing.grid.DefaultGridModel;
 import org.jwellman.swing.grid.GridModelListener;
 import org.jwellman.swing.grid.GridRow;
+import org.jwellman.swing.grid.LogRowPanel;
 import org.jwellman.swing.grid.Recyclable;
 import org.jwellman.swing.grid.Selectable;
 import org.jwellman.swing.grid.SmartGrid;
@@ -80,7 +81,16 @@ public class SmartGridDemo {
     }
 
     /**
-     * Builds and returns the full four-tab demo pane.
+     * Builds and returns the full demo pane.
+     *
+     * <ul>
+     *   <li>"Table"    — 1,000 flat rows; viewport virtualization; proportional column widths</li>
+     *   <li>"Tree"     — departments + employees; expand/collapse; unified model</li>
+     *   <li>"List"     — single-column SmartGrid; demonstrates list-is-a-table</li>
+     *   <li>"Paged"    — 1,000 rows / 50 per page; footer aggregates; pagination bar</li>
+     *   <li>"Scripted" — Phase 9b: XML blueprint + BeanShell bind scripts</li>
+     *   <li>"Log"      — dark log viewer; plain text, JSON, stack traces; live search</li>
+     * </ul>
      *
      * @param darkTheme {@code true} to apply SmartGrid's dark colour palette
      */
@@ -91,6 +101,7 @@ public class SmartGridDemo {
         tabs.addTab("List",     buildListTab(darkTheme));
         tabs.addTab("Paged",    buildPagedTab(darkTheme));
         tabs.addTab("Scripted", buildScriptedTab(darkTheme));
+        tabs.addTab("Log",      buildLogTab());
         return tabs;
     }
 
@@ -130,6 +141,7 @@ public class SmartGridDemo {
         grid.registerRowRenderer("featured",
             () -> new FeaturedRowPanel(featuredCols, featuredWidths, featuredSm));
         grid.setColumnFiltersVisible(true);
+        grid.setRowNumbersVisible(true);
 
         // Global filter field — wired to grid; lives in the grid's built-in toolbar
         JTextField filterField = new JTextField(20);
@@ -369,6 +381,142 @@ public class SmartGridDemo {
         factory.create("scripted", SCRIPTED_BLUEPRINT_XML);
 
         return wrap(grid, "Phase 9b: every 30th row uses an XML blueprint + BeanShell bind script (ScriptableRecyclable)");
+    }
+
+    // -------------------------------------------------------------------------
+    // Tab 6: Log viewer — dark theme, JSON/stack-trace highlighting, live search
+    // -------------------------------------------------------------------------
+
+    private static JPanel buildLogTab() {
+        final String[] searchHolder = {""};
+
+        final DefaultGridModel model = new DefaultGridModel()
+            .addColumn(new ColumnDef("level",   "Severity",  80,  false, false, null))
+            .addColumn(new ColumnDef("content", "Log Entry", 550, false, true,  null));
+
+        final String[] PLAIN_INFO = {
+            "Application started on port 8080",
+            "Loaded configuration from classpath:application.yml",
+            "Connected to database at jdbc:postgresql://localhost:5432/appdb",
+            "User 'admin' authenticated successfully from 192.168.1.42",
+            "Cache primed: 2,048 entries loaded in 312 ms",
+            "Scheduled task 'metrics-flush' completed in 45 ms",
+            "HTTP GET /api/v2/users returned 200 in 18 ms",
+            "Session token refreshed for user_id=7712",
+            "Batch import completed: 500 records written, 0 rejected",
+            "Health check passed: db=UP, cache=UP, queue=UP"
+        };
+        final String[] JSON_PAYLOADS = {
+            "{\"event\": \"order.created\", \"orderId\": 9921, \"userId\": 4401, \"total\": 129.95}",
+            "{\"event\": \"user.login\", \"userId\": 7712, \"ip\": \"10.0.0.5\", \"success\": true}",
+            "{\"level\": \"INFO\", \"service\": \"payment-svc\", \"duration_ms\": 203, \"status\": \"ok\"}",
+            "{\"metric\": \"heap_used_mb\", \"value\": 412, \"threshold\": 1024, \"ts\": \"2026-05-15T10:22:00Z\"}",
+            "{\"request\": {\"method\": \"POST\", \"path\": \"/api/checkout\"}, \"response\": {\"status\": 201}}"
+        };
+        final String[] WARN_MSGS = {
+            "Connection pool approaching limit: 45/50 active connections",
+            "Slow query detected (892 ms): SELECT * FROM audit_log WHERE created_at > ?",
+            "Retry attempt 2/3 for downstream service 'inventory-api'",
+            "Disk usage on /var/data at 78%; threshold is 80%"
+        };
+        final String[] ERROR_MSGS = {
+            "NullPointerException in OrderController.createOrder(OrderController.java:88)",
+            "Failed to acquire lock on resource 'tx-7821' after 30000 ms",
+            "Circuit breaker OPEN for service 'notification-svc'",
+            "Database connection lost; attempting reconnect..."
+        };
+        final String[] STACK_TRACES = {
+            "java.lang.NullPointerException: Cannot read field \"id\" because \"order\" is null\n"
+                + "  at com.example.OrderController.createOrder(OrderController.java:88)\n"
+                + "  at com.example.api.ApiDispatcher.dispatch(ApiDispatcher.java:204)\n"
+                + "  ... 14 more",
+            "java.util.concurrent.TimeoutException: Timed out after 30000 ms\n"
+                + "  at com.example.lock.DistributedLock.acquire(DistributedLock.java:51)\n"
+                + "  at com.example.tx.TxManager.begin(TxManager.java:137)\n"
+                + "  ... 8 more"
+        };
+        final String[] DEBUG_MSGS = {
+            "Entering method UserService.findById() with id=4401",
+            "Cache miss for key 'user:4401'; fetching from DB",
+            "SQL: SELECT id, name, email FROM users WHERE id = ?  [params: 4401]",
+            "Exiting UserService.findById() with result: User{id=4401, name='Alice'}"
+        };
+
+        for (int i = 1; i <= 150; i++) {
+            String level;
+            String content;
+            int bucket = i % 8;
+            switch (bucket) {
+                case 0: case 1: case 2:
+                    level   = "INFO";
+                    content = PLAIN_INFO[i % PLAIN_INFO.length];
+                    break;
+                case 3:
+                    level   = "INFO";
+                    content = JSON_PAYLOADS[i % JSON_PAYLOADS.length];
+                    break;
+                case 4:
+                    level   = "WARN";
+                    content = WARN_MSGS[i % WARN_MSGS.length];
+                    break;
+                case 5:
+                    level   = "ERROR";
+                    content = (i % 20 == 5)
+                            ? STACK_TRACES[i % STACK_TRACES.length]
+                            : ERROR_MSGS[i % ERROR_MSGS.length];
+                    break;
+                case 6:
+                    level   = "DEBUG";
+                    content = DEBUG_MSGS[i % DEBUG_MSGS.length];
+                    break;
+                default:
+                    level   = "ERROR";
+                    content = STACK_TRACES[i % STACK_TRACES.length];
+                    break;
+            }
+            model.addRow(new GridRow()
+                .put("level",   level)
+                .put("content", content)
+                .setTag("fnd-type",  "log-row")
+                .setTag("log-level", level.toLowerCase()));
+        }
+
+        SmartGrid grid = new SmartGrid(model, true);
+        grid.setRowHeight(64);
+        grid.setRowNumbersVisible(true);
+
+        final int[] columnWidths = grid.getColumnWidths();
+        grid.registerRowRenderer("log-row",
+            () -> new LogRowPanel(columnWidths, searchHolder, grid.getSelectionModel()));
+
+        JTextField searchField = new JTextField(28);
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            private void onChanged() {
+                String term = searchField.getText().trim();
+                searchHolder[0] = term;
+                if (term.isEmpty()) {
+                    grid.clearFilter();
+                } else {
+                    final String lower = term.toLowerCase();
+                    grid.setFilter(row -> {
+                        Object c = row.get("content");
+                        Object l = row.get("level");
+                        return (c != null && c.toString().toLowerCase().contains(lower))
+                            || (l != null && l.toString().toLowerCase().contains(lower));
+                    });
+                }
+            }
+            @Override public void insertUpdate(DocumentEvent e)  { onChanged(); }
+            @Override public void removeUpdate(DocumentEvent e)  { onChanged(); }
+            @Override public void changedUpdate(DocumentEvent e) { onChanged(); }
+        });
+
+        JLabel searchLabel = new JLabel("Search:");
+        searchLabel.setForeground(java.awt.Color.WHITE);
+        grid.getToolbar().add(searchLabel);
+        grid.getToolbar().add(searchField);
+
+        return wrap(grid, "Log viewer — 150 rows: plain text, JSON payloads, stack traces; live search filters and highlights");
     }
 
     // -------------------------------------------------------------------------

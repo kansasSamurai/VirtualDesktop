@@ -132,7 +132,14 @@ public class LogRowPanel extends JPanel implements Recyclable, Selectable {
         int w0 = columnWidths.length > 0 ? columnWidths[0] : 80;
         int w1 = Math.max(0, getWidth() - w0);
         severityLabel.setBounds(0, 0, w0, h);
-        contentPane.setBounds(w0, 0, w1, h);
+        // h - 1: Swing paints children AFTER the border, so an opaque child whose
+        // bounds reach the panel's bottom pixel will paint its background over the
+        // 1px bottom border declared in the constructor (createMatteBorder 0,0,1,0).
+        // Stopping the content pane 1px short leaves the border pixel uncovered.
+        // severityLabel is setOpaque(false) so its full height is fine — the panel's
+        // border shows through underneath it naturally.
+        // If the border width in the constructor ever changes, update this offset too.
+        contentPane.setBounds(w0, 0, w1, h - 1);
     }
 
     // -------------------------------------------------------------------------
@@ -176,7 +183,7 @@ public class LogRowPanel extends JPanel implements Recyclable, Selectable {
         severityLabel.setText(level);
         severityLabel.setForeground(severityColor(level));
 
-        contentPane.setBounds(w0, 0, w1, h);
+        contentPane.setBounds(w0, 0, w1, h - 1); // see doLayout() for why h - 1
 
         hydrateLog(content, searchHolder[0]);
 

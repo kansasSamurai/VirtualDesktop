@@ -11,6 +11,7 @@ import javax.swing.JTextPane;
 import javax.swing.ListSelectionModel;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultHighlighter;
+import javax.swing.text.DefaultStyledDocument;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
@@ -146,10 +147,7 @@ public class LogRowPanel extends JPanel implements Recyclable, Selectable {
         severityLabel.setText("");
         severityLabel.setForeground(TEXT_DEFAULT);
         contentPane.getHighlighter().removeAllHighlights();
-        StyledDocument doc = contentPane.getStyledDocument();
-        try {
-            doc.remove(0, doc.getLength());
-        } catch (BadLocationException ignored) {}
+        contentPane.setDocument(new DefaultStyledDocument());
         setBackground(BG_EVEN);
     }
 
@@ -228,32 +226,36 @@ public class LogRowPanel extends JPanel implements Recyclable, Selectable {
     // -------------------------------------------------------------------------
 
     private void hydrateLog(String content, String searchTerm) {
-        contentPane.getHighlighter().removeAllHighlights();
-        StyledDocument doc = contentPane.getStyledDocument();
-        try {
-            doc.remove(0, doc.getLength());
-        } catch (BadLocationException ignored) {}
+        // Build the document while it is DETACHED from the JTextPane.
+        // No BasicTextUI listener means no View-tree rebuild on each insertString()
+        // call — the many micro-inserts in insertJsonStyled are pure data ops.
+        // setDocument() below installs the finished document in one shot, triggering
+        // exactly one View rebuild instead of one per character-group transition.
+        DefaultStyledDocument newDoc = new DefaultStyledDocument();
 
-        if (content == null || content.isEmpty()) {
-            return;
-        }
-
-        String trimmed = content.trim();
-        try {
-            if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-                insertJsonStyled(doc, trimmed);
-            } else if (trimmed.contains("\n  at ") || isStackTrace(trimmed)) {
-                insertStackTraceStyled(doc, trimmed);
-            } else {
-                doc.insertString(0, content, defaultAttr);
-            }
-        } catch (BadLocationException e) {
+        if (content != null && !content.isEmpty()) {
+            String trimmed = content.trim();
             try {
-                doc.remove(0, doc.getLength());
-                doc.insertString(0, content, defaultAttr);
-            } catch (BadLocationException ignored) {}
+                if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+                    insertJsonStyled(newDoc, trimmed);
+                } else if (trimmed.contains("\n  at ") || isStackTrace(trimmed)) {
+                    insertStackTraceStyled(newDoc, trimmed);
+                } else {
+                    newDoc.insertString(0, content, defaultAttr);
+                }
+            } catch (BadLocationException e) {
+                try {
+                    newDoc.insertString(0, content, defaultAttr);
+                } catch (BadLocationException ignored) {}
+            }
         }
 
+        // One event, one View rebuild.
+        contentPane.setDocument(newDoc);
+
+        // Highlighter lives on the JTextPane UI, not the document; clear stale
+        // positions left over from before setDocument() and add fresh ones.
+        contentPane.getHighlighter().removeAllHighlights();
         if (searchTerm != null && !searchTerm.isEmpty()) {
             applySearchHighlights(searchTerm.toLowerCase());
         }

@@ -113,6 +113,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
     // Strip list — ordered left to right; each contributes to canvasLeadWidth()
     private final List<Strip> strips       = new ArrayList<>();
+    private RowNumberStrip    rowNumberStrip;
     private CheckboxStrip     checkboxStrip;
     private TreeZoneStrip     treeZoneStrip;
 
@@ -174,16 +175,18 @@ public class SmartGrid extends JPanel implements GridModelListener {
             renderers,
             dark));
 
-        checkboxStrip = new CheckboxStrip(selectionModel, model,
+        rowNumberStrip = new RowNumberStrip(darkTheme, headerBg);
+        checkboxStrip  = new CheckboxStrip(selectionModel, model,
                 this::selectAll, this::clearSelection);
-        treeZoneStrip = new TreeZoneStrip(() -> {
+        treeZoneStrip  = new TreeZoneStrip(() -> {
             if (model instanceof DefaultGridModel) {
                 ((DefaultGridModel) model).notifyDataChanged();
             }
         });
         treeZoneStrip.setVisible(false);
-        strips.add(checkboxStrip);
-        strips.add(treeZoneStrip);
+        strips.add(rowNumberStrip);  // index 0 — far left
+        strips.add(checkboxStrip);   // index 1
+        strips.add(treeZoneStrip);   // index 2
 
         registerRowRenderer("group-header", GroupHeaderRowPanel::new);
 
@@ -275,6 +278,18 @@ public class SmartGrid extends JPanel implements GridModelListener {
             add(toolbarPanel, BorderLayout.NORTH);
         }
         return toolbarPanel;
+    }
+
+    public boolean isRowNumbersVisible() {
+        return rowNumberStrip.isVisible();
+    }
+
+    public void setRowNumbersVisible(boolean visible) {
+        if (rowNumberStrip.isVisible() == visible) {
+            return;
+        }
+        rowNumberStrip.setVisible(visible);
+        onStripVisibilityChanged();
     }
 
     public boolean isCheckboxColumnVisible() {

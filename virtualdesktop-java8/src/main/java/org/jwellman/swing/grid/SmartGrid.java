@@ -28,6 +28,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.JViewport;
 import javax.swing.ListSelectionModel;
 import javax.swing.Scrollable;
 import javax.swing.SwingUtilities;
@@ -199,6 +200,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
         scrollPane = new JScrollPane(canvas,
             JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
             JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setColumnHeaderView(buildHeader(cols));
 
@@ -768,11 +770,9 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
                 // Swap component only when the required row type changes
                 if (!Objects.equals(requiredType, slotTypes[i])) {
-                    getPoolForType(slotTypes[i]).release(slots[i]);
-                    canvas.remove(slots[i]);
-                    slots[i]     = getPoolForType(requiredType).checkout();
+                    releaseSlot(getPoolForType(slotTypes[i]), slots[i]);
+                    slots[i]     = checkoutSlot(getPoolForType(requiredType));
                     slotTypes[i] = requiredType;
-                    canvas.add(slots[i]);
                 }
 
                 int leadX = 0;
@@ -805,8 +805,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private void reallocateSlots(int count) {
         if (slots != null) {
             for (int i = 0; i < slots.length; i++) {
-                canvas.remove(slots[i]);
-                getPoolForType(slotTypes[i]).release(slots[i]);
+                releaseSlot(getPoolForType(slotTypes[i]), slots[i]);
             }
             for (Strip strip : strips) {
                 if (strip.isVisible()) {
@@ -822,8 +821,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
             }
         }
         for (int i = 0; i < count; i++) {
-            slots[i] = pool.checkout();
-            canvas.add(slots[i]);
+            slots[i] = checkoutSlot(pool);
         }
     }
 
@@ -832,6 +830,26 @@ public class SmartGrid extends JPanel implements GridModelListener {
             return typedPools.get(fndType);
         }
         return pool;
+    }
+
+    // Checks out a slot component and ensures it is attached to the canvas exactly
+    // once.  Fresh components (parent == null, bounds 0,0,0,0) are added with a
+    // zero-pixel dirty region — no visible flash.  Recycled components already have
+    // canvas as their parent and are never re-added.
+    private JComponent checkoutSlot(ComponentPool p) {
+        JComponent c = p.checkout();
+        if (c.getParent() != canvas) {
+            canvas.add(c);
+        }
+        return c;
+    }
+
+    // Hides a slot component and returns it to its pool without removing it from
+    // the canvas.  Keeping it attached means no dirty-region gap is created at its
+    // former position.
+    private void releaseSlot(ComponentPool p, JComponent c) {
+        c.setVisible(false);
+        p.release(c);
     }
 
     private String resolveRowType(GridRow row) {

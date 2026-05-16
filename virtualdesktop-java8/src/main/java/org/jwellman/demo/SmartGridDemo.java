@@ -8,6 +8,8 @@ import java.awt.Insets;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -252,7 +254,72 @@ public class SmartGridDemo {
         toolbar.add(filterField);
         toolbar.add(editToggle);
 
-        return grid;
+        // --- Page layout: header + card, giving SmartGrid a "larger page" context ---
+
+        Color pageBg     = darkTheme ? new Color(0x2B2D30) : new Color(0xF0F2F5);
+        Color headerBg   = darkTheme ? new Color(0x3C3F41) : Color.WHITE;
+        Color titleFg    = darkTheme ? new Color(0xE8E8E8) : new Color(0x1A1A2E);
+        Color subtitleFg = darkTheme ? new Color(0x888888) : new Color(0x666677);
+        Color borderClr  = darkTheme ? new Color(0x4A4D52) : new Color(0xC8CDD3);
+
+        JLabel titleLabel = new JLabel("Employee Directory");
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 18f));
+        titleLabel.setForeground(titleFg);
+
+        JLabel subtitleLabel = new JLabel(
+            "SmartGrid demo  ·  1,000 rows  ·  live filter & sort"
+            + "  ·  interactive cell renderers  ·  inline edit mode");
+        subtitleLabel.setFont(subtitleLabel.getFont().deriveFont(Font.PLAIN, 11f));
+        subtitleLabel.setForeground(subtitleFg);
+
+        JPanel titleArea = new JPanel();
+        titleArea.setLayout(new BoxLayout(titleArea, BoxLayout.Y_AXIS));
+        titleArea.setOpaque(false);
+        titleArea.add(titleLabel);
+        titleArea.add(Box.createVerticalStrut(4));
+        titleArea.add(subtitleLabel);
+
+        JPanel chips = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+        chips.setOpaque(false);
+        chips.add(buildChip("Virtualized", new Color(0x2980B9)));
+        chips.add(buildChip("Sortable",    new Color(0x27AE60)));
+        chips.add(buildChip("Filterable",  new Color(0xD68910)));
+        chips.add(buildChip("Interactive", new Color(0x8E44AD)));
+        chips.add(buildChip("Edit Mode",   new Color(0xC0392B)));
+
+        JPanel header = new JPanel(new BorderLayout(16, 0));
+        header.setBackground(headerBg);
+        header.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, borderClr),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)));
+        header.add(titleArea, BorderLayout.WEST);
+        header.add(chips,     BorderLayout.EAST);
+
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBorder(BorderFactory.createLineBorder(borderClr));
+        card.add(grid, BorderLayout.CENTER);
+
+        JPanel content = new JPanel(new BorderLayout());
+        content.setOpaque(false);
+        content.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        content.add(card, BorderLayout.CENTER);
+
+        JPanel page = new JPanel(new BorderLayout());
+        page.setBackground(pageBg);
+        page.add(header,  BorderLayout.NORTH);
+        page.add(content, BorderLayout.CENTER);
+
+        return page;
+    }
+
+    private static JLabel buildChip(String text, Color bg) {
+        JLabel chip = new JLabel(text);
+        chip.setFont(chip.getFont().deriveFont(Font.BOLD, 10f));
+        chip.setForeground(Color.WHITE);
+        chip.setBackground(bg);
+        chip.setOpaque(true);
+        chip.setBorder(BorderFactory.createEmptyBorder(3, 7, 3, 7));
+        return chip;
     }
 
     // -------------------------------------------------------------------------

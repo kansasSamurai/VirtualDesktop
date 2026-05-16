@@ -298,6 +298,7 @@ public class SmartGridDemo {
         JPanel card = new JPanel(new BorderLayout());
         card.setBorder(BorderFactory.createLineBorder(borderClr));
         card.add(grid, BorderLayout.CENTER);
+        card.add(buildGridFooter(grid, 1000, darkTheme, borderClr), BorderLayout.SOUTH);
 
         JPanel content = new JPanel(new BorderLayout());
         content.setOpaque(false);
@@ -320,6 +321,54 @@ public class SmartGridDemo {
         chip.setOpaque(true);
         chip.setBorder(BorderFactory.createEmptyBorder(3, 7, 3, 7));
         return chip;
+    }
+
+    /**
+     * Builds a slim status footer for embedding at the SOUTH of a grid card.
+     * Shows live filtered-row count on the left and selection count on the right.
+     * Designed as a replacement for the standalone selectionToolbar when the grid
+     * is hosted inside a page layout rather than filling an entire tab.
+     */
+    private static JPanel buildGridFooter(SmartGrid grid, int totalRows,
+                                          boolean darkTheme, Color borderColor) {
+        Color footerBg = darkTheme ? new Color(0x32363B) : new Color(0xE8ECF0);
+        Color footerFg = darkTheme ? new Color(0x9A9A9A) : new Color(0x666677);
+
+        JLabel rowCount = new JLabel("Showing " + totalRows + " of " + totalRows + " rows");
+        rowCount.setFont(rowCount.getFont().deriveFont(Font.PLAIN, 10f));
+        rowCount.setForeground(footerFg);
+
+        JLabel selCount = new JLabel("0 rows selected");
+        selCount.setFont(selCount.getFont().deriveFont(Font.PLAIN, 10f));
+        selCount.setForeground(footerFg);
+
+        grid.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                ListSelectionModel sm = grid.getSelectionModel();
+                int selected = 0;
+                int min = sm.getMinSelectionIndex();
+                int max = sm.getMaxSelectionIndex();
+                for (int i = min; i <= max && min >= 0; i++) {
+                    if (sm.isSelectedIndex(i)) {
+                        selected++;
+                    }
+                }
+                selCount.setText(selected + " row(s) selected");
+            }
+        });
+
+        grid.getModel().addGridModelListener(e ->
+            rowCount.setText("Showing " + grid.getModel().getRowCount()
+                + " of " + totalRows + " rows"));
+
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.setBackground(footerBg);
+        footer.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(1, 0, 0, 0, borderColor),
+            BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+        footer.add(rowCount, BorderLayout.WEST);
+        footer.add(selCount, BorderLayout.EAST);
+        return footer;
     }
 
     // -------------------------------------------------------------------------

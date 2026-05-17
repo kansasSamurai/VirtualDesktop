@@ -725,23 +725,26 @@ public class SmartGrid extends JPanel implements GridModelListener {
      * focusable sibling; this method restores it via invokeLater.
      */
     private void rebuildHeaderView(List<ColumnDef> cols) {
-        int focusedFieldIdx = -1;
-        if (columnFilterFields != null) {
-            Component focused = KeyboardFocusManager
-                    .getCurrentKeyboardFocusManager().getFocusOwner();
-            for (int i = 0; i < columnFilterFields.length; i++) {
-                if (columnFilterFields[i] == focused) {
-                    focusedFieldIdx = i;
-                    break;
-                }
-            }
-        }
+        // Preserve focus across header rebuild.  The header panel is replaced
+        // entirely on viewport width changes (scroll bar appearing/disappearing),
+        // which re-parents any embedded interactive components and loses their
+        // focus.  Save the focused component if it lives anywhere in the column
+        // header — covers both column filter fields and custom HeaderCellRenderer
+        // components such as embedded search fields.
+        Component focused = KeyboardFocusManager
+                .getCurrentKeyboardFocusManager().getFocusOwner();
+        JViewport columnHeader = scrollPane.getColumnHeader();
+        boolean headerHadFocus = focused != null && columnHeader != null
+                && SwingUtilities.isDescendingFrom(focused, columnHeader);
 
         scrollPane.setColumnHeaderView(buildHeader(cols));
 
-        if (focusedFieldIdx >= 0) {
-            final int idx = focusedFieldIdx;
-            SwingUtilities.invokeLater(() -> columnFilterFields[idx].requestFocusInWindow());
+        // The saved component is the same object — it was re-parented into the
+        // new header by the HeaderCellRenderer.  Restore focus on the next EDT
+        // pass once the new hierarchy is fully wired.
+        if (headerHadFocus) {
+            final Component toFocus = focused;
+            SwingUtilities.invokeLater(() -> toFocus.requestFocusInWindow());
         }
     }
 

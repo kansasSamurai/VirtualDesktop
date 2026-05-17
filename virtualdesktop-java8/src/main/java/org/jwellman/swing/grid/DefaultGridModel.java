@@ -135,6 +135,11 @@ public class DefaultGridModel implements GridModel {
     }
 
     @Override
+    public int getTotalRowCount() {
+        return rows.size();
+    }
+
+    @Override
     public GridRow getRow(int index) {
         ensureVisible();
         return visibleRows.get(index);

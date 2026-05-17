@@ -258,7 +258,7 @@ public class SmartGridDemo {
             "Employee Directory",
             "SmartGrid demo  ·  1,000 rows  ·  live filter & sort"
                 + "  ·  interactive cell renderers  ·  inline edit mode",
-            1000, darkTheme,
+            darkTheme,
             buildChip("Virtualized", new Color(0x2980B9)),
             buildChip("Sortable",    new Color(0x27AE60)),
             buildChip("Filterable",  new Color(0xD68910)),
@@ -277,71 +277,13 @@ public class SmartGridDemo {
     }
 
     /**
-     * Builds a slim status footer for embedding at the SOUTH of a grid card.
-     * Shows live filtered-row count on the left and selection count on the right.
-     * Designed as a replacement for the standalone selectionToolbar when the grid
-     * is hosted inside a page layout rather than filling an entire tab.
-     */
-    private static JPanel buildGridFooter(SmartGrid grid, int totalRows,
-                                          boolean darkTheme, Color borderColor) {
-        Color footerBg = darkTheme ? new Color(0x32363B) : new Color(0xE8ECF0);
-        Color footerFg = darkTheme ? new Color(0x9A9A9A) : new Color(0x666677);
-
-        JLabel rowCount = new JLabel("Showing " + totalRows + " of " + totalRows + " rows");
-        rowCount.setFont(rowCount.getFont().deriveFont(Font.PLAIN, 10f));
-        rowCount.setForeground(footerFg);
-
-        JLabel selCount = new JLabel("0 rows selected");
-        selCount.setFont(selCount.getFont().deriveFont(Font.PLAIN, 10f));
-        selCount.setForeground(footerFg);
-
-        grid.addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) {
-                ListSelectionModel sm = grid.getSelectionModel();
-                int selected = 0;
-                int min = sm.getMinSelectionIndex();
-                int max = sm.getMaxSelectionIndex();
-                for (int i = min; i <= max && min >= 0; i++) {
-                    if (sm.isSelectedIndex(i)) {
-                        selected++;
-                    }
-                }
-                selCount.setText(selected + " row(s) selected");
-            }
-        });
-
-        grid.getModel().addGridModelListener(new GridModelListener() {
-            @Override
-            public void rowsChanged(int firstRow, int lastRow) {
-                updateCount();
-            }
-            @Override
-            public void modelReset() {
-                updateCount();
-            }
-            private void updateCount() {
-                rowCount.setText("Showing " + grid.getModel().getRowCount()
-                    + " of " + totalRows + " rows");
-            }
-        });
-
-        JPanel footer = new JPanel(new BorderLayout());
-        footer.setBackground(footerBg);
-        footer.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(1, 0, 0, 0, borderColor),
-            BorderFactory.createEmptyBorder(4, 8, 4, 8)));
-        footer.add(rowCount, BorderLayout.WEST);
-        footer.add(selCount, BorderLayout.EAST);
-        return footer;
-    }
-
-    /**
      * Wraps a SmartGrid in a full page layout: a header band with title, subtitle,
-     * and feature chips, followed by a bordered card containing the grid and a live
-     * status footer.  Used by every tab so the page structure stays consistent.
+     * and feature chips, followed by a bordered card containing the grid.  The
+     * SmartGrid's intrinsic summary row (always at the bottom of the grid) provides
+     * the "Showing X of Y rows / N selected" status — no external footer needed.
      */
     private static JPanel buildPage(SmartGrid grid, String title, String subtitle,
-                                    int totalRows, boolean darkTheme,
+                                    boolean darkTheme,
                                     JLabel... featureChips) {
         Color pageBg     = darkTheme ? new Color(0x2B2D30) : new Color(0xF0F2F5);
         Color headerBg   = darkTheme ? new Color(0x3C3F41) : Color.WHITE;
@@ -381,7 +323,6 @@ public class SmartGridDemo {
         JPanel card = new JPanel(new BorderLayout());
         card.setBorder(BorderFactory.createLineBorder(borderClr));
         card.add(grid, BorderLayout.CENTER);
-        card.add(buildGridFooter(grid, totalRows, darkTheme, borderClr), BorderLayout.SOUTH);
 
         JPanel content = new JPanel(new BorderLayout());
         content.setOpaque(false);
@@ -436,13 +377,11 @@ public class SmartGridDemo {
 
         SmartGrid grid = new SmartGrid(model, darkTheme);
         grid.setTreeZoneVisible(true);
-        // Total = 5 department headers + 43 employees across all departments
-        int totalTreeRows = deptData.length + (empId - 1);
         return buildPage(grid,
             "Department Hierarchy",
             "SmartGrid tree mode  ·  5 departments  ·  43 employees"
                 + "  ·  expand/collapse  ·  group headers  ·  unified model",
-            totalTreeRows, darkTheme,
+            darkTheme,
             buildChip("Tree View",   new Color(0x2C7BB6)),
             buildChip("Expandable",  new Color(0x1A9850)),
             buildChip("Grouped",     new Color(0x756BB1)),
@@ -515,7 +454,7 @@ public class SmartGridDemo {
             "Language Catalog",
             "SmartGrid list mode  ·  38 entries  ·  demonstrates a list is a single-column table"
                 + "  ·  same model, filter, and sort as the full table",
-            LANGUAGES.length + 2, darkTheme,
+            darkTheme,
             buildChip("List Mode",     new Color(0x2980B9)),
             buildChip("Single Column", new Color(0x27AE60)),
             buildChip("Unified Model", new Color(0x8E44AD)));
@@ -582,7 +521,7 @@ public class SmartGridDemo {
             "Paginated Employee Data",
             "SmartGrid pagination  ·  1,000 rows  ·  50 per page"
                 + "  ·  per-page footer aggregates (count, salary sum, active count)  ·  page navigation",
-            1000, darkTheme,
+            darkTheme,
             buildChip("Paginated",   new Color(0x2980B9)),
             buildChip("Aggregates",  new Color(0x27AE60)),
             buildChip("Navigation",  new Color(0xD68910)),
@@ -666,7 +605,7 @@ public class SmartGridDemo {
             "Scripted Row Renderers",
             "SmartGrid BeanShell integration  ·  1,000 rows  ·  XML blueprint DSL"
                 + "  ·  every 30th row scripted  ·  live hot-swap from BeanShell console",
-            1000, darkTheme,
+            darkTheme,
             buildChip("BeanShell",     new Color(0xC0392B)),
             buildChip("XML Blueprint", new Color(0x2980B9)),
             buildChip("Scripted",      new Color(0x8E44AD)),
@@ -811,7 +750,7 @@ public class SmartGridDemo {
             "Log Viewer",
             "SmartGrid log mining  ·  150 entries  ·  plain text, JSON payloads, stack traces"
                 + "  ·  live search filters rows and highlights matches",
-            150, true,
+            true,
             buildChip("Dark Theme",  new Color(0x34495E)),
             buildChip("JSON Syntax", new Color(0xD68910)),
             buildChip("Live Search", new Color(0x27AE60)),

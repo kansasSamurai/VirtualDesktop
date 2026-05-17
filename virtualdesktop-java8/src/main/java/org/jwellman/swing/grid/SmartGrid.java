@@ -122,6 +122,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
     // Swing components
     private JPanel        toolbarPanel  = null; // created lazily by getToolbar()
+    private JPanel        northPanel    = null; // BoxLayout.Y wrapper; created lazily
     private JScrollPane   scrollPane;
     private VirtualCanvas canvas;
     private JComponent[]  slots;
@@ -133,6 +134,14 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private JPanel        southPanel    = null;
     private JPanel        footerPanel   = null;
     private PaginationBar paginationBar = null;
+
+    // User-defined footer zone — persisted across rebuildSouthPanel() calls
+    private final java.util.List<JComponent> extraFooterRows = new java.util.ArrayList<>();
+
+    // Summary row — always last, always present
+    private JPanel summaryRow;
+    private JLabel summaryRowCount;
+    private JLabel summarySelCount;
 
     /** Constructs a SmartGrid with the light (default) theme. */
     public SmartGrid(GridModel model) {
@@ -240,6 +249,10 @@ public class SmartGrid extends JPanel implements GridModelListener {
         scrollPane.setCorner(JScrollPane.UPPER_RIGHT_CORNER, cornerFill);
 
         add(scrollPane, BorderLayout.CENTER);
+
+        summaryRow = buildSummaryRow();
+        rebuildSouthPanel();
+        updateSummaryCount();
     }
 
     // -------------------------------------------------------------------------
@@ -278,11 +291,33 @@ public class SmartGrid extends JPanel implements GridModelListener {
      */
     public JPanel getToolbar() {
         if (toolbarPanel == null) {
+            ensureNorthPanel();
             toolbarPanel = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 8, 4));
             toolbarPanel.setBackground(headerBg);
-            add(toolbarPanel, BorderLayout.NORTH);
+            northPanel.add(toolbarPanel, 0); // always topmost in the header zone
+            revalidate();
         }
         return toolbarPanel;
+    }
+
+    /**
+     * Adds a custom row to the header zone, stacked below the toolbar and above
+     * the column header.  Rows appear in the order they are added.
+     */
+    public void addHeaderRow(JComponent row) {
+        ensureNorthPanel();
+        northPanel.add(row);
+        revalidate();
+    }
+
+    /**
+     * Adds a custom row to the footer zone, stacked above the summary row and below
+     * the pagination bar.  Rows appear in the order they are added and survive
+     * theme/pagination rebuilds.
+     */
+    public void addFooterRow(JComponent row) {
+        extraFooterRows.add(row);
+        rebuildSouthPanel();
     }
 
     public boolean isRowNumbersVisible() {
@@ -852,6 +887,70 @@ public class SmartGrid extends JPanel implements GridModelListener {
         p.release(c);
     }
 
+    private void ensureNorthPanel() {
+        if (northPanel == null) {
+            northPanel = new JPanel();
+            northPanel.setLayout(new BoxLayout(northPanel, BoxLayout.Y_AXIS));
+            add(northPanel, BorderLayout.NORTH);
+        }
+    }
+
+    private JPanel buildSummaryRow() {
+        Color bg  = darkTheme ? new Color(0x32363B) : new Color(0xE8ECF0);
+        Color fg  = darkTheme ? new Color(0x9A9A9A) : new Color(0x666677);
+        Color bdr = darkTheme ? new Color(0x4A4D52) : new Color(0xC8CDD3);
+
+        summaryRowCount = new JLabel("Showing 0 rows");
+        summaryRowCount.setFont(summaryRowCount.getFont().deriveFont(java.awt.Font.PLAIN, 10f));
+        summaryRowCount.setForeground(fg);
+
+        summarySelCount = new JLabel("0 rows selected");
+        summarySelCount.setFont(summarySelCount.getFont().deriveFont(java.awt.Font.PLAIN, 10f));
+        summarySelCount.setForeground(fg);
+
+        model.addGridModelListener(new GridModelListener() {
+            @Override
+            public void rowsChanged(int first, int last) {
+                updateSummaryCount();
+            }
+            @Override
+            public void modelReset() {
+                updateSummaryCount();
+            }
+        });
+
+        selectionModel.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                int n   = 0;
+                int min = selectionModel.getMinSelectionIndex();
+                int max = selectionModel.getMaxSelectionIndex();
+                for (int i = min; i <= max && min >= 0; i++) {
+                    if (selectionModel.isSelectedIndex(i)) {
+                        n++;
+                    }
+                }
+                summarySelCount.setText(n + " row(s) selected");
+            }
+        });
+
+        JPanel row = new JPanel(new BorderLayout());
+        row.setBackground(bg);
+        row.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(1, 0, 0, 0, bdr),
+            BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+        row.add(summaryRowCount, BorderLayout.WEST);
+        row.add(summarySelCount, BorderLayout.EAST);
+        return row;
+    }
+
+    private void updateSummaryCount() {
+        int visible = model.getRowCount();
+        int total   = model.getTotalRowCount();
+        summaryRowCount.setText(visible == total
+            ? "Showing " + total + " rows"
+            : "Showing " + visible + " of " + total + " rows");
+    }
+
     private String resolveRowType(GridRow row) {
         if (editable)            return "edit";
         if (row.isGroupHeader()) return "group-header";
@@ -1087,25 +1186,25 @@ public class SmartGrid extends JPanel implements GridModelListener {
         footerPanel   = null;
         paginationBar = null;
 
-        boolean hasFooter = footerRenderer != null;
-        boolean hasPaging = pageSize > 0;
-
-        if (!hasFooter && !hasPaging) {
-            revalidate();
-            return;
-        }
-
         southPanel = new JPanel();
         southPanel.setLayout(new BoxLayout(southPanel, BoxLayout.Y_AXIS));
 
-        if (hasFooter) {
+        if (footerRenderer != null) {
             footerPanel = buildFooter(model.getColumns());
             southPanel.add(footerPanel);
         }
-        if (hasPaging) {
+        if (pageSize > 0) {
             paginationBar = new PaginationBar(this);
             southPanel.add(paginationBar);
         }
+        for (JComponent row : extraFooterRows) {
+            southPanel.add(row);
+        }
+        // Summary row is always last — this is an opinionated design decision.
+        // It provides visual grounding and a de-facto status contract that
+        // consumers can rely on without knowing the rest of the south zone layout.
+        southPanel.add(summaryRow);
+
         add(southPanel, BorderLayout.SOUTH);
         revalidate();
     }

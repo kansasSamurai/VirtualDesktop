@@ -7,6 +7,82 @@ when onboarding a contributor. For what is planned or what has been completed, s
 
 ---
 
+## Header and Footer Zone Architecture
+
+### Fixed Stacking Order
+
+SmartGrid uses an opinionated, fixed vertical layout. The zones from top to bottom are:
+
+```
+[ Header Zone         ]  addHeaderRow() rows, in call order
+[ Toolbar             ]  getToolbar() — always at index 0 within the header zone
+[ Column Header       ]  SmartGrid-managed, always present
+[ Filter Row          ]  SmartGrid-managed, optional (setColumnFiltersVisible)
+[ Canvas              ]  SmartGrid-managed — the virtual scroll area
+[ Column Footer       ]  SmartGrid-managed, optional (setFooterRenderer)
+[ Pagination          ]  SmartGrid-managed, optional (setPageSize)
+[ addFooterRow() zone ]  user rows, in call order
+[ Summary Row         ]  SmartGrid-managed, always last, always present
+```
+
+SmartGrid owns and sequences everything in the middle. The user owns two zones at
+the extremes.
+
+### Header Zone
+
+`addHeaderRow(JComponent)` appends a row below the toolbar and above the column
+header. Rows appear in the order they are added. The toolbar (returned by
+`getToolbar()`) is always placed at index 0 within the header zone so it remains
+topmost regardless of call order.
+
+The entire header zone lives in a `northPanel` (BoxLayout.Y_AXIS) that is created
+lazily on the first call to `getToolbar()` or `addHeaderRow()`. Callers that never
+use either method pay no overhead.
+
+### Footer Zone (user rows)
+
+`addFooterRow(JComponent)` appends a row below the pagination bar and above the
+summary row. Rows appear in the order they are added.
+
+**Important:** user-added footer rows are stored in a persistent `extraFooterRows`
+list and re-applied every time `rebuildSouthPanel()` runs. `rebuildSouthPanel()` is
+called whenever `setPageSize()` or `setFooterRenderer()` changes — if you add a
+row via `addFooterRow()` before calling those methods, your row will survive the
+rebuild.
+
+### Summary Row
+
+The summary row is always present and always the last visible element in the grid.
+It shows:
+- **Left:** "Showing X rows" or "Showing X of Y rows" when a filter is active
+  (X = visible rows, Y = total rows via `model.getTotalRowCount()`)
+- **Right:** "N row(s) selected"
+
+Both labels update automatically via listeners wired at construction time. The
+summary row is an opinionated design decision: it provides a de-facto status
+contract that consumers can rely on, and it visually grounds the grid in any
+layout. There is no opt-out in the current version.
+
+### Column Footer vs. User Footer Zone
+
+The **column footer** (`setFooterRenderer`) is a column-aligned aggregate row
+rendered by `FooterCellRenderer`. Each cell lines up with its data column (same
+null-layout and `columnWidths[]` array as the data rows). It is distinct from
+the user footer zone — it sits above pagination and is SmartGrid-managed.
+
+The **user footer zone** (`addFooterRow`) accepts any `JComponent` and is not
+column-aligned. Use it for free-form rows like status bars, action button panels,
+or additional summary text.
+
+### What Lives Outside SmartGrid
+
+Page-level chrome — title, description, feature badges, page background — belongs
+in the host container (e.g., `buildPage()` in the demo). SmartGrid's header and
+footer zones are for grid-intrinsic content: search fields, action buttons that
+operate on the grid, and status displays tied to the grid's data state.
+
+---
+
 ## How the Virtual Canvas Works
 
 ### The Core Illusion
@@ -302,3 +378,50 @@ slot.
 | Opaque child backgrounds updated | Match parent on every bind/select |
 | `doLayout()` overridden | Resize works without bind() |
 | `isValidateRoot()` returns true | Contains JTextPane revalidation |
+
+---
+
+## Search Field Design — Placement and Integration Quality
+
+### Why Header-Embedded Search Outperforms Toolbar Search
+
+The placement of a search field matters as much as its existence. Putting the search
+field inside the column header rather than in a separate toolbar communicates that
+search is a property of the column, not a separate tool being operated on the list.
+Users read it as "this column is filterable" rather than "there is a search bar
+somewhere." That distinction — column-intrinsic vs. externally attached — is a subtle
+but real UX improvement that many commercial components get wrong by placing a global
+filter in a toolbar that feels disconnected from the data.
+
+The absence of a label reinforces this. A "Filter:" prefix or placeholder-heavy
+convention signals an afterthought. A search field flush-right in the column header
+with no label looks native — it is what a polished desktop application would do.
+
+### What Separates SmartGrid's Implementation
+
+Live search/filter is table stakes for any list or grid today. What separates
+commercial-quality implementations is the integration quality, not the feature itself:
+
+- Filter fires on every keystroke with no manual model repopulation
+- The summary row count updates immediately and accurately
+- The result is smooth at any scroll position without external wiring
+- No `TableModel` events, no `fireTableDataChanged()`, no repaint management
+
+Many open-source Swing components support search but require the caller to
+re-populate the model, manually fire repaint events, and manage the count display
+independently. SmartGrid's `setFilter(GridModelFilter)` → `computeVisibleRows()` →
+`modelReset()` → `refresh()` → `updateSummaryCount()` chain handles all of it as a
+single EDT-synchronous operation with no caller involvement beyond providing the
+predicate.
+
+### The Pattern Generalizes
+
+Any single-column SmartGrid — a tag picker, a file chooser, a command palette, a
+language selector — can use this header-search pattern with zero new infrastructure.
+The multi-column equivalent (`setColumnFiltersVisible(true)`) already exists for
+the Table use case. The list demo proves that the single-column presentation is
+clean enough to stand without a toolbar.
+
+The combination of header-embedded search, live summary row, and no external chrome
+overhead is genuinely difficult to match without a commercial component — and those
+typically cost hundreds of dollars and require a week of integration work.

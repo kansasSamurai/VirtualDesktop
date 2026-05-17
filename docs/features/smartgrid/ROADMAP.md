@@ -24,6 +24,7 @@
 | 17 | Column freezing / pinning — fixed left columns, scrolling right columns | ⬜ Future | Split-pane architecture; see phase detail below |
 | 18 | Scroll repaint quality — eliminate canvas flash (blit mode + setVisible refactor) | ⬜ Future | Two-part fix; canvas-bg mitigation currently in place |
 | 19 | GlazedLists integration — swappable `FilterSortStrategy` behind `DefaultGridModel` | ⬜ Future | Naive impl ships as default; GlazedLists is a drop-in upgrade |
+| 20 | Semantic data font — `setDataFont(Font)` applies to all cell values; headers/labels unchanged | ⬜ Future | Formalizes the monospace-for-data convention; see design doc for rationale |
 
 ---
 
@@ -1088,6 +1089,64 @@ itself does not need to change.
 - The `FilterSortStrategy` interface should be defined as part of Phase 13 even if
   only the naive implementation ships at that point, so the abstraction exists before
   GlazedLists is needed.
+
+---
+
+## Phase 20 — Semantic Data Font (setDataFont)
+
+### Motivation
+
+A principled typographic convention: use a monospaced font for all cell values
+(data that originates outside the application — from a database, file, or API) and
+a proportional font for UI chrome (headers, labels, tooltips). This trains users
+quickly and subconsciously: monospace means "this is your data," proportional means
+"this is the application talking to you."
+
+This convention has been used successfully in financial terminals, database
+administration tools, log viewers, and monitoring dashboards — anywhere data
+fidelity matters more than visual softness. It is a semantic use of typography
+rather than a decorative one, and it holds up well in power-user and technical
+desktop applications even if it would feel unusual in a consumer product.
+
+The alignment benefit is significant and underrated: numbers, codes, identifiers,
+and dates are easier to scan vertically in monospace because each character occupies
+identical width. Proportional fonts in data columns create subtle misalignment that
+fatigues users scanning for patterns without them knowing why.
+
+### Implementation
+
+A single public setter on `SmartGrid`:
+
+```java
+public void setDataFont(Font font) {
+    this.dataFont = font;
+    // Pass through to StandardRowPanel pool and all typed pools
+    // so that bind() uses the data font for cell labels.
+}
+```
+
+`StandardRowPanel.bind()` currently uses the default JLabel font for cell values.
+With a `dataFont` set, it applies that font to each cell label after populating
+the text. Custom `CellRenderer` implementations receive the value and existing
+component and are responsible for applying the font themselves — the convention
+is documented but not enforced on custom renderers.
+
+A companion `getDataFont()` allows custom renderers to read the grid's configured
+font and stay consistent without hardcoding.
+
+### Default Behaviour
+
+`dataFont` defaults to `null`, meaning no change from current behaviour. The
+feature is strictly opt-in. Setting it to `new Font(Font.MONOSPACED, Font.PLAIN, 12)`
+activates the convention grid-wide.
+
+### Relationship to CellRenderer
+
+The monospace-bold code column in the Codes demo (`buildCodeListTab`) already
+applies this convention locally via a `CellRenderer`. Phase 20 moves the
+configuration to the grid level so individual renderers do not need to repeat it.
+A `CellRenderer` that sets its own font overrides the grid-level setting for its
+column — local always wins.
 
 ---
 

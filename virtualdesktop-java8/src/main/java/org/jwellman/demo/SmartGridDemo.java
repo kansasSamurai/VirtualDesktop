@@ -93,6 +93,7 @@ public class SmartGridDemo {
      *   <li>"Table"    — 1,000 flat rows; viewport virtualization; proportional column widths</li>
      *   <li>"Tree"     — departments + employees; expand/collapse; unified model</li>
      *   <li>"List"     — single-column SmartGrid; demonstrates list-is-a-table</li>
+     *   <li>"Codes"    — multi-column list; variable-length codes + descriptions; global search</li>
      *   <li>"Paged"    — 1,000 rows / 50 per page; footer aggregates; pagination bar</li>
      *   <li>"Scripted" — Phase 9b: XML blueprint + BeanShell bind scripts</li>
      *   <li>"Log"      — dark log viewer; plain text, JSON, stack traces; live search</li>
@@ -105,6 +106,7 @@ public class SmartGridDemo {
         tabs.addTab("Table",    buildTableTab(darkTheme));
         tabs.addTab("Tree",     buildTreeTab(darkTheme));
         tabs.addTab("List",     buildListTab(darkTheme));
+        tabs.addTab("Codes",    buildCodeListTab(darkTheme));
         tabs.addTab("Paged",    buildPagedTab(darkTheme));
         tabs.addTab("Scripted", buildScriptedTab(darkTheme));
         tabs.addTab("Log",      buildLogTab());
@@ -461,7 +463,139 @@ public class SmartGridDemo {
     }
 
     // -------------------------------------------------------------------------
-    // Tab 4: explicit pagination with column-aligned footer aggregates
+    // Tab 4: multi-column list — variable-length code + description
+    // -------------------------------------------------------------------------
+
+    private static JPanel buildCodeListTab(boolean darkTheme) {
+        final DefaultGridModel model = new DefaultGridModel()
+            .addColumn(new ColumnDef("code",   "Code",        90, false, false, "mono-code"))
+            .addColumn(new ColumnDef("action", "Description", 460, false, true,  null));
+
+        // Business action codes with intentionally variable-length keys —
+        // the original problem that motivated this demo: DOS programs often had
+        // action codes of varying length alongside their descriptions.
+        final String[][] entries = {
+            {"GL",       "General Ledger Entry"},
+            {"AP",       "Accounts Payable Invoice"},
+            {"AR",       "Accounts Receivable"},
+            {"PO",       "Purchase Order"},
+            {"CR",       "Credit Memo"},
+            {"DR",       "Debit Memo"},
+            {"RECV",     "Goods Receipt"},
+            {"INVT",     "Inventory Adjustment"},
+            {"PYMT",     "Payment Processing"},
+            {"ACCT",     "Account Reconciliation"},
+            {"AUDIT",    "Internal Audit Review"},
+            {"DEPR",     "Depreciation Schedule"},
+            {"BUDGET",   "Budget Variance Report"},
+            {"CAPEX",    "Capital Expenditure Request"},
+            {"OPEX",     "Operating Expense Approval"},
+            {"FOREX",    "Foreign Exchange Transaction"},
+            {"INTERCO",  "Intercompany Transfer"},
+            {"CONSOL",   "Consolidated Reporting"},
+            {"CLOSE",    "Period Close Procedure"},
+            {"RECON",    "Bank Reconciliation"},
+            {"FIXED",    "Fixed Asset Register"},
+            {"LEASE",    "Lease Accounting Entry"},
+            {"REV",      "Revenue Recognition"},
+            {"COGS",     "Cost of Goods Sold"},
+            {"WIP",      "Work in Progress"},
+            {"PAYROLL",  "Payroll Processing"},
+            {"BENEFITS", "Employee Benefits Enrollment"},
+            {"OVERHEAD", "Overhead Allocation"},
+            {"TAX",      "Tax Calculation"},
+            {"MGMT",     "Management Report"},
+            {"RMA",      "Return Merchandise Authorization"},
+            {"SLA",      "Service Level Agreement Review"},
+            {"KPI",      "Key Performance Indicator Report"},
+            {"ESG",      "Environmental Social Governance"},
+            {"IMPL",     "System Implementation Request"},
+        };
+
+        for (String[] entry : entries) {
+            model.addRow(new GridRow()
+                .put("code",   entry[0])
+                .put("action", entry[1]));
+        }
+
+        SmartGrid grid = new SmartGrid(model, darkTheme);
+        grid.setRowNumbersVisible(true);
+        grid.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        // Monospaced bold renderer for the code column — makes variable-length
+        // codes visually distinct from the description without needing fixed width.
+        grid.registerCellRenderer("mono-code", (col, value, row, existing) -> {
+            JLabel lbl = (existing instanceof JLabel) ? (JLabel) existing : new JLabel();
+            lbl.setText(value != null ? value.toString() : "");
+            lbl.setFont(new Font(Font.MONOSPACED, Font.BOLD, 12));
+            lbl.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 4));
+            return lbl;
+        });
+
+        // Search field lives outside the renderer so it retains text across
+        // rebuildHeaderView() calls triggered by viewport resize.
+        final String[] searchHolder = {""};
+        final JTextField codeSearch = new JTextField(16);
+        codeSearch.getDocument().addDocumentListener(new DocumentListener() {
+            private void applyFilter() {
+                String term = codeSearch.getText().trim().toLowerCase();
+                searchHolder[0] = term;
+                if (term.isEmpty()) {
+                    grid.clearFilter();
+                } else {
+                    grid.setFilter(row -> {
+                        Object code   = row.get("code");
+                        Object action = row.get("action");
+                        return (code   != null && code.toString().toLowerCase().contains(term))
+                            || (action != null && action.toString().toLowerCase().contains(term));
+                    });
+                }
+            }
+            @Override public void insertUpdate(DocumentEvent e)  { applyFilter(); }
+            @Override public void removeUpdate(DocumentEvent e)  { applyFilter(); }
+            @Override public void changedUpdate(DocumentEvent e) { applyFilter(); }
+        });
+
+        // Custom header: code column gets a plain label; description column
+        // gets the label + embedded search field (searches both columns globally).
+        grid.setHeaderRenderer((col, sortOrder, rank) -> {
+            if ("action".equals(col.getKey())) {
+                JPanel cell = new JPanel(new BorderLayout(4, 0));
+                cell.setOpaque(false);
+                JLabel lbl = new JLabel(col.getHeader());
+                lbl.setForeground(Color.WHITE);
+                lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
+                lbl.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+                JPanel fieldWrap = new JPanel(new BorderLayout());
+                fieldWrap.setOpaque(false);
+                fieldWrap.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 6));
+                fieldWrap.add(codeSearch, BorderLayout.CENTER);
+                cell.add(lbl,       BorderLayout.CENTER);
+                cell.add(fieldWrap, BorderLayout.EAST);
+                return cell;
+            } else {
+                JLabel lbl = new JLabel(col.getHeader());
+                lbl.setForeground(Color.WHITE);
+                lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
+                lbl.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+                lbl.setOpaque(false);
+                return lbl;
+            }
+        });
+
+        return buildPage(grid,
+            "Business Action Codes",
+            "Multi-column list demo  ·  35 entries  ·  variable-length codes"
+                + "  ·  global search across code and description",
+            darkTheme,
+            buildChip("Multi-Column",  new Color(0x2980B9)),
+            buildChip("Code List",     new Color(0x27AE60)),
+            buildChip("Variable Keys", new Color(0xD68910)),
+            buildChip("Global Search", new Color(0x8E44AD)));
+    }
+
+    // -------------------------------------------------------------------------
+    // Tab 5: explicit pagination with column-aligned footer aggregates
     // -------------------------------------------------------------------------
 
     private static JPanel buildPagedTab(boolean darkTheme) {

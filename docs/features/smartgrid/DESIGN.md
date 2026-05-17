@@ -425,3 +425,58 @@ clean enough to stand without a toolbar.
 The combination of header-embedded search, live summary row, and no external chrome
 overhead is genuinely difficult to match without a commercial component — and those
 typically cost hundreds of dollars and require a week of integration work.
+
+---
+
+## Semantic Typography — Monospace for Data, Proportional for Chrome
+
+### The Principle
+
+Use a monospaced font for all cell values — data that originates outside the
+application, from a database, file, or API — and a proportional font for UI chrome:
+headers, labels, descriptions, tooltips. This trains users quickly and
+subconsciously: monospace means "this is your data," proportional means "this is
+the application talking to you."
+
+This is *semantic typography* — using a visual property to encode meaning rather
+than aesthetics. Most modern UI uses typography decoratively, choosing fonts for
+feel. Semantic typography carries real information, and once a user internalises
+the convention it becomes a powerful pre-attentive signal that requires no conscious
+reading.
+
+### Why It Works
+
+**Alignment.** Numbers, codes, identifiers, and dates scan more naturally in
+monospace because every character occupies identical width. Proportional fonts in
+data columns create subtle misalignment that fatigues users scanning for patterns
+without them knowing why. This is why spreadsheets, terminals, and database tools
+have always defaulted to monospace for values.
+
+**Distinction without color.** Color is the most common way to separate data from
+chrome, but it requires a coherent palette and can fail under accessibility
+constraints. A font change costs nothing and survives any color scheme.
+
+**Precedent in high-stakes environments.** Financial terminals, trading floors,
+database administration tools, log viewers, and monitoring dashboards all use
+monospace for data. Bloomberg's terminal is famously dense by modern UI standards
+and also famously indispensable. The font convention signals seriousness about
+data fidelity — a quality power users recognize and trust.
+
+### Where It Fits in SmartGrid
+
+The `registerCellRenderer` mechanism already supports local application of this
+convention. The Codes demo uses a monospace-bold renderer for the code column
+specifically. Phase 20 of the roadmap formalizes this as a grid-level `setDataFont`
+property that flows through to `StandardRowPanel` and all default cell rendering,
+so individual renderers do not need to repeat the configuration.
+
+### The Modern Objection and the Answer
+
+Material Design, Fluent, and Apple HIG all assume proportional fonts everywhere,
+so deviating reads as "unpolished" to eyes trained on those systems. But those
+guidelines were built for consumer applications where approachability matters
+more than data fidelity. For power-user and technical desktop applications —
+forensic data display, administrative tools, data-intensive workflows — the
+consumer convention is the wrong target. Monospace for data is not a failure to
+follow modern conventions; it is a deliberate choice of the right convention for
+the audience.

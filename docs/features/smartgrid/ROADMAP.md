@@ -23,6 +23,7 @@
 | 14 | Structured filter expressions (`FilterExpression` alongside lambda) | ⬜ Future | Enables query folding — see `docs/features/query-folding/DISCUSSION.md` |
 | 17 | Column freezing / pinning — fixed left columns, scrolling right columns | ⬜ Future | Split-pane architecture; see phase detail below |
 | 18 | Scroll repaint quality — eliminate canvas flash (blit mode + setVisible refactor) | ⬜ Future | Two-part fix; canvas-bg mitigation currently in place |
+| 19 | GlazedLists integration — swappable `FilterSortStrategy` behind `DefaultGridModel` | ⬜ Future | Naive impl ships as default; GlazedLists is a drop-in upgrade |
 
 ---
 
@@ -967,6 +968,126 @@ When a slot changes from one row type to another (or after `reallocateSlots()`),
 **For commercial quality you'd want both.** The scroll-mode change is a one-liner inside the SmartGrid constructor. The setVisible refactor is non-trivial — it means the canvas always contains the full union of all typed pools' visible slots rather than dynamically swapping them — but it also has the side benefit of eliminating the `canvas.add()` peer-creation overhead during rapid type changes.
 
 The canvas background color fix currently in place is the right "livable" solution: it makes any residual flash the same color as the rows, so it's invisible in practice even though the flash still technically happens.
+
+---
+
+## Phase 19 — GlazedLists Integration (Swappable FilterSortStrategy)
+
+### Motivation
+
+SmartGrid's current filter and sort are intentionally naive: a single `GridModelFilter`
+lambda applied in an O(N) EDT scan, and a `Comparator`-based sort over the full row
+list. This is correct and fast enough for tens of thousands of rows. At higher scale,
+or when data arrives from background threads, a more capable data-transformation
+pipeline is warranted.
+
+GlazedLists provides exactly that: thread-safe observable `EventList` collections,
+incremental `FilterList` and `SortedList` transformations, and composable
+`MatcherEditor` filter chains. The goal of this phase is to make GlazedLists an
+optional drop-in upgrade rather than a hard dependency, so the naive implementation
+remains the default and consumers are never forced to take on the GlazedLists JAR.
+
+### Why Not Just Use GlazedLists with JTable?
+
+GlazedLists' documented quirks when used with `JTable` (spurious exceptions on
+concurrent structural changes, selection model desync, column reorder edge cases)
+are almost certainly `JTable`-side failures. GlazedLists fires structurally correct
+`TableModelEvent`s; `JTable`'s internal machinery mishandles them in certain sequences.
+With SmartGrid there is no `TableModel` in the picture — GlazedLists events would
+drive `DefaultGridModel` updates directly, removing that entire failure-mode surface.
+
+### Design: FilterSortStrategy Interface
+
+The integration point is purely inside `DefaultGridModel`. Introduce a single strategy
+interface:
+
+```java
+public interface FilterSortStrategy {
+    List<GridRow> apply(List<GridRow> source,
+                        GridModelFilter filter,
+                        List<SortSpec> sorts);
+}
+```
+
+`DefaultGridModel` holds one instance, defaulting to the naive implementation:
+
+```java
+// NaiveFilterSortStrategy — the current behaviour, extracted into the interface
+public class NaiveFilterSortStrategy implements FilterSortStrategy {
+    @Override
+    public List<GridRow> apply(List<GridRow> source,
+                               GridModelFilter filter,
+                               List<SortSpec> sorts) {
+        // existing O(N) scan + Comparator sort — unchanged
+    }
+}
+```
+
+A GlazedLists-backed implementation slots in via a new `DefaultGridModel` constructor
+or setter:
+
+```java
+model.setFilterSortStrategy(new GlazedListsFilterSortStrategy());
+```
+
+No call site in `SmartGridDemo` or any consumer changes. The grid consumer continues
+calling `grid.setFilter(predicate)` and `grid.sort(spec)` exactly as before.
+
+### GlazedListsFilterSortStrategy Sketch
+
+```java
+public class GlazedListsFilterSortStrategy implements FilterSortStrategy {
+
+    private final BasicEventList<GridRow> source  = new BasicEventList<>();
+    private final SortedList<GridRow>     sorted;
+    private final FilterList<GridRow>     filtered;
+
+    public GlazedListsFilterSortStrategy() {
+        sorted   = new SortedList<>(source, null);       // null = natural/no sort
+        filtered = new FilterList<>(sorted, Matchers.trueMatcher());
+    }
+
+    @Override
+    public List<GridRow> apply(List<GridRow> rows,
+                               GridModelFilter filter,
+                               List<SortSpec> sorts) {
+        // Sync source list
+        source.clear();
+        source.addAll(rows);
+
+        // Apply sort
+        sorted.setComparator(buildComparator(sorts));
+
+        // Apply filter
+        filtered.setMatcher(row -> filter == null || filter.accept(row));
+
+        return new ArrayList<>(filtered);
+    }
+
+    private Comparator<GridRow> buildComparator(List<SortSpec> sorts) {
+        // build ComparatorChain from SortSpec list — same logic as NaiveStrategy
+    }
+}
+```
+
+### Threading Consideration
+
+GlazedLists' main advantage over the naive implementation is thread-safe list mutation.
+To unlock this fully, `DefaultGridModel` would also need a `setRows(List<GridRow>)` path
+that can be called off-EDT, with the strategy responsible for proxying updates back to
+the EDT via GlazedLists' `ThreadProxyList` or `GlazedListsFactory.swingThreadProxyList()`.
+This is an optional enhancement on top of the strategy pattern; the strategy interface
+itself does not need to change.
+
+### Sequencing
+
+- Phase 13 (filter search cache) is a prerequisite — it reduces the O(N) penalty of
+  the naive strategy enough that Phase 19 is only needed at true scale.
+- Phase 19 does not block any other phase; implement it when row counts or threading
+  requirements actually demand it.
+- The `FilterSortStrategy` interface should be defined as part of Phase 13 even if
+  only the naive implementation ships at that point, so the abstraction exists before
+  GlazedLists is needed.
 
 ---
 

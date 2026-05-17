@@ -469,6 +469,48 @@ public class SmartGridDemo {
 
         // 36 languages + 2 highlighted scripting language entries
         SmartGrid grid = new SmartGrid(model, darkTheme);
+
+        // Search field lives here so it retains its text across rebuildHeaderView()
+        // calls (which fire on resize).  The renderer re-parents it each time —
+        // Swing moves a component to a new parent automatically.
+        final JTextField listSearch = new JTextField(15);
+        listSearch.getDocument().addDocumentListener(new DocumentListener() {
+            private void applyFilter() {
+                String text = listSearch.getText().trim().toLowerCase();
+                if (text.isEmpty()) {
+                    grid.clearFilter();
+                } else {
+                    grid.setFilter(row -> {
+                        Object val = row.get("name");
+                        return val != null && val.toString().toLowerCase().contains(text);
+                    });
+                }
+            }
+            @Override public void insertUpdate(DocumentEvent e)  { applyFilter(); }
+            @Override public void removeUpdate(DocumentEvent e)  { applyFilter(); }
+            @Override public void changedUpdate(DocumentEvent e) { applyFilter(); }
+        });
+
+        grid.setHeaderRenderer((col, sortOrder, rank) -> {
+            JPanel cell = new JPanel(new BorderLayout(4, 0));
+            cell.setOpaque(false);
+
+            JLabel nameLabel = new JLabel(col.getHeader());
+            nameLabel.setForeground(Color.WHITE);
+            nameLabel.setFont(nameLabel.getFont().deriveFont(Font.BOLD));
+            nameLabel.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+
+            // Wrap the field to add vertical breathing room within the header cell
+            JPanel fieldWrap = new JPanel(new BorderLayout());
+            fieldWrap.setOpaque(false);
+            fieldWrap.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 6));
+            fieldWrap.add(listSearch, BorderLayout.CENTER);
+
+            cell.add(nameLabel, BorderLayout.CENTER);
+            cell.add(fieldWrap, BorderLayout.EAST);
+            return cell;
+        });
+
         return buildPage(grid,
             "Language Catalog",
             "SmartGrid list mode  ·  38 entries  ·  demonstrates a list is a single-column table"

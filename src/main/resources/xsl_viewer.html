@@ -1,0 +1,4340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>XSL-FO Designer</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #27ae60; --bg: #525659; --panel-bg: #1e1e1e; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        header { background: var(--primary); color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        main { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 520px; display: flex; flex-direction: column; border-right: 2px solid #333; background: #252526; color: #ccc; transition: width 0.2s ease; }
+        .sidebar.expanded { width: var(--expanded-width, 1040px); }
+        .sidebar.expanded textarea { white-space: pre; overflow-x: auto; }
+        .tabs { display: flex; background: #333; }
+        .tab-expand-btn { padding: 10px 12px; cursor: pointer; font-size: 0.8rem; color: #888; background: #333; border: none; border-left: 1px solid #444; }
+        .tab-expand-btn:hover { color: white; background: #444; }
+        .tab-expand-btn.active { color: var(--accent); }
+        .tab { flex: 1; padding: 10px; cursor: pointer; text-align: center; font-size: 0.75rem; border-bottom: 2px solid transparent; }
+        .tab.active { background: var(--panel-bg); color: white; border-bottom: 2px solid var(--accent); }
+        textarea { flex: 1; font-family: 'Fira Code', monospace; font-size: 12px; padding: 15px; border: none; outline: none; background: var(--panel-bg); color: #d4d4d4; resize: none; }
+        #library-list { padding: 10px; background: #2d2d2d; border-radius: 4px; max-height: 200px; overflow-y: auto; }
+        .lib-item { font-size: 0.7rem; display: flex; justify-content: space-between; padding: 6px; border-bottom: 1px solid #3d3d3d; align-items: center; }
+        #preview-zone { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; background: var(--bg); gap: 40px; }
+        #xsl-canvas { display: flex; flex-direction: column; align-items: center; gap: 40px; }
+        .xsl-page { background: white; width: 210mm; min-height: 297mm; box-shadow: 0 10px 30px rgba(0,0,0,0.5); outline: none; color: black; box-sizing: border-box; display: flex; flex-direction: column; position: relative; }
+        .xsl-region-before { flex-shrink: 0; border-bottom: 1px dashed #ccc; background: #fafafa; overflow: hidden; }
+        .xsl-region-body { flex: 1; overflow: hidden; }
+        .xsl-region-after { flex-shrink: 0; border-top: 1px dashed #ccc; background: #fafafa; overflow: hidden; }
+        .fo-page-number { background-color: #e3f2fd; padding: 0 3px; border-radius: 2px; }
+        .fo-page-number-citation-last { background-color: #e8f5e9; padding: 0 3px; border-radius: 2px; }
+        .page-break-marker { display: none; }
+        button { cursor: pointer; border: none; border-radius: 4px; padding: 6px 12px; font-weight: 600; }
+        .btn-primary { background: var(--accent); color: white; }
+        .status-msg { font-size: 0.7rem; color: #aaa; margin-right: 15px; }
+        .toggle-option { font-size: 0.7rem; color: #ccc; margin-right: 15px; display: inline-flex; align-items: center; gap: 4px; }
+        .toggle-option input { margin: 0; }
+        .fo-leader-fill { flex: 1; min-width: 1em; align-self: center; }
+        .fo-leader-fill.pattern-dots { border-bottom: 1px dotted currentColor; margin: 0 0.3em; }
+        .fo-leader-fill.pattern-rule { border-bottom: 1px solid currentColor; margin: 0 0.3em; }
+        .fo-leader-fill.pattern-space { margin: 0 0.3em; }
+        /* Snippet Toolbar Styles */
+        .snippet-toolbar {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 6px 10px;
+            background: #333;
+            border-bottom: 1px solid #444;
+        }
+        .snippet-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px;
+        }
+        .snippet-label {
+            font-size: 0.6rem;
+            color: #888;
+            width: 28px;
+            text-transform: uppercase;
+        }
+        .snippet-toolbar button {
+            font-size: 0.65rem;
+            padding: 3px 6px;
+            background: #444;
+            color: #ccc;
+            border: 1px solid #555;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .snippet-toolbar button:hover {
+            background: #555;
+            color: white;
+        }
+        .snippet-toolbar select {
+            font-size: 0.65rem;
+            padding: 2px 4px;
+            background: #444;
+            color: #ccc;
+            border: 1px solid #555;
+            border-radius: 3px;
+            max-width: 150px;
+        }
+        /* Table Dialog Styles */
+        .table-dialog-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .table-dialog {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            color: #ccc;
+            min-width: 280px;
+            align-self: flex-start;
+            margin-top: 50px;
+        }
+        .table-dialog h3 {
+            margin: 0 0 15px 0;
+            color: white;
+        }
+        .table-dialog label {
+            display: block;
+            margin: 10px 0 5px;
+            font-size: 0.8rem;
+        }
+        .table-dialog input[type="number"] {
+            width: 60px;
+            padding: 4px;
+            background: #444;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 3px;
+        }
+        .table-dialog input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        .table-dialog-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        /* Project Dialog Styles */
+        .project-dialog {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            color: #ccc;
+            min-width: 450px;
+            align-self: flex-start;
+            margin-top: 50px;
+            max-width: 550px;
+        }
+        .project-dialog h3 {
+            margin: 0 0 15px 0;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .project-dialog h3 button {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0;
+        }
+        .project-dialog h3 button:hover {
+            color: white;
+        }
+        .project-current {
+            background: #383838;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+        .project-current-label {
+            font-size: 0.7rem;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .project-current-name {
+            font-size: 1rem;
+            color: #4fc3f7;
+            font-weight: bold;
+        }
+        .project-current-name.unsaved {
+            color: #ffa726;
+            font-style: italic;
+        }
+        .project-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .project-actions button {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            border: 1px solid #555;
+            cursor: pointer;
+        }
+        .project-actions .btn-save {
+            background: #2e7d32;
+            color: white;
+            border-color: #388e3c;
+        }
+        .project-actions .btn-save:hover {
+            background: #388e3c;
+        }
+        .project-actions .btn-save:disabled {
+            background: #555;
+            border-color: #666;
+            color: #888;
+            cursor: not-allowed;
+        }
+        .project-actions .btn-saveas {
+            background: #1565c0;
+            color: white;
+            border-color: #1976d2;
+        }
+        .project-actions .btn-saveas:hover {
+            background: #1976d2;
+        }
+        .project-actions .btn-new {
+            background: #444;
+            color: #ccc;
+        }
+        .project-actions .btn-new:hover {
+            background: #555;
+            color: white;
+        }
+        .project-list-header {
+            font-size: 0.7rem;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #444;
+        }
+        .project-list {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .project-list-empty {
+            color: #666;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
+        .project-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #3a3a3a;
+            gap: 10px;
+        }
+        .project-item:hover {
+            background: #383838;
+        }
+        .project-item-info {
+            flex: 1;
+        }
+        .project-item-name {
+            font-size: 0.85rem;
+            color: #ddd;
+        }
+        .project-item-date {
+            font-size: 0.65rem;
+            color: #888;
+        }
+        .project-item button {
+            padding: 5px 10px;
+            font-size: 0.7rem;
+            border-radius: 3px;
+            border: 1px solid #555;
+            cursor: pointer;
+        }
+        .project-item .btn-load {
+            background: #1565c0;
+            color: white;
+            border-color: #1976d2;
+        }
+        .project-item .btn-load:hover {
+            background: #1976d2;
+        }
+        .project-item .btn-delete {
+            background: #c62828;
+            color: white;
+            border-color: #d32f2f;
+        }
+        .project-item .btn-delete:hover {
+            background: #d32f2f;
+        }
+        /* Help Mode Dialog Styles */
+        .help-dialog {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            color: #ccc;
+            min-width: 420px;
+            max-width: 520px;
+            align-self: flex-start;
+            margin-top: 50px;
+        }
+        .help-dialog h3 {
+            margin: 0 0 5px 0;
+            color: white;
+        }
+        .help-dialog .help-subtitle {
+            font-size: 0.7rem;
+            color: #888;
+            margin-bottom: 15px;
+        }
+        .help-attr-list {
+            max-height: 570px;
+            overflow-y: auto;
+        }
+        .help-attr-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid #3a3a3a;
+        }
+        .help-attr-row:last-child {
+            border-bottom: none;
+        }
+        .help-attr-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+        .help-attr-row .attr-name {
+            width: 180px;
+            font-size: 0.75rem;
+            color: #4fc3f7;
+            flex-shrink: 0;
+        }
+        .help-attr-row input[type="text"] {
+            width: 120px;
+            flex-shrink: 0;
+            padding: 4px 6px;
+            font-size: 0.75rem;
+            background: #444;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 3px;
+        }
+        .help-dialog-buttons {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        /* Template Navigator Bar */
+        .template-nav-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            background: #2a2a2a;
+        }
+        .template-nav-bar label {
+            font-size: 0.7rem;
+            color: #888;
+            text-transform: uppercase;
+        }
+        .template-nav-bar select {
+            flex: 1;
+            font-size: 0.75rem;
+            padding: 5px 8px;
+            background: #383838;
+            color: #ddd;
+            border: 1px solid #555;
+            border-radius: 3px;
+        }
+        .template-nav-bar button {
+            font-size: 0.7rem;
+            padding: 5px 10px;
+            background: #444;
+            color: #ccc;
+            border: 1px solid #555;
+            border-radius: 3px;
+        }
+        .template-nav-bar button:hover {
+            background: #555;
+            color: white;
+        }
+        /* Template Editor */
+        .template-editor {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 150px;
+            background: #1a1a1a;
+            border-top: 1px solid #444;
+        }
+        .template-editor-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
+            background: #2a2a2a;
+            border-bottom: 1px solid #333;
+        }
+        .template-editor-header .template-name {
+            font-size: 0.75rem;
+            color: #4fc3f7;
+            font-weight: bold;
+        }
+        .template-editor-header .template-status {
+            font-size: 0.65rem;
+            color: #888;
+        }
+        .template-editor-header .template-status.modified {
+            color: #ffa726;
+        }
+        .template-editor-buttons {
+            display: flex;
+            gap: 6px;
+        }
+        .template-editor-buttons button {
+            font-size: 0.65rem;
+            padding: 4px 10px;
+            border-radius: 3px;
+            border: 1px solid #555;
+        }
+        .template-editor-buttons .btn-update {
+            background: #2e7d32;
+            color: white;
+            border-color: #388e3c;
+        }
+        .template-editor-buttons .btn-update:hover {
+            background: #388e3c;
+        }
+        .template-editor-buttons .btn-discard {
+            background: #444;
+            color: #ccc;
+        }
+        .template-editor-buttons .btn-discard:hover {
+            background: #555;
+            color: white;
+        }
+        .template-editor textarea {
+            flex: 1;
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+            padding: 10px;
+            border: none;
+            outline: none;
+            background: #1a1a1a;
+            color: #d4d4d4;
+            resize: none;
+        }
+        .template-editor-placeholder {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 0.8rem;
+            font-style: italic;
+        }
+        /* Bottom Tabs */
+        .bottom-tabs-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 200px;
+            border-top: 1px solid #444;
+        }
+        .bottom-tabs {
+            display: flex;
+            background: #252526;
+            border-bottom: 1px solid #444;
+        }
+        .bottom-tab {
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 0.65rem;
+            color: #888;
+            border-bottom: 2px solid transparent;
+            text-transform: uppercase;
+        }
+        .bottom-tab:hover {
+            color: #ccc;
+        }
+        .bottom-tab.active {
+            color: white;
+            border-bottom-color: var(--accent);
+            background: #2d2d2d;
+        }
+        .bottom-tab-content {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .bottom-tab-content.active {
+            display: flex;
+        }
+        /* Options Panel */
+        .options-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            background: var(--panel-bg);
+        }
+        .options-section {
+            padding: 15px;
+            border-bottom: 1px solid #333;
+        }
+        .options-section h4 {
+            margin: 0 0 10px 0;
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: uppercase;
+        }
+        .options-section label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: #ccc;
+            cursor: pointer;
+        }
+        .options-section label:hover {
+            color: white;
+        }
+        .options-section input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+        }
+    </style>
+</head>
+<body onload="initProject()">
+
+<header>
+    <div><strong>XSL-FO Designer</strong> <small>| v6 Professional</small></div>
+    <div>
+        <span id="render-status" class="status-msg"></span>
+        <span id="save-status" class="status-msg"></span>
+        <button class="btn-primary" onclick="renderPreview()">Render Preview & Save</button>
+        <button onclick="showProjectDialog()" style="background:#6a1b9a; color:white; margin-left:10px;">📁 Projects</button>
+    </div>
+</header>
+
+<main>
+	<div class="sidebar">
+		<div class="tabs">
+			<div id="tab-xsl" class="tab active" onclick="showTab('xsl')">XSLT</div>
+			<div id="tab-xml" class="tab" onclick="showTab('xml')">XML DATA</div>
+			<div id="tab-map" class="tab" onclick="showTab('map')">JAVA MAP</div>
+			<div id="tab-img" class="tab" onclick="showTab('img')">IMAGES</div>
+			<button id="expand-btn" class="tab-expand-btn" onclick="toggleSidebarExpand()" title="Expand/collapse sidebar for easier editing">⇔</button>
+		</div>
+
+		<div id="snippet-toolbar" class="snippet-toolbar">
+			<div class="snippet-row">
+				<span class="snippet-label">FO:</span>
+				<button onclick="insertSnippet('block')" title="Insert fo:block">block</button>
+				<button onclick="insertSnippet('inline')" title="Insert fo:inline">inline</button>
+				<button onclick="insertSnippet('inline-container')" title="Insert fo:inline-container">container</button>
+				<button onclick="insertSnippet('block-container')" title="Insert fo:block-container">block-ctr</button>
+				<button onclick="showTableDialog()" title="Insert fo:table">table...</button>
+				<button onclick="insertSnippet('leader')" title="Insert fo:leader">leader</button>
+				<button onclick="insertSnippet('graphic')" title="Insert fo:external-graphic">graphic</button>
+				<button onclick="showCommentDialog()" title="Insert XSL comment" style="background:#5a5a2a;">comment</button>
+			</div>
+			<div class="snippet-row">
+				<span class="snippet-label">XSL:</span>
+				<button onclick="showTemplateDialog()" title="Insert xsl:template">template...</button>
+				<button onclick="showCallTemplateDialog()" title="Insert xsl:call-template">call...</button>
+				<button onclick="insertSnippet('for-each')" title="Insert xsl:for-each">for-each</button>
+				<button onclick="insertSnippet('sort')" title="Insert xsl:sort">sort</button>
+				<button onclick="insertSnippet('if')" title="Insert xsl:if">if</button>
+				<button onclick="insertSnippet('choose')" title="Insert xsl:choose">choose</button>
+				<button onclick="insertSnippet('value-of')" title="Insert xsl:value-of">value-of</button>
+				<button onclick="insertSnippet('variable')" title="Insert xsl:variable">variable</button>
+				<button onclick="showAttrSetDialog()" title="Insert xsl:attribute-set">attr set...</button>
+			</div>
+		</div>
+
+		<textarea id="xslInput" oninput="saveProject()" placeholder="Paste Main XSLT..."></textarea>
+		<textarea id="xmlInput" style="display:none;" oninput="saveProject()" placeholder="Paste XML Data..."></textarea>
+		<textarea id="mapInput" style="display:none;" oninput="saveProject()" placeholder='{"firstMap": {"reportTitle": "Invoice"}, "secondMap": {"auditorName": "Jane Doe"}}'></textarea>
+		<textarea id="imageMapInput" style="display:none;" oninput="saveProject()" placeholder="logo.png|data:image/png;base64,..."></textarea>
+
+		<!-- Bottom Tabs Container -->
+		<div id="bottom-tabs-container" class="bottom-tabs-container">
+			<div class="bottom-tabs">
+				<div id="bottom-tab-templates" class="bottom-tab active" onclick="showBottomTab('templates')">TEMPLATES</div>
+				<div id="bottom-tab-attrsets" class="bottom-tab" onclick="showBottomTab('attrsets')">ATTRIBUTE SETS</div>
+				<div id="bottom-tab-includes" class="bottom-tab" onclick="showBottomTab('includes')">INCLUDES</div>
+				<div id="bottom-tab-shims" class="bottom-tab" onclick="showBottomTab('shims')">SHIMS</div>
+				<div id="bottom-tab-options" class="bottom-tab" onclick="showBottomTab('options')">OPTIONS</div>
+			</div>
+
+			<!-- TEMPLATES Tab Content -->
+			<div id="bottom-content-templates" class="bottom-tab-content active">
+				<!-- Template Navigator -->
+				<div id="template-nav-bar" class="template-nav-bar">
+					<label>Templates:</label>
+					<select id="template-nav" onchange="loadTemplateToEditor(this.value)" title="Select template to edit">
+						<option value="">-- Select a template --</option>
+					</select>
+					<button onclick="refreshTemplateNav()" title="Refresh template list">↻</button>
+				</div>
+
+				<!-- Template Editor -->
+				<div id="template-editor" class="template-editor">
+					<div id="template-editor-placeholder" class="template-editor-placeholder">
+						Select a template above to edit
+					</div>
+					<div id="template-editor-active" style="display: none; flex: 1; flex-direction: column;">
+						<div class="template-editor-header">
+							<span class="template-name" id="template-editor-name"></span>
+							<span class="template-status" id="template-editor-status"></span>
+							<div class="template-editor-buttons">
+								<button class="btn-discard" onclick="discardTemplateChanges()" title="Reload from main XSL">Discard</button>
+								<button class="btn-update" onclick="updateTemplateInXsl()" title="Update template in main XSL">Update XSL</button>
+							</div>
+						</div>
+						<textarea id="templateEditorInput" oninput="onTemplateEditorChange()" placeholder="Template content..."></textarea>
+					</div>
+				</div>
+			</div>
+
+			<!-- ATTRIBUTE SETS Tab Content -->
+			<div id="bottom-content-attrsets" class="bottom-tab-content">
+				<!-- Attribute Set Navigator -->
+				<div class="template-nav-bar">
+					<label>Attr Sets:</label>
+					<select id="attrset-nav" onchange="loadAttrSetToEditor(this.value)" title="Select attribute set to edit">
+						<option value="">-- Select an attribute set --</option>
+					</select>
+					<button onclick="refreshAttrSetNav()" title="Refresh attribute set list">↻</button>
+				</div>
+
+				<!-- Attribute Set Editor -->
+				<div id="attrset-editor" class="template-editor">
+					<div id="attrset-editor-placeholder" class="template-editor-placeholder">
+						Select an attribute set above to edit
+					</div>
+					<div id="attrset-editor-active" style="display: none; flex: 1; flex-direction: column;">
+						<div class="template-editor-header">
+							<span class="template-name" id="attrset-editor-name"></span>
+							<span class="template-status" id="attrset-editor-status"></span>
+							<div class="template-editor-buttons">
+								<button class="btn-discard" onclick="discardAttrSetChanges()" title="Reload from main XSL">Discard</button>
+								<button class="btn-update" onclick="updateAttrSetInXsl()" title="Update attribute set in main XSL">Update XSL</button>
+							</div>
+						</div>
+						<textarea id="attrSetEditorInput" oninput="onAttrSetEditorChange()" placeholder="Attribute set content..."></textarea>
+					</div>
+				</div>
+			</div>
+
+			<!-- INCLUDES Tab Content -->
+			<div id="bottom-content-includes" class="bottom-tab-content">
+				<div style="padding: 8px; font-size: 0.7rem; color: #888; background: #252526;">
+					Add XSL library files to include in your stylesheet (e.g., common templates, utilities)
+				</div>
+				<div style="flex: 1; overflow-y: auto; padding: 10px;">
+					<div id="library-list"></div>
+					<div style="display: flex; gap: 5px; margin-top: 10px;">
+						<input type="text" id="lib-name" placeholder="filename.xsl" style="flex:1; font-size:0.75rem; background:#333; color:white; border:1px solid #444; padding:6px; border-radius:3px;">
+						<button onclick="addLibFile()" style="font-size:0.7rem; padding: 6px 12px;">Add File</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- SHIMS Tab Content -->
+			<div id="bottom-content-shims" class="bottom-tab-content">
+				<div style="padding: 8px; font-size: 0.7rem; color: #888; background: #252526;">
+					Find-and-replace rules for unsupported FO elements. Format: OriginalText|ReplacementText (one per line)
+				</div>
+				<textarea id="shimInput" oninput="saveProject()" placeholder="OriginalText|ReplacementText" style="flex: 1; resize: none;"></textarea>
+			</div>
+
+			<!-- OPTIONS Tab Content -->
+			<div id="bottom-content-options" class="bottom-tab-content">
+				<div class="options-panel" style="display: flex;">
+					<div class="options-section">
+						<h4>Editor Options</h4>
+						<label title="Show attribute selection dialogs when inserting FO elements">
+							<input type="checkbox" id="helpModeToggle" onchange="saveProject()" checked>
+							Help Mode (show attribute dialogs for snippets)
+						</label>
+						<div style="margin-top: 10px;">
+							<label title="Width of sidebar when expanded (in pixels)">
+								Expanded sidebar width:
+								<input type="number" id="expandedWidthInput" value="1040" min="600" max="2000" step="10" onchange="updateExpandedWidth()" style="width: 70px; padding: 4px; background: #444; border: 1px solid #555; color: white; border-radius: 3px; margin-left: 5px;">
+								px
+							</label>
+						</div>
+					</div>
+					<div class="options-section">
+						<h4>Rendering Options</h4>
+						<label title="Enable flexbox-based leaders that fill available space (may affect some layouts)">
+							<input type="checkbox" id="flexLeadersToggle" onchange="saveProject()">
+							Flex Leaders (fill available space)
+						</label>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div style="padding: 10px; background: #252526; border-top: 1px solid #444;">
+			<button onclick="copyXsltToClipboard()" style="width: 100%; background: #007acc; color: white; border: none; padding: 8px; cursor: pointer; font-weight: bold;">
+				COPY XSLT TO CLIPBOARD
+			</button>
+		</div>
+
+	</div>
+	
+    <div id="preview-zone">
+        <div id="xsl-canvas"></div>
+    </div>
+</main>
+
+<script>
+/*
+ * Notes:
+
+example xml:
+<report>
+    ...
+    <imagePath>file:/C:/.../reports/image.svg</imagePath>
+
+4. Use data model in template:
+    <fo:external-graphic content-width="scale-down-to-fit" content-height="scale-down-to-fit"
+        inline-progression-dimension.maximum="5mm" block-progression-dimension.maximum="5mm">
+        <xsl:attribute name="src"><xsl:value-of select="report/imagePath" /> 
+    </fo:external-graphic>
+
+
+** XSL Viewer seems to handle this seamlessly when full path is given like shown above 
+*** ... it also seems to handle .png, .svg, (probably more) without issue
+
+ */
+	
+	// Global scope
+    let library = {};
+	let virtualImages = {};
+	let templates = {};        // Stored template contents { "name": "full template text" }
+	let activeTemplate = null; // Currently selected template name
+	let attrSets = {};         // Stored attribute set contents { "name": "full attr set text" }
+	let activeAttrSet = null;  // Currently selected attribute set name
+	let currentProjectId = null;  // ID of currently loaded project (null = unsaved)
+	let lastSavedState = null;    // Snapshot of last saved state for dirty checking
+	let sidebarExpanded = false;  // Whether sidebar is in expanded mode
+    const MISSING_IMAGE_SVG = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZGVkZWRlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iOCIgZmlsbD0iI2FhYSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TUlTU0lORzwvdGV4dD48L3N2Zz4=";
+	
+    // Centralized Style Mapping for FO to CSS
+    const SUPPORTED_FO_STYLES = {
+        'font-size': 'fontSize',
+        'font-weight': 'fontWeight',
+        'font-family': 'fontFamily',
+        'text-align': 'textAlign',
+        'border': 'border',
+        'border-top': 'borderTop',
+        'border-bottom': 'borderBottom',
+        'border-left': 'borderLeft',
+        'border-right': 'borderRight',
+        'border-top-color': 'borderTopColor',
+        'border-bottom-color': 'borderBottomColor',
+        'border-left-color': 'borderLeftColor',
+        'border-right-color': 'borderRightColor',
+        'border-top-style': 'borderTopStyle',
+        'border-bottom-style': 'borderBottomStyle',
+        'border-left-style': 'borderLeftStyle',
+        'border-right-style': 'borderRightStyle',
+        'border-top-width': 'borderTopWidth',
+        'border-bottom-width': 'borderBottomWidth',
+        'border-left-width': 'borderLeftWidth',
+        'border-right-width': 'borderRightWidth',
+        'padding': 'padding',
+        'padding-left': 'paddingLeft',
+        'padding-right': 'paddingRight',
+        'padding-top': 'paddingTop',
+        'padding-bottom': 'paddingBottom',
+        'width': 'width',
+        'height': 'height',
+        'color': 'color',
+        'background-color': 'backgroundColor',
+        'space-after': 'marginBottom',
+        'space-before': 'marginTop',
+        'line-height': 'lineHeight',
+        // Positioning (for watermarks/overlays)
+        'position': 'position',
+        'top': 'top',
+        'left': 'left',
+        'right': 'right',
+        'bottom': 'bottom',
+        'transform': 'transform',
+        'z-index': 'zIndex',
+        'text-decoration': 'textDecoration',
+        'text-indent': 'textIndent',
+        'inline-progression-dimension': 'width',
+        'block-progression-dimension': 'height'
+    };
+
+    const XSLT_SHIMS = {
+		// Add pairs here: "Original String": "Replacement String"
+		"fo:multi-switch": "fo:block", 
+		"fo:multi-case": "fo:block",
+		"proprietary:custom-extension": "fo:inline",
+		"xsl:analyze-string": "xsl:comment", // Kill complex logic for now
+
+		// Layout tags that browsers don't understand
+		"fo:declarations": "xsl:comment",
+		"fo:bookmark-tree": "xsl:comment",
+		"fo:destination": "xsl:comment",
+		
+		// Proprietary extensions (common in FOP or XEP)
+		"fox:external-document": "fo:block",
+		"rx:meta-field": "xsl:comment",
+		
+		// XSL 2.0+ logic that can break 1.0 parsers if not handled
+		"xsl:result-document": "xsl:comment",
+		"xsl:character-map": "xsl:comment",
+	};
+
+	function initProject() {
+        const saved = localStorage.getItem('xslfo_sandbox_v6');
+        if (saved) {
+            const data = JSON.parse(saved);
+
+            // 1. Populate Textareas
+            document.getElementById('xslInput').value = data.xsl || '';
+            document.getElementById('xmlInput').value = data.xml || '';
+            document.getElementById('mapInput').value = data.map || '';
+
+            // 2. Load the new Images Tab content
+            document.getElementById('imageMapInput').value = data.img || '';
+
+			// 2b. Load Persistent Shims
+			if(document.getElementById('shimInput')) document.getElementById('shimInput').value = data.shims || '';
+
+			// 2c. Load Toggle States
+			if(document.getElementById('flexLeadersToggle')) document.getElementById('flexLeadersToggle').checked = data.flexLeaders === true; // Default to false
+			if(document.getElementById('helpModeToggle')) document.getElementById('helpModeToggle').checked = data.helpMode !== false; // Default to true
+
+			// 2d. Restore sidebar expanded state and width
+			if (data.expandedWidth) {
+				document.getElementById('expandedWidthInput').value = data.expandedWidth;
+				document.documentElement.style.setProperty('--expanded-width', data.expandedWidth + 'px');
+			}
+			if (data.sidebarExpanded) {
+				sidebarExpanded = true;
+				document.querySelector('.sidebar').classList.add('expanded');
+				document.getElementById('expand-btn').classList.add('active');
+			}
+
+            // 3. Re-hydrate the Library object
+            library = data.library || {};
+
+            // 3b. Re-hydrate Templates storage
+            templates = data.templates || {};
+            activeTemplate = data.activeTemplate || null;
+
+            // 3c. Re-hydrate Attribute Sets storage
+            attrSets = data.attrSets || {};
+            activeAttrSet = data.activeAttrSet || null;
+
+            // 3d. Re-hydrate Project tracking
+            currentProjectId = data.currentProjectId || null;
+            // Set lastSavedState if we have a saved project
+            if (currentProjectId) {
+                const projectData = localStorage.getItem('xslfo_project_' + currentProjectId);
+                if (projectData) {
+                    lastSavedState = projectData;
+                }
+            }
+
+            renderLibUI();
+
+            // 4. Initial Render
+            if (data.xsl) renderPreview();
+
+            // 5. Restore active template in editor if any
+            if (activeTemplate && templates[activeTemplate]) {
+                showTemplateEditor(activeTemplate, templates[activeTemplate]);
+            }
+
+            // 5b. Restore active attribute set in editor if any
+            if (activeAttrSet && attrSets[activeAttrSet]) {
+                showAttrSetEditor(activeAttrSet, attrSets[activeAttrSet]);
+            }
+
+            // 6. Refresh navigators
+            refreshTemplateNav();
+            refreshAttrSetNav();
+        }
+    }
+
+    function saveProject() {
+        const data = {
+            xsl: document.getElementById('xslInput').value,
+            xml: document.getElementById('xmlInput').value,
+            map: document.getElementById('mapInput').value,
+            img: document.getElementById('imageMapInput').value, // Save Images
+			shims: document.getElementById('shimInput')?.value || '', // Save Shims
+			flexLeaders: document.getElementById('flexLeadersToggle')?.checked ?? true, // Save toggle
+			helpMode: document.getElementById('helpModeToggle')?.checked ?? true, // Save help mode
+			sidebarExpanded: sidebarExpanded, // Save sidebar expanded state
+			expandedWidth: document.getElementById('expandedWidthInput')?.value || '1040', // Save expanded width
+            library: library,
+            templates: templates,           // Save template editor contents
+            activeTemplate: activeTemplate, // Save which template is open
+            attrSets: attrSets,             // Save attribute set editor contents
+            activeAttrSet: activeAttrSet,   // Save which attribute set is open
+            currentProjectId: currentProjectId  // Save which project is loaded
+        };
+        localStorage.setItem('xslfo_sandbox_v6', JSON.stringify(data));
+        
+        // Visual feedback in the header
+        const status = document.getElementById('save-status');
+        if (status) {
+            status.innerText = `Auto-saved: ${new Date().toLocaleTimeString()}`;
+        }
+    }
+	
+    // ===== PROJECT MANAGEMENT =====
+
+	function getProjectsIndex() {
+		const stored = localStorage.getItem('xslfo_projects_index');
+		return stored ? JSON.parse(stored) : {};
+	}
+
+	function saveProjectsIndex(index) {
+		localStorage.setItem('xslfo_projects_index', JSON.stringify(index));
+	}
+
+	function getCurrentState() {
+		return {
+			xsl: document.getElementById('xslInput').value,
+			xml: document.getElementById('xmlInput').value,
+			map: document.getElementById('mapInput').value,
+			img: document.getElementById('imageMapInput').value,
+			shims: document.getElementById('shimInput')?.value || '',
+			flexLeaders: document.getElementById('flexLeadersToggle')?.checked ?? true,
+			library: library,
+			templates: templates,
+			activeTemplate: activeTemplate,
+			attrSets: attrSets,
+			activeAttrSet: activeAttrSet
+		};
+	}
+
+	function hasUnsavedChanges() {
+		if (!lastSavedState) return true; // Never saved
+		const current = JSON.stringify(getCurrentState());
+		return current !== lastSavedState;
+	}
+
+	function showProjectDialog() {
+		const index = getProjectsIndex();
+		const projectList = Object.entries(index)
+			.sort((a, b) => b[1].lastModified - a[1].lastModified);
+
+		const currentName = currentProjectId ? index[currentProjectId]?.name : null;
+		const hasChanges = hasUnsavedChanges();
+
+		const overlay = document.createElement('div');
+		overlay.className = 'table-dialog-overlay';
+		overlay.id = 'project-dialog-overlay';
+		overlay.innerHTML = `
+			<div class="project-dialog">
+				<h3>
+					Project Management
+					<button onclick="closeProjectDialog()" title="Close">&times;</button>
+				</h3>
+				<div class="project-current">
+					<div class="project-current-label">Current Project</div>
+					<div class="project-current-name ${currentName ? '' : 'unsaved'}">
+						${currentName || 'Unsaved Project'}
+						${hasChanges ? ' <span style="color:#ffa726;font-size:0.7rem;">(unsaved changes)</span>' : ''}
+					</div>
+				</div>
+				<div class="project-actions">
+					<button class="btn-save" onclick="saveCurrentProject()" ${currentProjectId ? '' : 'disabled'} title="${currentProjectId ? 'Save to current project' : 'Use Save As for new projects'}">
+						Save
+					</button>
+					<button class="btn-saveas" onclick="saveProjectAs()" title="Save as new project">
+						Save As...
+					</button>
+					<button class="btn-new" onclick="newProject()" title="Start a new blank project">
+						New Project
+					</button>
+				</div>
+				<div class="project-list-header">Saved Projects (${projectList.length})</div>
+				<div class="project-list" id="project-list">
+					${projectList.length === 0 ?
+						'<div class="project-list-empty">No saved projects yet</div>' :
+						projectList.map(([id, proj]) => `
+							<div class="project-item" data-id="${id}">
+								<div class="project-item-info">
+									<div class="project-item-name">${proj.name}${id === currentProjectId ? ' <span style="color:#4fc3f7;font-size:0.65rem;">(current)</span>' : ''}</div>
+									<div class="project-item-date">${formatDate(proj.lastModified)}</div>
+								</div>
+								<button class="btn-load" onclick="loadProject('${id}')" ${id === currentProjectId ? 'disabled' : ''}>Load</button>
+								<button class="btn-delete" onclick="deleteProject('${id}')">Delete</button>
+							</div>
+						`).join('')
+					}
+				</div>
+			</div>
+		`;
+		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
+	}
+
+	function closeProjectDialog() {
+		const overlay = document.getElementById('project-dialog-overlay');
+		if (overlay) overlay.remove();
+	}
+
+	function formatDate(timestamp) {
+		const date = new Date(timestamp);
+		const now = new Date();
+		const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+
+		if (diffDays === 0) {
+			return 'Today ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+		} else if (diffDays === 1) {
+			return 'Yesterday ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+		} else if (diffDays < 7) {
+			return date.toLocaleDateString([], { weekday: 'short' }) + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+		} else {
+			return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+		}
+	}
+
+	function saveCurrentProject() {
+		if (!currentProjectId) {
+			saveProjectAs();
+			return;
+		}
+
+		const state = getCurrentState();
+		localStorage.setItem('xslfo_project_' + currentProjectId, JSON.stringify(state));
+
+		// Update index with new timestamp
+		const index = getProjectsIndex();
+		if (index[currentProjectId]) {
+			index[currentProjectId].lastModified = Date.now();
+			saveProjectsIndex(index);
+		}
+
+		lastSavedState = JSON.stringify(state);
+
+		// Also update working state
+		saveProject();
+
+		closeProjectDialog();
+		showSaveConfirmation('Project saved!');
+	}
+
+	function saveProjectAs() {
+		const name = prompt('Enter project name:');
+		if (!name || !name.trim()) return;
+
+		const projectId = 'proj_' + Date.now();
+		const state = getCurrentState();
+
+		// Save project data
+		localStorage.setItem('xslfo_project_' + projectId, JSON.stringify(state));
+
+		// Update index
+		const index = getProjectsIndex();
+		index[projectId] = {
+			name: name.trim(),
+			lastModified: Date.now()
+		};
+		saveProjectsIndex(index);
+
+		// Set as current project
+		currentProjectId = projectId;
+		lastSavedState = JSON.stringify(state);
+
+		// Update working state
+		saveProject();
+
+		closeProjectDialog();
+		showSaveConfirmation('Project saved as "' + name.trim() + '"');
+	}
+
+	function loadProject(projectId) {
+		// Check for unsaved changes
+		if (hasUnsavedChanges()) {
+			const index = getProjectsIndex();
+			const currentName = currentProjectId ? index[currentProjectId]?.name : 'current project';
+			const choice = confirm(
+				`You have unsaved changes in ${currentName || 'the current project'}.\n\n` +
+				`Click OK to discard changes and load the new project.\n` +
+				`Click Cancel to go back and save first.`
+			);
+			if (!choice) return;
+		}
+
+		const stored = localStorage.getItem('xslfo_project_' + projectId);
+		if (!stored) {
+			alert('Project not found!');
+			return;
+		}
+
+		const data = JSON.parse(stored);
+
+		// Load into UI
+		document.getElementById('xslInput').value = data.xsl || '';
+		document.getElementById('xmlInput').value = data.xml || '';
+		document.getElementById('mapInput').value = data.map || '';
+		document.getElementById('imageMapInput').value = data.img || '';
+		if (document.getElementById('shimInput')) document.getElementById('shimInput').value = data.shims || '';
+		if (document.getElementById('flexLeadersToggle')) document.getElementById('flexLeadersToggle').checked = data.flexLeaders === true;
+
+		library = data.library || {};
+		templates = data.templates || {};
+		activeTemplate = data.activeTemplate || null;
+		attrSets = data.attrSets || {};
+		activeAttrSet = data.activeAttrSet || null;
+
+		renderLibUI();
+
+		// Update current project tracking
+		currentProjectId = projectId;
+		lastSavedState = JSON.stringify(data);
+
+		// Save as working state
+		saveProject();
+
+		// Refresh UI
+		if (data.xsl) renderPreview();
+		refreshTemplateNav();
+		refreshAttrSetNav();
+		if (activeTemplate && templates[activeTemplate]) {
+			showTemplateEditor(activeTemplate, templates[activeTemplate]);
+		} else {
+			hideTemplateEditor();
+		}
+		if (activeAttrSet && attrSets[activeAttrSet]) {
+			showAttrSetEditor(activeAttrSet, attrSets[activeAttrSet]);
+		} else {
+			hideAttrSetEditor();
+		}
+
+		closeProjectDialog();
+
+		const index = getProjectsIndex();
+		showSaveConfirmation('Loaded "' + index[projectId].name + '"');
+	}
+
+	function deleteProject(projectId) {
+		const index = getProjectsIndex();
+		const projectName = index[projectId]?.name || 'this project';
+
+		if (!confirm(`Delete "${projectName}"?\n\nThis cannot be undone.`)) return;
+
+		// Remove project data
+		localStorage.removeItem('xslfo_project_' + projectId);
+
+		// Remove from index
+		delete index[projectId];
+		saveProjectsIndex(index);
+
+		// If we deleted the current project, clear the reference
+		if (projectId === currentProjectId) {
+			currentProjectId = null;
+			lastSavedState = null;
+		}
+
+		// Refresh dialog
+		closeProjectDialog();
+		showProjectDialog();
+	}
+
+	function newProject() {
+		// Check for unsaved changes
+		if (hasUnsavedChanges()) {
+			const index = getProjectsIndex();
+			const currentName = currentProjectId ? index[currentProjectId]?.name : 'current project';
+			const choice = confirm(
+				`You have unsaved changes in ${currentName || 'the current project'}.\n\n` +
+				`Click OK to discard changes and start a new project.\n` +
+				`Click Cancel to go back and save first.`
+			);
+			if (!choice) return;
+		}
+
+		// Clear everything
+		document.getElementById('xslInput').value = '';
+		document.getElementById('xmlInput').value = '';
+		document.getElementById('mapInput').value = '';
+		document.getElementById('imageMapInput').value = '';
+		if (document.getElementById('shimInput')) document.getElementById('shimInput').value = '';
+		if (document.getElementById('flexLeadersToggle')) document.getElementById('flexLeadersToggle').checked = false;
+
+		library = {};
+		templates = {};
+		activeTemplate = null;
+		attrSets = {};
+		activeAttrSet = null;
+		currentProjectId = null;
+		lastSavedState = null;
+
+		renderLibUI();
+		hideTemplateEditor();
+		hideAttrSetEditor();
+		refreshTemplateNav();
+		refreshAttrSetNav();
+		document.getElementById('xsl-canvas').innerHTML = '';
+
+		saveProject();
+		closeProjectDialog();
+		showSaveConfirmation('New project started');
+	}
+
+	function showSaveConfirmation(message) {
+		const status = document.getElementById('save-status');
+		if (status) {
+			status.innerText = message;
+			status.style.color = '#4fc3f7';
+			setTimeout(() => {
+				status.style.color = '';
+			}, 2000);
+		}
+	}
+
+	async function copyXsltToClipboard() {
+		const xslContent = document.getElementById('xslInput').value;
+		try {
+			await navigator.clipboard.writeText(xslContent);
+			// Visual feedback
+			const btn = event.target;
+			const originalText = btn.innerText;
+			btn.innerText = "✓ COPIED!";
+			btn.style.background = "#28a745";
+			setTimeout(() => {
+				btn.innerText = originalText;
+				btn.style.background = "#007acc";
+			}, 2000);
+		} catch (err) {
+			console.error('Failed to copy: ', err);
+		}
+	}
+
+	function preProcessXslt(rawStr) {
+		let processed = rawStr;
+		
+		// 1. Build dynamic shim map from hardcoded + user input
+		let activeShims = { ...XSLT_SHIMS };
+		const shimEl = document.getElementById('shimInput');
+		if (shimEl && shimEl.value) {
+			shimEl.value.split('\n').forEach(line => {
+				const [target, replacement] = line.split('|');
+				if (target && replacement) activeShims[target.trim()] = replacement.trim();
+			});
+		}
+
+		// 2. Apply the shims
+		for (const [target, replacement] of Object.entries(activeShims)) {
+			// Use a global regex to replace all instances
+			const escapedTarget = target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			const re = new RegExp(escapedTarget, 'g');
+			processed = processed.replace(re, replacement);
+		}
+		
+		return processed;
+	}
+
+	function showTab(tabName) {
+		// 1. Update tab styling
+		document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+		document.getElementById('tab-' + tabName).classList.add('active');
+
+		// 2. Toggle textareas
+		document.getElementById('xslInput').style.display = (tabName === 'xsl' ? 'block' : 'none');
+		document.getElementById('xmlInput').style.display = (tabName === 'xml' ? 'block' : 'none');
+		document.getElementById('mapInput').style.display = (tabName === 'map' ? 'block' : 'none');
+		document.getElementById('imageMapInput').style.display = (tabName === 'img' ? 'block' : 'none');
+
+		// 3. Toggle snippet toolbar visibility (only show for XSLT tab)
+		const snippetToolbar = document.getElementById('snippet-toolbar');
+		if (snippetToolbar) snippetToolbar.style.display = (tabName === 'xsl' ? 'flex' : 'none');
+
+		// 4. Toggle bottom tabs container (only show for XSLT tab)
+		const bottomTabsContainer = document.getElementById('bottom-tabs-container');
+		if (bottomTabsContainer) bottomTabsContainer.style.display = (tabName === 'xsl' ? 'flex' : 'none');
+
+		// 5. Refresh navigators when switching to XSLT tab
+		if (tabName === 'xsl') {
+			refreshTemplateNav();
+			refreshAttrSetNav();
+		}
+	}
+
+	function showBottomTab(tabName) {
+		// Update bottom tab styling
+		document.querySelectorAll('.bottom-tab').forEach(t => t.classList.remove('active'));
+		document.getElementById('bottom-tab-' + tabName).classList.add('active');
+
+		// Toggle bottom tab content
+		document.querySelectorAll('.bottom-tab-content').forEach(c => c.classList.remove('active'));
+		document.getElementById('bottom-content-' + tabName).classList.add('active');
+
+		// Refresh navigator for the selected tab
+		if (tabName === 'templates') refreshTemplateNav();
+		if (tabName === 'attrsets') refreshAttrSetNav();
+	}
+
+	function toggleSidebarExpand() {
+		sidebarExpanded = !sidebarExpanded;
+		const sidebar = document.querySelector('.sidebar');
+		const btn = document.getElementById('expand-btn');
+
+		if (sidebarExpanded) {
+			sidebar.classList.add('expanded');
+			btn.classList.add('active');
+		} else {
+			sidebar.classList.remove('expanded');
+			btn.classList.remove('active');
+		}
+
+		saveProject();
+	}
+
+	function updateExpandedWidth() {
+		const width = document.getElementById('expandedWidthInput').value || '1040';
+		document.documentElement.style.setProperty('--expanded-width', width + 'px');
+		saveProject();
+	}
+
+    function addLibFile() {
+        const name = document.getElementById('lib-name').value;
+        const content = prompt(`Paste XSL for ${name}`);
+        if (name && content) { library[name] = content; renderLibUI(); saveProject(); }
+    }
+
+    function renderLibUI() {
+        const list = document.getElementById('library-list');
+        list.innerHTML = Object.keys(library).map(name => `
+            <div class="lib-item">
+                <span>📄 ${name}</span>
+                <button onclick="delete library['${name}']; renderLibUI(); saveProject();" style="background:none; color:red; cursor:pointer;">&times;</button>
+            </div>`).join('');
+    }
+
+	// --- XPath 2.0 Function Shims ---
+	// Resolves XPath 2.0 function calls that browsers don't support natively.
+	// Called by both evaluateXPath and evaluateXPathBoolean before doc.evaluate().
+	function resolveXPath2Functions(xpath, xmlContext) {
+		let resolved = xpath;
+		const doc = xmlContext.ownerDocument || xmlContext;
+
+		function evalStr(expr) {
+			try {
+				return doc.evaluate(expr.trim(), xmlContext, null, XPathResult.STRING_TYPE, null).stringValue;
+			} catch(e) {
+				console.warn(`XPath 2.0 shim: failed to evaluate [${expr}]`, e);
+				return '';
+			}
+		}
+
+		function evalNodeSet(expr) {
+			try {
+				return doc.evaluate(expr.trim(), xmlContext, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+			} catch(e) {
+				console.warn(`XPath 2.0 shim: failed to evaluate node-set [${expr}]`, e);
+				return null;
+			}
+		}
+
+		function escStr(s) {
+			return "'" + s.replace(/'/g, "''") + "'";
+		}
+
+		// Find a function call respecting parenthesis and string-literal nesting.
+		// Returns { start, end, args[], full } or null.
+		function findFunc(str, funcName) {
+			const re = new RegExp('\\b' + funcName.replace(/-/g, '\\-') + '\\s*\\(');
+			const m = re.exec(str);
+			if (!m) return null;
+			const startIdx = m.index;
+			const argsStart = m.index + m[0].length;
+			let depth = 1, i = argsStart;
+			let args = [], argStart = argsStart;
+			while (i < str.length && depth > 0) {
+				const ch = str[i];
+				if (ch === '(') depth++;
+				else if (ch === ')') {
+					depth--;
+					if (depth === 0) { args.push(str.substring(argStart, i)); break; }
+				} else if (ch === ',' && depth === 1) {
+					args.push(str.substring(argStart, i));
+					argStart = i + 1;
+				} else if (ch === "'" || ch === '"') {
+					const q = ch; i++;
+					while (i < str.length && str[i] !== q) i++;
+				}
+				i++;
+			}
+			const end = i + 1; // +1 to consume past the closing ')'
+			return { start: startIdx, end, args: args.map(a => a.trim()), full: str.substring(startIdx, end) };
+		}
+
+		const FUNC_NAMES = ['upper-case', 'lower-case', 'ends-with', 'contains-token', 'string-join', 'tokenize', 'exists', 'empty', 'distinct-values', 'abs', 'avg', 'round-half-to-even', 'current-date', 'current-dateTime'];
+
+		// Iteratively resolve — innermost calls resolve first on re-scan
+		let safety = 50;
+		while (safety-- > 0) {
+			let matched = false;
+			for (const fn of FUNC_NAMES) {
+				const call = findFunc(resolved, fn);
+				if (!call) continue;
+
+				let replacement;
+				let customEnd = call.end; // may extend past call.end for predicates
+
+				switch (fn) {
+				case 'upper-case':
+					replacement = escStr(evalStr(call.args[0]).toUpperCase());
+					break;
+				case 'lower-case':
+					replacement = escStr(evalStr(call.args[0]).toLowerCase());
+					break;
+				case 'ends-with': {
+					const s = evalStr(call.args[0]);
+					const suffix = evalStr(call.args[1]);
+					replacement = s.endsWith(suffix) ? 'true()' : 'false()';
+					break;
+				}
+				case 'contains-token': {
+					const list = evalStr(call.args[0]);
+					const token = evalStr(call.args[1]);
+					const tokens = list.trim().split(/\s+/);
+					replacement = tokens.includes(token) ? 'true()' : 'false()';
+					break;
+				}
+				case 'string-join': {
+					const nodeSet = evalNodeSet(call.args[0]);
+					const delim = call.args.length > 1 ? evalStr(call.args[1]) : '';
+					let parts = [];
+					if (nodeSet) {
+						for (let j = 0; j < nodeSet.snapshotLength; j++) {
+							parts.push(nodeSet.snapshotItem(j).textContent);
+						}
+					}
+					replacement = escStr(parts.join(delim));
+					break;
+				}
+				case 'tokenize': {
+					const input = evalStr(call.args[0]);
+					const pattern = call.args.length > 1 ? evalStr(call.args[1]) : '\\s+';
+					const tokens = input.split(new RegExp(pattern));
+
+					// Check for positional predicate: tokenize(...)[N]
+					const afterCall = resolved.substring(call.end);
+					const predMatch = afterCall.match(/^\s*\[(\d+)\]/);
+					if (predMatch) {
+						const idx = parseInt(predMatch[1]) - 1; // XPath is 1-based
+						replacement = escStr(tokens[idx] !== undefined ? tokens[idx] : '');
+						customEnd = call.end + predMatch[0].length;
+						break;
+					}
+
+					// Check if wrapped in count(): count(tokenize(...))
+					const before = resolved.substring(0, call.start);
+					const countPre = before.match(/\bcount\s*\(\s*$/);
+					if (countPre) {
+						const afterTokenize = resolved.substring(call.end);
+						const countClose = afterTokenize.match(/^\s*\)/);
+						if (countClose) {
+							replacement = String(tokens.length);
+							resolved = resolved.substring(0, before.length - countPre[0].length) + replacement + resolved.substring(call.end + countClose[0].length);
+							matched = true;
+							continue;
+						}
+					}
+
+					// Bare tokenize (no predicate, no count) → join with space
+					replacement = escStr(tokens.join(' '));
+					break;
+				}
+				case 'exists': {
+					const ns = evalNodeSet(call.args[0]);
+					replacement = (ns && ns.snapshotLength > 0) ? 'true()' : 'false()';
+					break;
+				}
+				case 'empty': {
+					const ns = evalNodeSet(call.args[0]);
+					replacement = (!ns || ns.snapshotLength === 0) ? 'true()' : 'false()';
+					break;
+				}
+				case 'distinct-values': {
+					const ns = evalNodeSet(call.args[0]);
+					const seen = new Set();
+					const unique = [];
+					if (ns) {
+						for (let j = 0; j < ns.snapshotLength; j++) {
+							const val = ns.snapshotItem(j).textContent;
+							if (!seen.has(val)) { seen.add(val); unique.push(val); }
+						}
+					}
+
+					// Check for positional predicate: distinct-values(...)[N]
+					const afterCall = resolved.substring(call.end);
+					const predMatch = afterCall.match(/^\s*\[(\d+)\]/);
+					if (predMatch) {
+						const idx = parseInt(predMatch[1]) - 1;
+						replacement = escStr(unique[idx] !== undefined ? unique[idx] : '');
+						customEnd = call.end + predMatch[0].length;
+						break;
+					}
+
+					// Check if wrapped in count(): count(distinct-values(...))
+					const before = resolved.substring(0, call.start);
+					const countPre = before.match(/\bcount\s*\(\s*$/);
+					if (countPre) {
+						const afterDV = resolved.substring(call.end);
+						const countClose = afterDV.match(/^\s*\)/);
+						if (countClose) {
+							replacement = String(unique.length);
+							resolved = resolved.substring(0, before.length - countPre[0].length) + replacement + resolved.substring(call.end + countClose[0].length);
+							matched = true;
+							continue;
+						}
+					}
+
+					// Bare distinct-values → join with space
+					replacement = escStr(unique.join(' '));
+					break;
+				}
+				case 'abs': {
+					const num = parseFloat(evalStr(call.args[0]));
+					replacement = String(isNaN(num) ? 'NaN' : Math.abs(num));
+					break;
+				}
+				case 'avg': {
+					const ns = evalNodeSet(call.args[0]);
+					if (ns && ns.snapshotLength > 0) {
+						let sum = 0;
+						for (let j = 0; j < ns.snapshotLength; j++) {
+							sum += parseFloat(ns.snapshotItem(j).textContent) || 0;
+						}
+						replacement = String(sum / ns.snapshotLength);
+					} else {
+						replacement = 'NaN';
+					}
+					break;
+				}
+				case 'round-half-to-even': {
+					const num = parseFloat(evalStr(call.args[0]));
+					const precision = call.args.length > 1 ? parseInt(evalStr(call.args[1])) : 0;
+					if (isNaN(num)) {
+						replacement = 'NaN';
+					} else {
+						const factor = Math.pow(10, precision);
+						const shifted = num * factor;
+						const floored = Math.floor(shifted);
+						const diff = shifted - floored;
+						let rounded;
+						if (Math.abs(diff - 0.5) < 1e-10) {
+							// Exactly halfway — round to even
+							rounded = (floored % 2 === 0) ? floored : floored + 1;
+						} else {
+							rounded = Math.round(shifted);
+						}
+						replacement = String(rounded / factor);
+					}
+					break;
+				}
+				case 'current-date': {
+					const now = new Date();
+					const yyyy = now.getFullYear();
+					const mm = String(now.getMonth() + 1).padStart(2, '0');
+					const dd = String(now.getDate()).padStart(2, '0');
+					replacement = escStr(`${yyyy}-${mm}-${dd}`);
+					break;
+				}
+				case 'current-dateTime': {
+					replacement = escStr(new Date().toISOString());
+					break;
+				}
+				}
+
+				resolved = resolved.substring(0, call.start) + replacement + resolved.substring(customEnd);
+				matched = true;
+				break; // restart scan from beginning
+			}
+			if (!matched) break;
+		}
+
+		// Handle XPath 2.0 if/then/else expressions (not a function call)
+		let ifSafety = 20;
+		while (ifSafety-- > 0) {
+			const ifMatch = resolved.match(/\bif\s*\(/);
+			if (!ifMatch) break;
+			const ifStart = ifMatch.index;
+
+			// Parse balanced-paren condition after "if ("
+			const condStart = ifStart + ifMatch[0].length;
+			let depth = 1, ci = condStart;
+			while (ci < resolved.length && depth > 0) {
+				const ch = resolved[ci];
+				if (ch === '(') depth++;
+				else if (ch === ')') depth--;
+				else if (ch === "'" || ch === '"') { const q = ch; ci++; while (ci < resolved.length && resolved[ci] !== q) ci++; }
+				ci++;
+			}
+			const condExpr = resolved.substring(condStart, ci - 1);
+
+			// Find "then" keyword after condition's closing paren
+			const afterCond = resolved.substring(ci);
+			const thenMatch = afterCond.match(/^\s*then\b/);
+			if (!thenMatch) break; // not a valid if/then/else
+			const thenStart = ci + thenMatch[0].length;
+
+			// Scan for "else" keyword at depth 0 (outside parens and strings)
+			let ei = thenStart, eDepth = 0;
+			let elseIdx = -1;
+			while (ei < resolved.length) {
+				const ch = resolved[ei];
+				if (ch === '(' ) eDepth++;
+				else if (ch === ')') { if (eDepth === 0) break; eDepth--; }
+				else if (ch === "'" || ch === '"') { const q = ch; ei++; while (ei < resolved.length && resolved[ei] !== q) ei++; }
+				else if (eDepth === 0 && resolved.substring(ei).match(/^else\b/)) { elseIdx = ei; break; }
+				ei++;
+			}
+			if (elseIdx === -1) break; // no else found
+
+			const thenExpr = resolved.substring(thenStart, elseIdx).trim();
+			const elseStart = elseIdx + 4; // skip "else"
+
+			// Scan else-expr end: ')' or ',' at depth 0, or end of string
+			let xi = elseStart, xDepth = 0;
+			while (xi < resolved.length) {
+				const ch = resolved[xi];
+				if (ch === '(') xDepth++;
+				else if (ch === ')') { if (xDepth === 0) break; xDepth--; }
+				else if (ch === ',' && xDepth === 0) break;
+				else if (ch === "'" || ch === '"') { const q = ch; xi++; while (xi < resolved.length && resolved[xi] !== q) xi++; }
+				xi++;
+			}
+			const elseExpr = resolved.substring(elseStart, xi).trim();
+
+			// Evaluate condition as boolean
+			let condResult = false;
+			try {
+				const resolvedCond = resolveXPath2Functions(condExpr, xmlContext);
+				condResult = doc.evaluate(resolvedCond, xmlContext, null, XPathResult.BOOLEAN_TYPE, null).booleanValue;
+			} catch(e) {
+				console.warn('XPath 2.0 shim: if/then/else condition failed', e);
+			}
+
+			const winningExpr = condResult ? thenExpr : elseExpr;
+			// Resolve any XPath 2.0 functions in the winning branch
+			const winningResult = resolveXPath2Functions(winningExpr, xmlContext);
+			resolved = resolved.substring(0, ifStart) + winningResult + resolved.substring(xi);
+		}
+
+		return resolved;
+	}
+
+	function evaluateXPath(xpath, context) {
+		if (!xpath) return "";
+
+		// Unwrap template context if needed (from call-template)
+		// Template context is { _xmlContext: actualXmlContext, _params: {...} }
+		let xmlContext = context;
+		let params = {};
+		let variables = {};
+
+		// Collect params and variables from all levels of nested template contexts
+		let ctx = context;
+		while (ctx) {
+			if (ctx._params) {
+				// Merge params, inner scopes take precedence
+				params = { ...ctx._params, ...params };
+			}
+			if (ctx._variables) {
+				variables = { ...ctx._variables, ...variables };
+			}
+			if (ctx._xmlContext) {
+				xmlContext = ctx._xmlContext;
+				ctx = ctx._xmlContext;
+			} else {
+				break;
+			}
+		}
+
+		let resolvedXPath = xpath;
+
+		// --- Variable & Parameter Resolution ---
+		// Replace $name references with actual values (variables take precedence over params)
+		const paramRegex = /\$([a-zA-Z_][\w.-]*)/g;
+		if (resolvedXPath.match(paramRegex)) {
+			resolvedXPath = resolvedXPath.replace(paramRegex, (match, paramName) => {
+				if (variables.hasOwnProperty(paramName)) {
+					const value = variables[paramName];
+					return `'${String(value).replace(/'/g, "''")}'`;
+				}
+				if (params.hasOwnProperty(paramName)) {
+					const value = params[paramName];
+					// Return as XPath string literal (properly escaped)
+					return `'${String(value).replace(/'/g, "''")}'`;
+				}
+				// Leave unresolved params as-is (may be XPath variables from XML)
+				return match;
+			});
+		}
+
+		// --- Java Map Dot Notation ---
+		// Matches: $mapName.keyName (e.g., $firstMap.reportTitle)
+		const dotNotationRegex = /\$([a-zA-Z_][\w]*)\.([\w]+)/g;
+		if (resolvedXPath.match(dotNotationRegex)) {
+			try {
+				const mapData = JSON.parse(document.getElementById('mapInput').value || "{}");
+				resolvedXPath = resolvedXPath.replace(dotNotationRegex, (match, mapName, key) => {
+					const targetMap = mapData[mapName];
+					const value = targetMap ? targetMap[key] : undefined;
+					return value !== undefined ? `'${String(value).replace(/'/g, "''")}'` : "''";
+				});
+			} catch(e) {
+				console.warn("Map dot notation resolution failed: check if JAVA MAP JSON is valid.");
+			}
+		}
+
+		// --- Dynamic XSL 3.0 Map Shim ---
+		// This regex captures the map name (group 1) and the key (group 2)
+		// Matches: map:get($anyMapName, 'anyKey')
+		const mapRegex = /map:get\(\$([^,\s]+),\s*['"]([^'"]+)['"]\)/g;
+
+		if (resolvedXPath.includes("map:get")) {
+			try {
+				const mapData = JSON.parse(document.getElementById('mapInput').value || "{}");
+
+				resolvedXPath = resolvedXPath.replace(mapRegex, (match, mapName, key) => {
+					// Look for the specific map object in your JSON (e.g., mapData['firstMap'])
+					const targetMap = mapData[mapName];
+					const value = targetMap ? targetMap[key] : undefined;
+
+					// Return as an XPath string literal
+					return value !== undefined ? `'${value}'` : "''";
+				});
+			} catch(e) {
+				console.warn("Map resolution failed: check if JAVA MAP JSON is valid.");
+			}
+		}
+
+		// --- XPath 2.0 Function Shims ---
+		resolvedXPath = resolveXPath2Functions(resolvedXPath, xmlContext);
+
+		try {
+			const doc = xmlContext.ownerDocument || xmlContext;
+			const res = doc.evaluate(resolvedXPath, xmlContext, null, XPathResult.STRING_TYPE, null);
+			return res.stringValue;
+		} catch(e) {
+			console.error(`XPath Error on [${resolvedXPath}]:`, e);
+			return "";
+		}
+	}
+
+	function evaluateXPathBoolean(xpath, context) {
+		if (!xpath) return false;
+
+		// Unwrap template context if needed
+		let xmlContext = context;
+		let params = {};
+		let variables = {};
+		let ctx = context;
+		while (ctx) {
+			if (ctx._params) {
+				params = { ...ctx._params, ...params };
+			}
+			if (ctx._variables) {
+				variables = { ...ctx._variables, ...variables };
+			}
+			if (ctx._xmlContext) {
+				xmlContext = ctx._xmlContext;
+				ctx = ctx._xmlContext;
+			} else {
+				break;
+			}
+		}
+
+		let resolvedXPath = xpath;
+
+		// Replace $mapName.key dot notation
+		const dotNotationRegex = /\$([a-zA-Z_][\w]*)\.([\w]+)/g;
+		if (resolvedXPath.match(dotNotationRegex)) {
+			try {
+				const mapData = JSON.parse(document.getElementById('mapInput').value || "{}");
+				resolvedXPath = resolvedXPath.replace(dotNotationRegex, (match, mapName, key) => {
+					const targetMap = mapData[mapName];
+					const value = targetMap ? targetMap[key] : undefined;
+					return value !== undefined ? `'${String(value).replace(/'/g, "''")}'` : "''";
+				});
+			} catch(e) {}
+		}
+
+		// Replace $name references (variables take precedence over params)
+		const paramRegex = /\$([a-zA-Z_][\w.-]*)/g;
+		if (resolvedXPath.match(paramRegex)) {
+			resolvedXPath = resolvedXPath.replace(paramRegex, (match, paramName) => {
+				if (variables.hasOwnProperty(paramName)) {
+					const value = variables[paramName];
+					return `'${String(value).replace(/'/g, "''")}'`;
+				}
+				if (params.hasOwnProperty(paramName)) {
+					const value = params[paramName];
+					return `'${String(value).replace(/'/g, "''")}'`;
+				}
+				return match;
+			});
+		}
+
+		// --- XPath 2.0 Function Shims ---
+		resolvedXPath = resolveXPath2Functions(resolvedXPath, xmlContext);
+
+		try {
+			const doc = xmlContext.ownerDocument || xmlContext;
+			const res = doc.evaluate(resolvedXPath, xmlContext, null, XPathResult.BOOLEAN_TYPE, null);
+			return res.booleanValue;
+		} catch(e) {
+			console.error(`XPath Boolean Error on [${resolvedXPath}]:`, e);
+			return false;
+		}
+	}
+
+function renderPreview() {
+		saveProject();
+		console.log("--- Starting Render Process ---");
+		
+		// 1. Get the raw string and pre-process it immediately
+		let xslStr = document.getElementById('xslInput').value;
+		xslStr = preProcessXslt(xslStr); 
+		
+		const xmlStr = document.getElementById('xmlInput').value || "<r/>";
+		const parser = new DOMParser();
+		
+		// 2. Now parse the "cleaned" string
+		let xslDoc = parser.parseFromString(xslStr, "text/xml");
+		const xmlDataDoc = parser.parseFromString(xmlStr, "text/xml");
+		
+		// ... rest of the function ...
+
+		// 1. Resolve Includes (Stitching)
+		const includes = xslDoc.getElementsByTagNameNS("*", "include");
+		console.log(`Found ${includes.length} include tags in main XSL.`);
+		
+		for (let i = includes.length - 1; i >= 0; i--) {
+			const href = includes[i].getAttribute('href');
+			console.log(`Processing include: ${href}`);
+			
+			if (library[href]) {
+				console.log(`  SUCCESS: ${href} found in Library.`);
+				const sub = parser.parseFromString(library[href], "text/xml");
+				const subTemplates = sub.getElementsByTagNameNS("*", "template");
+				console.log(`  Moving ${subTemplates.length} templates from ${href} to main XSL.`);
+				
+				Array.from(subTemplates).forEach(t => {
+					xslDoc.documentElement.appendChild(xslDoc.importNode(t, true));
+				});
+				includes[i].remove();
+			} else {
+				console.error(`  FAILURE: ${href} NOT found in Library. Available:`, Object.keys(library));
+			}
+		}
+
+		// 2. Inject Java Map
+		try {
+			const mapData = JSON.parse(document.getElementById('mapInput').value || "{}");
+			for (let [k, v] of Object.entries(mapData)) {
+				let p = xslDoc.createElementNS("http://www.w3.org/1999/XSL/Transform", "xsl:param");
+				p.setAttribute("name", k);
+				p.textContent = v;
+				xslDoc.documentElement.insertBefore(p, xslDoc.documentElement.firstChild);
+			}
+		} catch(e) { console.warn("Java Map JSON is invalid or empty."); }
+
+		const canvas = document.getElementById('xsl-canvas');
+		canvas.innerHTML = '';
+
+		// Build the virtual map from the new textarea
+		const imgLines = document.getElementById('imageMapInput').value.split('\n');
+		virtualImages = {}; // Reset the global map before repopulating
+		imgLines.forEach(line => {
+			const [name, data] = line.split('|');
+			if (name && data) virtualImages[name.trim()] = data.trim();
+		});
+
+		// 3. Extract static content (headers/footers) and page layout info
+		const staticContents = {};
+		const pageLayout = { bodyMargin: null, beforeExtent: null, afterExtent: null };
+
+		// Extract region layout from layout-master-set
+		const layoutMasters = xslDoc.getElementsByTagNameNS("*", "simple-page-master");
+		if (layoutMasters.length > 0) {
+			const master = layoutMasters[0];
+
+			// Extract region-before extent and margins
+			const regionBefore = master.getElementsByTagNameNS("*", "region-before")[0];
+			if (regionBefore) {
+				pageLayout.beforeExtent = regionBefore.getAttribute('extent');
+				pageLayout.beforeMargin = extractMarginPadding(regionBefore, 'margin');
+				pageLayout.beforePadding = extractMarginPadding(regionBefore, 'padding');
+			}
+
+			// Extract region-after extent and margins
+			const regionAfter = master.getElementsByTagNameNS("*", "region-after")[0];
+			if (regionAfter) {
+				pageLayout.afterExtent = regionAfter.getAttribute('extent');
+				pageLayout.afterMargin = extractMarginPadding(regionAfter, 'margin');
+				pageLayout.afterPadding = extractMarginPadding(regionAfter, 'padding');
+			}
+
+			const regionBody = master.getElementsByTagNameNS("*", "region-body")[0];
+			if (regionBody) {
+				// Check for margin attribute (shorthand) or individual margins
+				const margin = regionBody.getAttribute('margin');
+				const marginTop = regionBody.getAttribute('margin-top');
+				const marginRight = regionBody.getAttribute('margin-right');
+				const marginBottom = regionBody.getAttribute('margin-bottom');
+				const marginLeft = regionBody.getAttribute('margin-left');
+
+				if (margin) {
+					pageLayout.bodyMargin = margin;
+				} else if (marginTop || marginRight || marginBottom || marginLeft) {
+					pageLayout.bodyMargin = `${marginTop || '0'} ${marginRight || '0'} ${marginBottom || '0'} ${marginLeft || '0'}`;
+				}
+				console.log(`Region-body margin: ${pageLayout.bodyMargin}`);
+			}
+		}
+
+		const pageSequences = xslDoc.getElementsByTagNameNS("*", "page-sequence");
+		console.log(`Found ${pageSequences.length} page-sequence(s)`);
+
+		// Process each page-sequence
+		Array.from(pageSequences).forEach((pageSeq, seqIndex) => {
+			console.log(`Processing page-sequence ${seqIndex + 1}...`);
+
+			// Create per-sequence static contents and layout
+			const seqStaticContents = {};
+			const seqLayout = { ...pageLayout }; // Start with base layout
+
+			// Extract inheritable font properties from this page-sequence
+			const inheritableProps = ['font-family', 'font-size', 'color', 'font-weight', 'font-style', 'line-height'];
+			inheritableProps.forEach(prop => {
+				const val = pageSeq.getAttribute(prop);
+				if (val) {
+					seqLayout[prop] = val;
+					console.log(`  Page-sequence ${seqIndex + 1} ${prop}: ${val}`);
+				}
+			});
+
+			// Extract static-content for this page-sequence
+			const statics = pageSeq.getElementsByTagNameNS("*", "static-content");
+			Array.from(statics).forEach(sc => {
+				const flowName = sc.getAttribute('flow-name');
+				if (flowName) {
+					console.log(`  Found static-content for: ${flowName}`);
+					seqStaticContents[flowName] = mapToHtml(sc, xmlDataDoc);
+				}
+			});
+
+			// Store for use by paginateCanvas
+			// For first sequence, use global staticContents; for others, we'll handle via markers
+			if (seqIndex === 0) {
+				Object.assign(staticContents, seqStaticContents);
+				Object.assign(pageLayout, seqLayout);
+			}
+
+			// Add page-break marker before subsequent sequences
+			if (seqIndex > 0) {
+				const seqBreak = document.createElement('div');
+				seqBreak.className = 'page-break-marker page-sequence-break';
+				seqBreak.dataset.breakType = 'before';
+				seqBreak.dataset.sequenceIndex = seqIndex;
+				// Store static contents and layout as JSON for this sequence
+				seqBreak.dataset.staticContents = JSON.stringify({
+					'xsl-region-before': seqStaticContents['xsl-region-before']?.outerHTML || '',
+					'xsl-region-after': seqStaticContents['xsl-region-after']?.outerHTML || ''
+				});
+				seqBreak.dataset.pageLayout = JSON.stringify(seqLayout);
+				canvas.appendChild(seqBreak);
+			}
+
+			// Find and render the flow for this page-sequence
+			const flows = pageSeq.getElementsByTagNameNS("*", "flow");
+			if (flows.length > 0) {
+				console.log(`  Mapping flow content...`);
+				const result = mapToHtml(flows[0], xmlDataDoc);
+				canvas.appendChild(result);
+			}
+		});
+
+		// Fallback: if no page-sequences found, try to render flows directly
+		if (pageSequences.length === 0) {
+			const flows = xslDoc.getElementsByTagNameNS("*", "flow");
+			const startNode = flows.length > 0 ? flows[0] : xslDoc.documentElement;
+			console.log("No page-sequences found, mapping from flow/root...");
+			const result = mapToHtml(startNode, xmlDataDoc);
+			canvas.appendChild(result);
+		}
+
+		// Post-process: Split content into pages at page-break markers
+		paginateCanvas(canvas, staticContents, pageLayout);
+
+		// Post-process: Enable basic-link click handling via event delegation
+		// (needed because contentEditable regions can interfere with normal link behavior)
+		setupLinkHandlers(canvas);
+
+		// Post-process: Enable flex-based leaders if toggle is on
+		if (document.getElementById('flexLeadersToggle')?.checked) {
+			enableFlexLeaders(canvas);
+		}
+
+		// Update render timestamp
+		const renderStatus = document.getElementById('render-status');
+		if (renderStatus) {
+			renderStatus.innerText = `Rendered: ${new Date().toLocaleTimeString()}`;
+		}
+
+		// Refresh template navigator
+		refreshTemplateNav();
+
+		console.log("--- Render Complete ---");
+	}
+
+	// Parse CSS length value to pixels (supports mm, in, pt, cm, px)
+	function parseLengthToPx(value) {
+		if (!value) return 0;
+		const match = String(value).trim().match(/^([\d.]+)\s*(mm|in|pt|cm|px|em)?$/);
+		if (!match) return 0;
+		const num = parseFloat(match[1]);
+		const unit = match[2] || 'px';
+		switch (unit) {
+			case 'mm': return num * 3.7795;
+			case 'cm': return num * 37.795;
+			case 'in': return num * 96;
+			case 'pt': return num * 1.3333;
+			case 'em': return num * 16;
+			default:   return num;
+		}
+	}
+
+	// Parse CSS margin shorthand into { top, right, bottom, left }
+	function parseMarginShorthand(margin) {
+		const defaults = { top: '0', right: '0', bottom: '0', left: '0' };
+		if (!margin) return defaults;
+		const parts = margin.trim().split(/\s+/);
+		switch (parts.length) {
+			case 1: return { top: parts[0], right: parts[0], bottom: parts[0], left: parts[0] };
+			case 2: return { top: parts[0], right: parts[1], bottom: parts[0], left: parts[1] };
+			case 3: return { top: parts[0], right: parts[1], bottom: parts[2], left: parts[1] };
+			case 4: return { top: parts[0], right: parts[1], bottom: parts[2], left: parts[3] };
+			default: return defaults;
+		}
+	}
+
+	// Combine two FO length values into a single CSS px value (for merging margin + padding)
+	function combineLengths(a, b) {
+		const pxA = parseLengthToPx(a);
+		const pxB = parseLengthToPx(b);
+		if (pxA === 0 && pxB === 0) return null;
+		return `${pxA + pxB}px`;
+	}
+
+	// Extract margin or padding attributes from an FO element (shorthand + individual sides)
+	function extractMarginPadding(el, prop) {
+		const shorthand = el.getAttribute(prop);
+		const top = el.getAttribute(`${prop}-top`);
+		const right = el.getAttribute(`${prop}-right`);
+		const bottom = el.getAttribute(`${prop}-bottom`);
+		const left = el.getAttribute(`${prop}-left`);
+		if (shorthand) return parseMarginShorthand(shorthand);
+		if (top || right || bottom || left) {
+			return { top: top || '0', right: right || '0', bottom: bottom || '0', left: left || '0' };
+		}
+		return null;
+	}
+
+	function createPageWithRegions(staticContents, pageLayout = {}) {
+		const page = document.createElement('div');
+		page.className = 'xsl-page';
+
+		// Apply inheritable font properties from page-sequence
+		if (pageLayout['font-family']) page.style.fontFamily = pageLayout['font-family'];
+		if (pageLayout['font-size']) page.style.fontSize = pageLayout['font-size'];
+		if (pageLayout['color']) page.style.color = pageLayout['color'];
+		if (pageLayout['font-weight']) page.style.fontWeight = pageLayout['font-weight'];
+		if (pageLayout['font-style']) page.style.fontStyle = pageLayout['font-style'];
+		if (pageLayout['line-height']) page.style.lineHeight = pageLayout['line-height'];
+
+		// Parse body margin into individual sides for delta calculation
+		const bodyMarginParts = parseMarginShorthand(pageLayout.bodyMargin);
+		const beforeExtentPx = parseLengthToPx(pageLayout.beforeExtent);
+		const afterExtentPx = parseLengthToPx(pageLayout.afterExtent);
+
+		// Header (region-before)
+		if (staticContents['xsl-region-before']) {
+			const header = document.createElement('div');
+			header.className = 'xsl-region-before';
+			if (pageLayout.beforeExtent) {
+				header.style.height = pageLayout.beforeExtent;
+			}
+			// FO margins and padding both become CSS padding (keeps border at region boundary)
+			const bm = pageLayout.beforeMargin;
+			const bp = pageLayout.beforePadding;
+			header.style.paddingTop = combineLengths(bm?.top, bp?.top) || '0';
+			header.style.paddingBottom = combineLengths(bm?.bottom, bp?.bottom) || '0';
+			header.style.paddingLeft = combineLengths(bm?.left, bp?.left) || bodyMarginParts.left;
+			header.style.paddingRight = combineLengths(bm?.right, bp?.right) || bodyMarginParts.right;
+			header.appendChild(staticContents['xsl-region-before'].cloneNode(true));
+			page.appendChild(header);
+		}
+
+		// Body — delta: region-body margin minus total region height (extent + margins)
+		const body = document.createElement('div');
+		body.className = 'xsl-region-body';
+		body.contentEditable = 'true';
+		if (pageLayout.bodyMargin) {
+			const topPx = parseLengthToPx(bodyMarginParts.top);
+			const bottomPx = parseLengthToPx(bodyMarginParts.bottom);
+			// Total before height = extent + margin-top + margin-bottom
+			const bm = pageLayout.beforeMargin;
+			const beforeTotalPx = beforeExtentPx + parseLengthToPx(bm?.top) + parseLengthToPx(bm?.bottom);
+			// Total after height = extent + margin-top + margin-bottom
+			const am = pageLayout.afterMargin;
+			const afterTotalPx = afterExtentPx + parseLengthToPx(am?.top) + parseLengthToPx(am?.bottom);
+			// Delta: body margin from page edge minus total region space
+			const deltaTop = staticContents['xsl-region-before'] ? Math.max(0, topPx - beforeTotalPx) : topPx;
+			const deltaBottom = staticContents['xsl-region-after'] ? Math.max(0, bottomPx - afterTotalPx) : bottomPx;
+			body.style.padding = `${deltaTop}px ${bodyMarginParts.right} ${deltaBottom}px ${bodyMarginParts.left}`;
+		}
+		page.appendChild(body);
+
+		// Footer (region-after)
+		if (staticContents['xsl-region-after']) {
+			const footer = document.createElement('div');
+			footer.className = 'xsl-region-after';
+			if (pageLayout.afterExtent) {
+				footer.style.height = pageLayout.afterExtent;
+			}
+			// FO margins and padding both become CSS padding (keeps border at region boundary)
+			const am = pageLayout.afterMargin;
+			const ap = pageLayout.afterPadding;
+			footer.style.paddingTop = combineLengths(am?.top, ap?.top) || '0';
+			footer.style.paddingBottom = combineLengths(am?.bottom, ap?.bottom) || '0';
+			footer.style.paddingLeft = combineLengths(am?.left, ap?.left) || bodyMarginParts.left;
+			footer.style.paddingRight = combineLengths(am?.right, ap?.right) || bodyMarginParts.right;
+			footer.appendChild(staticContents['xsl-region-after'].cloneNode(true));
+			page.appendChild(footer);
+		}
+
+		return { page, body };
+	}
+
+	function paginateCanvas(canvas, staticContents = {}, pageLayout = {}) {
+		// Collect all content from canvas into a temporary container
+		const tempContainer = document.createElement('div');
+		while (canvas.firstChild) {
+			tempContainer.appendChild(canvas.firstChild);
+		}
+
+		// Find all page-break markers
+		const markers = tempContainer.querySelectorAll('.page-break-marker');
+
+		if (markers.length === 0) {
+			// No page breaks - wrap all content in a single page with regions
+			const { page, body } = createPageWithRegions(staticContents, pageLayout);
+			while (tempContainer.firstChild) {
+				body.appendChild(tempContainer.firstChild);
+			}
+			canvas.appendChild(page);
+			updatePageNumbers(canvas);
+			relocateAbsoluteElements(canvas);
+			return;
+		}
+
+		// Split content at page-break markers
+		let { page: currentPage, body: currentBody } = createPageWithRegions(staticContents, pageLayout);
+
+		// Process all nodes, splitting at markers
+		const allNodes = Array.from(tempContainer.childNodes);
+		splitAtMarkers(allNodes, canvas, currentPage, currentBody, staticContents, pageLayout);
+		updatePageNumbers(canvas);
+		relocateAbsoluteElements(canvas);
+	}
+
+	function splitAtMarkers(nodes, canvas, currentPage, currentBody, staticContents, pageLayout = {}) {
+		// Track current static contents and layout (may change at page-sequence boundaries)
+		let currentStaticContents = staticContents;
+		let currentLayout = pageLayout;
+
+		nodes.forEach(node => {
+			if (node.classList && node.classList.contains('page-break-marker')) {
+				// Found a page break - finalize current page and start a new one
+				if (currentBody.childNodes.length > 0 || canvas.childNodes.length === 0) {
+					canvas.appendChild(currentPage);
+				}
+
+				// Check if this is a page-sequence break with its own static contents
+				if (node.classList.contains('page-sequence-break') && node.dataset.staticContents) {
+					try {
+						const seqStatics = JSON.parse(node.dataset.staticContents);
+						const seqLayout = JSON.parse(node.dataset.pageLayout || '{}');
+
+						// Create new static content elements from stored HTML
+						currentStaticContents = {};
+						if (seqStatics['xsl-region-before']) {
+							const temp = document.createElement('div');
+							temp.innerHTML = seqStatics['xsl-region-before'];
+							currentStaticContents['xsl-region-before'] = temp.firstChild;
+						}
+						if (seqStatics['xsl-region-after']) {
+							const temp = document.createElement('div');
+							temp.innerHTML = seqStatics['xsl-region-after'];
+							currentStaticContents['xsl-region-after'] = temp.firstChild;
+						}
+						currentLayout = { ...pageLayout, ...seqLayout };
+						console.log(`Switched to page-sequence ${node.dataset.sequenceIndex} static contents`);
+					} catch (e) {
+						console.warn('Failed to parse page-sequence static contents:', e);
+					}
+				}
+
+				const newPage = createPageWithRegions(currentStaticContents, currentLayout);
+				currentPage = newPage.page;
+				currentBody = newPage.body;
+			} else if (node.nodeType === 1 && node.querySelector && node.querySelector('.page-break-marker')) {
+				// This element contains page-break markers - need to split it
+				const childNodes = Array.from(node.childNodes);
+				// Clone the container for structure, but we'll populate it differently
+				const wrapper = node.cloneNode(false);
+				currentBody.appendChild(wrapper);
+
+				childNodes.forEach(child => {
+					if (child.classList && child.classList.contains('page-break-marker')) {
+						// Page break inside container - close wrapper, close page, start new
+						if (currentBody.childNodes.length > 0) {
+							canvas.appendChild(currentPage);
+						}
+						const newPage = createPageWithRegions(currentStaticContents, currentLayout);
+						currentPage = newPage.page;
+						currentBody = newPage.body;
+						// Create new wrapper for continued content
+						const newWrapper = node.cloneNode(false);
+						currentBody.appendChild(newWrapper);
+					} else if (child.nodeType === 1 && child.querySelector && child.querySelector('.page-break-marker')) {
+						// Nested page breaks - recurse
+						const nestedResult = splitAtMarkersNested(child, canvas, currentPage, currentBody, node, currentStaticContents, currentLayout);
+						currentPage = nestedResult.currentPage;
+						currentBody = nestedResult.currentBody;
+					} else {
+						// Regular child - add to current wrapper
+						const currentWrapper = currentBody.lastElementChild;
+						if (currentWrapper && currentWrapper.tagName === node.tagName) {
+							currentWrapper.appendChild(child);
+						} else {
+							currentBody.appendChild(child);
+						}
+					}
+				});
+			} else {
+				// Regular node - add to current page body
+				currentBody.appendChild(node);
+			}
+		});
+
+		// Don't forget the last page
+		if (currentBody.childNodes.length > 0) {
+			canvas.appendChild(currentPage);
+		}
+	}
+
+	function splitAtMarkersNested(node, canvas, currentPage, currentBody, parentTemplate, staticContents, pageLayout = {}) {
+		const childNodes = Array.from(node.childNodes);
+		const wrapper = node.cloneNode(false);
+		const parentWrapper = currentBody.lastElementChild;
+		if (parentWrapper) {
+			parentWrapper.appendChild(wrapper);
+		} else {
+			currentBody.appendChild(wrapper);
+		}
+
+		childNodes.forEach(child => {
+			if (child.classList && child.classList.contains('page-break-marker')) {
+				canvas.appendChild(currentPage);
+				const newPage = createPageWithRegions(staticContents, pageLayout);
+				currentPage = newPage.page;
+				currentBody = newPage.body;
+				// Recreate parent structure
+				const newParentWrapper = parentTemplate.cloneNode(false);
+				const newWrapper = node.cloneNode(false);
+				newParentWrapper.appendChild(newWrapper);
+				currentBody.appendChild(newParentWrapper);
+			} else {
+				const currentWrapper = currentBody.querySelector(node.tagName + ':last-of-type') || currentBody.lastElementChild;
+				if (currentWrapper) {
+					currentWrapper.appendChild(child);
+				}
+			}
+		});
+
+		return { currentPage, currentBody };
+	}
+
+	function updatePageNumbers(canvas) {
+		const pages = canvas.querySelectorAll('.xsl-page');
+		const totalPages = pages.length;
+
+		pages.forEach((page, index) => {
+			page.querySelectorAll('.fo-page-number').forEach(el => {
+				el.textContent = index + 1;
+			});
+			page.querySelectorAll('.fo-page-number-citation-last').forEach(el => {
+				el.textContent = totalPages;
+			});
+		});
+	}
+
+	function setupLinkHandlers(canvas) {
+		// Use event delegation for links since contentEditable can interfere
+		canvas.addEventListener('click', function(e) {
+			// Find if we clicked on or within a link
+			let link = e.target.closest('a[href]');
+			if (!link) return;
+
+			// Check for data attributes that mark this as an FO link
+			const href = link.getAttribute('href');
+			if (!href) return;
+
+			e.preventDefault();
+			e.stopPropagation();
+
+			if (href.startsWith('#')) {
+				// Internal link - scroll to target
+				const targetId = href.substring(1);
+				const target = document.getElementById(targetId);
+				if (target) {
+					target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				}
+			} else {
+				// External link - open in new tab
+				window.open(href, '_blank', 'noopener,noreferrer');
+			}
+		});
+	}
+
+	function enableFlexLeaders(canvas) {
+		// Find all fill-mode leaders and convert their parent blocks to flex containers
+		canvas.querySelectorAll('.fo-leader-fill').forEach(leader => {
+			const parent = leader.parentElement;
+			if (parent && parent.style.display !== 'flex') {
+				parent.style.display = 'flex';
+				parent.style.alignItems = 'baseline';
+				// Ensure text nodes before/after leader are wrapped for proper flex behavior
+				// (Browser should handle this, but explicit wrapping can help)
+			}
+		});
+	}
+
+	function relocateAbsoluteElements(canvas) {
+		// Move absolutely positioned elements from region-before/after to page level
+		// This allows watermarks and overlays defined in static-content to position
+		// relative to the page, matching real XSL-FO engine behavior
+		canvas.querySelectorAll('.xsl-page').forEach(page => {
+			const regions = page.querySelectorAll('.xsl-region-before, .xsl-region-after');
+			regions.forEach(region => {
+				// Find all direct and nested elements with position: absolute
+				region.querySelectorAll('*').forEach(el => {
+					if (getComputedStyle(el).position === 'absolute') {
+						// Move to page level so it positions relative to .xsl-page
+						page.appendChild(el);
+					}
+				});
+			});
+		});
+	}
+
+	// ===== SNIPPET INSERTION HELPERS =====
+
+	const SNIPPETS = {
+		'block': '<fo:block>\n    \n</fo:block>',
+		'inline': '<fo:inline></fo:inline>',
+		'inline-container': '<fo:inline-container>\n    <fo:block>\n        \n    </fo:block>\n</fo:inline-container>',
+		'block-container': '<fo:block-container>\n    <fo:block>\n        \n    </fo:block>\n</fo:block-container>',
+		'leader': '<fo:leader leader-pattern="dots"/>',
+		'graphic': '<fo:external-graphic src="" content-width="50pt"/>',
+		'template': '<xsl:template name="templateName">\n    \n</xsl:template>',
+		'call-template': '<xsl:call-template name=""/>',
+		'for-each': '<xsl:for-each select="">\n    \n</xsl:for-each>',
+		'sort': '<xsl:sort select="" order="ascending"/>',
+		'if': '<xsl:if test="">\n    \n</xsl:if>',
+		'choose': '<xsl:choose>\n    <xsl:when test="">\n        \n    </xsl:when>\n    <xsl:otherwise>\n        \n    </xsl:otherwise>\n</xsl:choose>',
+		'value-of': '<xsl:value-of select=""/>',
+		'variable': '<xsl:variable name="" select=""/>'
+	};
+
+	function insertSnippet(type) {
+		// Check if help mode is enabled
+		const helpMode = document.getElementById('helpModeToggle')?.checked ?? true;
+
+		// Show help dialogs for supported elements when help mode is on
+		if (helpMode) {
+			if (type === 'block') {
+				showBlockHelpDialog();
+				return;
+			}
+			if (type === 'graphic') {
+				showGraphicHelpDialog();
+				return;
+			}
+			if (type === 'inline-container') {
+				showContainerHelpDialog();
+				return;
+			}
+		}
+
+		// Default: insert basic snippet
+		const textarea = document.getElementById('xslInput');
+		const snippet = SNIPPETS[type];
+		if (snippet) {
+			insertAtCursor(textarea, snippet);
+		}
+	}
+
+	function insertAtCursor(textarea, text) {
+		const start = textarea.selectionStart;
+		const end = textarea.selectionEnd;
+		const value = textarea.value;
+
+		textarea.value = value.substring(0, start) + text + value.substring(end);
+
+		// Position cursor inside the inserted snippet (after first newline or at a sensible position)
+		let cursorPos = start + text.length;
+		const firstNewline = text.indexOf('\n');
+		if (firstNewline !== -1) {
+			// Position after the indentation on the next line
+			cursorPos = start + firstNewline + 5; // Account for newline + typical indentation
+		} else {
+			// For single-line snippets, try to position at empty attribute value
+			const emptyQuotes = text.indexOf('""');
+			if (emptyQuotes !== -1) {
+				cursorPos = start + emptyQuotes + 1;
+			}
+		}
+
+		textarea.selectionStart = textarea.selectionEnd = cursorPos;
+		textarea.focus();
+		saveProject();
+	}
+
+	// ===== TABLE DIALOG =====
+
+	function showTableDialog() {
+		const overlay = document.createElement('div');
+		overlay.className = 'table-dialog-overlay';
+		overlay.id = 'table-dialog-overlay';
+		overlay.innerHTML = `
+			<div class="table-dialog" style="min-width: 320px;">
+				<h3>Insert Table</h3>
+				<div style="display: flex; gap: 15px; margin-bottom: 10px;">
+					<label>Columns: <input type="number" id="table-cols" value="2" min="1" max="10" style="width: 50px;"></label>
+					<label>Rows: <input type="number" id="table-rows" value="2" min="1" max="20" style="width: 50px;"></label>
+				</div>
+				<label><input type="checkbox" id="table-header"> Include header row</label>
+				<label><input type="checkbox" id="table-borders" checked> Add borders (if no attribute sets)</label>
+				<hr style="border-color: #555; margin: 12px 0;">
+				<div style="font-size: 0.75rem; color: #aaa; margin-bottom: 8px;">
+					Attribute Sets (optional - leave blank for inline styles)
+				</div>
+				<label style="display: block; margin-bottom: 8px;">
+					Table attribute set:
+					<input type="text" id="table-attr-set" placeholder="e.g. attr.table.base" style="width: 100%; padding: 4px; background: #444; border: 1px solid #555; color: white; border-radius: 3px; margin-top: 3px;">
+				</label>
+				<label style="display: block; margin-bottom: 8px;">
+					Cell attribute set:
+					<input type="text" id="table-cell-attr-set" placeholder="e.g. attr.table.cell.base" style="width: 100%; padding: 4px; background: #444; border: 1px solid #555; color: white; border-radius: 3px; margin-top: 3px;">
+				</label>
+				<div class="table-dialog-buttons">
+					<button onclick="closeTableDialog()">Cancel</button>
+					<button onclick="generateTableXsl()" class="btn-primary">Insert</button>
+				</div>
+			</div>
+		`;
+		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
+	}
+
+	function closeTableDialog() {
+		const overlay = document.getElementById('table-dialog-overlay');
+		if (overlay) overlay.remove();
+	}
+
+	function generateTableXsl() {
+		const cols = parseInt(document.getElementById('table-cols').value) || 2;
+		const rows = parseInt(document.getElementById('table-rows').value) || 2;
+		const hasHeader = document.getElementById('table-header').checked;
+		const hasBorders = document.getElementById('table-borders').checked;
+		const tableAttrSet = document.getElementById('table-attr-set').value.trim();
+		const cellAttrSet = document.getElementById('table-cell-attr-set').value.trim();
+
+		// Check if attribute sets exist and offer to create them
+		const missingAttrSets = [];
+		if (tableAttrSet && !attrSetExists(tableAttrSet)) {
+			missingAttrSets.push({ name: tableAttrSet, type: 'table' });
+		}
+		if (cellAttrSet && !attrSetExists(cellAttrSet)) {
+			missingAttrSets.push({ name: cellAttrSet, type: 'cell' });
+		}
+
+		if (missingAttrSets.length > 0) {
+			const names = missingAttrSets.map(a => a.name).join(', ');
+			const create = confirm(
+				`The following attribute set(s) do not exist:\n${names}\n\n` +
+				`Would you like to create them with default presets?\n` +
+				`(You can edit them later in the ATTRIBUTE SETS tab)`
+			);
+			if (create) {
+				// Auto-create each missing attribute set with its preset
+				missingAttrSets.forEach(attrSet => {
+					createAttrSetWithPreset(attrSet.name, attrSet.type);
+				});
+				refreshAttrSetNav();
+			}
+		}
+
+		const colWidth = `${Math.floor(100 / cols)}%`;
+
+		// Build table opening tag
+		let tableAttrs = 'table-layout="fixed" width="100%"';
+		if (tableAttrSet) {
+			tableAttrs = `xsl:use-attribute-sets="${tableAttrSet}" ${tableAttrs}`;
+		}
+		let xsl = `<fo:table ${tableAttrs}>\n`;
+
+		// Column definitions
+		for (let c = 0; c < cols; c++) {
+			xsl += `    <fo:table-column column-width="${colWidth}"/>\n`;
+		}
+
+		// Build cell attributes
+		let cellAttrs = '';
+		if (cellAttrSet) {
+			cellAttrs = ` xsl:use-attribute-sets="${cellAttrSet}"`;
+		} else if (hasBorders) {
+			cellAttrs = ' border="1pt solid black" padding="2pt"';
+		} else {
+			cellAttrs = ' padding="2pt"';
+		}
+
+		// Header
+		if (hasHeader) {
+			xsl += '    <fo:table-header>\n';
+			xsl += '        <fo:table-row>\n';
+			for (let c = 0; c < cols; c++) {
+				xsl += `            <fo:table-cell${cellAttrs}>\n`;
+				xsl += `                <fo:block font-weight="bold">Header ${c + 1}</fo:block>\n`;
+				xsl += '            </fo:table-cell>\n';
+			}
+			xsl += '        </fo:table-row>\n';
+			xsl += '    </fo:table-header>\n';
+		}
+
+		// Body
+		xsl += '    <fo:table-body>\n';
+		for (let r = 0; r < rows; r++) {
+			xsl += '        <fo:table-row>\n';
+			for (let c = 0; c < cols; c++) {
+				xsl += `            <fo:table-cell${cellAttrs}>\n`;
+				xsl += `                <fo:block>Cell ${r + 1}-${c + 1}</fo:block>\n`;
+				xsl += '            </fo:table-cell>\n';
+			}
+			xsl += '        </fo:table-row>\n';
+		}
+		xsl += '    </fo:table-body>\n';
+		xsl += '</fo:table>';
+
+		const textarea = document.getElementById('xslInput');
+		insertAtCursor(textarea, xsl);
+		closeTableDialog();
+	}
+
+	// ===== COMMENT DIALOG =====
+
+	function showCommentDialog() {
+		const overlay = document.createElement('div');
+		overlay.className = 'table-dialog-overlay';
+		overlay.id = 'comment-dialog-overlay';
+		overlay.innerHTML = `
+			<div class="table-dialog" style="min-width: 350px;">
+				<h3>Insert XSL Comment</h3>
+				<label style="display: block; margin-bottom: 10px;">
+					Comment text:
+					<textarea id="comment-text" rows="4" style="width: 100%; margin-top: 5px; background: #444; color: #ccc; border: 1px solid #555; border-radius: 3px; padding: 6px; font-family: inherit; resize: vertical;"></textarea>
+				</label>
+				<div class="table-dialog-buttons">
+					<button onclick="closeCommentDialog()">Cancel</button>
+					<button onclick="insertComment()" class="btn-primary">Insert</button>
+				</div>
+			</div>
+		`;
+		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
+		// Focus the textarea
+		setTimeout(() => document.getElementById('comment-text').focus(), 50);
+	}
+
+	function closeCommentDialog() {
+		const overlay = document.getElementById('comment-dialog-overlay');
+		if (overlay) overlay.remove();
+	}
+
+	function insertComment() {
+		const text = document.getElementById('comment-text').value.trim();
+		if (!text) {
+			closeCommentDialog();
+			return;
+		}
+		// Escape any "--" in the comment text (not allowed in XML comments)
+		const safeText = text.replace(/--/g, '- -');
+		const comment = `<!-- ${safeText} -->`;
+		const textarea = document.getElementById('xslInput');
+		insertAtCursor(textarea, comment);
+		closeCommentDialog();
+	}
+
+	// ===== ATTRIBUTE SET DIALOG =====
+
+	const ATTRSET_PRESETS = {
+		'table': {
+			label: 'Table',
+			attributes: [
+				{ name: 'width', value: '100%', checked: true },
+				{ name: 'table-layout', value: 'fixed', checked: true },
+				{ name: 'border-collapse', value: 'collapse', checked: true },
+				{ name: 'space-before', value: '5mm', checked: false },
+				{ name: 'space-after', value: '5mm', checked: false }
+			]
+		},
+		'cell': {
+			label: 'Table Cell',
+			attributes: [
+				{ name: 'border', value: '0.5pt solid #333', checked: true },
+				{ name: 'padding', value: '3pt', checked: true },
+				{ name: 'display-align', value: 'center', checked: false },
+				{ name: 'background-color', value: '#ffffff', checked: false }
+			]
+		},
+		'block': {
+			label: 'Block',
+			attributes: [
+				{ name: 'font-family', value: 'Arial, sans-serif', checked: false },
+				{ name: 'font-size', value: '10pt', checked: false },
+				{ name: 'color', value: '#333333', checked: false },
+				{ name: 'space-before', value: '6pt', checked: false },
+				{ name: 'space-after', value: '6pt', checked: false },
+				{ name: 'line-height', value: '1.4', checked: false }
+			]
+		},
+		'header': {
+			label: 'Header Text',
+			attributes: [
+				{ name: 'font-weight', value: 'bold', checked: true },
+				{ name: 'font-size', value: '14pt', checked: true },
+				{ name: 'color', value: '#333333', checked: false },
+				{ name: 'space-before', value: '12pt', checked: false },
+				{ name: 'space-after', value: '8pt', checked: false }
+			]
+		}
+	};
+
+	function showAttrSetDialog(prefilledName = '', prefilledType = 'table') {
+		const presetOptions = Object.entries(ATTRSET_PRESETS)
+			.map(([key, val]) => `<option value="${key}" ${key === prefilledType ? 'selected' : ''}>${val.label}</option>`)
+			.join('');
+
+		const overlay = document.createElement('div');
+		overlay.className = 'table-dialog-overlay';
+		overlay.id = 'attrset-dialog-overlay';
+		overlay.innerHTML = `
+			<div class="table-dialog" style="min-width: 380px;">
+				<h3>Create Attribute Set</h3>
+				<label style="display: block; margin-bottom: 10px;">
+					Name:
+					<input type="text" id="attrset-name" value="${prefilledName}" placeholder="e.g. attr.table.base" style="width: 100%; padding: 6px; background: #444; border: 1px solid #555; color: white; border-radius: 3px; margin-top: 3px;">
+				</label>
+				<label style="display: block; margin-bottom: 10px;">
+					Preset:
+					<select id="attrset-preset" onchange="updateAttrSetPreview()" style="width: 100%; padding: 6px; background: #444; border: 1px solid #555; color: white; border-radius: 3px; margin-top: 3px;">
+						${presetOptions}
+					</select>
+				</label>
+				<div style="font-size: 0.75rem; color: #aaa; margin-bottom: 6px;">Attributes (check to include):</div>
+				<div id="attrset-attrs" style="max-height: 200px; overflow-y: auto; background: #333; padding: 8px; border-radius: 3px; margin-bottom: 10px;">
+				</div>
+				<div class="table-dialog-buttons">
+					<button onclick="closeAttrSetDialog()">Cancel</button>
+					<button onclick="insertAttrSet()" class="btn-primary">Insert</button>
+				</div>
+			</div>
+		`;
+		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
+		updateAttrSetPreview();
+		setTimeout(() => document.getElementById('attrset-name').focus(), 50);
+	}
+
+	function updateAttrSetPreview() {
+		const preset = document.getElementById('attrset-preset').value;
+		const attrs = ATTRSET_PRESETS[preset]?.attributes || [];
+		const container = document.getElementById('attrset-attrs');
+
+		container.innerHTML = attrs.map((attr, i) => `
+			<label style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.8rem;">
+				<input type="checkbox" id="attrset-attr-${i}" ${attr.checked ? 'checked' : ''}>
+				<span style="color: #4fc3f7; min-width: 120px;">${attr.name}</span>
+				<input type="text" id="attrset-val-${i}" value="${attr.value}" style="flex: 1; padding: 3px 6px; background: #444; border: 1px solid #555; color: #ccc; border-radius: 3px; font-size: 0.75rem;">
+			</label>
+		`).join('');
+	}
+
+	function closeAttrSetDialog() {
+		const overlay = document.getElementById('attrset-dialog-overlay');
+		if (overlay) overlay.remove();
+	}
+
+	function insertAttrSet() {
+		const name = document.getElementById('attrset-name').value.trim();
+		if (!name) {
+			document.getElementById('attrset-name').style.borderColor = '#c62828';
+			document.getElementById('attrset-name').focus();
+			return;
+		}
+
+		const preset = document.getElementById('attrset-preset').value;
+		const attrs = ATTRSET_PRESETS[preset]?.attributes || [];
+
+		// Collect checked attributes
+		const selectedAttrs = [];
+		attrs.forEach((attr, i) => {
+			const checkbox = document.getElementById(`attrset-attr-${i}`);
+			const valueInput = document.getElementById(`attrset-val-${i}`);
+			if (checkbox && checkbox.checked) {
+				selectedAttrs.push({ name: attr.name, value: valueInput.value });
+			}
+		});
+
+		// Build the attribute set XSL
+		let xsl = `<xsl:attribute-set name="${name}">\n`;
+		selectedAttrs.forEach(attr => {
+			xsl += `    <xsl:attribute name="${attr.name}">${attr.value}</xsl:attribute>\n`;
+		});
+		xsl += '</xsl:attribute-set>';
+
+		const textarea = document.getElementById('xslInput');
+		insertAtCursor(textarea, xsl);
+		closeAttrSetDialog();
+
+		// Refresh the attribute set navigator
+		refreshAttrSetNav();
+	}
+
+	function attrSetExists(name) {
+		const xsl = document.getElementById('xslInput').value;
+		const regex = new RegExp(`<xsl:attribute-set\\s+name="${name}"`, 'g');
+		return regex.test(xsl);
+	}
+
+	function createAttrSetWithPreset(name, type) {
+		const preset = ATTRSET_PRESETS[type];
+		if (!preset) return;
+
+		// Build attribute set with checked (default) attributes from preset
+		let attrSetXsl = `<xsl:attribute-set name="${name}">\n`;
+		preset.attributes.filter(a => a.checked).forEach(attr => {
+			attrSetXsl += `    <xsl:attribute name="${attr.name}">${attr.value}</xsl:attribute>\n`;
+		});
+		attrSetXsl += '</xsl:attribute-set>\n\n';
+
+		// Insert at a good location - after stylesheet opening or after existing attribute-sets
+		const textarea = document.getElementById('xslInput');
+		let xsl = textarea.value;
+
+		// Try to find existing attribute-sets and insert after the last one
+		const lastAttrSetMatch = xsl.match(/<\/xsl:attribute-set>\s*/g);
+		if (lastAttrSetMatch) {
+			const lastIndex = xsl.lastIndexOf('</xsl:attribute-set>');
+			const insertPos = lastIndex + '</xsl:attribute-set>'.length;
+			// Find end of line
+			let endOfLine = xsl.indexOf('\n', insertPos);
+			if (endOfLine === -1) endOfLine = insertPos;
+			xsl = xsl.slice(0, endOfLine + 1) + '\n' + attrSetXsl + xsl.slice(endOfLine + 1);
+		} else {
+			// No existing attribute-sets, insert after stylesheet declaration
+			const stylesheetMatch = xsl.match(/<xsl:stylesheet[^>]*>/);
+			if (stylesheetMatch) {
+				const insertPos = stylesheetMatch.index + stylesheetMatch[0].length;
+				let endOfLine = xsl.indexOf('\n', insertPos);
+				if (endOfLine === -1) endOfLine = insertPos;
+				xsl = xsl.slice(0, endOfLine + 1) + '\n' + attrSetXsl + xsl.slice(endOfLine + 1);
+			} else {
+				// Fallback: insert at cursor
+				insertAtCursor(textarea, attrSetXsl);
+				return;
+			}
+		}
+
+		textarea.value = xsl;
+		saveProject();
+	}
+
+	// ===== HELP MODE DIALOGS =====
+
+	const GRAPHIC_ATTRIBUTES = [
+		{ name: 'src', default: "url('logo.png')", desc: 'Image source URL' },
+		{ name: 'width', default: '100%', desc: 'Display width' },
+		{ name: 'content-width', default: 'scale-to-fit', desc: 'Content scaling width' },
+		{ name: 'scaling', default: 'uniform', desc: 'Scaling mode (uniform or non-uniform)' },
+		{ name: 'content-height', default: 'scale-to-fit', desc: 'Content scaling height' },
+		{ name: 'height', default: 'auto', desc: 'Display height' },
+		{ name: 'text-align', default: 'center', desc: 'Horizontal alignment' },
+		{ name: 'display-align', default: 'center', desc: 'Vertical alignment' },
+		{ name: 'padding', default: '0pt', desc: 'Padding (all sides)' },
+		{ name: 'border', default: '1pt solid black', desc: 'Border' }
+	];
+
+	const CONTAINER_ATTRIBUTES = [
+		{ name: 'width', default: '50%', desc: 'Container width' },
+		{ name: 'height', default: 'auto', desc: 'Container height' },
+		{ name: 'display-align', default: 'center', desc: 'Vertical alignment of content' },
+		{ name: 'text-align', default: 'center', desc: 'Horizontal alignment of content' },
+		{ name: 'padding', default: '3pt', desc: 'Padding (all sides)' },
+		{ name: 'border', default: '1pt solid black', desc: 'Border' },
+		{ name: 'background-color', default: '#f0f0f0', desc: 'Background color' },
+		{ name: 'overflow', default: 'hidden', desc: 'Overflow behavior' },
+		{ name: 'reference-orientation', default: '0', desc: 'Rotation angle (0, 90, 180, 270)' }
+	];
+
+	const BLOCK_ATTRIBUTES = [
+		{ name: 'color', default: '#000000', desc: 'Text color' },
+		{ name: 'background-color', default: '#f0f0f0', desc: 'Background' },
+		{ name: 'space-before', default: '6pt', desc: 'Space above' },
+		{ name: 'space-after', default: '6pt', desc: 'Space below' },
+		{ name: 'margin-left', default: '2pt', desc: 'Left margin' },
+		{ name: 'margin-right', default: '2pt', desc: 'Right margin' },
+		{ name: 'font-size', default: '10pt', desc: 'Font size' },
+		{ name: 'font-weight', default: 'bold', desc: 'Font weight' },
+		{ name: 'font-family', default: 'sans-serif', desc: 'Font family' },
+		{ name: 'text-align', default: 'left', desc: 'Text alignment' },
+		{ name: 'padding', default: '3pt', desc: 'Padding (all sides)' },
+		{ name: 'border', default: '1pt solid black', desc: 'Border' },
+		{ name: 'line-height', default: '1.4', desc: 'Line height' },
+		{ name: 'keep-together.within-page', default: 'always', desc: 'Keep together' },
+		{ name: 'keep-with-next.within-page', default: 'always', desc: 'Keep with next' }
+	];
+
+	// Help settings persistence (global, not per-project)
+	function loadHelpSettings(elementType) {
+		const stored = localStorage.getItem(`xslfo_help_${elementType}`);
+		return stored ? JSON.parse(stored) : {};
+	}
+
+	function saveHelpSettings(elementType, settings) {
+		localStorage.setItem(`xslfo_help_${elementType}`, JSON.stringify(settings));
+	}
+
+	function showBlockHelpDialog() {
+		// Load saved settings
+		const savedSettings = loadHelpSettings('block');
+
+		const attrRows = BLOCK_ATTRIBUTES.map((attr, idx) => {
+			const saved = savedSettings[attr.name];
+			const isChecked = saved?.checked || false;
+			const value = saved?.value ?? attr.default;
+			return `
+				<div class="help-attr-row">
+					<input type="checkbox" id="block-attr-${idx}" data-attr="${attr.name}" ${isChecked ? 'checked' : ''}>
+					<span class="attr-name" title="${attr.desc}">${attr.name}</span>
+					<input type="text" id="block-val-${idx}" value="${value}" placeholder="${attr.default}">
+				</div>
+			`;
+		}).join('');
+
+		const overlay = document.createElement('div');
+		overlay.className = 'table-dialog-overlay';
+		overlay.id = 'block-help-dialog-overlay';
+		overlay.innerHTML = `
+			<div class="help-dialog">
+				<h3>Insert fo:block</h3>
+				<div class="help-subtitle">Select attributes to include (check to enable)</div>
+				<div class="help-attr-list">
+					${attrRows}
+				</div>
+				<div class="help-dialog-buttons">
+					<button onclick="closeBlockHelpDialog()">Cancel</button>
+					<button onclick="insertBlockFromHelpDialog()" class="btn-primary">Insert</button>
+				</div>
+			</div>
+		`;
+		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
+
+		// Add Escape key support
+		const handleKeydown = (e) => {
+			if (e.key === 'Escape') {
+				closeBlockHelpDialog();
+				document.removeEventListener('keydown', handleKeydown);
+			}
+		};
+		document.addEventListener('keydown', handleKeydown);
+	}
+
+	function closeBlockHelpDialog() {
+		const overlay = document.getElementById('block-help-dialog-overlay');
+		if (overlay) overlay.remove();
+	}
+
+	function insertBlockFromHelpDialog() {
+		const selectedAttrs = [];
+		const settings = {};
+
+		BLOCK_ATTRIBUTES.forEach((attr, idx) => {
+			const checkbox = document.getElementById(`block-attr-${idx}`);
+			const valueInput = document.getElementById(`block-val-${idx}`);
+
+			// Save current state for next time
+			settings[attr.name] = {
+				checked: checkbox.checked,
+				value: valueInput.value.trim() || attr.default
+			};
+
+			if (checkbox.checked && valueInput.value.trim()) {
+				selectedAttrs.push(`${attr.name}="${valueInput.value.trim()}"`);
+			}
+		});
+
+		// Persist settings
+		saveHelpSettings('block', settings);
+
+		let blockXsl;
+		if (selectedAttrs.length > 0) {
+			blockXsl = `<fo:block ${selectedAttrs.join(' ')}>\n    \n</fo:block>`;
+		} else {
+			blockXsl = '<fo:block>\n    \n</fo:block>';
+		}
+
+		const textarea = document.getElementById('xslInput');
+		insertAtCursor(textarea, blockXsl);
+		closeBlockHelpDialog();
+	}
+
+	// ===== GRAPHIC BUILDER DIALOG =====
+
+	function showGraphicHelpDialog() {
+		const savedSettings = loadHelpSettings('graphic');
+
+		const attrRows = GRAPHIC_ATTRIBUTES.map((attr, idx) => {
+			const saved = savedSettings[attr.name];
+			const isChecked = saved !== undefined ? saved.checked : (attr.name === 'src' || attr.name === 'width' || attr.name === 'content-width' || attr.name === 'scaling');
+			const value = saved?.value ?? attr.default;
+			return `
+				<div class="help-attr-row">
+					<input type="checkbox" id="graphic-attr-${idx}" data-attr="${attr.name}" ${isChecked ? 'checked' : ''}>
+					<span class="attr-name" title="${attr.desc}">${attr.name}</span>
+					<input type="text" id="graphic-val-${idx}" value="${value}" placeholder="${attr.default}">
+				</div>
+			`;
+		}).join('');
+
+		const overlay = document.createElement('div');
+		overlay.className = 'table-dialog-overlay';
+		overlay.id = 'graphic-help-dialog-overlay';
+		overlay.innerHTML = `
+			<div class="help-dialog">
+				<h3>Insert fo:external-graphic</h3>
+				<div class="help-subtitle">Select attributes to include (check to enable)</div>
+				<div class="help-attr-list">
+					${attrRows}
+				</div>
+				<div class="help-dialog-buttons">
+					<button onclick="closeGraphicHelpDialog()">Cancel</button>
+					<button onclick="insertGraphicFromHelpDialog()" class="btn-primary">Insert</button>
+				</div>
+			</div>
+		`;
+		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
+
+		const handleKeydown = (e) => {
+			if (e.key === 'Escape') {
+				closeGraphicHelpDialog();
+				document.removeEventListener('keydown', handleKeydown);
+			}
+		};
+		document.addEventListener('keydown', handleKeydown);
+	}
+
+	function closeGraphicHelpDialog() {
+		const overlay = document.getElementById('graphic-help-dialog-overlay');
+		if (overlay) overlay.remove();
+	}
+
+	function insertGraphicFromHelpDialog() {
+		const selectedAttrs = [];
+		const settings = {};
+
+		GRAPHIC_ATTRIBUTES.forEach((attr, idx) => {
+			const checkbox = document.getElementById(`graphic-attr-${idx}`);
+			const valueInput = document.getElementById(`graphic-val-${idx}`);
+
+			settings[attr.name] = {
+				checked: checkbox.checked,
+				value: valueInput.value.trim() || attr.default
+			};
+
+			if (checkbox.checked && valueInput.value.trim()) {
+				selectedAttrs.push(`${attr.name}="${valueInput.value.trim()}"`);
+			}
+		});
+
+		saveHelpSettings('graphic', settings);
+
+		const graphicXsl = `<fo:external-graphic ${selectedAttrs.join(' ')}/>`;
+
+		const textarea = document.getElementById('xslInput');
+		insertAtCursor(textarea, graphicXsl);
+		closeGraphicHelpDialog();
+	}
+
+	// ===== CONTAINER BUILDER DIALOG =====
+
+	function showContainerHelpDialog() {
+		const savedSettings = loadHelpSettings('container');
+
+		const attrRows = CONTAINER_ATTRIBUTES.map((attr, idx) => {
+			const saved = savedSettings[attr.name];
+			const isChecked = saved !== undefined ? saved.checked : (attr.name === 'width');
+			const value = saved?.value ?? attr.default;
+			return `
+				<div class="help-attr-row">
+					<input type="checkbox" id="container-attr-${idx}" data-attr="${attr.name}" ${isChecked ? 'checked' : ''}>
+					<span class="attr-name" title="${attr.desc}">${attr.name}</span>
+					<input type="text" id="container-val-${idx}" value="${value}" placeholder="${attr.default}">
+				</div>
+			`;
+		}).join('');
+
+		const overlay = document.createElement('div');
+		overlay.className = 'table-dialog-overlay';
+		overlay.id = 'container-help-dialog-overlay';
+		overlay.innerHTML = `
+			<div class="help-dialog">
+				<h3>Insert fo:inline-container</h3>
+				<div class="help-subtitle">Select attributes to include (check to enable)</div>
+				<div class="help-attr-list">
+					${attrRows}
+				</div>
+				<div class="help-dialog-buttons">
+					<button onclick="closeContainerHelpDialog()">Cancel</button>
+					<button onclick="insertContainerFromHelpDialog()" class="btn-primary">Insert</button>
+				</div>
+			</div>
+		`;
+		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
+
+		const handleKeydown = (e) => {
+			if (e.key === 'Escape') {
+				closeContainerHelpDialog();
+				document.removeEventListener('keydown', handleKeydown);
+			}
+		};
+		document.addEventListener('keydown', handleKeydown);
+	}
+
+	function closeContainerHelpDialog() {
+		const overlay = document.getElementById('container-help-dialog-overlay');
+		if (overlay) overlay.remove();
+	}
+
+	function insertContainerFromHelpDialog() {
+		const selectedAttrs = [];
+		const settings = {};
+
+		CONTAINER_ATTRIBUTES.forEach((attr, idx) => {
+			const checkbox = document.getElementById(`container-attr-${idx}`);
+			const valueInput = document.getElementById(`container-val-${idx}`);
+
+			settings[attr.name] = {
+				checked: checkbox.checked,
+				value: valueInput.value.trim() || attr.default
+			};
+
+			if (checkbox.checked && valueInput.value.trim()) {
+				selectedAttrs.push(`${attr.name}="${valueInput.value.trim()}"`);
+			}
+		});
+
+		saveHelpSettings('container', settings);
+
+		let containerXsl;
+		if (selectedAttrs.length > 0) {
+			containerXsl = `<fo:inline-container ${selectedAttrs.join(' ')}>\n    <fo:block>\n        \n    </fo:block>\n</fo:inline-container>`;
+		} else {
+			containerXsl = '<fo:inline-container>\n    <fo:block>\n        \n    </fo:block>\n</fo:inline-container>';
+		}
+
+		const textarea = document.getElementById('xslInput');
+		insertAtCursor(textarea, containerXsl);
+		closeContainerHelpDialog();
+	}
+
+	// ===== TEMPLATE CREATION DIALOG =====
+
+	function showTemplateDialog() {
+		const overlay = document.createElement('div');
+		overlay.className = 'table-dialog-overlay';
+		overlay.id = 'template-create-dialog-overlay';
+		overlay.innerHTML = `
+			<div class="table-dialog">
+				<h3>Create Template</h3>
+				<label>Template Name:
+					<input type="text" id="template-name-input" style="width: 100%; padding: 6px; background: #444; border: 1px solid #555; color: white; border-radius: 3px; margin-top: 5px;" placeholder="myTemplateName" autofocus>
+				</label>
+				<label style="margin-top: 15px;">
+					<input type="checkbox" id="template-load-editor" checked>
+					Load into template editor after creation
+				</label>
+				<div class="table-dialog-buttons">
+					<button onclick="closeTemplateCreateDialog()">Cancel</button>
+					<button onclick="createTemplateFromDialog()" class="btn-primary">Create</button>
+				</div>
+			</div>
+		`;
+		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
+		// Focus the input after a small delay and add Enter key support
+		setTimeout(() => {
+			const input = document.getElementById('template-name-input');
+			input.focus();
+			input.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter') createTemplateFromDialog();
+				if (e.key === 'Escape') closeTemplateCreateDialog();
+			});
+		}, 50);
+	}
+
+	function closeTemplateCreateDialog() {
+		const overlay = document.getElementById('template-create-dialog-overlay');
+		if (overlay) overlay.remove();
+	}
+
+	function createTemplateFromDialog() {
+		const nameInput = document.getElementById('template-name-input');
+		const loadToEditor = document.getElementById('template-load-editor').checked;
+		const name = nameInput.value.trim();
+
+		if (!name) {
+			nameInput.style.borderColor = '#c62828';
+			nameInput.focus();
+			return;
+		}
+
+		// Create the template snippet
+		const templateXsl = `<xsl:template name="${name}">\n    \n</xsl:template>`;
+
+		// Insert into main XSL
+		const textarea = document.getElementById('xslInput');
+		insertAtCursor(textarea, templateXsl);
+
+		closeTemplateCreateDialog();
+
+		// Optionally load into template editor
+		if (loadToEditor) {
+			// Small delay to let the XSL update, then refresh and load
+			setTimeout(() => {
+				refreshTemplateNav();
+				loadTemplateToEditor(name);
+			}, 100);
+		}
+	}
+
+	// ===== CALL-TEMPLATE DIALOG =====
+
+	function showCallTemplateDialog() {
+		const hasActiveTemplate = activeTemplate && templates[activeTemplate];
+
+		// Get param info for active template
+		let paramInfo = '';
+		if (hasActiveTemplate) {
+			const params = extractTemplateParams(activeTemplate);
+			if (params.length > 0) {
+				const paramNames = params.map(p => p.name).join(', ');
+				paramInfo = `<div style="font-size: 0.7rem; color: #888; margin-top: 3px; margin-left: 20px;">
+					Params (${params.length}): ${paramNames}
+				</div>`;
+			}
+		}
+
+		const overlay = document.createElement('div');
+		overlay.className = 'table-dialog-overlay';
+		overlay.id = 'call-template-dialog-overlay';
+		overlay.innerHTML = `
+			<div class="table-dialog">
+				<h3>Insert Call-Template</h3>
+				<div style="margin-bottom: 15px;">
+					<label>
+						<input type="radio" name="call-type" value="current" ${hasActiveTemplate ? 'checked' : 'disabled'}>
+						Call current template: <strong style="color: #4fc3f7;">${activeTemplate || '(none)'}</strong>
+					</label>
+					${paramInfo}
+				</div>
+				<div style="margin-bottom: 15px;">
+					<label>
+						<input type="radio" name="call-type" value="custom" ${hasActiveTemplate ? '' : 'checked'}>
+						Call custom template:
+					</label>
+					<input type="text" id="call-template-name-input" style="width: 100%; padding: 6px; background: #444; border: 1px solid #555; color: white; border-radius: 3px; margin-top: 5px;" placeholder="templateName">
+				</div>
+				<div class="table-dialog-buttons">
+					<button onclick="closeCallTemplateDialog()">Cancel</button>
+					<button onclick="insertCallTemplateFromDialog()" class="btn-primary">Insert</button>
+				</div>
+			</div>
+		`;
+		document.body.appendChild(overlay);
+		overlay.querySelector('input, select, textarea')?.focus();
+
+		// Add keyboard support
+		setTimeout(() => {
+			const input = document.getElementById('call-template-name-input');
+			if (!hasActiveTemplate) input.focus();
+			input.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter') insertCallTemplateFromDialog();
+				if (e.key === 'Escape') closeCallTemplateDialog();
+			});
+		}, 50);
+	}
+
+	function closeCallTemplateDialog() {
+		const overlay = document.getElementById('call-template-dialog-overlay');
+		if (overlay) overlay.remove();
+	}
+
+	function insertCallTemplateFromDialog() {
+		const callType = document.querySelector('input[name="call-type"]:checked')?.value;
+		let templateName = '';
+
+		if (callType === 'current') {
+			templateName = activeTemplate;
+		} else {
+			templateName = document.getElementById('call-template-name-input').value.trim();
+		}
+
+		if (!templateName) {
+			const input = document.getElementById('call-template-name-input');
+			input.style.borderColor = '#c62828';
+			input.focus();
+			return;
+		}
+
+		// Try to extract params from the template
+		const params = extractTemplateParams(templateName);
+
+		let callXsl;
+		if (params.length > 0) {
+			// Generate call with with-param elements
+			callXsl = `<xsl:call-template name="${templateName}">\n`;
+			params.forEach(param => {
+				callXsl += `    <xsl:with-param name="${param.name}" select=""/>`;
+				if (param.defaultValue) {
+					callXsl += ` <!-- default: ${param.defaultValue} -->`;
+				}
+				callXsl += '\n';
+			});
+			callXsl += '</xsl:call-template>';
+		} else {
+			callXsl = `<xsl:call-template name="${templateName}"/>`;
+		}
+
+		const textarea = document.getElementById('xslInput');
+		insertAtCursor(textarea, callXsl);
+
+		closeCallTemplateDialog();
+	}
+
+	function extractTemplateParams(templateName) {
+		// First check if we have it in our templates storage
+		let templateContent = templates[templateName];
+
+		// If not in storage, try to extract from main XSL
+		if (!templateContent) {
+			templateContent = extractTemplateFromXsl(templateName);
+		}
+
+		if (!templateContent) return [];
+
+		// Find all xsl:param elements in the template
+		const params = [];
+		const paramRegex = /<xsl:param\s+name="([^"]+)"(?:\s+select="([^"]*)")?[^>]*\/?>/g;
+
+		let match;
+		while ((match = paramRegex.exec(templateContent)) !== null) {
+			params.push({
+				name: match[1],
+				defaultValue: match[2] || null
+			});
+		}
+
+		return params;
+	}
+
+	// ===== TEMPLATE NAVIGATOR =====
+
+	function refreshTemplateNav() {
+		const xsl = document.getElementById('xslInput').value;
+		const select = document.getElementById('template-nav');
+		const regex = /<xsl:template\s+name="([^"]+)"/g;
+
+		// Clear existing options except first
+		select.innerHTML = '<option value="">-- Select a template --</option>';
+
+		let match;
+		while ((match = regex.exec(xsl)) !== null) {
+			const option = document.createElement('option');
+			option.value = match[1]; // Store template name, not index
+			option.textContent = match[1];
+			// Mark if template has stored edits
+			if (templates[match[1]]) {
+				option.textContent += ' •';
+				option.style.color = '#4fc3f7';
+			}
+			select.appendChild(option);
+		}
+
+		// Re-select active template if it exists
+		if (activeTemplate) {
+			select.value = activeTemplate;
+		}
+	}
+
+	// ===== TEMPLATE EDITOR FUNCTIONS =====
+
+	function extractTemplateFromXsl(templateName) {
+		const xsl = document.getElementById('xslInput').value;
+		// Find the template start
+		const startRegex = new RegExp(`<xsl:template\\s+name="${templateName}"[^>]*>`, 'g');
+		const startMatch = startRegex.exec(xsl);
+		if (!startMatch) return null;
+
+		const startIndex = startMatch.index;
+		let depth = 1;
+		let pos = startIndex + startMatch[0].length;
+
+		// Find matching closing tag by counting depth
+		while (depth > 0 && pos < xsl.length) {
+			const openMatch = xsl.substring(pos).match(/^<xsl:template[\s>]/);
+			const closeMatch = xsl.substring(pos).match(/^<\/xsl:template>/);
+
+			if (closeMatch) {
+				depth--;
+				if (depth === 0) {
+					return xsl.substring(startIndex, pos + closeMatch[0].length);
+				}
+				pos += closeMatch[0].length;
+			} else if (openMatch) {
+				depth++;
+				pos++;
+			} else {
+				pos++;
+			}
+		}
+		return null;
+	}
+
+	function loadTemplateToEditor(templateName) {
+		if (!templateName) {
+			// Clear editor
+			hideTemplateEditor();
+			activeTemplate = null;
+			saveProject();
+			return;
+		}
+
+		// Check if we already have this template stored
+		if (!templates[templateName]) {
+			// Extract from main XSL
+			const extracted = extractTemplateFromXsl(templateName);
+			if (!extracted) {
+				alert(`Could not find template "${templateName}" in the main XSL.`);
+				return;
+			}
+			templates[templateName] = extracted;
+		}
+
+		activeTemplate = templateName;
+		showTemplateEditor(templateName, templates[templateName]);
+		saveProject();
+	}
+
+	function showTemplateEditor(templateName, content) {
+		document.getElementById('template-editor-placeholder').style.display = 'none';
+		const activePanel = document.getElementById('template-editor-active');
+		activePanel.style.display = 'flex';
+
+		document.getElementById('template-editor-name').textContent = templateName;
+		document.getElementById('templateEditorInput').value = content;
+
+		updateTemplateEditorStatus();
+	}
+
+	function hideTemplateEditor() {
+		document.getElementById('template-editor-placeholder').style.display = 'flex';
+		document.getElementById('template-editor-active').style.display = 'none';
+		document.getElementById('template-nav').value = '';
+	}
+
+	function onTemplateEditorChange() {
+		if (!activeTemplate) return;
+		templates[activeTemplate] = document.getElementById('templateEditorInput').value;
+		updateTemplateEditorStatus();
+		saveProject();
+	}
+
+	function updateTemplateEditorStatus() {
+		if (!activeTemplate) return;
+
+		const statusEl = document.getElementById('template-editor-status');
+		const currentInXsl = extractTemplateFromXsl(activeTemplate);
+		const stored = templates[activeTemplate];
+
+		if (!currentInXsl) {
+			statusEl.textContent = '⚠ Not in XSL';
+			statusEl.className = 'template-status modified';
+		} else if (currentInXsl !== stored) {
+			statusEl.textContent = '● Modified';
+			statusEl.className = 'template-status modified';
+		} else {
+			statusEl.textContent = '✓ Synced';
+			statusEl.className = 'template-status';
+		}
+	}
+
+	function discardTemplateChanges() {
+		if (!activeTemplate) return;
+
+		const currentInXsl = extractTemplateFromXsl(activeTemplate);
+		if (currentInXsl) {
+			templates[activeTemplate] = currentInXsl;
+			document.getElementById('templateEditorInput').value = currentInXsl;
+			updateTemplateEditorStatus();
+			saveProject();
+		} else {
+			if (confirm(`Template "${activeTemplate}" not found in main XSL. Remove from editor?`)) {
+				delete templates[activeTemplate];
+				activeTemplate = null;
+				hideTemplateEditor();
+				refreshTemplateNav();
+				saveProject();
+			}
+		}
+	}
+
+	function updateTemplateInXsl() {
+		if (!activeTemplate) return;
+
+		const xsl = document.getElementById('xslInput').value;
+		const newContent = templates[activeTemplate];
+
+		// Find the original template in XSL
+		const currentInXsl = extractTemplateFromXsl(activeTemplate);
+
+		if (!currentInXsl) {
+			// Template not found - show helpful error
+			alert(
+				`Template "${activeTemplate}" was not found in the main XSL.\n\n` +
+				`To re-establish it:\n` +
+				`1. Copy the template content from the editor below\n` +
+				`2. Paste it into the main XSL at the desired location\n` +
+				`3. Click "Discard" to sync the editor with the main XSL`
+			);
+			return;
+		}
+
+		// Replace the old template with the new content
+		const newXsl = xsl.replace(currentInXsl, newContent);
+		document.getElementById('xslInput').value = newXsl;
+
+		updateTemplateEditorStatus();
+		saveProject();
+
+		// Visual feedback
+		const btn = event.target;
+		const originalText = btn.textContent;
+		btn.textContent = '✓ Updated!';
+		btn.style.background = '#43a047';
+		setTimeout(() => {
+			btn.textContent = originalText;
+			btn.style.background = '';
+		}, 1500);
+	}
+
+	// ===== ATTRIBUTE SET NAVIGATOR =====
+
+	function refreshAttrSetNav() {
+		const xsl = document.getElementById('xslInput').value;
+		const select = document.getElementById('attrset-nav');
+		const regex = /<xsl:attribute-set\s+name="([^"]+)"/g;
+
+		// Clear existing options except first
+		select.innerHTML = '<option value="">-- Select an attribute set --</option>';
+
+		let match;
+		while ((match = regex.exec(xsl)) !== null) {
+			const option = document.createElement('option');
+			option.value = match[1];
+			option.textContent = match[1];
+			// Mark if attribute set has stored edits
+			if (attrSets[match[1]]) {
+				option.textContent += ' •';
+				option.style.color = '#4fc3f7';
+			}
+			select.appendChild(option);
+		}
+
+		// Re-select active attribute set if it exists
+		if (activeAttrSet) {
+			select.value = activeAttrSet;
+		}
+	}
+
+	// ===== ATTRIBUTE SET EDITOR FUNCTIONS =====
+
+	function extractAttrSetFromXsl(attrSetName) {
+		const xsl = document.getElementById('xslInput').value;
+		// Find the attribute-set start
+		const startRegex = new RegExp(`<xsl:attribute-set\\s+name="${attrSetName}"[^>]*>`, 'g');
+		const startMatch = startRegex.exec(xsl);
+		if (!startMatch) return null;
+
+		const startIndex = startMatch.index;
+		let depth = 1;
+		let pos = startIndex + startMatch[0].length;
+
+		// Find matching closing tag by counting depth
+		while (depth > 0 && pos < xsl.length) {
+			const openMatch = xsl.substring(pos).match(/^<xsl:attribute-set[\s>]/);
+			const closeMatch = xsl.substring(pos).match(/^<\/xsl:attribute-set>/);
+
+			if (closeMatch) {
+				depth--;
+				if (depth === 0) {
+					return xsl.substring(startIndex, pos + closeMatch[0].length);
+				}
+				pos += closeMatch[0].length;
+			} else if (openMatch) {
+				depth++;
+				pos++;
+			} else {
+				pos++;
+			}
+		}
+		return null;
+	}
+
+	function loadAttrSetToEditor(attrSetName) {
+		if (!attrSetName) {
+			hideAttrSetEditor();
+			activeAttrSet = null;
+			saveProject();
+			return;
+		}
+
+		// Check if we already have this attribute set stored
+		if (!attrSets[attrSetName]) {
+			const extracted = extractAttrSetFromXsl(attrSetName);
+			if (!extracted) {
+				alert(`Could not find attribute set "${attrSetName}" in the main XSL.`);
+				return;
+			}
+			attrSets[attrSetName] = extracted;
+		}
+
+		activeAttrSet = attrSetName;
+		showAttrSetEditor(attrSetName, attrSets[attrSetName]);
+		saveProject();
+	}
+
+	function showAttrSetEditor(attrSetName, content) {
+		document.getElementById('attrset-editor-placeholder').style.display = 'none';
+		const activePanel = document.getElementById('attrset-editor-active');
+		activePanel.style.display = 'flex';
+
+		document.getElementById('attrset-editor-name').textContent = attrSetName;
+		document.getElementById('attrSetEditorInput').value = content;
+
+		updateAttrSetEditorStatus();
+	}
+
+	function hideAttrSetEditor() {
+		document.getElementById('attrset-editor-placeholder').style.display = 'flex';
+		document.getElementById('attrset-editor-active').style.display = 'none';
+		document.getElementById('attrset-nav').value = '';
+	}
+
+	function onAttrSetEditorChange() {
+		if (!activeAttrSet) return;
+		attrSets[activeAttrSet] = document.getElementById('attrSetEditorInput').value;
+		updateAttrSetEditorStatus();
+		saveProject();
+	}
+
+	function updateAttrSetEditorStatus() {
+		if (!activeAttrSet) return;
+
+		const statusEl = document.getElementById('attrset-editor-status');
+		const currentInXsl = extractAttrSetFromXsl(activeAttrSet);
+		const stored = attrSets[activeAttrSet];
+
+		if (!currentInXsl) {
+			statusEl.textContent = '⚠ Not in XSL';
+			statusEl.className = 'template-status modified';
+		} else if (currentInXsl !== stored) {
+			statusEl.textContent = '● Modified';
+			statusEl.className = 'template-status modified';
+		} else {
+			statusEl.textContent = '✓ Synced';
+			statusEl.className = 'template-status';
+		}
+	}
+
+	function discardAttrSetChanges() {
+		if (!activeAttrSet) return;
+
+		const currentInXsl = extractAttrSetFromXsl(activeAttrSet);
+		if (currentInXsl) {
+			attrSets[activeAttrSet] = currentInXsl;
+			document.getElementById('attrSetEditorInput').value = currentInXsl;
+			updateAttrSetEditorStatus();
+			saveProject();
+		} else {
+			if (confirm(`Attribute set "${activeAttrSet}" not found in main XSL. Remove from editor?`)) {
+				delete attrSets[activeAttrSet];
+				activeAttrSet = null;
+				hideAttrSetEditor();
+				refreshAttrSetNav();
+				saveProject();
+			}
+		}
+	}
+
+	function updateAttrSetInXsl() {
+		if (!activeAttrSet) return;
+
+		const xsl = document.getElementById('xslInput').value;
+		const newContent = attrSets[activeAttrSet];
+
+		const currentInXsl = extractAttrSetFromXsl(activeAttrSet);
+
+		if (!currentInXsl) {
+			alert(
+				`Attribute set "${activeAttrSet}" was not found in the main XSL.\n\n` +
+				`To re-establish it:\n` +
+				`1. Copy the attribute set content from the editor below\n` +
+				`2. Paste it into the main XSL at the desired location\n` +
+				`3. Click "Discard" to sync the editor with the main XSL`
+			);
+			return;
+		}
+
+		const newXsl = xsl.replace(currentInXsl, newContent);
+		document.getElementById('xslInput').value = newXsl;
+
+		updateAttrSetEditorStatus();
+		saveProject();
+
+		// Visual feedback
+		const btn = event.target;
+		const originalText = btn.textContent;
+		btn.textContent = '✓ Updated!';
+		btn.style.background = '#43a047';
+		setTimeout(() => {
+			btn.textContent = originalText;
+			btn.style.background = '';
+		}, 1500);
+	}
+
+// Helper: Apply xsl:sort specifications to an array of nodes
+function applySortSpecs(nodeArray, sortSpecs, xmlCtx) {
+    // Build sort key extractors from sort specs (applied in reverse priority — last spec is least significant)
+    const specs = sortSpecs.map(s => ({
+        select: s.getAttribute('select') || '.',
+        dataType: s.getAttribute('data-type') || 'text',
+        order: s.getAttribute('order') || 'ascending'
+    }));
+
+    return nodeArray.slice().sort((a, b) => {
+        for (const spec of specs) {
+            const doc = a.ownerDocument || a;
+            let valA, valB;
+            try {
+                valA = doc.evaluate(spec.select, a, null, XPathResult.STRING_TYPE, null).stringValue;
+                valB = doc.evaluate(spec.select, b, null, XPathResult.STRING_TYPE, null).stringValue;
+            } catch(e) {
+                valA = ''; valB = '';
+            }
+
+            let cmp;
+            if (spec.dataType === 'number') {
+                cmp = (parseFloat(valA) || 0) - (parseFloat(valB) || 0);
+            } else {
+                cmp = valA.localeCompare(valB);
+            }
+
+            if (spec.order === 'descending') cmp = -cmp;
+            if (cmp !== 0) return cmp;
+        }
+        return 0;
+    });
+}
+
+// Helper: Evaluate Attribute Value Templates (AVTs)
+// Replaces {$param} and {xpath} patterns with their values
+function evaluateAVT(template, dataContext) {
+    if (!template || !template.includes('{')) return template;
+
+    return template.replace(/\{([^}]+)\}/g, (match, expr) => {
+        expr = expr.trim();
+        if (expr.startsWith('$')) {
+            // Variable/parameter reference
+            const paramName = expr.substring(1);
+            // Check variables first, then params, walking up the context chain
+            let ctx = dataContext;
+            while (ctx) {
+                if (ctx._variables && ctx._variables[paramName] !== undefined) {
+                    return ctx._variables[paramName];
+                }
+                if (ctx._params && ctx._params[paramName] !== undefined) {
+                    return ctx._params[paramName];
+                }
+                ctx = ctx._xmlContext;
+            }
+            return match; // Return original if not found
+        } else {
+            // XPath expression
+            const xmlCtx = dataContext._xmlContext || dataContext;
+            return evaluateXPath(expr, xmlCtx);
+        }
+    });
+}
+
+function mapToHtml(xmlNode, dataContext) {
+    // Handle text nodes
+    if (xmlNode.nodeType === 3) {
+        const text = xmlNode.textContent;
+        // Skip whitespace-only text nodes that contain newlines (XML formatting/indentation)
+        // This prevents unwanted gaps between inline-block elements like inline-container
+        if (/^\s*$/.test(text) && text.includes('\n')) {
+            return null;
+        }
+        return document.createTextNode(text);
+    }
+
+    // Skip comment nodes (nodeType 8)
+    if (xmlNode.nodeType === 8) return null;
+
+    const ln = xmlNode.localName;
+    const ns = xmlNode.namespaceURI;
+    const isXSL = ns?.includes("Transform");
+
+    // --- XSL LOGIC ---
+    if (isXSL) {
+        if (ln === "value-of") {
+            const selectAttr = xmlNode.getAttribute('select');
+            let val;
+
+            // Check if it's a variable/parameter reference ($name)
+            if (selectAttr.startsWith('$')) {
+                const paramName = selectAttr.substring(1);
+                // Check variables first, then params, walking up the context chain
+                let resolved = false;
+                let ctx = dataContext;
+                while (ctx) {
+                    if (ctx._variables && ctx._variables[paramName] !== undefined) {
+                        val = ctx._variables[paramName];
+                        resolved = true;
+                        break;
+                    }
+                    if (ctx._params && ctx._params[paramName] !== undefined) {
+                        val = ctx._params[paramName];
+                        resolved = true;
+                        break;
+                    }
+                    ctx = ctx._xmlContext;
+                }
+                if (!resolved) {
+                    val = `[$${paramName}]`; // Placeholder for undefined
+                }
+            } else {
+                // Regular XPath evaluation
+                const xmlCtx = dataContext._xmlContext || dataContext;
+                val = evaluateXPath(selectAttr, xmlCtx);
+            }
+
+            const span = document.createElement('span');
+            span.style.color = '#2980b9';
+            span.innerText = val;
+            return span;
+        }
+
+        if (ln === "for-each") {
+            const frag = document.createDocumentFragment();
+            const xmlCtx = dataContext._xmlContext || dataContext;
+            const selectExpr = xmlNode.getAttribute('select');
+
+            // Check if select uses tokenize() — create virtual text nodes for iteration
+            const tokenizeMatch = selectExpr.match(/^\s*tokenize\s*\(/);
+            if (tokenizeMatch) {
+                const doc = xmlCtx.ownerDocument || xmlCtx;
+                // Parse tokenize args using the same balanced-paren approach
+                const argsStart = selectExpr.indexOf('(') + 1;
+                let depth = 1, i = argsStart, args = [], argStart = argsStart;
+                while (i < selectExpr.length && depth > 0) {
+                    const ch = selectExpr[i];
+                    if (ch === '(') depth++;
+                    else if (ch === ')') { depth--; if (depth === 0) { args.push(selectExpr.substring(argStart, i)); break; } }
+                    else if (ch === ',' && depth === 1) { args.push(selectExpr.substring(argStart, i)); argStart = i + 1; }
+                    else if (ch === "'" || ch === '"') { const q = ch; i++; while (i < selectExpr.length && selectExpr[i] !== q) i++; }
+                    i++;
+                }
+                const inputExpr = resolveXPath2Functions(args[0].trim(), xmlCtx);
+                const patternExpr = args.length > 1 ? resolveXPath2Functions(args[1].trim(), xmlCtx) : "'\\\\s+'";
+                const input = doc.evaluate(inputExpr, xmlCtx, null, XPathResult.STRING_TYPE, null).stringValue;
+                const pattern = doc.evaluate(patternExpr, xmlCtx, null, XPathResult.STRING_TYPE, null).stringValue;
+                const tokens = input.split(new RegExp(pattern));
+
+                // Create a temporary XML doc with <token> elements for each result
+                const tmpDoc = new DOMParser().parseFromString(
+                    '<tokens>' + tokens.map(t => '<token>' + t.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</token>').join('') + '</tokens>',
+                    'text/xml'
+                );
+                const tokenNodes = tmpDoc.documentElement.childNodes;
+                for (let ti = 0; ti < tokenNodes.length; ti++) {
+                    Array.from(xmlNode.childNodes).forEach(c => {
+                        const res = mapToHtml(c, tokenNodes[ti]);
+                        if (res instanceof Node) frag.appendChild(res);
+                    });
+                }
+                return frag;
+            }
+
+            // Check if select uses distinct-values() — create virtual nodes with unique values
+            const distinctMatch = selectExpr.match(/^\s*distinct-values\s*\(/);
+            if (distinctMatch) {
+                const doc = xmlCtx.ownerDocument || xmlCtx;
+                const argsStart = selectExpr.indexOf('(') + 1;
+                let depth = 1, di = argsStart;
+                let dvArgs = [], argStart = argsStart;
+                while (di < selectExpr.length && depth > 0) {
+                    const ch = selectExpr[di];
+                    if (ch === '(') depth++;
+                    else if (ch === ')') { depth--; if (depth === 0) { dvArgs.push(selectExpr.substring(argStart, di)); break; } }
+                    else if (ch === ',' && depth === 1) { dvArgs.push(selectExpr.substring(argStart, di)); argStart = di + 1; }
+                    else if (ch === "'" || ch === '"') { const q = ch; di++; while (di < selectExpr.length && selectExpr[di] !== q) di++; }
+                    di++;
+                }
+                const innerExpr = resolveXPath2Functions(dvArgs[0].trim(), xmlCtx);
+                const ns = doc.evaluate(innerExpr, xmlCtx, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+                const seen = new Set();
+                const unique = [];
+                for (let j = 0; j < ns.snapshotLength; j++) {
+                    const val = ns.snapshotItem(j).textContent;
+                    if (!seen.has(val)) { seen.add(val); unique.push(val); }
+                }
+                const tmpDoc = new DOMParser().parseFromString(
+                    '<items>' + unique.map(v => '<item>' + v.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</item>').join('') + '</items>',
+                    'text/xml'
+                );
+                const itemNodes = tmpDoc.documentElement.childNodes;
+                for (let ti = 0; ti < itemNodes.length; ti++) {
+                    Array.from(xmlNode.childNodes).forEach(c => {
+                        const res = mapToHtml(c, itemNodes[ti]);
+                        if (res instanceof Node) frag.appendChild(res);
+                    });
+                }
+                return frag;
+            }
+
+            const nodes = (xmlCtx.ownerDocument || xmlCtx).evaluate(selectExpr, xmlCtx, null, 7, null);
+
+            // Collect nodes into array for potential sorting
+            let nodeArray = [];
+            for (let i = 0; i < nodes.snapshotLength; i++) {
+                nodeArray.push(nodes.snapshotItem(i));
+            }
+
+            // Check for xsl:sort children
+            const sortSpecs = Array.from(xmlNode.childNodes).filter(c =>
+                c.namespaceURI?.includes("Transform") && c.localName === "sort"
+            );
+            if (sortSpecs.length > 0) {
+                nodeArray = applySortSpecs(nodeArray, sortSpecs, xmlCtx);
+            }
+
+            // Get non-sort children for body processing
+            const bodyChildren = Array.from(xmlNode.childNodes).filter(c =>
+                !(c.namespaceURI?.includes("Transform") && c.localName === "sort")
+            );
+
+            for (let i = 0; i < nodeArray.length; i++) {
+                bodyChildren.forEach(c => {
+                    const res = mapToHtml(c, nodeArray[i]);
+                    if (res instanceof Node) frag.appendChild(res);
+                });
+            }
+            return frag;
+        }
+
+        if (ln === "call-template") {
+            const name = xmlNode.getAttribute('name');
+            const templates = xmlNode.ownerDocument.getElementsByTagNameNS("*", "template");
+            let def = null;
+            for (let t of templates) {
+                if (t.getAttribute('name') === name) {
+                    def = t;
+                    break;
+                }
+            }
+            if (def) {
+                // Collect xsl:with-param values from call-template
+                const params = {};
+                Array.from(xmlNode.childNodes).forEach(child => {
+                    if (child.localName === 'with-param') {
+                        const paramName = child.getAttribute('name');
+                        const selectAttr = child.getAttribute('select');
+                        if (selectAttr) {
+                            // xsl:with-param select="xpath"
+                            params[paramName] = evaluateXPath(selectAttr, dataContext);
+                        } else {
+                            // xsl:with-param with text content
+                            params[paramName] = child.textContent.trim();
+                        }
+                    }
+                });
+
+                // Merge params with dataContext for template rendering
+                const templateContext = { _xmlContext: dataContext, _params: params };
+
+                const frag = document.createDocumentFragment();
+                Array.from(def.childNodes).forEach(c => {
+                    const res = mapToHtml(c, templateContext);
+                    if (res instanceof Node) frag.appendChild(res);
+                });
+                return frag;
+            } else {
+                const err = document.createElement('span');
+                err.style.color = 'red';
+                err.innerText = `[Template "${name}" Not Found]`;
+                return err;
+            }
+        }
+
+        if (ln === "variable") {
+            const varName = xmlNode.getAttribute('name');
+            const selectAttr = xmlNode.getAttribute('select');
+            let varValue;
+
+            if (selectAttr) {
+                varValue = evaluateXPath(selectAttr, dataContext);
+            } else {
+                // Inline content — render children, extract text
+                const frag = document.createDocumentFragment();
+                Array.from(xmlNode.childNodes).forEach(c => {
+                    const res = mapToHtml(c, dataContext);
+                    if (res instanceof Node) frag.appendChild(res);
+                });
+                varValue = frag.textContent;
+            }
+
+            // Store on context — visible to subsequent siblings
+            if (!dataContext._variables) dataContext._variables = {};
+            dataContext._variables[varName] = varValue;
+            return null;
+        }
+
+        if (ln === "attribute") {
+            const attrName = xmlNode.getAttribute('name');
+            let attrValue = "";
+            Array.from(xmlNode.childNodes).forEach(c => {
+                const nodeName = c.localName || c.nodeName.split(':').pop();
+                if (nodeName === "value-of") {
+                    attrValue += evaluateXPath(c.getAttribute('select'), dataContext);
+                } else if (c.nodeType === 3) {
+                    attrValue += c.textContent;
+                }
+            });
+            attrValue = attrValue.trim();
+            if (attrName === 'src') {
+                attrValue = attrValue.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
+                let resolvedSrc = virtualImages[attrValue] || library[attrValue] || attrValue;
+                if (!resolvedSrc || resolvedSrc.trim() === "") {
+                    attrValue = MISSING_IMAGE_SVG;
+                } else {
+                    attrValue = resolvedSrc;
+                }
+            }
+            return { type: 'attribute', name: attrName, value: attrValue };
+        }
+
+        if (ln === "if") {
+            const testExpr = xmlNode.getAttribute('test');
+            if (evaluateXPathBoolean(testExpr, dataContext)) {
+                const frag = document.createDocumentFragment();
+                Array.from(xmlNode.childNodes).forEach(c => {
+                    const res = mapToHtml(c, dataContext);
+                    if (res instanceof Node) frag.appendChild(res);
+                });
+                return frag;
+            }
+            return null; // Condition false, render nothing
+        }
+
+        if (ln === "choose") {
+            // Process xsl:when and xsl:otherwise children
+            for (const child of xmlNode.childNodes) {
+                if (child.nodeType !== 1) continue; // Skip non-elements
+                const childLn = child.localName;
+
+                if (childLn === "when") {
+                    const testExpr = child.getAttribute('test');
+                    if (evaluateXPathBoolean(testExpr, dataContext)) {
+                        const frag = document.createDocumentFragment();
+                        Array.from(child.childNodes).forEach(c => {
+                            const res = mapToHtml(c, dataContext);
+                            if (res instanceof Node) frag.appendChild(res);
+                        });
+                        return frag;
+                    }
+                } else if (childLn === "otherwise") {
+                    // Only reached if no xsl:when matched
+                    const frag = document.createDocumentFragment();
+                    Array.from(child.childNodes).forEach(c => {
+                        const res = mapToHtml(c, dataContext);
+                        if (res instanceof Node) frag.appendChild(res);
+                    });
+                    return frag;
+                }
+            }
+            return null; // No condition matched and no otherwise
+        }
+
+        // Default XSL container (passthrough for unknown XSL elements)
+        const frag = document.createDocumentFragment();
+        Array.from(xmlNode.childNodes).forEach(c => {
+            const childResult = mapToHtml(c, dataContext);
+            if (childResult instanceof Node) frag.appendChild(childResult);
+        });
+        return frag;
+    }
+
+    // --- FO LAYOUT ---
+    const tagMap = {
+        'table': 'table',
+        'table-header': 'thead',
+        'table-body': 'tbody',
+        'table-footer': 'tfoot',
+        'table-row': 'tr',
+        'table-cell': 'td',
+        'table-column': 'col',
+        'leader': 'span',
+        'page-number': 'span',
+        'page-number-citation-last': 'span',
+        'static-content': 'div',
+        'external-graphic': 'img',
+        'inline': 'span',
+        'inline-container': 'span',
+        'block': 'div',
+        'basic-link': 'a',
+        'list-block': 'div',
+        'list-item': 'div',
+        'list-item-label': 'div',
+        'list-item-body': 'div',
+        'block-container': 'div'
+    };
+
+    const el = document.createElement(tagMap[ln] || 'div');
+
+    // Check for page breaks (applies to fo:block elements)
+    let pageBreakBefore = false;
+    let pageBreakAfter = false;
+    if (ns?.includes("Format") && ln === 'block') {
+        const breakBefore = xmlNode.getAttribute('break-before');
+        const breakAfter = xmlNode.getAttribute('break-after');
+        if (breakBefore === 'page') pageBreakBefore = true;
+        if (breakAfter === 'page') pageBreakAfter = true;
+    }
+
+    if (ns?.includes("Format")) {
+        // 1. Handle Attribute Sets (Lookup phase)
+        // Check for both use-attribute-sets and xsl:use-attribute-sets (with namespace prefix)
+        const attrSetNames = xmlNode.getAttribute('use-attribute-sets') || xmlNode.getAttribute('xsl:use-attribute-sets');
+        if (attrSetNames) {
+            attrSetNames.split(/\s+/).forEach(setName => {
+                const sets = xmlNode.ownerDocument.getElementsByTagNameNS("*", "attribute-set");
+                for (let set of sets) {
+                    if (set.getAttribute('name') === setName) {
+                        Array.from(set.childNodes).forEach(attrNode => {
+                            if (attrNode.localName === 'attribute') {
+                                const aName = attrNode.getAttribute('name');
+                                const aVal = attrNode.textContent.trim();
+                                if (SUPPORTED_FO_STYLES[aName]) el.style[SUPPORTED_FO_STYLES[aName]] = aVal;
+                                else el.setAttribute(aName, aVal);
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        // 2. Apply Direct FO Attributes (overrides sets) using global mapping
+        // Use AVT evaluation to handle {$param} patterns
+        for (let [foAttr, jsProp] of Object.entries(SUPPORTED_FO_STYLES)) {
+            const val = xmlNode.getAttribute(foAttr);
+            if (val) el.style[jsProp] = evaluateAVT(val, dataContext);
+        }
+
+        // 3. Special Case: display-align (vertical alignment for block containers)
+        const displayAlign = xmlNode.getAttribute('display-align');
+        if (displayAlign) {
+            const vAlignMap = { 'before': 'top', 'center': 'middle', 'after': 'bottom' };
+            el.style.verticalAlign = vAlignMap[displayAlign] || displayAlign;
+        }
+
+        // 3b. Special Case: alignment-baseline (vertical alignment for inline elements)
+        const alignmentBaseline = xmlNode.getAttribute('alignment-baseline');
+        if (alignmentBaseline) {
+            // FO alignment-baseline values map fairly directly to CSS vertical-align
+            el.style.verticalAlign = alignmentBaseline;
+        }
+
+        // 3c. Special Case: keep-together.within-line (prevent line breaks)
+        const keepTogether = xmlNode.getAttribute('keep-together.within-line');
+        if (keepTogether === 'always') {
+            el.style.whiteSpace = 'nowrap';
+        }
+
+        // 4. Component-specific Logic
+        if (ln === 'table') { 
+            el.style.width = "100%"; 
+            el.style.borderCollapse = "collapse"; 
+        }
+
+        if (ln === 'table-column') {
+            const colWidth = xmlNode.getAttribute('column-width');
+            if (colWidth) el.style.width = colWidth;
+        }
+
+        if (ln === 'table-cell') {
+            const colSpan = xmlNode.getAttribute('number-columns-spanned');
+            if (colSpan) el.colSpan = colSpan;
+            const rowSpan = xmlNode.getAttribute('number-rows-spanned');
+            if (rowSpan) el.rowSpan = rowSpan;
+            // Default vertical align if not specified
+            if (!el.style.verticalAlign) el.style.verticalAlign = 'top';
+        }
+
+        if (ln === 'inline-container') {
+            el.style.display = 'inline-block';
+            el.style.verticalAlign = 'middle';
+        }
+
+        if (ln === 'block-container') {
+            el.style.display = 'block';
+            el.style.overflow = 'hidden';
+        }
+
+        if (ln === 'external-graphic') {
+            let src = xmlNode.getAttribute('src') || "";
+            // Evaluate AVTs in src attribute, then clean url() wrapper
+            src = evaluateAVT(src, dataContext);
+            src = src.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
+            let resolvedSrc = virtualImages[src] || library[src] || src;
+            // Fall back to MISSING_IMAGE_SVG if src is empty or unresolved
+            if (!resolvedSrc || resolvedSrc.trim() === "") {
+                el.src = MISSING_IMAGE_SVG;
+            } else {
+                el.src = resolvedSrc;
+            }
+            const width = evaluateAVT(xmlNode.getAttribute('width') || '', dataContext);
+            const contentWidth = xmlNode.getAttribute('content-width');
+            const height = xmlNode.getAttribute('content-height');
+            if (width) el.style.width = width;
+            if (contentWidth && contentWidth !== 'scale-to-fit') el.style.width = contentWidth;
+            if (height) el.style.height = height;
+            el.style.display = 'inline-block';
+            el.alt = "XSL-FO Graphic";
+            el.style.maxWidth = '100%';
+        }
+
+        if (ln === 'page-number') {
+            el.innerText = "1";
+            el.className = 'fo-page-number';
+            el.style.display = 'inline';
+        }
+
+        if (ln === 'page-number-citation-last') {
+            el.innerText = "N";
+            el.className = 'fo-page-number-citation-last';
+            el.style.display = 'inline';
+        }
+
+        if (ln === 'leader') {
+            const len = xmlNode.getAttribute('leader-length');
+            const pattern = xmlNode.getAttribute('leader-pattern') || 'space';
+            const thickness = xmlNode.getAttribute('rule-thickness') || '1pt';
+            const leaderColor = xmlNode.getAttribute('color');
+
+            // Determine if this leader should "fill" available space
+            // Fill ONLY when no length specified at all
+            // If leader-length is explicitly set (any value), honor it and don't apply flex
+            const shouldFill = !len;
+
+            el.style.display = 'inline-block';
+
+            if (shouldFill) {
+                // Flex-based fill mode (activated by post-processor if toggle enabled)
+                el.className = 'fo-leader-fill pattern-' + pattern;
+            } else {
+                // Fixed-length mode
+                el.style.verticalAlign = 'baseline';
+            }
+
+            // Always map leader-length to width when specified
+            if (len) {
+                el.style.width = len;
+            }
+
+            // Apply pattern styling
+            if (pattern === 'dots') el.style.borderBottom = `${thickness} dotted currentColor`;
+            else if (pattern === 'rule') el.style.borderBottom = `${thickness} solid currentColor`;
+
+            if (leaderColor) el.style.borderColor = leaderColor;
+        }
+
+        if (ln === 'basic-link') {
+            // Handle external-destination (URLs)
+            let extDest = xmlNode.getAttribute('external-destination');
+            if (extDest) {
+                // Strip url('...') wrapper if present
+                extDest = extDest.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
+                el.href = extDest;
+            }
+
+            // Handle internal-destination (document anchors)
+            const intDest = xmlNode.getAttribute('internal-destination');
+            if (intDest) {
+                el.href = '#' + intDest;
+            }
+
+            // Style as link if no explicit color set
+            if (!xmlNode.getAttribute('color')) {
+                el.style.color = '#0066cc';
+                el.style.textDecoration = 'underline';
+            }
+            el.style.cursor = 'pointer';
+        }
+
+        if (ln === 'list-block') {
+            el.style.display = 'table';
+            el.style.width = '100%';
+            const provDist = xmlNode.getAttribute('provisional-distance-between-starts');
+            if (provDist) el.dataset.labelWidth = provDist;
+        }
+
+        if (ln === 'list-item') {
+            el.style.display = 'table-row';
+        }
+
+        if (ln === 'list-item-label') {
+            el.style.display = 'table-cell';
+            el.style.verticalAlign = 'top';
+            // Walk up to find list-block ancestor for provisional width
+            let ancestor = xmlNode.parentNode;
+            while (ancestor && ancestor.localName !== 'list-block') ancestor = ancestor.parentNode;
+            const labelWidth = ancestor?.getAttribute('provisional-distance-between-starts');
+            if (labelWidth) el.style.width = labelWidth;
+            // Respect end-indent if set
+            const endIndent = xmlNode.getAttribute('end-indent');
+            if (endIndent && endIndent !== 'label-end()') el.style.paddingRight = endIndent;
+        }
+
+        if (ln === 'list-item-body') {
+            el.style.display = 'table-cell';
+            el.style.verticalAlign = 'top';
+            const startIndent = xmlNode.getAttribute('start-indent');
+            if (startIndent && startIndent !== 'body-start()') el.style.paddingLeft = startIndent;
+        }
+    }
+
+    // Recursively process children
+    Array.from(xmlNode.childNodes).forEach(c => {
+        const childResult = mapToHtml(c, dataContext);
+
+        if (childResult && childResult.type === 'attribute') {
+            // Apply dynamic attributes using the global style map
+            if (childResult.name === 'src' && el.tagName === 'IMG') {
+                el.src = childResult.value;
+            } else if (SUPPORTED_FO_STYLES[childResult.name]) {
+                el.style[SUPPORTED_FO_STYLES[childResult.name]] = childResult.value;
+            } else {
+                el.setAttribute(childResult.name, childResult.value);
+            }
+        } else if (childResult instanceof Node) {
+            el.appendChild(childResult);
+        }
+    });
+
+    // Handle page breaks by wrapping element with markers
+    if (pageBreakBefore || pageBreakAfter) {
+        const frag = document.createDocumentFragment();
+        if (pageBreakBefore) {
+            const marker = document.createElement('div');
+            marker.className = 'page-break-marker';
+            marker.dataset.breakType = 'before';
+            frag.appendChild(marker);
+        }
+        frag.appendChild(el);
+        if (pageBreakAfter) {
+            const marker = document.createElement('div');
+            marker.className = 'page-break-marker';
+            marker.dataset.breakType = 'after';
+            frag.appendChild(marker);
+        }
+        return frag;
+    }
+
+    return el;
+}
+</script>
+</body>
+</html>

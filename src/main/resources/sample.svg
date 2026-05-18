@@ -1,0 +1,28 @@
+<svg width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .quad-red    { fill: #FF4136; stroke: #333; stroke-width: 2; }
+      .quad-yellow { fill: #FFDC00; stroke: #333; stroke-width: 2; }
+      .quad-green  { fill: #2ECC40; stroke: #333; stroke-width: 2; }
+      .quad-blue   { fill: #0074D9; stroke: #333; stroke-width: 2; }
+      .text-style  { font-family: sans-serif; font-weight: bold; font-size: 22px; fill: #333; letter-spacing: 4px; }
+    </style>
+  </defs>
+
+  <circle cx="150" cy="150" r="145" fill="none" stroke="#333" stroke-width="2" />
+  
+  <circle cx="150" cy="150" r="100" fill="none" stroke="#333" stroke-width="3" />
+
+  <path d="M 150 150 L 50 150 A 100 100 0 0 1 150 50 Z" class="quad-red" />
+  <path d="M 150 150 L 150 50 A 100 100 0 0 1 250 150 Z" class="quad-yellow" />
+  <path d="M 150 150 L 250 150 A 100 100 0 0 1 150 250 Z" class="quad-green" />
+  <path d="M 150 150 L 150 250 A 100 100 0 0 1 50 150 Z" class="quad-blue" />
+
+  <path id="textPath" d="M 30, 150 A 120, 120 0 1, 1 270, 150" fill="none" />
+
+  <text class="text-style">
+    <textPath href="#textPath" startOffset="50%" text-anchor="middle">
+      STUDENT REPORT
+    </textPath>
+  </text>
+</svg>

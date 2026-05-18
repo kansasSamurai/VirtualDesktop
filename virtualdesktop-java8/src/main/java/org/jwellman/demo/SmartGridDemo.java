@@ -14,6 +14,8 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JToggleButton;
 import javax.swing.JLabel;
@@ -25,6 +27,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.table.DefaultTableModel;
 
 import java.util.List;
 import org.jwellman.swing.grid.ColumnDef;
@@ -32,6 +35,7 @@ import org.jwellman.swing.grid.DefaultGridComponentFactory;
 import org.jwellman.swing.grid.DefaultGridModel;
 import org.jwellman.swing.grid.GridModelListener;
 import org.jwellman.swing.grid.GridRow;
+import org.jwellman.swing.grid.JTableAdapter;
 import org.jwellman.swing.grid.LogRowPanel;
 import org.jwellman.swing.grid.Recyclable;
 import org.jwellman.swing.grid.Selectable;
@@ -97,6 +101,7 @@ public class SmartGridDemo {
      *   <li>"Paged"    — 1,000 rows / 50 per page; footer aggregates; pagination bar</li>
      *   <li>"Scripted" — Phase 9b: XML blueprint + BeanShell bind scripts</li>
      *   <li>"Log"      — dark log viewer; plain text, JSON, stack traces; live search</li>
+     *   <li>"Migrate"  — JTableAdapter demo; same 50 rows in SmartGrid (top) and JTable (bottom)</li>
      * </ul>
      *
      * @param darkTheme {@code true} to apply SmartGrid's dark colour palette
@@ -110,6 +115,7 @@ public class SmartGridDemo {
         tabs.addTab("Paged",    buildPagedTab(darkTheme));
         tabs.addTab("Scripted", buildScriptedTab(darkTheme));
         tabs.addTab("Log",      buildLogTab());
+        tabs.addTab("Migrate",  buildMigrateTab(darkTheme));
         return tabs;
     }
 
@@ -889,6 +895,148 @@ public class SmartGridDemo {
             buildChip("JSON Syntax", new Color(0xD68910)),
             buildChip("Live Search", new Color(0x27AE60)),
             buildChip("Log Mining",  new Color(0x8E44AD)));
+    }
+
+    // -------------------------------------------------------------------------
+    // Tab 9: migration demo — SmartGrid (top) vs JTable (bottom), same 50 rows
+    // -------------------------------------------------------------------------
+
+    private static JPanel buildMigrateTab(boolean darkTheme) {
+
+        // Build the DefaultTableModel first — as a real migrator would have it
+        DefaultTableModel tableModel = new DefaultTableModel(
+            new String[]{"ID", "Name", "Department", "Salary", "Status"}, 0);
+        for (int i = 1; i <= 50; i++) {
+            tableModel.addRow(new Object[]{
+                String.valueOf(i),
+                "Employee " + i,
+                DEPTS[i % DEPTS.length],
+                String.format("$%,d", 50_000 + (i * 173 % 100_000)),
+                STATUSES[i % STATUSES.length]
+            });
+        }
+
+        // Standard JTable setup — no filtering, no alternating rows, no summary
+        JTable jtable = new JTable(tableModel);
+        jtable.setFillsViewportHeight(true);
+        jtable.setAutoCreateRowSorter(true);
+        jtable.getColumnModel().getColumn(0).setPreferredWidth(50);
+        jtable.getColumnModel().getColumn(1).setPreferredWidth(220);
+        jtable.getColumnModel().getColumn(2).setPreferredWidth(180);
+        jtable.getColumnModel().getColumn(3).setPreferredWidth(110);
+        jtable.getColumnModel().getColumn(4).setPreferredWidth(80);
+        JScrollPane jtableScroll = new JScrollPane(jtable);
+
+        // This single call is the migration — hand the existing JTable to the adapter
+        DefaultGridModel smartModel = JTableAdapter.toSmartGrid(jtable);
+
+        SmartGrid grid = new SmartGrid(smartModel, darkTheme);
+        grid.setRowNumbersVisible(true);
+
+        JTextField filterField = new JTextField(18);
+        filterField.getDocument().addDocumentListener(new DocumentListener() {
+            private void applyFilter() {
+                String text = filterField.getText().trim().toLowerCase();
+                if (text.isEmpty()) {
+                    grid.clearFilter();
+                } else {
+                    grid.setFilter(row -> {
+                        for (ColumnDef col : smartModel.getColumns()) {
+                            Object val = row.get(col.getKey());
+                            if (val != null && val.toString().toLowerCase().contains(text)) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+                }
+            }
+            @Override public void insertUpdate(DocumentEvent e)  { applyFilter(); }
+            @Override public void removeUpdate(DocumentEvent e)  { applyFilter(); }
+            @Override public void changedUpdate(DocumentEvent e) { applyFilter(); }
+        });
+        JLabel filterLabel = new JLabel("Filter:");
+        filterLabel.setForeground(Color.WHITE);
+        grid.getToolbar().add(filterLabel);
+        grid.getToolbar().add(filterField);
+
+        // Page chrome — same style as buildPage() but hosting two components
+        Color pageBg     = darkTheme ? new Color(0x2B2D30) : new Color(0xF0F2F5);
+        Color headerBg   = darkTheme ? new Color(0x3C3F41) : Color.WHITE;
+        Color titleFg    = darkTheme ? new Color(0xE8E8E8) : new Color(0x1A1A2E);
+        Color subtitleFg = darkTheme ? new Color(0x888888) : new Color(0x666677);
+        Color borderClr  = darkTheme ? new Color(0x4A4D52) : new Color(0xC8CDD3);
+        Color sectionFg  = darkTheme ? new Color(0xA0A0A0) : new Color(0x555566);
+
+        JLabel titleLabel = new JLabel("SmartGrid Migration Demo");
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 18f));
+        titleLabel.setForeground(titleFg);
+
+        JLabel subtitleLabel = new JLabel(
+            "JTableAdapter converts the existing JTable in one call"
+                + "  ·  50 rows  ·  same data, different component");
+        subtitleLabel.setFont(subtitleLabel.getFont().deriveFont(Font.PLAIN, 11f));
+        subtitleLabel.setForeground(subtitleFg);
+
+        JPanel titleArea = new JPanel();
+        titleArea.setLayout(new BoxLayout(titleArea, BoxLayout.Y_AXIS));
+        titleArea.setOpaque(false);
+        titleArea.add(titleLabel);
+        titleArea.add(Box.createVerticalStrut(4));
+        titleArea.add(subtitleLabel);
+
+        JPanel chipsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+        chipsPanel.setOpaque(false);
+        chipsPanel.add(buildChip("Migration",    new Color(0x8E44AD)));
+        chipsPanel.add(buildChip("Adapter API",  new Color(0x2980B9)));
+        chipsPanel.add(buildChip("50 Rows",      new Color(0x27AE60)));
+        chipsPanel.add(buildChip("Side by Side", new Color(0xD68910)));
+
+        JPanel pageHeader = new JPanel(new BorderLayout(16, 0));
+        pageHeader.setBackground(headerBg);
+        pageHeader.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, borderClr),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)));
+        pageHeader.add(titleArea,   BorderLayout.WEST);
+        pageHeader.add(chipsPanel,  BorderLayout.EAST);
+
+        JLabel sgLabel = new JLabel("  SmartGrid  —  after migration");
+        sgLabel.setFont(sgLabel.getFont().deriveFont(Font.BOLD, 11f));
+        sgLabel.setForeground(Color.WHITE);
+        sgLabel.setBackground(new Color(0x3C4B64));
+        sgLabel.setOpaque(true);
+        sgLabel.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+
+        JPanel sgCard = new JPanel(new BorderLayout());
+        sgCard.setBorder(BorderFactory.createLineBorder(borderClr));
+        sgCard.add(sgLabel, BorderLayout.NORTH);
+        sgCard.add(grid,    BorderLayout.CENTER);
+
+        JLabel jtLabel = new JLabel("  JTable  —  before migration");
+        jtLabel.setFont(jtLabel.getFont().deriveFont(Font.BOLD, 11f));
+        jtLabel.setForeground(sectionFg);
+        jtLabel.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+
+        JPanel jtCard = new JPanel(new BorderLayout());
+        jtCard.setBorder(BorderFactory.createLineBorder(borderClr));
+        jtCard.add(jtLabel,      BorderLayout.NORTH);
+        jtCard.add(jtableScroll, BorderLayout.CENTER);
+
+        JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, sgCard, jtCard);
+        split.setResizeWeight(0.6);
+        split.setDividerSize(6);
+        split.setBorder(null);
+
+        JPanel content = new JPanel(new BorderLayout());
+        content.setOpaque(false);
+        content.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        content.add(split, BorderLayout.CENTER);
+
+        JPanel page = new JPanel(new BorderLayout());
+        page.setBackground(pageBg);
+        page.add(pageHeader, BorderLayout.NORTH);
+        page.add(content,    BorderLayout.CENTER);
+        return page;
     }
 
     // -------------------------------------------------------------------------

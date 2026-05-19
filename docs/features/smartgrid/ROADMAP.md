@@ -27,6 +27,7 @@
 | 20 | Semantic data font — `setDataFont(Font)` applies to all cell values; headers/labels unchanged | ⬜ Future | Formalizes the monospace-for-data convention; see design doc for rationale |
 | 21 | Toolbar alignment — `setToolbarAlignedWithData(boolean)` keeps toolbar content flush with data columns | ⬜ Future | Auto-updates strut when strip visibility changes |
 | 22 | Toolbar widget system — standard widgets + user-customizable toolbar with widget registry | ⬜ Future | See phase detail below |
+| 23 | Column visual polish — cell padding API, column separators, header alignment inheritance | ⬜ Future | See phase detail below |
 
 ---
 
@@ -1267,6 +1268,84 @@ launch, the toolbar is rebuilt from that list using the registered widget regist
 - The standard widget library and presets ship together as the first sub-phase
 - The runtime customization dialog is a second sub-phase; it is not a blocker for
   the widget library
+
+---
+
+## Phase 23 — Column Visual Polish
+
+### Motivation
+
+Grid components carry implicit visual contracts that users expect: consistent cell
+padding, optional column separator lines, and header labels that align with the data
+beneath them. SmartGrid currently leaves these concerns to individual `CellRenderer`
+implementations, resulting in inconsistency (the right-aligned salary column has a
+left-aligned header, cell padding is declared per-renderer rather than grid-wide, etc.).
+This phase establishes a grid-level visual contract.
+
+### setColumnPadding(int horizontal, int vertical)
+
+A grid-level cell inset applied uniformly to all data cells rendered by
+`StandardRowPanel` and to column header labels. Replaces the current pattern of
+individual `Borders.CELL_RIGHT` / `Borders.LABEL` declarations in each renderer
+and demo method. `CellRenderer` implementations can still override locally — grid
+padding is the default, not a constraint.
+
+```java
+grid.setColumnPadding(8, 2);   // 8px left/right, 2px top/bottom — the table standard
+```
+
+`StandardRowPanel` reads this setting on bind; `buildHeaderLabelRow()` applies it when
+constructing header cells. The value is stored on SmartGrid and exposed via
+`getColumnPadding()`.
+
+### setColumnSeparatorsVisible(boolean)
+
+Draws a 1px vertical rule between adjacent data columns (and between the strip zone
+and the first data column). Painted in both the VirtualCanvas and the header panel.
+The separator color follows the existing `borderClr` palette (light/dark theme).
+
+Implementation: `StandardRowPanel.bind()` adds a right border matching the separator
+color on all cells except the last column; the header label row does the same. The
+strip-to-first-column separator aligns with the existing strip right-edge styling.
+
+### Header Alignment Inheritance
+
+When a `ColumnDef` has an `fndType` that maps to a registered `CellRenderer` whose
+output is right-aligned (e.g., the `"currency"` renderer), the column header label
+should default to the same alignment. Currently all header labels are left-aligned
+regardless of cell content alignment.
+
+**Implementation options:**
+
+1. Add `alignment` to `ColumnDef` — explicit, but breaks existing ColumnDef construction
+2. Infer from the registered `CellRenderer` by calling `render()` on a blank row and
+   checking the returned component's alignment — zero API change, but costs one render
+   call per column per header rebuild
+3. Add a `setHeaderAlignment(String fndType, int alignment)` registry on SmartGrid —
+   explicit opt-in, no ColumnDef change
+
+Option 3 is the safest: no ColumnDef API change, no inference cost, callers opt in
+where they care.
+
+```java
+grid.setHeaderAlignment("currency", JLabel.RIGHT);
+```
+
+### Edge Gutters
+
+Expose `setLeadGutter(int)` and `setTrailGutter(int)` for the space between the strip
+zone and the first column, and between the last column and the viewport right edge.
+Currently these are absorbed into column padding, which means resizing the viewport
+causes the right edge to appear ragged. Named constants make the intent explicit.
+
+### Coordination with Phase 12
+
+Header alignment inheritance and column separator painting both touch
+`buildHeaderLabelRow()`. Phase 12 (persistent header panels) will restructure that
+method significantly. Implementing Phase 23 before Phase 12 is possible but means the
+work will need minor adaptation when Phase 12 ships. Sequencing Phase 12 first makes
+Phase 23's header changes cleaner; sequencing Phase 23 first delivers the visual polish
+sooner. Neither blocks the other.
 
 ---
 

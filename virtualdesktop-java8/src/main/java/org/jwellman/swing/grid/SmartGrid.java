@@ -668,6 +668,12 @@ public class SmartGrid extends JPanel implements GridModelListener {
     // Internal — strip helpers
     // -------------------------------------------------------------------------
 
+    /** Returns the total width in pixels of all visible left-side strips (row numbers,
+     *  checkbox, tree zone).  Use this to align toolbar content with the data columns. */
+    public int getCanvasLeadWidth() {
+        return canvasLeadWidth();
+    }
+
     private int canvasLeadWidth() {
         int total = 0;
         for (Strip strip : strips) {

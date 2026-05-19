@@ -148,7 +148,13 @@ public class SmartGridDemo {
         }
 
         SmartGrid grid = new SmartGrid(model, darkTheme);
-        grid.registerFormatter("currency", v -> String.format("$%,d", ((Number) v).longValue()));
+        grid.registerCellRenderer("currency", (col, value, row, existing) -> {
+            JLabel lbl = (existing instanceof JLabel) ? (JLabel) existing : new JLabel();
+            lbl.setText(value != null ? String.format("$%,d", ((Number) value).longValue()) : "");
+            lbl.setHorizontalAlignment(JLabel.RIGHT);
+            lbl.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 8));
+            return lbl;
+        });
 
         // CellRenderer for the name column: demonstrates a real interactive JButton
         // embedded in a cell — something JTable's stamp-based renderer cannot do.
@@ -227,6 +233,41 @@ public class SmartGridDemo {
         grid.setColumnFiltersVisible(true);
         grid.setRowNumbersVisible(true);
 
+        grid.setFooterRenderer((col, pageRows, fullModel) -> {
+            JLabel lbl = new JLabel();
+            lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+            lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
+            switch (col.getKey()) {
+                case "id":
+                    lbl.setText("Totals");
+                    break;
+                case "salary":
+                    long salarySum = 0;
+                    for (GridRow r : pageRows) {
+                        Object n = r.get("salary");
+                        if (n instanceof Number) {
+                            salarySum += ((Number) n).longValue();
+                        }
+                    }
+                    lbl.setText(String.format("$%,d", salarySum));
+                    lbl.setHorizontalAlignment(JLabel.RIGHT);
+                    lbl.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 8));
+                    break;
+                case "status":
+                    int activeCount = 0;
+                    for (GridRow r : pageRows) {
+                        if ("Active".equals(r.get("status"))) {
+                            activeCount++;
+                        }
+                    }
+                    lbl.setText(activeCount + " active");
+                    break;
+                default:
+                    break;
+            }
+            return lbl;
+        });
+
         // Global filter field — wired to grid; lives in the grid's built-in toolbar
         JTextField filterField = new JTextField(20);
         filterField.getDocument().addDocumentListener(new DocumentListener() {
@@ -258,6 +299,7 @@ public class SmartGridDemo {
         filterLabel.setForeground(java.awt.Color.WHITE);
 
         JPanel toolbar = grid.getToolbar();
+        // toolbar.add(Box.createHorizontalStrut(grid.getCanvasLeadWidth()));
         toolbar.add(filterLabel);
         toolbar.add(filterField);
         toolbar.add(editToggle);
@@ -882,8 +924,10 @@ public class SmartGridDemo {
 
         JLabel searchLabel = new JLabel("Search:");
         searchLabel.setForeground(java.awt.Color.WHITE);
-        grid.getToolbar().add(searchLabel);
-        grid.getToolbar().add(searchField);
+        JPanel logToolbar = grid.getToolbar();
+        // logToolbar.add(Box.createHorizontalStrut(grid.getCanvasLeadWidth()));
+        logToolbar.add(searchLabel);
+        logToolbar.add(searchField);
 
         // Page is always dark — the grid is always dark and the surrounding chrome should match
         return buildPage(grid,
@@ -957,8 +1001,10 @@ public class SmartGridDemo {
         });
         JLabel filterLabel = new JLabel("Filter:");
         filterLabel.setForeground(Color.WHITE);
-        grid.getToolbar().add(filterLabel);
-        grid.getToolbar().add(filterField);
+        JPanel migrateToolbar = grid.getToolbar();
+        // migrateToolbar.add(Box.createHorizontalStrut(grid.getCanvasLeadWidth()));
+        migrateToolbar.add(filterLabel);
+        migrateToolbar.add(filterField);
 
         // Page chrome — same style as buildPage() but hosting two components
         Color pageBg     = darkTheme ? new Color(0x2B2D30) : new Color(0xF0F2F5);

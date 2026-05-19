@@ -25,6 +25,8 @@
 | 18 | Scroll repaint quality — eliminate canvas flash (blit mode + setVisible refactor) | ⬜ Future | Two-part fix; canvas-bg mitigation currently in place |
 | 19 | GlazedLists integration — swappable `FilterSortStrategy` behind `DefaultGridModel` | ⬜ Future | Naive impl ships as default; GlazedLists is a drop-in upgrade |
 | 20 | Semantic data font — `setDataFont(Font)` applies to all cell values; headers/labels unchanged | ⬜ Future | Formalizes the monospace-for-data convention; see design doc for rationale |
+| 21 | Toolbar alignment — `setToolbarAlignedWithData(boolean)` keeps toolbar content flush with data columns | ⬜ Future | Auto-updates strut when strip visibility changes |
+| 22 | Toolbar widget system — standard widgets + user-customizable toolbar with widget registry | ⬜ Future | See phase detail below |
 
 ---
 
@@ -1147,6 +1149,124 @@ applies this convention locally via a `CellRenderer`. Phase 20 moves the
 configuration to the grid level so individual renderers do not need to repeat it.
 A `CellRenderer` that sets its own font overrides the grid-level setting for its
 column — local always wins.
+
+---
+
+## Phase 21 — Toolbar Alignment (setToolbarAlignedWithData)
+
+When row number strips, checkbox strips, or tree zone strips are visible, the left
+edge of the strip gutter creates a visual offset between the toolbar and the data
+columns. The toolbar currently starts at x=0 (the far left of the grid) rather
+than aligning with the first data column.
+
+**Fix:** A `setToolbarAlignedWithData(boolean)` toggle on `SmartGrid`. When enabled,
+a horizontal strut of width `canvasLeadWidth()` is inserted as the first component
+of `toolbarPanel`. The strut is updated whenever `canvasLeadWidth()` changes — i.e.,
+whenever `setRowNumbersVisible()`, `setCheckboxColumnVisible()`, or
+`setTreeZoneVisible()` is called.
+
+**Prerequisite:** Expose `getCanvasLeadWidth()` as a public method (currently
+private), which also enables callers to manually align `addHeaderRow()` components
+without the full toggle mechanism.
+
+### The Vertical Gutter Problem
+
+A plain horizontal strut is not sufficient on its own. Without visual treatment, the
+strut creates a blank patch in the toolbar that looks like something is missing rather
+than a deliberate alignment. The alignment only reads correctly when the strip gutter
+continues visually into every header row — including the toolbar and any rows added
+via `addHeaderRow()`.
+
+This means the strip zone must be treated as a **vertical gutter** that runs the full
+height of the header stack, not just the column header and data rows. Concretely:
+
+- Each header row (toolbar, addHeaderRow components) must paint the strip background
+  color in its leftmost `canvasLeadWidth()` pixels
+- The strip color/border treatment should visually match the row number / checkbox /
+  tree zone strips in the data area
+- This likely requires SmartGrid to paint that zone itself (e.g., via a
+  `paintComponent()` override on `northPanel` or a dedicated overlay) rather than
+  relying on individual toolbar components to know about strip geometry
+
+**Sequencing note:** The strut-only approach was attempted and reverted — it made the
+toolbar look worse, not better, because the unstyled gap was more visually jarring than
+simple left-alignment. Do not ship the strut without the gutter styling.
+
+---
+
+## Phase 22 — Toolbar Widget System
+
+### Motivation
+
+The toolbar returned by `getToolbar()` is a plain `FlowLayout` panel. Callers add
+components manually and the result is ad-hoc per grid instance. The goal is a
+first-class widget system where:
+
+1. SmartGrid ships a library of **standard toolbar widgets** covering the most
+   common toolbar needs out of the box
+2. Consumers can register their own widgets and mix them with standard ones
+3. Toolbars can eventually be **user-customizable** at runtime — a user can pick
+   which widgets appear and in what order, with persistence
+
+### Standard Widget Library
+
+Pre-built widgets that ship with SmartGrid:
+
+| Widget | Description |
+|--------|-------------|
+| `FilterWidget` | JTextField that wires to `grid.setFilter()` / `clearFilter()`; includes debounce |
+| `RowCountWidget` | Read-only label showing "Showing X of Y rows"; mirrors summary row |
+| `SelectAllWidget` | "Select All" / "Clear" button pair |
+| `ColumnVisibilityWidget` | Dropdown checklist to show/hide individual columns |
+| `ExportWidget` | "Copy as TSV" button (copies selected rows to clipboard) |
+| `EditModeWidget` | Toggle button wiring to `grid.setEditable(boolean)` |
+| `RefreshWidget` | Button that calls `model.notifyDataChanged()` |
+
+### Widget Registration API
+
+```java
+public interface ToolbarWidget {
+    JComponent build(SmartGrid grid);  // called once; widget wires itself to grid
+    String getId();                    // unique key for persistence / deduplication
+    String getLabel();                 // display name for the widget picker UI
+}
+
+grid.addToolbarWidget(new FilterWidget());
+grid.addToolbarWidget(new SelectAllWidget());
+grid.addToolbarWidget(new MyCustomWidget());
+```
+
+`addToolbarWidget()` calls `widget.build(grid)`, adds the returned component to the
+toolbar, and registers the widget by ID for the customization layer.
+
+### Standard Toolbar Presets
+
+Factory methods that return pre-configured widget sets:
+
+```java
+grid.applyToolbar(SmartGrid.TOOLBAR_BASIC);       // Filter + RowCount
+grid.applyToolbar(SmartGrid.TOOLBAR_DATA_ENTRY);  // Filter + EditMode + SelectAll
+grid.applyToolbar(SmartGrid.TOOLBAR_REPORTING);   // Filter + RowCount + Export
+```
+
+### User Customization Layer (later sub-phase)
+
+A runtime "customize toolbar" dialog where users can:
+- Drag widgets into / out of the active toolbar
+- Reorder widgets
+- Save the configuration (JSON via Jackson, stored in user preferences)
+- Reset to the preset default
+
+The customization state is serialized as an ordered list of widget IDs. On next
+launch, the toolbar is rebuilt from that list using the registered widget registry.
+
+### Sequencing
+
+- Phase 21 (toolbar alignment) should ship first — the aligned strut becomes a
+  standard part of the `FilterWidget` setup
+- The standard widget library and presets ship together as the first sub-phase
+- The runtime customization dialog is a second sub-phase; it is not a blocker for
+  the widget library
 
 ---
 

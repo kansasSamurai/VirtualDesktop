@@ -52,6 +52,62 @@ import org.jwellman.swing.grid.SmartGrid;
  */
 public class SmartGridDemo {
 
+    // -------------------------------------------------------------------------
+    // Shared resource classes — instantiated once, referenced everywhere
+    // -------------------------------------------------------------------------
+
+    /** Semantic chip colours shared across all tabs. */
+    private static final class ChipColors {
+        static final Color PRIMARY = new Color(0x2980B9); // blue   — informational / feature
+        static final Color SUCCESS = new Color(0x27AE60); // green  — capability / positive
+        static final Color WARNING = new Color(0xD68910); // amber  — configuration / notable
+        static final Color DANGER  = new Color(0xC0392B); // red    — powerful / scripting
+        static final Color ACCENT  = new Color(0x8E44AD); // purple — advanced / special
+        static final Color MUTED   = new Color(0x34495E); // slate  — neutral
+        private ChipColors() {}
+    }
+
+    /** Theme-resolved page chrome colours and borders.  One instance per tab. */
+    private static final class PagePalette {
+        final Color  pageBg;
+        final Color  headerBg;
+        final Color  titleFg;
+        final Color  subtitleFg;
+        final Color  sectionFg;   // section labels (e.g. "JTable — before migration")
+        final Color  border;      // raw colour — use to compose additional borders
+        final javax.swing.border.Border cardBorder;
+        final javax.swing.border.Border headerBorder;
+
+        PagePalette(boolean darkTheme) {
+            pageBg       = darkTheme ? new Color(0x2B2D30) : new Color(0xF0F2F5);
+            headerBg     = darkTheme ? new Color(0x3C3F41) : Color.WHITE;
+            titleFg      = darkTheme ? new Color(0xE8E8E8) : new Color(0x1A1A2E);
+            subtitleFg   = darkTheme ? new Color(0x888888) : new Color(0x666677);
+            sectionFg    = darkTheme ? new Color(0xA0A0A0) : new Color(0x555566);
+            border       = darkTheme ? new Color(0x4A4D52) : new Color(0xC8CDD3);
+            cardBorder   = BorderFactory.createLineBorder(border);
+            headerBorder = BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, border),
+                Borders.PAGE_HEADER);
+        }
+    }
+
+    /** Cached empty / compound borders for repeated use throughout the demo. */
+    private static final class Borders {
+        static final javax.swing.border.Border CHIP         = BorderFactory.createEmptyBorder(3,  7,  3,  7);
+        static final javax.swing.border.Border CONTENT      = BorderFactory.createEmptyBorder(12, 12, 12, 12);
+        static final javax.swing.border.Border PAGE_HEADER  = BorderFactory.createEmptyBorder(12, 16, 12, 16);
+        static final javax.swing.border.Border LABEL        = BorderFactory.createEmptyBorder(0,  8,  0,  8);
+        static final javax.swing.border.Border CELL_RIGHT   = BorderFactory.createEmptyBorder(0,  4,  0,  8);
+        static final javax.swing.border.Border FOOTER       = BorderFactory.createEmptyBorder(2,  8,  2,  8);
+        static final javax.swing.border.Border FOOTER_RIGHT = BorderFactory.createEmptyBorder(2,  4,  2,  8);
+        private Borders() {}
+    }
+
+    // -------------------------------------------------------------------------
+    // Data arrays shared across tabs
+    // -------------------------------------------------------------------------
+
     private static final String[] DEPTS = {
         "Engineering", "Marketing", "Sales", "Human Resources", "Finance"
     };
@@ -152,7 +208,7 @@ public class SmartGridDemo {
             JLabel lbl = (existing instanceof JLabel) ? (JLabel) existing : new JLabel();
             lbl.setText(value != null ? String.format("$%,d", ((Number) value).longValue()) : "");
             lbl.setHorizontalAlignment(JLabel.RIGHT);
-            lbl.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 8));
+            lbl.setBorder(Borders.CELL_RIGHT);
             return lbl;
         });
 
@@ -235,7 +291,7 @@ public class SmartGridDemo {
 
         grid.setFooterRenderer((col, pageRows, fullModel) -> {
             JLabel lbl = new JLabel();
-            lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+            lbl.setBorder(Borders.FOOTER);
             lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
             switch (col.getKey()) {
                 case "id":
@@ -251,7 +307,7 @@ public class SmartGridDemo {
                     }
                     lbl.setText(String.format("$%,d", salarySum));
                     lbl.setHorizontalAlignment(JLabel.RIGHT);
-                    lbl.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 8));
+                    lbl.setBorder(Borders.FOOTER_RIGHT);
                     break;
                 case "status":
                     int activeCount = 0;
@@ -309,11 +365,11 @@ public class SmartGridDemo {
             "SmartGrid demo  ·  1,000 rows  ·  live filter & sort"
                 + "  ·  interactive cell renderers  ·  inline edit mode",
             darkTheme,
-            buildChip("Virtualized", new Color(0x2980B9)),
-            buildChip("Sortable",    new Color(0x27AE60)),
-            buildChip("Filterable",  new Color(0xD68910)),
-            buildChip("Interactive", new Color(0x8E44AD)),
-            buildChip("Edit Mode",   new Color(0xC0392B)));
+            buildChip("Virtualized", ChipColors.PRIMARY),
+            buildChip("Sortable",    ChipColors.SUCCESS),
+            buildChip("Filterable",  ChipColors.WARNING),
+            buildChip("Interactive", ChipColors.ACCENT),
+            buildChip("Edit Mode",   ChipColors.DANGER));
     }
 
     private static JLabel buildChip(String text, Color bg) {
@@ -322,7 +378,7 @@ public class SmartGridDemo {
         chip.setForeground(Color.WHITE);
         chip.setBackground(bg);
         chip.setOpaque(true);
-        chip.setBorder(BorderFactory.createEmptyBorder(3, 7, 3, 7));
+        chip.setBorder(Borders.CHIP);
         return chip;
     }
 
@@ -335,19 +391,15 @@ public class SmartGridDemo {
     private static JPanel buildPage(SmartGrid grid, String title, String subtitle,
                                     boolean darkTheme,
                                     JLabel... featureChips) {
-        Color pageBg     = darkTheme ? new Color(0x2B2D30) : new Color(0xF0F2F5);
-        Color headerBg   = darkTheme ? new Color(0x3C3F41) : Color.WHITE;
-        Color titleFg    = darkTheme ? new Color(0xE8E8E8) : new Color(0x1A1A2E);
-        Color subtitleFg = darkTheme ? new Color(0x888888) : new Color(0x666677);
-        Color borderClr  = darkTheme ? new Color(0x4A4D52) : new Color(0xC8CDD3);
+        PagePalette p = new PagePalette(darkTheme);
 
         JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 18f));
-        titleLabel.setForeground(titleFg);
+        titleLabel.setForeground(p.titleFg);
 
         JLabel subtitleLabel = new JLabel(subtitle);
         subtitleLabel.setFont(subtitleLabel.getFont().deriveFont(Font.PLAIN, 11f));
-        subtitleLabel.setForeground(subtitleFg);
+        subtitleLabel.setForeground(p.subtitleFg);
 
         JPanel titleArea = new JPanel();
         titleArea.setLayout(new BoxLayout(titleArea, BoxLayout.Y_AXIS));
@@ -363,24 +415,22 @@ public class SmartGridDemo {
         }
 
         JPanel header = new JPanel(new BorderLayout(16, 0));
-        header.setBackground(headerBg);
-        header.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, borderClr),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)));
+        header.setBackground(p.headerBg);
+        header.setBorder(p.headerBorder);
         header.add(titleArea,   BorderLayout.WEST);
         header.add(chipsPanel,  BorderLayout.EAST);
 
         JPanel card = new JPanel(new BorderLayout());
-        card.setBorder(BorderFactory.createLineBorder(borderClr));
+        card.setBorder(p.cardBorder);
         card.add(grid, BorderLayout.CENTER);
 
         JPanel content = new JPanel(new BorderLayout());
         content.setOpaque(false);
-        content.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        content.setBorder(Borders.CONTENT);
         content.add(card, BorderLayout.CENTER);
 
         JPanel page = new JPanel(new BorderLayout());
-        page.setBackground(pageBg);
+        page.setBackground(p.pageBg);
         page.add(header,  BorderLayout.NORTH);
         page.add(content, BorderLayout.CENTER);
         return page;
@@ -432,10 +482,10 @@ public class SmartGridDemo {
             "SmartGrid tree mode  ·  5 departments  ·  43 employees"
                 + "  ·  expand/collapse  ·  group headers  ·  unified model",
             darkTheme,
-            buildChip("Tree View",   new Color(0x2C7BB6)),
-            buildChip("Expandable",  new Color(0x1A9850)),
-            buildChip("Grouped",     new Color(0x756BB1)),
-            buildChip("Hierarchical",new Color(0xE08214)));
+            buildChip("Tree View",    ChipColors.PRIMARY),
+            buildChip("Expandable",   ChipColors.SUCCESS),
+            buildChip("Grouped",      ChipColors.ACCENT),
+            buildChip("Hierarchical", ChipColors.WARNING));
     }
 
     // -------------------------------------------------------------------------
@@ -505,9 +555,9 @@ public class SmartGridDemo {
             "SmartGrid list mode  ·  38 entries  ·  demonstrates a list is a single-column table"
                 + "  ·  same model, filter, and sort as the full table",
             darkTheme,
-            buildChip("List Mode",     new Color(0x2980B9)),
-            buildChip("Single Column", new Color(0x27AE60)),
-            buildChip("Unified Model", new Color(0x8E44AD)));
+            buildChip("List Mode",     ChipColors.PRIMARY),
+            buildChip("Single Column", ChipColors.SUCCESS),
+            buildChip("Unified Model", ChipColors.ACCENT));
     }
 
     // -------------------------------------------------------------------------
@@ -613,7 +663,7 @@ public class SmartGridDemo {
                 JLabel lbl = new JLabel(col.getHeader());
                 lbl.setForeground(Color.WHITE);
                 lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
-                lbl.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+                lbl.setBorder(Borders.LABEL);
                 JPanel fieldWrap = new JPanel(new BorderLayout());
                 fieldWrap.setOpaque(false);
                 fieldWrap.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 6));
@@ -625,7 +675,7 @@ public class SmartGridDemo {
                 JLabel lbl = new JLabel(col.getHeader());
                 lbl.setForeground(Color.WHITE);
                 lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
-                lbl.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+                lbl.setBorder(Borders.LABEL);
                 lbl.setOpaque(false);
                 return lbl;
             }
@@ -636,10 +686,10 @@ public class SmartGridDemo {
             "Multi-column list demo  ·  35 entries  ·  variable-length codes"
                 + "  ·  global search across code and description",
             darkTheme,
-            buildChip("Multi-Column",  new Color(0x2980B9)),
-            buildChip("Code List",     new Color(0x27AE60)),
-            buildChip("Variable Keys", new Color(0xD68910)),
-            buildChip("Global Search", new Color(0x8E44AD)));
+            buildChip("Multi-Column",  ChipColors.PRIMARY),
+            buildChip("Code List",     ChipColors.SUCCESS),
+            buildChip("Variable Keys", ChipColors.WARNING),
+            buildChip("Global Search", ChipColors.ACCENT));
     }
 
     // -------------------------------------------------------------------------
@@ -669,7 +719,7 @@ public class SmartGridDemo {
         // Footer: row count on "name", salary sum (raw Number) on "salary", active count on "status"
         grid.setFooterRenderer((col, pageRows, fullModel) -> {
             JLabel lbl = new JLabel();
-            lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+            lbl.setBorder(Borders.FOOTER);
             lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
 
             switch (col.getKey()) {
@@ -704,10 +754,10 @@ public class SmartGridDemo {
             "SmartGrid pagination  ·  1,000 rows  ·  50 per page"
                 + "  ·  per-page footer aggregates (count, salary sum, active count)  ·  page navigation",
             darkTheme,
-            buildChip("Paginated",   new Color(0x2980B9)),
-            buildChip("Aggregates",  new Color(0x27AE60)),
-            buildChip("Navigation",  new Color(0xD68910)),
-            buildChip("Footer Row",  new Color(0x8E44AD)));
+            buildChip("Paginated",   ChipColors.PRIMARY),
+            buildChip("Aggregates",  ChipColors.SUCCESS),
+            buildChip("Navigation",  ChipColors.WARNING),
+            buildChip("Footer Row",  ChipColors.ACCENT));
     }
 
     // -------------------------------------------------------------------------
@@ -788,10 +838,10 @@ public class SmartGridDemo {
             "SmartGrid BeanShell integration  ·  1,000 rows  ·  XML blueprint DSL"
                 + "  ·  every 30th row scripted  ·  live hot-swap from BeanShell console",
             darkTheme,
-            buildChip("BeanShell",     new Color(0xC0392B)),
-            buildChip("XML Blueprint", new Color(0x2980B9)),
-            buildChip("Scripted",      new Color(0x8E44AD)),
-            buildChip("Hot-Swap",      new Color(0xD68910)));
+            buildChip("BeanShell",     ChipColors.DANGER),
+            buildChip("XML Blueprint", ChipColors.PRIMARY),
+            buildChip("Scripted",      ChipColors.ACCENT),
+            buildChip("Hot-Swap",      ChipColors.WARNING));
     }
 
     // -------------------------------------------------------------------------
@@ -935,10 +985,10 @@ public class SmartGridDemo {
             "SmartGrid log mining  ·  150 entries  ·  plain text, JSON payloads, stack traces"
                 + "  ·  live search filters rows and highlights matches",
             true,
-            buildChip("Dark Theme",  new Color(0x34495E)),
-            buildChip("JSON Syntax", new Color(0xD68910)),
-            buildChip("Live Search", new Color(0x27AE60)),
-            buildChip("Log Mining",  new Color(0x8E44AD)));
+            buildChip("Dark Theme",  ChipColors.MUTED),
+            buildChip("JSON Syntax", ChipColors.WARNING),
+            buildChip("Live Search", ChipColors.SUCCESS),
+            buildChip("Log Mining",  ChipColors.ACCENT));
     }
 
     // -------------------------------------------------------------------------
@@ -1007,22 +1057,17 @@ public class SmartGridDemo {
         migrateToolbar.add(filterField);
 
         // Page chrome — same style as buildPage() but hosting two components
-        Color pageBg     = darkTheme ? new Color(0x2B2D30) : new Color(0xF0F2F5);
-        Color headerBg   = darkTheme ? new Color(0x3C3F41) : Color.WHITE;
-        Color titleFg    = darkTheme ? new Color(0xE8E8E8) : new Color(0x1A1A2E);
-        Color subtitleFg = darkTheme ? new Color(0x888888) : new Color(0x666677);
-        Color borderClr  = darkTheme ? new Color(0x4A4D52) : new Color(0xC8CDD3);
-        Color sectionFg  = darkTheme ? new Color(0xA0A0A0) : new Color(0x555566);
+        PagePalette p = new PagePalette(darkTheme);
 
         JLabel titleLabel = new JLabel("SmartGrid Migration Demo");
         titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 18f));
-        titleLabel.setForeground(titleFg);
+        titleLabel.setForeground(p.titleFg);
 
         JLabel subtitleLabel = new JLabel(
             "JTableAdapter converts the existing JTable in one call"
                 + "  ·  50 rows  ·  same data, different component");
         subtitleLabel.setFont(subtitleLabel.getFont().deriveFont(Font.PLAIN, 11f));
-        subtitleLabel.setForeground(subtitleFg);
+        subtitleLabel.setForeground(p.subtitleFg);
 
         JPanel titleArea = new JPanel();
         titleArea.setLayout(new BoxLayout(titleArea, BoxLayout.Y_AXIS));
@@ -1033,16 +1078,14 @@ public class SmartGridDemo {
 
         JPanel chipsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         chipsPanel.setOpaque(false);
-        chipsPanel.add(buildChip("Migration",    new Color(0x8E44AD)));
-        chipsPanel.add(buildChip("Adapter API",  new Color(0x2980B9)));
-        chipsPanel.add(buildChip("50 Rows",      new Color(0x27AE60)));
-        chipsPanel.add(buildChip("Side by Side", new Color(0xD68910)));
+        chipsPanel.add(buildChip("Migration",    ChipColors.ACCENT));
+        chipsPanel.add(buildChip("Adapter API",  ChipColors.PRIMARY));
+        chipsPanel.add(buildChip("50 Rows",      ChipColors.SUCCESS));
+        chipsPanel.add(buildChip("Side by Side", ChipColors.WARNING));
 
         JPanel pageHeader = new JPanel(new BorderLayout(16, 0));
-        pageHeader.setBackground(headerBg);
-        pageHeader.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, borderClr),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)));
+        pageHeader.setBackground(p.headerBg);
+        pageHeader.setBorder(p.headerBorder);
         pageHeader.add(titleArea,   BorderLayout.WEST);
         pageHeader.add(chipsPanel,  BorderLayout.EAST);
 
@@ -1051,20 +1094,20 @@ public class SmartGridDemo {
         sgLabel.setForeground(Color.WHITE);
         sgLabel.setBackground(new Color(0x3C4B64));
         sgLabel.setOpaque(true);
-        sgLabel.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+        sgLabel.setBorder(Borders.FOOTER);
 
         JPanel sgCard = new JPanel(new BorderLayout());
-        sgCard.setBorder(BorderFactory.createLineBorder(borderClr));
+        sgCard.setBorder(p.cardBorder);
         sgCard.add(sgLabel, BorderLayout.NORTH);
         sgCard.add(grid,    BorderLayout.CENTER);
 
         JLabel jtLabel = new JLabel("  JTable  —  before migration");
         jtLabel.setFont(jtLabel.getFont().deriveFont(Font.BOLD, 11f));
-        jtLabel.setForeground(sectionFg);
-        jtLabel.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+        jtLabel.setForeground(p.sectionFg);
+        jtLabel.setBorder(Borders.FOOTER);
 
         JPanel jtCard = new JPanel(new BorderLayout());
-        jtCard.setBorder(BorderFactory.createLineBorder(borderClr));
+        jtCard.setBorder(p.cardBorder);
         jtCard.add(jtLabel,      BorderLayout.NORTH);
         jtCard.add(jtableScroll, BorderLayout.CENTER);
 
@@ -1075,11 +1118,11 @@ public class SmartGridDemo {
 
         JPanel content = new JPanel(new BorderLayout());
         content.setOpaque(false);
-        content.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        content.setBorder(Borders.CONTENT);
         content.add(split, BorderLayout.CENTER);
 
         JPanel page = new JPanel(new BorderLayout());
-        page.setBackground(pageBg);
+        page.setBackground(p.pageBg);
         page.add(pageHeader, BorderLayout.NORTH);
         page.add(content,    BorderLayout.CENTER);
         return page;

@@ -28,6 +28,7 @@
 | 21 | Toolbar alignment — `setToolbarAlignedWithData(boolean)` keeps toolbar content flush with data columns | ⬜ Future | Auto-updates strut when strip visibility changes |
 | 22 | Toolbar widget system — standard widgets + user-customizable toolbar with widget registry | ⬜ Future | See phase detail below |
 | 23 | Column visual polish — cell padding API, column separators, header alignment inheritance | ⬜ Future | See phase detail below |
+| 24 | Visualization renderers — mini bar chart / sparkline cell renderer + smart footers | ⬜ Future | See phase detail below |
 
 ---
 
@@ -1346,6 +1347,127 @@ method significantly. Implementing Phase 23 before Phase 12 is possible but mean
 work will need minor adaptation when Phase 12 ships. Sequencing Phase 12 first makes
 Phase 23's header changes cleaner; sequencing Phase 23 first delivers the visual polish
 sooner. Neither blocks the other.
+
+---
+
+## Phase 24 — Visualization Renderers and Smart Footers
+
+### Motivation
+
+SmartGrid already demonstrates that live, interactive components inside rows are
+possible where JTable cannot go. This phase makes that case visually undeniable: a
+mini bar chart that responds to mouse clicks in a data cell, and footer cells that
+go beyond aggregate numbers to show distribution shape, heatmaps, and ratio bars.
+Together these put the "Smart" in SmartGrid and constitute the strongest demo
+argument against commercial alternatives.
+
+---
+
+### Part A — Mini Bar Chart / Sparkline Cell Renderer
+
+**Approach:** A custom `JPanel` subclass implementing `CellRenderer`. It overrides
+`paintComponent()` with raw `Graphics2D` — no charting library required. Bar
+positions are computed from the panel's current width and the value array length,
+so the chart is inherently responsive to column resizing.
+
+**Data model:** Values are stored in `GridRow` as a primitive array under a named
+key (e.g., `"monthly_scores"` holding `int[]`). The renderer reads this key via
+`value` parameter, casts to `int[]`, and computes bar heights proportionally to the
+column maximum.
+
+**Clickable bars:** A `MouseAdapter` on the chart panel hit-tests with
+`barIndex = mouseX / (width / barCount)`. On click: show a small popup label
+with the bar's value and label (e.g., "Mar: 87"), or update an external status
+label. This is the demo differentiator — the bar *is* a real component and responds
+because it responds.
+
+**Recycling contract:** The `render()` method checks `existing instanceof MiniBarChart`
+and reuses it, updating only the value array and clearing the hover/click state.
+Construction allocates only the JPanel and its MouseAdapter.
+
+**Hover highlight:** Track `hoveredBar` field; update on `mouseMoved`, call
+`repaint()`. The hovered bar renders slightly brighter. This adds zero allocation
+per scroll event.
+
+**Variant — Sparkline:** A line-chart variant draws `g.drawLine()` between
+consecutive points instead of filled bars. Useful for time-series data (e.g.,
+daily log volume). The same `MiniBarChart` class can support both via a `style`
+field (`BAR` or `LINE`).
+
+---
+
+### Part B — Smart Footers
+
+#### SmartFooterCellRenderer (auto-numeric detection)
+
+A `FooterCellRenderer` implementation that inspects `pageRows` at render time:
+
+```java
+public JComponent render(ColumnDef col, List<GridRow> rows, GridModel model) {
+    // Accumulate if all non-null values are Number instances
+    long sum = 0; int count = 0;
+    for (GridRow r : rows) {
+        Object v = r.get(col.getKey());
+        if (v instanceof Number) { sum += ((Number)v).longValue(); count++; }
+    }
+    if (count > 0) {
+        // render "sum · avg" — e.g. "$42,317,000 · avg $63,847"
+    } else {
+        return new JLabel(); // non-numeric column: blank
+    }
+}
+```
+
+No caller configuration needed. Register once; it auto-adapts per column type on
+each page/filter change.
+
+#### Distribution Bar (categorical columns)
+
+For columns with a small set of distinct values (e.g., Status: Active/Inactive),
+paint a horizontal bar subdivided by category frequency. Each segment is colored
+by category and sized proportionally. Updates live as the filter changes — the
+distribution bar is a visual summary of the current result set.
+
+Example: Status column shows a bar 80% blue (Active) / 20% gray (Inactive). When
+the user filters to "Engineering", the bar updates immediately.
+
+#### Heatmap Footer (numeric range histogram)
+
+The most powerful smart footer. Divides the column's value range into 8 equal
+buckets, colors each segment light-to-dark by row count in that bucket (low
+density = light; high density = dark). Each bucket is also a **filter control**:
+clicking a bucket calls `grid.setFilter()` to restrict rows to that value range.
+
+This makes the footer simultaneously a histogram and an interactive filter. It's
+the closest a footer can get to a full BI visualization — one row of pixels that
+summarizes and controls the data.
+
+Implementation: the footer cell is a custom `JPanel` that overrides
+`paintComponent()` to draw 8 colored rectangles. A `MouseAdapter` maps
+`mouseX → bucketIndex → value range → grid.setFilter(...)`. Clicking again
+(same bucket while active) clears the filter.
+
+#### Trend Sparkline Footer
+
+A mini line chart drawn across all visible rows' values in model order. Shows
+distribution shape at a glance — flat salary distribution, bimodal, right-skewed
+etc. Useful as a complement to the heatmap bucket view.
+
+---
+
+### Demo Integration
+
+A new "Viz" tab in `SmartGridDemo` demonstrates all of the above:
+
+- Employee data with an added `monthly_scores` column (`int[]`, 6 months)
+- `MiniBarChart` CellRenderer for that column — bars clickable to show month detail
+- `SmartFooterCellRenderer` registered on all columns — auto-detects salary as numeric
+- Distribution bar footer on the Status column
+- Heatmap footer on the Salary column — click a bucket to filter by salary range
+
+The Salary heatmap + live filter is the signature interaction: select a salary
+range in the footer, the data rows narrow, the summary row updates, the distribution
+bar shifts. All from clicking one small region in the footer.
 
 ---
 

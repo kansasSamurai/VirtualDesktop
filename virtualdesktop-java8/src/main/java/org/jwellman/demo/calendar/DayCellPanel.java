@@ -35,7 +35,21 @@ public class DayCellPanel extends JPanel {
     private static final LocalDate TODAY   = LocalDate.now();
 
     private static final class Borders {
+        private static final javax.swing.border.Border DAY_CELL = BorderFactory.createMatteBorder(0, 1, 1, 0, BORDER_CLR);
         private static final javax.swing.border.Border PRIMARY_LABEL = BorderFactory.createEmptyBorder(1, 3, 1, 3);
+    }
+
+    private static final class Fonts {
+        private static final Font DAY_NUMBER = new Font("SansSerif", Font.PLAIN, 11);
+        private static final Font PRIMARY_LABEL = new Font("SansSerif", Font.PLAIN, 11);
+    }
+    
+    private static final class Colors {
+        private static final Color DAY_NUMBER = new Color(0x80, 0x80, 0x80);
+    }
+    
+    private static final class Dimensions {
+        private static final Dimension CHIPS = new Dimension(CHIP_SIZE, CHIP_SIZE);
     }
 
     private final JLabel dayNumberLabel;
@@ -49,16 +63,16 @@ public class DayCellPanel extends JPanel {
         this.onEventClicked = onEventClicked;
         setLayout(null);
         setOpaque(true);
-        setBorder(BorderFactory.createMatteBorder(0, 1, 1, 0, BORDER_CLR));
+        setBorder(Borders.DAY_CELL);
 
         dayNumberLabel = new JLabel();
-        dayNumberLabel.setFont(new Font("SansSerif", Font.PLAIN, 9));
-        dayNumberLabel.setForeground(new Color(0x80, 0x80, 0x80));
+        dayNumberLabel.setFont(Fonts.DAY_NUMBER);
+        dayNumberLabel.setForeground(Colors.DAY_NUMBER);
         dayNumberLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         add(dayNumberLabel);
 
         primaryLabel = new JLabel();
-        primaryLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        primaryLabel.setFont(Fonts.PRIMARY_LABEL);
         primaryLabel.setBorder(Borders.PRIMARY_LABEL);
         primaryLabel.setOpaque(false);
         primaryLabel.addMouseListener(new MouseAdapter() {
@@ -139,7 +153,7 @@ public class DayCellPanel extends JPanel {
 
     private JButton makeChip(CalendarEvent event) {
         JButton chip = new JButton();
-        chip.setPreferredSize(new Dimension(CHIP_SIZE, CHIP_SIZE));
+        chip.setPreferredSize(Dimensions.CHIPS);
         chip.setBackground(event.getCategory().getColor());
         chip.setOpaque(true);
         chip.setContentAreaFilled(true);
@@ -149,4 +163,5 @@ public class DayCellPanel extends JPanel {
         chip.addActionListener(e -> onEventClicked.accept(event));
         return chip;
     }
+
 }

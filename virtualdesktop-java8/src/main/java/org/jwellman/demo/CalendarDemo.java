@@ -18,6 +18,7 @@ import org.jwellman.demo.calendar.DayData;
 import org.jwellman.demo.calendar.EventCategory;
 import org.jwellman.demo.calendar.EventDetailPanel;
 import org.jwellman.demo.calendar.OnCallStrip;
+import org.jwellman.demo.calendar.SprintStrip;
 import org.jwellman.demo.calendar.WeekNumberStrip;
 import org.jwellman.swing.grid.ColumnDef;
 import org.jwellman.swing.grid.DefaultGridModel;
@@ -52,6 +53,7 @@ public class CalendarDemo {
 
         grid.addStrip(new WeekNumberStrip(grid.getHeaderBackground()));
         grid.addStrip(new OnCallStrip(grid.getHeaderBackground()));
+        grid.addStrip(new SprintStrip(grid.getHeaderBackground()));
         grid.setCheckboxColumnVisible(false);
         grid.setRowSelectionEnabled(false);
 
@@ -75,8 +77,8 @@ public class CalendarDemo {
         model.addColumn(new ColumnDef("wed", "Wed"));
         model.addColumn(new ColumnDef("thu", "Thu"));
         model.addColumn(new ColumnDef("fri", "Fri"));
-        model.addColumn(new ColumnDef("sat", "Sat"));
-        model.addColumn(new ColumnDef("sun", "Sun"));
+        model.addColumn(new ColumnDef("sat", "Sat", 80, false, true, null));
+        model.addColumn(new ColumnDef("sun", "Sun", 80, false, true, null));
 
         LocalDate jan1 = LocalDate.of(year, 1, 1);
         LocalDate dec31 = LocalDate.of(year, 12, 31);

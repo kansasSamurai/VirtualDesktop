@@ -219,6 +219,73 @@ Together these make the component lifecycle:
 
 ---
 
+## Row Height — The Uniform-Height Constraint and Workarounds
+
+### Why All Rows Must Be the Same Height
+
+SmartGrid enforces a single global `rowHeight` for every row in the canvas. This
+is not an oversight — it is a load-bearing requirement of the virtualization engine.
+All three core scrolling calculations depend on it:
+
+| Calculation | Code |
+|---|---|
+| Virtual canvas height | `effectiveRows * rowHeight` |
+| First visible row index | `scrollY / rowHeight` |
+| Visible slot count | `(vpHeight / rowHeight) + 2` |
+
+These are simple integer divisions. If rows could have variable heights, jumping to
+"scroll position 500" would require summing all prior row heights — a fundamentally
+different (and heavier) data structure. The uniform-height contract is what makes
+virtualization cheap.
+
+### What Actually Enforces It
+
+The constraint lives in a single `setBounds()` call in `SmartGrid.java`:
+
+```java
+slots[i].setBounds(leadX, rowIdx * rowHeight, totalColWidth, rowHeight);
+```
+
+The row panel is force-sized to `rowHeight` before `bind()` is ever called.
+`getPreferredSize()` is **never consulted** on row components — so a custom renderer
+that returns a different preferred height has no effect. The content is simply clipped
+to `rowHeight` pixels.
+
+### Workarounds That Don't Require Variable Height
+
+Because SmartGrid rows are **real live Swing components** (not just paint calls like
+JTable), there are two practical workarounds:
+
+**1. Increase global `rowHeight`**
+Call `setRowHeight(64)` (or any value). All rows get taller, giving complex renderers
+more room. The downside is that *every* row gets taller — simple rows waste the extra
+vertical space.
+
+**2. Embed a JScrollPane inside the row**
+A row that stays at the standard `rowHeight` can contain a `JScrollPane` wrapping
+a tall component (`JTextArea`, `JTextPane`, a nested panel). The user scrolls
+*within the cell* rather than the grid revealing more content. Because the row is a
+live component, the embedded `JScrollPane` receives real mouse and keyboard events
+— scroll, focus, selection — with no extra wiring.
+
+**3. The hybrid**
+A slightly taller `rowHeight` (e.g. 64px) combined with an embedded `JScrollPane`
+in complex rows gives a content preview at normal scroll speed, while the internal
+scrollbar exposes the rest on demand. Simple rows just gain extra padding or a larger
+font at no cost.
+
+### The Real Advantage Over JTable
+
+This brainstorming exposes a genuine SmartGrid strength. In JTable, the cell renderer
+is a rubber stamp — there is no actual component in the cell to receive events. You
+cannot put a real `JScrollPane` in a JTable cell because there is nothing to scroll.
+In SmartGrid, the embedded `JScrollPane` is a first-class Swing component: it gets
+focus, mouse wheel events, keyboard shortcuts, and accessibility support automatically.
+The uniform-height constraint is real, but the workaround space is much richer than
+JTable offers.
+
+---
+
 ## Key Contracts for Custom Row Components
 
 Any class registered via `grid.registerRowRenderer(fndType, supplier)` must implement
@@ -507,6 +574,108 @@ forensic data display, administrative tools, data-intensive workflows — the
 consumer convention is the wrong target. Monospace for data is not a failure to
 follow modern conventions; it is a deliberate choice of the right convention for
 the audience.
+
+---
+
+## SmartGrid as a Calendar Engine
+
+### The Week-as-Row Mapping
+
+A full-year calendar view is a natural fit for SmartGrid. The mapping is direct:
+
+- **Row = one week** (~53 rows for a full year — trivial for SmartGrid, no virtualization pressure)
+- **Columns = Mon through Sun** (7 fixed columns, equal width)
+- **Cell value = a `DayData` object** holding a list of `CalendarEvent` items for that day
+- **Row renderer = `CalendarWeekRowPanel`** — a custom `Recyclable` containing seven `DayCellPanel` instances
+
+With ~53 rows, SmartGrid's entire virtual canvas fits comfortably in memory with no pooling pressure. The infrastructure exists for 150,000 rows; at 53 it is simply not a constraint.
+
+### Why SmartGrid Beats a Table for This
+
+JTable renders cells with a rubber stamp — there is no live component inside a cell.
+A JTable calendar cell can hold a string and paint some colors. It cannot contain
+a `JButton`, respond to a click on a specific chip, or embed a `JScrollPane` for
+overflow events.
+
+Because SmartGrid rows are real Swing components, each `DayCellPanel` contains:
+- A live `JLabel` for the primary event (clickable, colored background)
+- Live `JButton` chip instances for secondary events (real click → detail panel update)
+- Tooltip support on each chip, no extra wiring
+
+The detail panel to the right updates when any chip or primary label is clicked.
+None of this is possible in JTable without deep customization of the event dispatch.
+
+### Day Cell Layout
+
+Each `DayCellPanel` divides its `rowHeight` into two vertical sections:
+
+```
++----------------------------------------+
+|  [primary event name............] [DD] |  ← TOP_HEIGHT px; colored bg = category
++----------------------------------------+
+|  [■] [■] [■]                           |  ← remainder; chip buttons, one per extra event
++----------------------------------------+
+```
+
+- The top section shows the first event with a category-colored background and white text.
+  Clicking it populates the detail panel.
+- The bottom section shows remaining events as small square chip buttons colored by category.
+  Clicking a chip populates the detail panel.
+- `DD` is the day-of-month number, small and muted, top-right corner.
+- Days outside the year boundary (partial first/last week) render with a grayed-out background
+  and no events.
+
+### Event Categories and Colors
+
+| Category | Color | Meaning |
+|---|---|---|
+| `RELEASE` | Blue `#4285F4` | Planned software releases |
+| `HOTFIX` | Red `#EA4335` | Emergency patches |
+| `MEETING` | Green `#34A853` | Scheduled meetings / reviews |
+| `DEADLINE` | Amber `#FF9900` | Hard deadlines, freeze dates |
+
+Color is the primary visual signal at the calendar level — users scan for red chips
+(hotfixes) or amber chips (deadlines) without reading text.
+
+### Partial Week Handling
+
+The year does not start on Monday or end on Sunday in the general case. The grid
+includes the full weeks that contain January 1 and December 31:
+
+```java
+LocalDate weekStart = jan1.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+LocalDate yearEnd   = dec31.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+```
+
+Days outside the target year are marked `inYear = false` in their `DayData`. The
+renderer shows them with a muted background and no events — they are present for
+visual continuity but do not distract.
+
+### Event Detail Panel
+
+A fixed-width panel on the right side of the vapp (BorderLayout.EAST) shows:
+- A category-colored stripe across the top
+- Event name (bold)
+- Formatted date
+- Category label (colored to match stripe)
+- Free-text description
+
+The panel is populated by a `Consumer<CalendarEvent>` lambda passed into every
+`DayCellPanel` at construction time. The consumer is the only coupling between the
+calendar grid and the detail view — no shared state, no listeners to wire up.
+
+### Extension Opportunities
+
+This prototype establishes the pattern. Natural extensions include:
+
+- **Month labels**: insert `GroupHeaderRowPanel` rows before the first week of each month
+- **Scroll-to-today**: compute `weekIndex * rowHeight` and set the JScrollPane position on open
+- **Overflow events**: embed a `JScrollPane` inside `DayCellPanel`'s chip section for days with
+  many events (the row height / JScrollPane brainstorm from earlier applies directly here)
+- **Event loading from a real model**: replace `generateEvents()` with a `CalendarModel` interface
+  that queries a database or iCal source
+- **Drag-to-reschedule**: SmartGrid rows are live components, so mouse drag listeners are possible
+  without any framework support
 
 ---
 

@@ -7,6 +7,33 @@ when onboarding a contributor. For what is planned or what has been completed, s
 
 ---
 
+## Foundational Principle: Model Layer vs. Rendering Layer
+
+`GridRow` is the canonical source of truth. The row renderer (StandardRowPanel,
+FeaturedRowPanel, LogRowPanel, or any custom type) is purely a visual
+interpretation of it. These two layers are deliberately decoupled, and that
+separation is one of SmartGrid's architectural strengths.
+
+**Practical consequence:** operations that consume data — copy, export, search,
+aggregation, footer totals — always operate on the model layer and are completely
+indifferent to how a row happens to render. A `FeaturedRowPanel` row and a
+`StandardRowPanel` row backed by the same `GridRow` are identical from the
+perspective of any of these operations. The spanning layout, the custom painting,
+the embedded components — none of it affects what gets copied or exported.
+
+**The `Copyable` interface as a diagnostic signal:** this interface exists as a
+narrow escape hatch for rows where data is not fully represented in the `GridRow`
+— computed or composed values that live in the renderer rather than the model.
+If `Copyable` is needed frequently across many row types, that is a design signal:
+data that belongs in `GridRow` has drifted into the renderer layer. The interface
+being rarely needed is the healthy outcome.
+
+**Corollary for custom renderer authors:** put all meaningful data in `GridRow`
+and let the renderer be purely presentational. Operations like copy and export
+will then work correctly with zero additional implementation.
+
+---
+
 ## Header and Footer Zone Architecture
 
 ### Fixed Stacking Order
@@ -480,3 +507,265 @@ forensic data display, administrative tools, data-intensive workflows — the
 consumer convention is the wrong target. Monospace for data is not a failure to
 follow modern conventions; it is a deliberate choice of the right convention for
 the audience.
+
+---
+
+## Extensibility Analysis — Interface Definitions and Design Patterns
+
+### What Is Already Good and Should Not Change
+
+The current extensibility foundation is solid. `Recyclable`, `Selectable`,
+`CellRenderer`, `HeaderCellRenderer`, `FooterCellRenderer`, `GridModel`,
+`GridModelFilter`, and `Strip` are all clean interface definitions. What is
+missing is mostly the **layered defaults** pattern that separates "I want the
+smart behaviour without implementing anything" from "I want full control." That
+is the gap between a component library and a component framework.
+
+`Recyclable` + `Selectable` as separate interfaces is exactly right — composition
+over inheritance. `CellRenderer`'s `existing` recycling parameter is the correct
+Android-style pattern. `Strip` as an interface is clean and proven. `GridModel`
+as the data contract is solid. The `fnd-type` dispatch mechanism, while
+string-keyed, is intentionally loose enough to support the scripting use case.
+These do not need touching.
+
+---
+
+### Gap 1 — FooterAggregator (the highest-impact missing abstraction)
+
+`FooterCellRenderer` is a good interface but it is all-or-nothing. The user
+implements the whole thing or gets a blank cell. A registration-based aggregator
+layer would let the component be smart by default:
+
+```java
+public interface FooterAggregator {
+    void reset();
+    void accumulate(Object value);
+    JComponent render(ColumnDef col);
+}
+```
+
+A `SmartFooterCellRenderer` (a `FooterCellRenderer` implementation) holds a
+registry of `FooterAggregator` instances keyed by column key or Java type. It
+loops through `pageRows`, accumulates, and delegates rendering. Users register
+their aggregators and get intelligent footers without implementing the full
+`FooterCellRenderer` contract.
+
+Default implementations ship with SmartGrid:
+- `NumericAggregator` — sum + average, formatted appropriately
+- `CategoricalAggregator` — frequency map for distinct values
+- `HeatmapAggregator` — bucket distribution for numeric ranges (see Phase 24)
+
+Someone building a log viewer registers a `SeverityAggregator` that counts by
+level. That is the "cell-level smartness as an interface" pattern — each column
+gets a strategy, not a full renderer.
+
+---
+
+### Gap 2 — `GridModelFilter` Composition
+
+`GridModelFilter` is already a functional interface. Adding `default` methods
+enables readable composition without manual `&&`:
+
+```java
+default GridModelFilter and(GridModelFilter other) {
+    return row -> this.accept(row) && other.accept(row);
+}
+default GridModelFilter or(GridModelFilter other) {
+    return row -> this.accept(row) || other.accept(row);
+}
+static GridModelFilter not(GridModelFilter f) {
+    return row -> !f.accept(row);
+}
+```
+
+This is a one-file change with zero breaking impact.
+
+---
+
+### Gap 3 — `CellClickListener` (currently forced into every renderer)
+
+Anyone who wants to respond to a cell click currently has to embed a
+`MouseAdapter` inside their `CellRenderer`. That is fine for fully custom row
+types like `LogRowPanel`, but for a standard column with a formatted value it is
+invasive. A grid-level listener handles it cleanly:
+
+```java
+public interface CellClickListener {
+    void cellClicked(CellClickEvent e); // row, col, GridRow, source JComponent, MouseEvent
+}
+grid.addCellClickListener(listener);
+```
+
+`StandardRowPanel` fires this to the grid's registered listeners on click,
+passing the column index so the listener knows which cell. This enables the
+heatmap footer → click → filter interaction cleanly without any component
+embedding.
+
+---
+
+### Gap 4 — `RowDecorator` (signal/response architecture for visual styling)
+
+#### The two decoration models
+
+**Tag-based decoration (current)** encodes the decoration decision *in the data*.
+A `GridRow` carries a `fnd-style` tag set by whoever loaded or analysed the data
+— including BeanShell scripts operating at runtime. This is the right model when:
+- Data is populated generically from an external source (database, API, BeanShell)
+- Interesting rows are *identified* at runtime through pattern analysis
+- The decoration decision is meaningful as data (should be serialisable, persistent,
+  or communicable across subsystems)
+
+Workflow: load data → analyse → `row.setTag("fnd-style", "critical")` → `notifyDataChanged()` → grid repaints.
+The BeanShell script author defines the *semantic category*; they do not need to know anything about Swing.
+
+**RowDecorator (proposed)** encodes the decoration decision *as a rule*.
+A predicate registered at setup time that recomputes fresh on every `bind()`.
+This is the right model when:
+- The rule is a simple condition on the row's values and does not need to be stored
+- The rule is always active and does not change at runtime
+
+```java
+public interface RowDecorator {
+    void decorate(JComponent panel, GridRow row, int rowIndex, boolean selected);
+}
+grid.addRowDecorator((panel, row, idx, sel) ->
+    panel.setBackground("Inactive".equals(row.get("status")) ? INACTIVE_BG : null));
+```
+
+#### The clean synthesis: tags as signals, decorators as interpreters
+
+The two models are complementary. A `RowDecorator` can *read* tags:
+
+```java
+grid.addRowDecorator((panel, row, idx, sel) -> {
+    String style = row.getTag("fnd-style");
+    if ("critical".equals(style)) {
+        panel.setBorder(BorderFactory.createLineBorder(Color.RED, 2));
+    } else if ("flagged".equals(style)) {
+        panel.setBackground(new Color(0xFF, 0xF8, 0xDC));
+    }
+});
+```
+
+The BeanShell script still just sets a tag. The visual treatment is registered
+separately in Java. `StandardRowPanel` no longer needs hardcoded knowledge of
+any specific tag names. New tag values work automatically as long as a decorator
+responds to them.
+
+A built-in `TagStyleDecorator` pre-registered on every grid handles the existing
+`fnd-style` tags (`warning-glow`, `error`, etc.) for backward compatibility.
+User-registered decorators run in order after it.
+
+#### Registration and execution
+
+`addRowDecorator(RowDecorator)` on SmartGrid maintains an ordered `List<RowDecorator>`.
+Decorators are called in `doRefresh()` *after* `bind()` and `setSelected()` on each slot,
+so they layer on top of the row panel's base state:
+
+```java
+((Recyclable) slots[i]).bind(row, modelIdx);
+if (slots[i] instanceof Selectable) {
+    ((Selectable) slots[i]).setSelected(selectionModel.isSelectedIndex(modelIdx));
+}
+for (RowDecorator d : rowDecorators) {
+    d.decorate(slots[i], row, modelIdx, selectionModel.isSelectedIndex(modelIdx));
+}
+```
+
+Running at the SmartGrid level (not inside `StandardRowPanel`) means decorators
+apply to *any* row type — `LogRowPanel`, `FeaturedRowPanel`, custom types — not
+only the default renderer.
+
+---
+
+### Gap 5 — Builder Pattern for Construction
+
+For a publishable component, a builder reduces the "20 setter calls" ceremony
+and communicates which options are meaningful to set together:
+
+```java
+SmartGrid grid = SmartGrid.builder(model)
+    .darkTheme(true)
+    .rowHeight(64)
+    .rowNumbers(true)
+    .columnPadding(8, 2)
+    .footerAggregator(new SmartFooterCellRenderer())
+    .build();
+```
+
+The current setter approach works but does not communicate which options form a
+coherent configuration, and it does not enable configuration objects to be
+passed around or reused across grid instances. A builder also provides a natural
+validation point — catch conflicting settings at construction time rather than
+silently at render time.
+
+---
+
+### Gap 6 — `CellDecorator` and the `activeCell` State Model
+
+#### Why RowDecorator alone is not sufficient
+
+`RowDecorator` operates on the whole row panel — the right granularity for
+row-level concerns (backgrounds, borders, selection). Cell focus, cell copy,
+and keyboard navigation all require a second dimension: *which column within
+the row* is the active unit. This inevitably points toward a `CellDecorator`.
+
+The relationship is hierarchical:
+
+```
+RowDecorator            → operates on the whole row panel
+  └── CellDecorator     → operates on a specific cell component within that row
+```
+
+#### The activeCell shared state
+
+An `int[] activeCell = {rowIndex, colIndex}` held on SmartGrid (initialised to
+`{-1, -1}`) follows the same shared mutable reference pattern as `columnWidths`
+and `searchHolder`. `StandardRowPanel.bind()` reads it to know whether any cell
+in this row is the active one, and which column index. Mouse click on a cell
+computes the column index from `mouseX` and the `columnWidths` array, then
+updates `activeCell` and triggers a rebind.
+
+#### CellDecorator interface
+
+```java
+public interface CellDecorator {
+    void decorate(JComponent cellComponent, ColumnDef col, Object value,
+                  GridRow row, int rowIndex, int colIndex, boolean cellFocused);
+}
+```
+
+`cellFocused` is `rowIndex == activeCell[0] && colIndex == activeCell[1]`.
+The decorator that draws the focus ring checks this flag; all other decorators
+ignore it.
+
+`StandardRowPanel` applies registered `CellDecorator` instances in `bind()`,
+after rendering each cell. It already iterates columns there, so the hook point
+is natural. SmartGrid passes its `List<CellDecorator>` to `StandardRowPanel`
+via the same shared-reference pattern used for `columnWidths` and `cellRenderers`.
+
+#### Three consumers of activeCell
+
+Cell focus, cell copy, and keyboard navigation are not three separate features —
+they are one shared state with three consumers:
+
+| Consumer | Behaviour |
+|----------|-----------|
+| **Visual** | `CellDecorator` draws focus ring / highlight on the active cell |
+| **Clipboard** | Ctrl+C reads `row.get(cols.get(activeCell[1]).getKey())` and puts it on the system clipboard |
+| **Navigation** | Arrow keys, Tab, Enter mutate `activeCell` indices and trigger rebind |
+
+The `activeCell` state is the prerequisite for all three. Implementing it first
+(as a shared `int[]`) unlocks the others incrementally.
+
+#### Implementation notes
+
+- `activeCell` must be cleared to `{-1, -1}` when the model resets or filter
+  changes, since the previously focused row may no longer be visible.
+- A `CellDecoratorRowAdapter` can wrap a list of `CellDecorator` instances as a
+  single `RowDecorator`, enabling the same `addRowDecorator()` registration path
+  if desired.
+- `StandardRowPanel` will need to expose a way for SmartGrid-level code (or the
+  `CellDecoratorRowAdapter`) to obtain individual cell components. A
+  `CellDecoratable` interface with `getCell(int colIndex)` is the clean
+  approach; direct component hierarchy traversal is the pragmatic fallback.

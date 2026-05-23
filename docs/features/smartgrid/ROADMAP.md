@@ -29,6 +29,7 @@
 | 22 | Toolbar widget system — standard widgets + user-customizable toolbar with widget registry | ⬜ Future | See phase detail below |
 | 23 | Column visual polish — cell padding API, column separators, header alignment inheritance | ⬜ Future | See phase detail below |
 | 24 | Visualization renderers — mini bar chart / sparkline cell renderer + smart footers | ⬜ Future | See phase detail below |
+| 25 | RowDecorator + CellDecorator + Copyable — pluggable decoration; activeCell; cell focus, copy, keyboard nav | ⬜ Future | See phase detail below; prerequisite for all cell-level keyboard/clipboard features |
 
 ---
 
@@ -1468,6 +1469,106 @@ A new "Viz" tab in `SmartGridDemo` demonstrates all of the above:
 The Salary heatmap + live filter is the signature interaction: select a salary
 range in the footer, the data rows narrow, the summary row updates, the distribution
 bar shifts. All from clicking one small region in the footer.
+
+---
+
+## Phase 25 — RowDecorator, CellDecorator, activeCell, and Copyable
+
+### Motivation
+
+Row-level and cell-level decoration are currently hardcoded inside
+`StandardRowPanel.bind()` via string-matched `fnd-style` tags. This phase
+introduces a pluggable decoration layer that separates visual treatment from
+the row panel internals, adds the `activeCell` shared state that is the
+prerequisite for all cell-level keyboard and clipboard features, and defines
+the `Copyable` interface for rows that need to control their own copy output.
+
+See `DESIGN.md` — Foundational Principle (model vs. rendering layer), `§Gap 4`
+(RowDecorator), and `§Gap 6` (CellDecorator / activeCell) for full rationale.
+
+### Sub-phase A — RowDecorator
+
+1. Define `RowDecorator` interface: `void decorate(JComponent panel, GridRow row, int rowIndex, boolean selected)`
+2. Add `List<RowDecorator> rowDecorators` field and `addRowDecorator()` / `removeRowDecorator()` to SmartGrid
+3. Call decorators in `doRefresh()` after `bind()` + `setSelected()` for each slot
+4. Extract the existing `fnd-style` hardcoded logic from `StandardRowPanel.bind()` into a built-in `TagStyleDecorator` pre-registered on every grid — backward compatible, existing tag-based code unchanged
+5. Register `TagStyleDecorator` first; user decorators run after in registration order
+
+**Verification:** existing `fnd-style` tags continue to work; a new decorator
+registered via `addRowDecorator()` applies after tag styling and can override it.
+
+### Sub-phase B — activeCell shared state
+
+1. Add `int[] activeCell = {-1, -1}` field to SmartGrid
+2. Add `getActiveCell()` / `setActiveCell(int row, int col)` — `setActiveCell` clears the old cell's highlight and triggers a targeted rebind
+3. Clear `activeCell` to `{-1, -1}` on `modelReset()` (filter change, sort, data reload)
+4. Wire mouse click in `StandardRowPanel` to compute `colIndex` from `mouseX` and `columnWidths`, then call `grid.setActiveCell(rowIndex, colIndex)`
+5. Expose via `grid.getActiveRow()` and `grid.getActiveColumn()` convenience getters
+
+### Sub-phase C — CellDecorator
+
+1. Define `CellDecorator` interface: `void decorate(JComponent cell, ColumnDef col, Object value, GridRow row, int rowIndex, int colIndex, boolean cellFocused)`
+2. Add `List<CellDecorator> cellDecorators` to SmartGrid; pass reference to `StandardRowPanel` (same shared-reference pattern as `cellRenderers`)
+3. `StandardRowPanel.bind()` applies registered `CellDecorator` instances after rendering each cell; `cellFocused = (rowIndex == activeCell[0] && colIndex == activeCell[1])`
+4. Built-in `FocusRingDecorator` pre-registered — draws a 1px inset border on the focused cell; activated when `activeCell` is set
+
+### Sub-phase D — Clipboard and keyboard navigation
+
+These are the consumers of `activeCell`:
+
+| Feature | Implementation |
+|---------|---------------|
+| Ctrl+C (cell) | KeyListener on SmartGrid: `row.get(cols.get(activeCell[1]).getKey()).toString()` → clipboard |
+| Ctrl+C (rows) | Copy all selected rows as tab-separated text (independent of activeCell) |
+| Tab | `setActiveCell(row, col+1)` wrapping to next row at end of row |
+| Shift+Tab | `setActiveCell(row, col-1)` wrapping |
+| Arrow keys | `setActiveCell(row±1, col)` or `setActiveCell(row, col±1)` depending on mode |
+| Enter / Shift+Enter | `setActiveCell(row+1 / row-1, col)` |
+
+### Sub-phase E — Copyable interface
+
+```java
+public interface Copyable {
+    String getCopyText();   // returns the row's copy representation
+}
+```
+
+**Default behaviour (no interface required):** when Ctrl+C fires on selected
+rows, SmartGrid reads from the `GridRow` model directly — iterates column keys
+in order, calls `row.get(key).toString()`, formats as tab-separated text. This
+covers every row backed by a fully-populated `GridRow` with no additional code.
+
+**`Copyable` as an escape hatch:** row panels that need to override the default
+implement this interface. Use cases:
+- A `LogRowPanel` row where the meaningful copy is the raw JSON, not parsed columns
+- A row with computed/composed values not stored in `GridRow`
+- A group header row that should return empty (silently skipping itself)
+- A `FeaturedRowPanel` that wants a custom formatted string
+
+**Design signal:** if `Copyable` is being implemented frequently, data that
+belongs in `GridRow` has drifted into the renderer layer. See the Foundational
+Principle in `DESIGN.md`. The interface being rarely needed is the healthy outcome.
+
+**Copy decision chain on Ctrl+C:**
+```
+if row panel implements Copyable
+    → use getCopyText()               // row defines its own representation
+else
+    → read GridRow in column order    // default TSV from model keys
+```
+
+**Row-level vs. cell-level copy:** two distinct behaviours, both triggered by
+Ctrl+C depending on whether `activeCell` is set:
+- `activeCell == {-1, -1}` (row selection mode): copy all selected rows as TSV
+- `activeCell` is set (cell focus mode): copy only the focused cell's value
+
+### Sequencing note
+
+Sub-phase A (RowDecorator) has no dependencies and can ship independently.
+Sub-phases B, C, and D depend on each other in the order listed. B is the
+prerequisite for C and D; C makes the focus state visible; D makes it useful.
+Sub-phase E (Copyable) can ship alongside sub-phase D or independently — it
+requires only that the Ctrl+C key handler from D exists to call it.
 
 ---
 

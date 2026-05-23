@@ -1,6 +1,7 @@
 package org.jwellman.demo.calendar;
 
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -31,17 +32,22 @@ public class DayCellPanel extends JPanel {
     private static final Color BG_PAST     = new Color(0xE8, 0xF0, 0xFF);
     private static final Color BG_WEEKEND  = new Color(0xF4, 0xF4, 0xF4);
     private static final Color BG_OUT_YEAR = new Color(0xF0, 0xF0, 0xF0);
-    private static final Color BORDER_CLR  = new Color(0xD0, 0xD0, 0xD0);
-    private static final LocalDate TODAY   = LocalDate.now();
+    private static final Color BORDER_CLR   = new Color(0xD0, 0xD0, 0xD0);
+    private static final Color TODAY_ACCENT = new Color(0x18, 0x76, 0xD2);
+    private static final LocalDate TODAY    = LocalDate.now();
 
     private static final class Borders {
         private static final javax.swing.border.Border DAY_CELL = BorderFactory.createMatteBorder(0, 1, 1, 0, BORDER_CLR);
+        private static final javax.swing.border.Border TODAY_CELL = BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(3, 0, 0, 0, TODAY_ACCENT),
+            BorderFactory.createMatteBorder(0, 1, 1, 0, BORDER_CLR));
         private static final javax.swing.border.Border PRIMARY_LABEL = BorderFactory.createEmptyBorder(1, 3, 1, 3);
     }
 
     private static final class Fonts {
-        private static final Font DAY_NUMBER = new Font("SansSerif", Font.PLAIN, 11);
-        private static final Font PRIMARY_LABEL = new Font("SansSerif", Font.PLAIN, 11);
+        private static final Font DAY_NUMBER       = new Font("SansSerif", Font.PLAIN, 11);
+        private static final Font DAY_NUMBER_TODAY = new Font("SansSerif", Font.BOLD,  11);
+        private static final Font PRIMARY_LABEL    = new Font("SansSerif", Font.PLAIN, 11);
     }
     
     private static final class Colors {
@@ -75,6 +81,7 @@ public class DayCellPanel extends JPanel {
         primaryLabel.setFont(Fonts.PRIMARY_LABEL);
         primaryLabel.setBorder(Borders.PRIMARY_LABEL);
         primaryLabel.setOpaque(false);
+        primaryLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         primaryLabel.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -120,7 +127,12 @@ public class DayCellPanel extends JPanel {
         boolean isPastWeekday = !isWeekend && data.getDate().isBefore(TODAY);
         Color bg = isWeekend ? BG_WEEKEND : isPastWeekday ? BG_PAST : BG_IN_YEAR;
         setBackground(bg);
+
+        boolean isToday = data.getDate().equals(TODAY);
+        setBorder(isToday ? Borders.TODAY_CELL : Borders.DAY_CELL);
         dayNumberLabel.setText(String.valueOf(data.getDate().getDayOfMonth()));
+        dayNumberLabel.setFont(isToday ? Fonts.DAY_NUMBER_TODAY : Fonts.DAY_NUMBER);
+        dayNumberLabel.setForeground(isToday ? TODAY_ACCENT : Colors.DAY_NUMBER);
 
         List<CalendarEvent> events = data.getEvents();
         if (events.isEmpty()) {
@@ -147,7 +159,10 @@ public class DayCellPanel extends JPanel {
         primaryLabel.setText("");
         primaryLabel.setOpaque(false);
         dayNumberLabel.setText("");
+        dayNumberLabel.setFont(Fonts.DAY_NUMBER);
+        dayNumberLabel.setForeground(Colors.DAY_NUMBER);
         chipsPanel.removeAll();
+        setBorder(Borders.DAY_CELL);
         setBackground(BG_IN_YEAR);
     }
 
@@ -159,6 +174,7 @@ public class DayCellPanel extends JPanel {
         chip.setContentAreaFilled(true);
         chip.setBorderPainted(false);
         chip.setFocusPainted(false);
+        chip.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         chip.setToolTipText(event.getName() + " (" + event.getCategory().getDisplayName() + ")");
         chip.addActionListener(e -> onEventClicked.accept(event));
         return chip;

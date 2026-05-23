@@ -1,6 +1,9 @@
 package org.jwellman.demo;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
@@ -10,6 +13,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import javax.swing.BorderFactory;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 import org.jwellman.demo.calendar.CalendarEvent;
@@ -56,6 +61,7 @@ public class CalendarDemo {
         grid.addStrip(new SprintStrip(grid.getHeaderBackground()));
         grid.setCheckboxColumnVisible(false);
         grid.setRowSelectionEnabled(false);
+        grid.addFooterRow(buildLegend());
 
         JPanel container = new JPanel(new BorderLayout());
         container.add(grid, BorderLayout.CENTER);
@@ -223,5 +229,35 @@ public class CalendarDemo {
             map.put(date, list);
         }
         list.add(event);
+    }
+
+    // -------------------------------------------------------------------------
+    // Footer legend
+    // -------------------------------------------------------------------------
+
+    private static JPanel buildLegend() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
+        panel.setBackground(new Color(0xEC, 0xEF, 0xF4));
+        panel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(0xD0, 0xD0, 0xD0)));
+
+        JLabel title = new JLabel("Legend:");
+        title.setFont(new Font("SansSerif", Font.BOLD, 11));
+        title.setForeground(new Color(0x50, 0x50, 0x50));
+        panel.add(title);
+
+        for (EventCategory cat : EventCategory.values()) {
+            panel.add(makeLegendChip(cat));
+        }
+        return panel;
+    }
+
+    private static JLabel makeLegendChip(EventCategory cat) {
+        JLabel lbl = new JLabel(cat.getDisplayName());
+        lbl.setBackground(cat.getColor());
+        lbl.setForeground(Color.WHITE);
+        lbl.setOpaque(true);
+        lbl.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        lbl.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+        return lbl;
     }
 }

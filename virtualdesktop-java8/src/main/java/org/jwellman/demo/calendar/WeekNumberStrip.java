@@ -21,9 +21,12 @@ public class WeekNumberStrip implements Strip {
 
     static final int WIDTH = 34;
 
-    private static final Color BG  = new Color(0xE8, 0xE8, 0xE8);
-    private static final Color FG  = new Color(0x80, 0x80, 0x80);
-    private static final Color BDR = new Color(0xD0, 0xD0, 0xD0);
+    private static final Color BG        = new Color(0xE8, 0xE8, 0xE8);
+    private static final Color FG        = new Color(0x80, 0x80, 0x80);
+    private static final Color BDR       = new Color(0xD0, 0xD0, 0xD0);
+    private static final Color ACCENT    = new Color(0x18, 0x76, 0xD2);
+    private static final Color ACCENT_FG = Color.WHITE;
+    private static final LocalDate TODAY = LocalDate.now();
 
     private static final javax.swing.border.Border SLOT_BORDER = BorderFactory.createCompoundBorder(
         BorderFactory.createMatteBorder(0, 0, 1, 1, BDR),
@@ -89,8 +92,16 @@ public class WeekNumberStrip implements Strip {
             LocalDate monday = ((DayData) mondayVal).getDate();
             int weekNum = monday.get(WeekFields.ISO.weekOfWeekBasedYear());
             lbl.setText("W" + weekNum);
+            boolean isCurrentWeek = !TODAY.isBefore(monday) && !TODAY.isAfter(monday.plusDays(6));
+            lbl.setBackground(isCurrentWeek ? ACCENT : BG);
+            lbl.setForeground(isCurrentWeek ? ACCENT_FG : FG);
+            lbl.setFont(isCurrentWeek
+                ? lbl.getFont().deriveFont(Font.BOLD)
+                : lbl.getFont().deriveFont(Font.PLAIN));
         } else {
             lbl.setText("");
+            lbl.setBackground(BG);
+            lbl.setForeground(FG);
         }
         lbl.setBounds(xOffset, y, WIDTH, rowHeight);
         lbl.setVisible(true);

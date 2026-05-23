@@ -24,7 +24,7 @@ public class WeekNumberStrip implements Strip {
     private static final Color BG        = new Color(0xE8, 0xE8, 0xE8);
     private static final Color FG        = new Color(0x80, 0x80, 0x80);
     private static final Color BDR       = new Color(0xD0, 0xD0, 0xD0);
-    private static final Color ACCENT    = new Color(0x18, 0x76, 0xD2);
+    private static final Color ACCENT    = new Color(0xE9, 0x1E, 0x8C);
     private static final Color ACCENT_FG = Color.WHITE;
     private static final LocalDate TODAY = LocalDate.now();
 

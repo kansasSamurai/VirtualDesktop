@@ -33,20 +33,17 @@ public class DayCellPanel extends JPanel {
     private static final Color BG_WEEKEND  = new Color(0xF4, 0xF4, 0xF4);
     private static final Color BG_OUT_YEAR = new Color(0xF0, 0xF0, 0xF0);
     private static final Color BORDER_CLR   = new Color(0xD0, 0xD0, 0xD0);
-    private static final Color TODAY_ACCENT = new Color(0x18, 0x76, 0xD2);
+    private static final Color TODAY_ACCENT = new Color(0xE9, 0x1E, 0x8C);
     private static final LocalDate TODAY    = LocalDate.now();
 
     private static final class Borders {
         private static final javax.swing.border.Border DAY_CELL = BorderFactory.createMatteBorder(0, 1, 1, 0, BORDER_CLR);
-        private static final javax.swing.border.Border TODAY_CELL = BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(3, 0, 0, 0, TODAY_ACCENT),
-            BorderFactory.createMatteBorder(0, 1, 1, 0, BORDER_CLR));
         private static final javax.swing.border.Border PRIMARY_LABEL = BorderFactory.createEmptyBorder(1, 3, 1, 3);
     }
 
     private static final class Fonts {
         private static final Font DAY_NUMBER       = new Font("SansSerif", Font.PLAIN, 11);
-        private static final Font DAY_NUMBER_TODAY = new Font("SansSerif", Font.BOLD,  11);
+        private static final Font DAY_NUMBER_TODAY = new Font("SansSerif", Font.BOLD,  13);
         private static final Font PRIMARY_LABEL    = new Font("SansSerif", Font.PLAIN, 11);
     }
     
@@ -64,6 +61,7 @@ public class DayCellPanel extends JPanel {
     private final Consumer<CalendarEvent> onEventClicked;
 
     private CalendarEvent primaryEvent;
+    private boolean isToday = false;
 
     public DayCellPanel(Consumer<CalendarEvent> onEventClicked) {
         this.onEventClicked = onEventClicked;
@@ -103,7 +101,8 @@ public class DayCellPanel extends JPanel {
         int h = getHeight();
         int botH = h - TOP_HEIGHT;
 
-        dayNumberLabel.setBounds(w - 22, 1, 20, 12);
+        int badgeH = isToday ? 20 : 12;
+        dayNumberLabel.setBounds(w - 22, TOP_HEIGHT / 2 - badgeH / 2, 20, badgeH);
         primaryLabel.setBounds(2, TOP_HEIGHT / 2 - 9, w - 26, 18);
         chipsPanel.setBounds(2, TOP_HEIGHT, w - 4, Math.max(0, botH));
     }
@@ -128,11 +127,13 @@ public class DayCellPanel extends JPanel {
         Color bg = isWeekend ? BG_WEEKEND : isPastWeekday ? BG_PAST : BG_IN_YEAR;
         setBackground(bg);
 
-        boolean isToday = data.getDate().equals(TODAY);
-        setBorder(isToday ? Borders.TODAY_CELL : Borders.DAY_CELL);
+        this.isToday = data.getDate().equals(TODAY);
         dayNumberLabel.setText(String.valueOf(data.getDate().getDayOfMonth()));
+        dayNumberLabel.setOpaque(isToday);
+        dayNumberLabel.setBackground(isToday ? TODAY_ACCENT : null);
+        dayNumberLabel.setForeground(isToday ? Color.WHITE : Colors.DAY_NUMBER);
         dayNumberLabel.setFont(isToday ? Fonts.DAY_NUMBER_TODAY : Fonts.DAY_NUMBER);
-        dayNumberLabel.setForeground(isToday ? TODAY_ACCENT : Colors.DAY_NUMBER);
+        dayNumberLabel.setHorizontalAlignment(isToday ? SwingConstants.CENTER : SwingConstants.RIGHT);
 
         List<CalendarEvent> events = data.getEvents();
         if (events.isEmpty()) {
@@ -156,13 +157,15 @@ public class DayCellPanel extends JPanel {
 
     public void clear() {
         primaryEvent = null;
+        isToday = false;
         primaryLabel.setText("");
         primaryLabel.setOpaque(false);
         dayNumberLabel.setText("");
+        dayNumberLabel.setOpaque(false);
         dayNumberLabel.setFont(Fonts.DAY_NUMBER);
         dayNumberLabel.setForeground(Colors.DAY_NUMBER);
+        dayNumberLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         chipsPanel.removeAll();
-        setBorder(Borders.DAY_CELL);
         setBackground(BG_IN_YEAR);
     }
 

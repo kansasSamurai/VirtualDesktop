@@ -17,6 +17,7 @@ import org.jwellman.demo.calendar.CalendarWeekRowPanel;
 import org.jwellman.demo.calendar.DayData;
 import org.jwellman.demo.calendar.EventCategory;
 import org.jwellman.demo.calendar.EventDetailPanel;
+import org.jwellman.demo.calendar.OnCallStrip;
 import org.jwellman.demo.calendar.WeekNumberStrip;
 import org.jwellman.swing.grid.ColumnDef;
 import org.jwellman.swing.grid.DefaultGridModel;
@@ -39,7 +40,8 @@ public class CalendarDemo {
         EventDetailPanel detailPanel = new EventDetailPanel();
         Consumer<CalendarEvent> onEventClicked = detailPanel::showEvent;
 
-        DefaultGridModel model = buildModel(year, eventMap);
+        Map<Integer, String> onCallSchedule = generateOnCallSchedule(year);
+        DefaultGridModel model = buildModel(year, eventMap, onCallSchedule);
 
         SmartGrid grid = new SmartGrid(model);
         grid.setRowHeight(64);
@@ -49,6 +51,7 @@ public class CalendarDemo {
             () -> new CalendarWeekRowPanel(columnWidths, onEventClicked));
 
         grid.addStrip(new WeekNumberStrip(grid.getHeaderBackground()));
+        grid.addStrip(new OnCallStrip(grid.getHeaderBackground()));
         grid.setCheckboxColumnVisible(false);
         grid.setRowSelectionEnabled(false);
 
@@ -63,7 +66,8 @@ public class CalendarDemo {
     // Model construction
     // -------------------------------------------------------------------------
 
-    private static DefaultGridModel buildModel(int year, Map<LocalDate, List<CalendarEvent>> eventMap) {
+    private static DefaultGridModel buildModel(int year, Map<LocalDate, List<CalendarEvent>> eventMap,
+                                               Map<Integer, String> onCallSchedule) {
         DefaultGridModel model = new DefaultGridModel();
 
         model.addColumn(new ColumnDef("mon", "Mon"));
@@ -94,6 +98,9 @@ public class CalendarDemo {
                     : Collections.<CalendarEvent>emptyList();
                 row.put(DAY_KEYS[i], new DayData(day, events, inYear));
             }
+
+            int weekNum = current.get(java.time.temporal.WeekFields.ISO.weekOfWeekBasedYear());
+            row.put("oncall", onCallSchedule.getOrDefault(weekNum, ""));
 
             model.addRow(row);
             current = current.plusWeeks(1);
@@ -186,6 +193,24 @@ public class CalendarDemo {
                 "General availability release of v3.0. Marketing launch and blog post coordinated."));
 
         return map;
+    }
+
+    private static Map<Integer, String> generateOnCallSchedule(int year) {
+        String[] names = {"Alice", "Bob", "Carol", "Dave", "Eve"};
+        Map<Integer, String> schedule = new LinkedHashMap<Integer, String>();
+        LocalDate jan1 = LocalDate.of(year, 1, 1);
+        LocalDate weekStart = jan1.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate dec31 = LocalDate.of(year, 12, 31);
+        LocalDate yearEnd = dec31.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+        int rotation = 0;
+        LocalDate current = weekStart;
+        while (!current.isAfter(yearEnd)) {
+            int weekNum = current.get(java.time.temporal.WeekFields.ISO.weekOfWeekBasedYear());
+            schedule.put(weekNum, names[rotation % names.length]);
+            rotation++;
+            current = current.plusWeeks(1);
+        }
+        return schedule;
     }
 
     private static void addEvent(Map<LocalDate, List<CalendarEvent>> map,

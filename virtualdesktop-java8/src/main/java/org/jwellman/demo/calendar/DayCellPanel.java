@@ -6,6 +6,8 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.function.Consumer;
 import javax.swing.BorderFactory;
@@ -23,11 +25,18 @@ import javax.swing.SwingConstants;
  */
 public class DayCellPanel extends JPanel {
 
-    private static final Color BG_IN_YEAR  = Color.WHITE;
-    private static final Color BG_OUT_YEAR = new Color(0xF0, 0xF0, 0xF0);
-    private static final Color BORDER_CLR  = new Color(0xD0, 0xD0, 0xD0);
     private static final int   TOP_HEIGHT  = 36;
     private static final int   CHIP_SIZE   = 14;
+    private static final Color BG_IN_YEAR  = Color.WHITE;
+    private static final Color BG_PAST     = new Color(0xE8, 0xF0, 0xFF);
+    private static final Color BG_WEEKEND  = new Color(0xF4, 0xF4, 0xF4);
+    private static final Color BG_OUT_YEAR = new Color(0xF0, 0xF0, 0xF0);
+    private static final Color BORDER_CLR  = new Color(0xD0, 0xD0, 0xD0);
+    private static final LocalDate TODAY   = LocalDate.now();
+
+    private static final class Borders {
+        private static final javax.swing.border.Border PRIMARY_LABEL = BorderFactory.createEmptyBorder(1, 3, 1, 3);
+    }
 
     private final JLabel dayNumberLabel;
     private final JLabel primaryLabel;
@@ -50,7 +59,7 @@ public class DayCellPanel extends JPanel {
 
         primaryLabel = new JLabel();
         primaryLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        primaryLabel.setBorder(BorderFactory.createEmptyBorder(1, 3, 1, 3));
+        primaryLabel.setBorder(Borders.PRIMARY_LABEL);
         primaryLabel.setOpaque(false);
         primaryLabel.addMouseListener(new MouseAdapter() {
             @Override
@@ -92,7 +101,11 @@ public class DayCellPanel extends JPanel {
             return;
         }
 
-        setBackground(BG_IN_YEAR);
+        DayOfWeek dow = data.getDate().getDayOfWeek();
+        boolean isWeekend = dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY;
+        boolean isPastWeekday = !isWeekend && data.getDate().isBefore(TODAY);
+        Color bg = isWeekend ? BG_WEEKEND : isPastWeekday ? BG_PAST : BG_IN_YEAR;
+        setBackground(bg);
         dayNumberLabel.setText(String.valueOf(data.getDate().getDayOfMonth()));
 
         List<CalendarEvent> events = data.getEvents();

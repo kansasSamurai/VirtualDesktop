@@ -86,6 +86,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private final GridModel model;
     private final DefaultListSelectionModel selectionModel = new DefaultListSelectionModel();
     private int rowHeight = 32;
+    private boolean rowSelectionEnabled = true;
 
     // Shared column-width array — updated in-place by computeColumnWidths().
     // All StandardRowPanel instances in the pool reference this same object.
@@ -361,6 +362,41 @@ public class SmartGrid extends JPanel implements GridModelListener {
             reallocateSlots(slots.length);
         }
         lastVpWidth = -1;
+        refresh();
+    }
+
+    /**
+     * Appends a custom strip to the left-gutter area. The strip is added after the
+     * three built-in strips (row numbers, checkbox, tree zone). If the strip reports
+     * {@code isVisible() == true} at the time of this call, a full re-layout fires
+     * immediately.
+     */
+    public void addStrip(Strip strip) {
+        strips.add(strip);
+        if (strip.isVisible()) {
+            onStripVisibilityChanged();
+        }
+    }
+
+    /** Returns the background colour used for the column-header row. */
+    public Color getHeaderBackground() {
+        return headerBg;
+    }
+
+    public boolean isRowSelectionEnabled() {
+        return rowSelectionEnabled;
+    }
+
+    /**
+     * Enables or disables row selection. When {@code false}, the visual selection
+     * highlight ({@link Selectable#setSelected}) is suppressed during refresh.
+     * Row panels that install their own selection mouse listeners (e.g.
+     * {@link StandardRowPanel}) should also be made aware of this flag for full
+     * suppression; for custom row renderers that do not install those listeners
+     * this property is sufficient.
+     */
+    public void setRowSelectionEnabled(boolean enabled) {
+        this.rowSelectionEnabled = enabled;
         refresh();
     }
 
@@ -828,7 +864,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
                 }
                 slots[i].setBounds(leadX, rowIdx * rowHeight, totalColWidth, rowHeight);
                 ((Recyclable) slots[i]).bind(row, modelIdx);
-                if (slots[i] instanceof Selectable) {
+                if (rowSelectionEnabled && slots[i] instanceof Selectable) {
                     ((Selectable) slots[i]).setSelected(selectionModel.isSelectedIndex(modelIdx));
                 }
                 slots[i].setVisible(true);

@@ -17,6 +17,7 @@ import org.jwellman.demo.calendar.CalendarWeekRowPanel;
 import org.jwellman.demo.calendar.DayData;
 import org.jwellman.demo.calendar.EventCategory;
 import org.jwellman.demo.calendar.EventDetailPanel;
+import org.jwellman.demo.calendar.WeekNumberStrip;
 import org.jwellman.swing.grid.ColumnDef;
 import org.jwellman.swing.grid.DefaultGridModel;
 import org.jwellman.swing.grid.GridRow;
@@ -46,6 +47,10 @@ public class CalendarDemo {
         final int[] columnWidths = grid.getColumnWidths();
         grid.registerRowRenderer("calendar-week",
             () -> new CalendarWeekRowPanel(columnWidths, onEventClicked));
+
+        grid.addStrip(new WeekNumberStrip(grid.getHeaderBackground()));
+        grid.setCheckboxColumnVisible(false);
+        grid.setRowSelectionEnabled(false);
 
         JPanel container = new JPanel(new BorderLayout());
         container.add(grid, BorderLayout.CENTER);

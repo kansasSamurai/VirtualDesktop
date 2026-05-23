@@ -31,6 +31,7 @@ public class DefaultHeaderCellRenderer implements HeaderCellRenderer {
         JLabel nameLabel = new JLabel(buildNameText(col.getHeader(), sortOrder, col.isSortable()));
         nameLabel.setForeground(Color.WHITE);
         nameLabel.setFont(nameLabel.getFont().deriveFont(Font.BOLD));
+        nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
         nameLabel.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 4));
 
         // Rank number: secondary, only shown during multi-column sort (rank > 0)

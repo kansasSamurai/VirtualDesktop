@@ -40,7 +40,7 @@ public class DayCellPanel extends JPanel {
         this.onEventClicked = onEventClicked;
         setLayout(null);
         setOpaque(true);
-        setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_CLR));
+        setBorder(BorderFactory.createMatteBorder(0, 1, 1, 0, BORDER_CLR));
 
         dayNumberLabel = new JLabel();
         dayNumberLabel.setFont(new Font("SansSerif", Font.PLAIN, 9));

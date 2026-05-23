@@ -17,6 +17,9 @@
 | 16 | Checkbox selection strip — standard chrome, left of data columns | ✅ Complete | `Selectable` interface; `setCheckboxColumnVisible(boolean)` |
 | 6 | Tree enhancements — Strip abstraction, TreeZoneStrip, GroupHeaderRowPanel | ✅ Complete | |
 | 9b | `ScriptableRecyclable` + Blueprint DSL + BeanShell integration | ✅ Complete | `RowScript` adapter + string-eval paths; `ScriptBridge`; `DefaultGridComponentFactory`; live swap via shared `ScriptSpec` |
+| Cal | Year Calendar Demo — SmartGrid as calendar engine | ✅ Complete | Week-as-row; `CalendarWeekRowPanel`; `DayCellPanel` with chip buttons; `WeekNumberStrip`; event detail panel |
+| — | SmartGrid API: `addStrip()`, `getHeaderBackground()`, `setRowSelectionEnabled()` | ✅ Complete | Extensibility additions driven by the calendar demo |
+| — | `DefaultHeaderCellRenderer` — centered column header labels | ✅ Complete | |
 | 8 | Variable row height (`RowHeightProvider`) | ⬜ End | Deferred by design — touches core scroll math |
 | 12 | Header panel refactor: persistent panels, in-place bound updates | ⬜ End | |
 | 13 | Filter search cache with configurable row-count threshold | ⬜ End | |
@@ -531,6 +534,80 @@ Examples: lazy child loading, drag-to-reorder nodes, keyboard expand/collapse.
 ### Demo test
 - Launch VirtualDesktop; verify "Smart Grid" appears in the menu
 - Open it as an internal frame; scroll, resize, interact
+
+---
+
+## Year Calendar Demo (Phase Cal)
+
+### What was built
+
+A full-year calendar vapp (`SpecCalendarDemo` / `CalendarDemo`) that uses SmartGrid
+as the rendering engine. The mapping is direct: one week per row, seven columns
+(Mon–Sun), each cell value a `DayData` object carrying zero or more `CalendarEvent`
+items. With ~53 rows for a full year, SmartGrid runs well within its comfort zone
+with no virtualization pressure.
+
+**New files:**
+
+| Class | Package | Purpose |
+|---|---|---|
+| `EventCategory` | `org.jwellman.demo.calendar` | Enum: RELEASE / HOTFIX / MEETING / DEADLINE, each with a category color |
+| `CalendarEvent` | `org.jwellman.demo.calendar` | Immutable event record: name, date, category, description |
+| `DayData` | `org.jwellman.demo.calendar` | Holds event list + date + `inYear` flag for a single day |
+| `DayCellPanel` | `org.jwellman.demo.calendar` | Day cell: top section = primary event (colored label, clickable); bottom section = chip buttons for additional events |
+| `CalendarWeekRowPanel` | `org.jwellman.demo.calendar` | `Recyclable` row renderer; holds 7 `DayCellPanel` instances; aligns with column headers via shared `columnWidths[]` |
+| `EventDetailPanel` | `org.jwellman.demo.calendar` | Fixed-width right-side panel; populates on chip/primary-label click via `Consumer<CalendarEvent>` |
+| `WeekNumberStrip` | `org.jwellman.demo.calendar` | Custom `Strip` — reads Monday's `DayData` to display ISO week number (W1–W53) in the left gutter |
+| `CalendarDemo` | `org.jwellman.demo` | Static factory: builds model, wires detail panel, registers renderer and strip |
+| `SpecCalendarDemo` | `org.jwellman.virtualdesktop.vapps` | VApp entry point (960×620) |
+
+**SmartGrid additions driven by this work:**
+
+- `addStrip(Strip)` — public API to append a custom strip to the left gutter; calls
+  `onStripVisibilityChanged()` if the strip is visible at insertion time. Unlocks
+  arbitrary gutter columns without modifying SmartGrid internals.
+- `getHeaderBackground()` — exposes the theme-resolved header color so external strips
+  can match their `headerCell()` appearance to the built-in header row.
+- `setRowSelectionEnabled(boolean)` / `isRowSelectionEnabled()` — when `false`,
+  the `Selectable.setSelected()` call in `doRefresh()` is suppressed. Useful for
+  views (like the calendar) where row-level selection has no utility.
+- `DefaultHeaderCellRenderer` — column header labels are now center-aligned.
+
+### Day cell layout
+
+```
++------------------------------------------+
+|  [primary event name...........] [DD]    |  ← colored bg = category color; clickable
++------------------------------------------+
+|  [■] [■] [■]                             |  ← chip JButtons, one per extra event
++------------------------------------------+
+```
+
+- `DD` — day-of-month number, small and muted, top-right corner
+- Border: left edge + bottom edge in muted grey (standard calendar day convention)
+- Days outside the target year (partial first/last weeks) render with a grey background and no events
+- Chip tooltip shows event name + category; click → `EventDetailPanel.showEvent()`
+
+### Event categories and colors
+
+| Category | Color | Hex |
+|---|---|---|
+| RELEASE | Blue | `#4285F4` |
+| HOTFIX | Red | `#EA4335` |
+| MEETING | Green | `#34A853` |
+| DEADLINE | Amber | `#FF9900` |
+
+### Dummy data strategy
+
+Events are generated relative to `LocalDate.now()` so the calendar always shows
+upcoming activity regardless of when the demo is launched. Fifteen events spread across
+roughly 90 days from today, with several days carrying two events to demonstrate the
+chip row.
+
+### Extension opportunities noted in DESIGN.md
+
+Month boundary group headers, scroll-to-today on open, embedded `JScrollPane` for
+overflow events, real data source behind `CalendarModel`, drag-to-reschedule.
 
 ---
 

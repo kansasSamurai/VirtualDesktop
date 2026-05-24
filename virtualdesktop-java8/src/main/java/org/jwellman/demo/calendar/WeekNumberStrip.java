@@ -35,11 +35,13 @@ public class WeekNumberStrip implements Strip {
         BorderFactory.createMatteBorder(0, 0, 0, 1, BDR);
 
     private final Color headerBg;
+    private final boolean[] highlightOn;
     private JLabel[] slots;
     private boolean visible = true;
 
-    public WeekNumberStrip(Color headerBg) {
-        this.headerBg = headerBg;
+    public WeekNumberStrip(Color headerBg, boolean[] highlightOn) {
+        this.headerBg   = headerBg;
+        this.highlightOn = highlightOn;
     }
 
     public void setVisible(boolean visible) {
@@ -92,7 +94,7 @@ public class WeekNumberStrip implements Strip {
             LocalDate monday = ((DayData) mondayVal).getDate();
             int weekNum = monday.get(WeekFields.ISO.weekOfWeekBasedYear());
             lbl.setText("W" + weekNum);
-            boolean isCurrentWeek = !TODAY.isBefore(monday) && !TODAY.isAfter(monday.plusDays(6));
+            boolean isCurrentWeek = highlightOn[0] && !TODAY.isBefore(monday) && !TODAY.isAfter(monday.plusDays(6));
             lbl.setBackground(isCurrentWeek ? ACCENT : BG);
             lbl.setForeground(isCurrentWeek ? ACCENT_FG : FG);
             lbl.setFont(isCurrentWeek

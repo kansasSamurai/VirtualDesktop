@@ -17,14 +17,15 @@ public class CalendarWeekRowPanel extends JPanel implements Recyclable {
     private final DayCellPanel[] dayCells;
     private final int[] columnWidths;
 
-    public CalendarWeekRowPanel(int[] columnWidths, Consumer<CalendarEvent> onEventClicked) {
+    public CalendarWeekRowPanel(int[] columnWidths, Consumer<CalendarEvent> onEventClicked,
+                               boolean[] highlightOn) {
         this.columnWidths = columnWidths;
         setLayout(null);
         setOpaque(true);
 
         dayCells = new DayCellPanel[7];
         for (int i = 0; i < 7; i++) {
-            dayCells[i] = new DayCellPanel(onEventClicked);
+            dayCells[i] = new DayCellPanel(onEventClicked, highlightOn);
             add(dayCells[i]);
         }
     }

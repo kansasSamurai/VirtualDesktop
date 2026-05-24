@@ -9,6 +9,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.function.Consumer;
 import javax.swing.BorderFactory;
@@ -26,18 +27,19 @@ import javax.swing.SwingConstants;
  */
 public class DayCellPanel extends JPanel {
 
-    private static final int   TOP_HEIGHT  = 36;
-    private static final int   CHIP_SIZE   = 14;
-    private static final Color BG_IN_YEAR  = Color.WHITE;
-    private static final Color BG_PAST     = new Color(0xE8, 0xF0, 0xFF);
-    private static final Color BG_WEEKEND  = new Color(0xF4, 0xF4, 0xF4);
-    private static final Color BG_OUT_YEAR = new Color(0xF0, 0xF0, 0xF0);
-    private static final Color BORDER_CLR   = new Color(0xD0, 0xD0, 0xD0);
-    private static final Color TODAY_ACCENT = new Color(0xE9, 0x1E, 0x8C);
-    private static final LocalDate TODAY    = LocalDate.now();
+    private static final int   TOP_HEIGHT       = 36;
+    private static final int   CHIP_SIZE        = 14;
+    private static final Color BG_IN_YEAR       = Color.WHITE;
+    private static final Color BG_PAST          = new Color(0xE8, 0xF0, 0xFF);
+    private static final Color BG_WEEKEND       = new Color(0xF4, 0xF4, 0xF4);
+    private static final Color BG_OUT_YEAR      = new Color(0xF0, 0xF0, 0xF0);
+    private static final Color BORDER_CLR       = new Color(0xD0, 0xD0, 0xD0);
+    private static final Color TODAY_ACCENT     = new Color(0xE9, 0x1E, 0x8C);
+    private static final LocalDate TODAY        = LocalDate.now();
+    private static final LocalDate WEEK_END     = TODAY.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
 
     private static final class Borders {
-        private static final javax.swing.border.Border DAY_CELL = BorderFactory.createMatteBorder(0, 1, 1, 0, BORDER_CLR);
+        private static final javax.swing.border.Border DAY_CELL      = BorderFactory.createMatteBorder(0, 1, 1, 0, BORDER_CLR);
         private static final javax.swing.border.Border PRIMARY_LABEL = BorderFactory.createEmptyBorder(1, 3, 1, 3);
     }
 
@@ -46,11 +48,11 @@ public class DayCellPanel extends JPanel {
         private static final Font DAY_NUMBER_TODAY = new Font("SansSerif", Font.BOLD,  13);
         private static final Font PRIMARY_LABEL    = new Font("SansSerif", Font.PLAIN, 11);
     }
-    
+
     private static final class Colors {
         private static final Color DAY_NUMBER = new Color(0x80, 0x80, 0x80);
     }
-    
+
     private static final class Dimensions {
         private static final Dimension CHIPS = new Dimension(CHIP_SIZE, CHIP_SIZE);
     }
@@ -59,12 +61,15 @@ public class DayCellPanel extends JPanel {
     private final JLabel primaryLabel;
     private final JPanel chipsPanel;
     private final Consumer<CalendarEvent> onEventClicked;
+    private final boolean[] highlightOn;
 
     private CalendarEvent primaryEvent;
-    private boolean isToday = false;
+    private boolean isToday           = false;
+    private boolean isFutureThisWeek  = false;
 
-    public DayCellPanel(Consumer<CalendarEvent> onEventClicked) {
+    public DayCellPanel(Consumer<CalendarEvent> onEventClicked, boolean[] highlightOn) {
         this.onEventClicked = onEventClicked;
+        this.highlightOn    = highlightOn;
         setLayout(null);
         setOpaque(true);
         setBorder(Borders.DAY_CELL);
@@ -102,52 +107,91 @@ public class DayCellPanel extends JPanel {
         int botH = h - TOP_HEIGHT;
 
         int badgeH = isToday ? 20 : 12;
-        dayNumberLabel.setBounds(w - 22, TOP_HEIGHT / 2 - badgeH / 2, 20, badgeH);
-        primaryLabel.setBounds(2, TOP_HEIGHT / 2 - 9, w - 26, 18);
+        int badgeY = isToday ? TOP_HEIGHT / 2 - badgeH / 2 : 1;
+        dayNumberLabel.setBounds(w - 22, badgeY, 20, badgeH);
+
+        if (isFutureThisWeek) {
+            primaryLabel.setBounds(2, h / 2 - 10, w - 4, 20);
+        } else {
+            primaryLabel.setBounds(2, TOP_HEIGHT / 2 - 9, w - 26, 18);
+        }
         chipsPanel.setBounds(2, TOP_HEIGHT, w - 4, Math.max(0, botH));
     }
 
     public void populate(DayData data) {
         chipsPanel.removeAll();
-        primaryEvent = null;
+        primaryEvent     = null;
+        isToday          = false;
+        isFutureThisWeek = false;
 
         if (data == null || !data.isInYear()) {
             setBackground(BG_OUT_YEAR);
             primaryLabel.setText("");
             primaryLabel.setOpaque(false);
+            primaryLabel.setHorizontalAlignment(SwingConstants.LEFT);
             dayNumberLabel.setText(data != null ? String.valueOf(data.getDate().getDayOfMonth()) : "");
+            dayNumberLabel.setOpaque(false);
+            dayNumberLabel.setFont(Fonts.DAY_NUMBER);
+            dayNumberLabel.setForeground(Colors.DAY_NUMBER);
             revalidate();
             repaint();
             return;
         }
 
-        DayOfWeek dow = data.getDate().getDayOfWeek();
-        boolean isWeekend = dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY;
-        boolean isPastWeekday = !isWeekend && data.getDate().isBefore(TODAY);
-        Color bg = isWeekend ? BG_WEEKEND : isPastWeekday ? BG_PAST : BG_IN_YEAR;
-        setBackground(bg);
+        LocalDate date     = data.getDate();
+        DayOfWeek dow      = date.getDayOfWeek();
+        boolean isWeekend  = dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY;
+        boolean highlights = highlightOn[0];
 
-        this.isToday = data.getDate().equals(TODAY);
-        dayNumberLabel.setText(String.valueOf(data.getDate().getDayOfMonth()));
-        dayNumberLabel.setOpaque(isToday);
-        dayNumberLabel.setBackground(isToday ? TODAY_ACCENT : null);
-        dayNumberLabel.setForeground(isToday ? Color.WHITE : Colors.DAY_NUMBER);
-        dayNumberLabel.setFont(isToday ? Fonts.DAY_NUMBER_TODAY : Fonts.DAY_NUMBER);
-        dayNumberLabel.setHorizontalAlignment(isToday ? SwingConstants.CENTER : SwingConstants.RIGHT);
+        isToday          = highlights && date.equals(TODAY);
+        isFutureThisWeek = highlights && date.isAfter(TODAY) && !date.isAfter(WEEK_END) && data.getEvents().isEmpty();
 
-        List<CalendarEvent> events = data.getEvents();
-        if (events.isEmpty()) {
-            primaryLabel.setText("");
-            primaryLabel.setOpaque(false);
+        // ── background ──────────────────────────────────────────────────────
+        if (isFutureThisWeek) {
+            setBackground(TODAY_ACCENT);
         } else {
-            primaryEvent = events.get(0);
-            primaryLabel.setText(primaryEvent.getName());
-            primaryLabel.setBackground(primaryEvent.getCategory().getColor());
-            primaryLabel.setForeground(Color.WHITE);
-            primaryLabel.setOpaque(true);
+            boolean isPastWeekday = !isWeekend && date.isBefore(TODAY);
+            setBackground(isWeekend ? BG_WEEKEND : isPastWeekday ? BG_PAST : BG_IN_YEAR);
+        }
 
-            for (int i = 1; i < events.size(); i++) {
-                chipsPanel.add(makeChip(events.get(i)));
+        // ── day-number badge ─────────────────────────────────────────────────
+        dayNumberLabel.setText(String.valueOf(date.getDayOfMonth()));
+        if (isToday) {
+            dayNumberLabel.setOpaque(true);
+            dayNumberLabel.setBackground(TODAY_ACCENT);
+            dayNumberLabel.setForeground(Color.WHITE);
+            dayNumberLabel.setFont(Fonts.DAY_NUMBER_TODAY);
+            dayNumberLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        } else {
+            dayNumberLabel.setOpaque(false);
+            dayNumberLabel.setForeground(isFutureThisWeek ? Color.WHITE : Colors.DAY_NUMBER);
+            dayNumberLabel.setFont(Fonts.DAY_NUMBER);
+            dayNumberLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        }
+
+        // ── primary label / future-week marker ───────────────────────────────
+        if (isFutureThisWeek) {
+            primaryLabel.setText("<<<");
+            primaryLabel.setForeground(Color.WHITE);
+            primaryLabel.setOpaque(false);
+            primaryLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        } else {
+            List<CalendarEvent> events = data.getEvents();
+            if (events.isEmpty()) {
+                primaryLabel.setText("");
+                primaryLabel.setOpaque(false);
+                primaryLabel.setHorizontalAlignment(SwingConstants.LEFT);
+            } else {
+                primaryEvent = events.get(0);
+                primaryLabel.setText(primaryEvent.getName());
+                primaryLabel.setBackground(primaryEvent.getCategory().getColor());
+                primaryLabel.setForeground(Color.WHITE);
+                primaryLabel.setOpaque(true);
+                primaryLabel.setHorizontalAlignment(SwingConstants.LEFT);
+
+                for (int i = 1; i < events.size(); i++) {
+                    chipsPanel.add(makeChip(events.get(i)));
+                }
             }
         }
 
@@ -156,10 +200,12 @@ public class DayCellPanel extends JPanel {
     }
 
     public void clear() {
-        primaryEvent = null;
-        isToday = false;
+        primaryEvent     = null;
+        isToday          = false;
+        isFutureThisWeek = false;
         primaryLabel.setText("");
         primaryLabel.setOpaque(false);
+        primaryLabel.setHorizontalAlignment(SwingConstants.LEFT);
         dayNumberLabel.setText("");
         dayNumberLabel.setOpaque(false);
         dayNumberLabel.setFont(Fonts.DAY_NUMBER);
@@ -182,5 +228,4 @@ public class DayCellPanel extends JPanel {
         chip.addActionListener(e -> onEventClicked.accept(event));
         return chip;
     }
-
 }

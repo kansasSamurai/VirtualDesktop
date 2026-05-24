@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import javax.swing.BorderFactory;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
@@ -52,16 +53,18 @@ public class CalendarDemo {
         SmartGrid grid = new SmartGrid(model);
         grid.setRowHeight(64);
 
+        final boolean[] highlightOn = {true};
+
         final int[] columnWidths = grid.getColumnWidths();
         grid.registerRowRenderer("calendar-week",
-            () -> new CalendarWeekRowPanel(columnWidths, onEventClicked));
+            () -> new CalendarWeekRowPanel(columnWidths, onEventClicked, highlightOn));
 
-        grid.addStrip(new WeekNumberStrip(grid.getHeaderBackground()));
+        grid.addStrip(new WeekNumberStrip(grid.getHeaderBackground(), highlightOn));
         grid.addStrip(new OnCallStrip(grid.getHeaderBackground()));
         grid.addStrip(new SprintStrip(grid.getHeaderBackground()));
         grid.setCheckboxColumnVisible(false);
         grid.setRowSelectionEnabled(false);
-        grid.addFooterRow(buildLegend());
+        grid.addFooterRow(buildFooter(highlightOn, model));
 
         JPanel container = new JPanel(new BorderLayout());
         container.add(grid, BorderLayout.CENTER);
@@ -232,23 +235,44 @@ public class CalendarDemo {
     }
 
     // -------------------------------------------------------------------------
-    // Footer legend
+    // Footer: toggle checkbox (left) + legend (right)
     // -------------------------------------------------------------------------
 
-    private static JPanel buildLegend() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
-        panel.setBackground(new Color(0xEC, 0xEF, 0xF4));
-        panel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(0xD0, 0xD0, 0xD0)));
+    private static JPanel buildFooter(final boolean[] highlightOn, final DefaultGridModel model) {
+        Color footerBg  = new Color(0xEC, 0xEF, 0xF4);
+        Color borderClr = new Color(0xD0, 0xD0, 0xD0);
 
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.setBackground(footerBg);
+        footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, borderClr));
+
+        // Left — highlight toggle
+        final JCheckBox toggle = new JCheckBox("Highlight current week / day", true);
+        toggle.setOpaque(false);
+        toggle.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        toggle.setForeground(new Color(0x50, 0x50, 0x50));
+        toggle.addActionListener(e -> {
+            highlightOn[0] = toggle.isSelected();
+            model.notifyDataChanged();
+        });
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+        left.setOpaque(false);
+        left.add(toggle);
+        footer.add(left, BorderLayout.WEST);
+
+        // Right — event category legend
+        JPanel legend = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 4));
+        legend.setOpaque(false);
         JLabel title = new JLabel("Legend:");
         title.setFont(new Font("SansSerif", Font.BOLD, 11));
         title.setForeground(new Color(0x50, 0x50, 0x50));
-        panel.add(title);
-
+        legend.add(title);
         for (EventCategory cat : EventCategory.values()) {
-            panel.add(makeLegendChip(cat));
+            legend.add(makeLegendChip(cat));
         }
-        return panel;
+        footer.add(legend, BorderLayout.EAST);
+
+        return footer;
     }
 
     private static JLabel makeLegendChip(EventCategory cat) {

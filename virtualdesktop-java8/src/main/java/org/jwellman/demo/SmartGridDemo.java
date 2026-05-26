@@ -687,7 +687,7 @@ public class SmartGridDemo {
         }
 
         SmartGrid grid = new SmartGrid(model, darkTheme);
-        grid.setRowNumbersVisible(true);
+        grid.setRowNumbersVisible(false);
         grid.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         // Monospaced bold renderer for the code column — makes variable-length
@@ -725,21 +725,13 @@ public class SmartGridDemo {
         });
 
         // Custom header: code column gets a plain label; description column
-        // gets the label + embedded search field (searches both columns globally).
+        // gets only the search field spanning the full header width.
         grid.setHeaderRenderer((col, sortOrder, rank) -> {
             if ("action".equals(col.getKey())) {
-                JPanel cell = new JPanel(new BorderLayout(4, 0));
+                JPanel cell = new JPanel(new BorderLayout());
                 cell.setOpaque(false);
-                JLabel lbl = new JLabel(col.getHeader());
-                lbl.setForeground(Color.WHITE);
-                lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
-                lbl.setBorder(Borders.LABEL);
-                JPanel fieldWrap = new JPanel(new BorderLayout());
-                fieldWrap.setOpaque(false);
-                fieldWrap.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 6));
-                fieldWrap.add(codeSearch, BorderLayout.CENTER);
-                cell.add(lbl,       BorderLayout.CENTER);
-                cell.add(fieldWrap, BorderLayout.EAST);
+                cell.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
+                cell.add(codeSearch, BorderLayout.CENTER);
                 return cell;
             } else {
                 JLabel lbl = new JLabel(col.getHeader());

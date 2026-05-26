@@ -1321,7 +1321,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
         @Override
         public Dimension getPreferredSize() {
             int vpWidth = scrollPane.getViewport().getWidth();
-            int w = Math.max(totalCanvasWidth(), vpWidth > 0 ? vpWidth : 400);
+            int w = Math.max(totalCanvasWidth(), vpWidth);
 
             int pageOffset    = (pageSize > 0) ? currentPage * pageSize : 0;
             int effectiveRows = (pageSize > 0)
@@ -1336,7 +1336,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
             // getPreferredSize() (the full virtual height) is still used for scrollbar math;
             // this method mirrors the JTable pattern of keeping the two concerns separate.
             int vpWidth = scrollPane.getViewport().getWidth();
-            int w = Math.max(totalCanvasWidth(), vpWidth > 0 ? vpWidth : 400);
+            int w = Math.max(totalCanvasWidth(), vpWidth);
             return new Dimension(w, 400);
         }
 

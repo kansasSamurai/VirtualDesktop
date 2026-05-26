@@ -219,6 +219,122 @@ Together these make the component lifecycle:
 
 ---
 
+## Large Dataset Considerations
+
+### Two Layers, Two Different Answers
+
+SmartGrid's scalability story depends entirely on which layer you are asking about.
+
+**The rendering layer is already large-dataset-safe.** The virtual canvas maintains
+roughly `viewportHeight / rowHeight + 2` live slot components regardless of dataset
+size — typically 12–18 components. Scrolling through 150 rows or 150,000 rows
+produces the same number of `bind()` calls per scroll event and the same component
+memory footprint. There is nothing to improve here; the architecture is intentionally
+O(1) with respect to row count.
+
+**The model layer scales linearly with row count.** `DefaultGridModel` holds one
+`GridRow` object in memory for every record, always. A `GridRow` is essentially a
+small `HashMap` — approximately 300–500 bytes each when populated with typical
+column values. The table below shows what that means in practice:
+
+| Row count | Approximate model memory |
+|-----------|--------------------------|
+| 1,000     | 0.3–0.5 MB               |
+| 50,000    | 15–25 MB                 |
+| 500,000   | 150–250 MB               |
+| 1,000,000 | 300–500 MB               |
+
+At tens of thousands of rows `DefaultGridModel` is fine. At hundreds of thousands
+it becomes a concern. At millions it is the wrong tool.
+
+### Why GridRow Is Not the Problem
+
+The natural instinct is to see `GridRow` as the cost that must be paid for real
+Swing components — the richer model you accept in exchange for richer rendering.
+That framing is partly true but misses an important nuance.
+
+`GridRow` is richer than a flat `TableModel` for three specific reasons:
+
+1. **Named keys** (`row.get("status")`) rather than column index (`getValueAt(r, 3)`)
+2. **Typed values** — a cell can hold a `DayData`, `Color`, or any domain object, not
+   just a displayable primitive
+3. **Type tags** (`fnd-type`) — this is the load-bearing difference; it lets SmartGrid
+   dispatch a row index to completely different component types
+   (`StandardRowPanel` vs. `CalendarWeekRowPanel` vs. `GroupHeaderRowPanel`)
+
+JTable's `TableModel` is minimal because its rubber-stamp renderer only needs a
+value for a moment, then discards it. But `TableModel` has exactly the same O(n)
+memory problem — `DefaultTableModel` stores a `Vector` of `Vector` rows. The
+interface happens to be simpler, but the problem is identical.
+
+More importantly: `GridRow` as an object actually *helps* lazy loading. Because
+`bind(GridRow, int)` is the entire contract between the model and the renderer,
+a lazy model can construct a `GridRow` ephemerally for that call — populating it
+from a database cursor or network response — and let it be garbage-collected
+immediately after `bind()` returns. A raw `getValueAt(row, col)` interface would
+require the lazy model to keep the fetched record alive across N separate column
+calls for the same row.
+
+### The Solution: A Lazy GridModel Implementation
+
+SmartGrid already depends on `GridModel` as an interface (or can be extracted to
+one cleanly). A `LazyGridModel` or `VirtualGridModel` implementation would present
+the same API surface as `DefaultGridModel` while only materializing rows on demand:
+
+```java
+// Contract
+int getTotalRowCount();              // returns N from a DB count query, for example
+GridRow getRow(int index);          // fetches only this record, builds a GridRow, returns it
+
+// What the virtual canvas calls per scroll event
+for each visible slot i:
+    GridRow row = model.getRow(firstRow + i);  // only ~16 calls, not N
+    slot.bind(row, firstRow + i);
+```
+
+With this model, the memory footprint becomes O(1) at the model layer to match the
+already-O(1) rendering layer. The rendering architecture requires zero changes.
+
+The implementation challenge shifts to the backing store: it must support efficient
+random access by index (SQL `OFFSET`/`LIMIT`, or an indexed cache). Sequential-only
+sources (streams, message queues) need a windowed buffer to simulate random access.
+
+### The GridRow Object Lifecycle Under Lazy Loading
+
+Under eager loading: GridRow objects live forever in `DefaultGridModel`.
+
+Under lazy loading: GridRow objects are created in `getRow()`, passed to `bind()`,
+and immediately become eligible for GC. GC pressure from short-lived objects is
+negligible for JVM generational collectors — these are textbook short-lived allocations
+that live and die entirely within the young generation.
+
+Alternatively, a lazy model can maintain a fixed-size `GridRow` cache (e.g., 200
+rows around the current scroll position) to avoid re-fetching on rapid scroll-back.
+The cache evicts by LRU or simple ring-buffer. This is an implementation detail of
+the lazy model; SmartGrid's rendering layer is indifferent to it.
+
+### Comparison to JTable at Scale
+
+JTable's `AbstractTableModel` can be implemented with a lazy backing store — it has
+no opinion about how `getValueAt(row, col)` is implemented. This is one genuine
+area where JTable's minimalism is an advantage: the interface is so thin that lazy
+implementation is natural.
+
+SmartGrid's equivalent is a `LazyGridModel` implementation — slightly more surface
+area (named keys, type tags) but structurally the same pattern. The real-component
+advantage (live Swing components vs. rubber-stamp painting) is preserved regardless
+of which model implementation is used.
+
+### Roadmap Note
+
+GlazedLists integration (roadmap item #19) is the "production answer" to this
+problem for datasets that are already in memory but need efficient sorting, filtering,
+and change notification without full model rebuilds. For datasets that do not fit in
+memory at all, `LazyGridModel` / `VirtualGridModel` is the required path and is not
+yet implemented.
+
+---
+
 ## Row Height — The Uniform-Height Constraint and Workarounds
 
 ### Why All Rows Must Be the Same Height

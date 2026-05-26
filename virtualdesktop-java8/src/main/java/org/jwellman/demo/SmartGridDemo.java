@@ -493,6 +493,9 @@ public class SmartGridDemo {
     // -------------------------------------------------------------------------
 
     private static JPanel buildListTab(boolean darkTheme) {
+        PagePalette p = new PagePalette(darkTheme);
+
+        // --- Existing (full-featured) grid — unchanged ---
         DefaultGridModel model = new DefaultGridModel()
             .addColumn(new ColumnDef("name", "Programming Languages", 400, false, true, null));
 
@@ -550,14 +553,81 @@ public class SmartGridDemo {
             return cell;
         });
 
-        return buildPage(grid,
-            "Language Catalog",
-            "SmartGrid list mode  ·  38 entries  ·  demonstrates a list is a single-column table"
-                + "  ·  same model, filter, and sort as the full table",
-            darkTheme,
-            buildChip("List Mode",     ChipColors.PRIMARY),
-            buildChip("Single Column", ChipColors.SUCCESS),
-            buildChip("Unified Model", ChipColors.ACCENT));
+        // --- Minimal grid (left) — no selection strip, no search, plain header ---
+        DefaultGridModel minimalModel = new DefaultGridModel()
+            .addColumn(new ColumnDef("name", "Programming Languages", 161, false, true, null));
+
+        for (String lang : LANGUAGES) {
+            minimalModel.addRow(new GridRow().put("name", lang));
+        }
+        minimalModel.addRow(new GridRow()
+            .put("name", "BeanShell  (used in this application)")
+            .setTag("fnd-style", "warning-glow"));
+        minimalModel.addRow(new GridRow()
+            .put("name", "Groovy  (used in this application)")
+            .setTag("fnd-style", "warning-glow"));
+
+        SmartGrid minimalGrid = new SmartGrid(minimalModel, darkTheme);
+        minimalGrid.setCheckboxColumnVisible(false);
+
+        // --- Two cards sharing the same border instance ---
+        javax.swing.border.Border cardBorder = p.cardBorder;
+
+        JPanel minimalCard = new JPanel(new BorderLayout());
+        minimalCard.setBorder(cardBorder);
+        minimalCard.add(minimalGrid, BorderLayout.CENTER);
+
+        JPanel existingCard = new JPanel(new BorderLayout());
+        existingCard.setBorder(cardBorder);
+        existingCard.add(grid, BorderLayout.CENTER);
+
+        JPanel twoGrids = new JPanel(new BorderLayout(8, 0));
+        twoGrids.setOpaque(false);
+        twoGrids.add(minimalCard,  BorderLayout.WEST);
+        twoGrids.add(existingCard, BorderLayout.CENTER);
+
+        // --- Page chrome (mirrors buildPage layout) ---
+        JLabel titleLabel = new JLabel("Language Catalog");
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 18f));
+        titleLabel.setForeground(p.titleFg);
+
+        JLabel subtitleLabel = new JLabel(
+            "SmartGrid list mode  ·  38 entries"
+                + "  ·  minimal / JList-style (left)  ·  featured (right)"
+                + "  ·  demonstrates a list is a single-column table");
+        subtitleLabel.setFont(subtitleLabel.getFont().deriveFont(Font.PLAIN, 11f));
+        subtitleLabel.setForeground(p.subtitleFg);
+
+        JPanel titleArea = new JPanel();
+        titleArea.setLayout(new BoxLayout(titleArea, BoxLayout.Y_AXIS));
+        titleArea.setOpaque(false);
+        titleArea.add(titleLabel);
+        titleArea.add(Box.createVerticalStrut(4));
+        titleArea.add(subtitleLabel);
+
+        JPanel chipsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+        chipsPanel.setOpaque(false);
+        chipsPanel.add(buildChip("Minimal Mode",  ChipColors.MUTED));
+        chipsPanel.add(buildChip("List Mode",     ChipColors.PRIMARY));
+        chipsPanel.add(buildChip("Single Column", ChipColors.SUCCESS));
+        chipsPanel.add(buildChip("Unified Model", ChipColors.ACCENT));
+
+        JPanel header = new JPanel(new BorderLayout(16, 0));
+        header.setBackground(p.headerBg);
+        header.setBorder(p.headerBorder);
+        header.add(titleArea,  BorderLayout.WEST);
+        header.add(chipsPanel, BorderLayout.EAST);
+
+        JPanel content = new JPanel(new BorderLayout());
+        content.setOpaque(false);
+        content.setBorder(Borders.CONTENT);
+        content.add(twoGrids, BorderLayout.CENTER);
+
+        JPanel page = new JPanel(new BorderLayout());
+        page.setBackground(p.pageBg);
+        page.add(header,  BorderLayout.NORTH);
+        page.add(content, BorderLayout.CENTER);
+        return page;
     }
 
     // -------------------------------------------------------------------------

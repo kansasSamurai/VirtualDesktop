@@ -268,6 +268,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
         pastePanel.add(pasteBtn);
         getToolbar(); // ensure toolbarPanel is created
         toolbarPanel.add(pastePanel, BorderLayout.EAST);
+        toolbarPanel.setVisible(false); // hidden by default; call setToolbarVisible(true) to show
     }
 
     // -------------------------------------------------------------------------
@@ -336,6 +337,16 @@ public class SmartGrid extends JPanel implements GridModelListener {
     public void addFooterRow(JComponent row) {
         extraFooterRows.add(row);
         rebuildSouthPanel();
+    }
+
+    public boolean isToolbarVisible() {
+        return toolbarPanel != null && toolbarPanel.isVisible();
+    }
+
+    public void setToolbarVisible(boolean visible) {
+        getToolbar(); // ensure created
+        toolbarPanel.setVisible(visible);
+        revalidate();
     }
 
     public boolean isRowNumbersVisible() {

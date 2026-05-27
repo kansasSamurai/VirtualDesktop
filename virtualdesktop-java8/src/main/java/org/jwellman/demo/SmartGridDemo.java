@@ -359,6 +359,7 @@ public class SmartGridDemo {
         toolbar.add(filterLabel);
         toolbar.add(filterField);
         toolbar.add(editToggle);
+        grid.setToolbarVisible(true);
 
         return buildPage(grid,
             "Employee Directory",
@@ -1040,6 +1041,7 @@ public class SmartGridDemo {
         // logToolbar.add(Box.createHorizontalStrut(grid.getCanvasLeadWidth()));
         logToolbar.add(searchLabel);
         logToolbar.add(searchField);
+        grid.setToolbarVisible(true);
 
         // Page is always dark — the grid is always dark and the surrounding chrome should match
         return buildPage(grid,
@@ -1117,6 +1119,7 @@ public class SmartGridDemo {
         // migrateToolbar.add(Box.createHorizontalStrut(grid.getCanvasLeadWidth()));
         migrateToolbar.add(filterLabel);
         migrateToolbar.add(filterField);
+        grid.setToolbarVisible(true);
 
         // Page chrome — same style as buildPage() but hosting two components
         PagePalette p = new PagePalette(darkTheme);

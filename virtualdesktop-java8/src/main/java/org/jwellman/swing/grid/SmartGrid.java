@@ -7,6 +7,9 @@ import java.awt.Dimension;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -23,8 +26,10 @@ import java.util.function.Supplier;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListSelectionModel;
+import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -123,6 +128,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
     // Swing components
     private JPanel        toolbarPanel  = null; // created lazily by getToolbar()
+    private JPanel        toolbarLeft   = null; // left section; returned by getToolbar()
     private JPanel        northPanel    = null; // BoxLayout.Y wrapper; created lazily
     private JScrollPane   scrollPane;
     private VirtualCanvas canvas;
@@ -254,6 +260,14 @@ public class SmartGrid extends JPanel implements GridModelListener {
         summaryRow = buildSummaryRow();
         rebuildSouthPanel();
         updateSummaryCount();
+
+        JPanel pastePanel = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 8, 4));
+        pastePanel.setBackground(headerBg);
+        JButton pasteBtn = new JButton("Paste");
+        pasteBtn.addActionListener(e -> onPasteTSV());
+        pastePanel.add(pasteBtn);
+        getToolbar(); // ensure toolbarPanel is created
+        toolbarPanel.add(pastePanel, BorderLayout.EAST);
     }
 
     // -------------------------------------------------------------------------
@@ -293,12 +307,15 @@ public class SmartGrid extends JPanel implements GridModelListener {
     public JPanel getToolbar() {
         if (toolbarPanel == null) {
             ensureNorthPanel();
-            toolbarPanel = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 8, 4));
+            toolbarPanel = new JPanel(new BorderLayout());
             toolbarPanel.setBackground(headerBg);
+            toolbarLeft = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 8, 4));
+            toolbarLeft.setBackground(headerBg);
+            toolbarPanel.add(toolbarLeft, BorderLayout.CENTER);
             northPanel.add(toolbarPanel, 0); // always topmost in the header zone
             revalidate();
         }
-        return toolbarPanel;
+        return toolbarLeft;
     }
 
     /**
@@ -629,6 +646,9 @@ public class SmartGrid extends JPanel implements GridModelListener {
     @Override
     public void modelReset() {
         SwingUtilities.invokeLater(() -> {
+            if (model.getColumns().size() != columnWidths.length) {
+                reinitForColumns(model.getColumns());
+            }
             canvas.revalidate();
             refresh();
             refreshFooter();
@@ -701,6 +721,78 @@ public class SmartGrid extends JPanel implements GridModelListener {
     }
 
     // -------------------------------------------------------------------------
+    // Internal — TSV paste
+    // -------------------------------------------------------------------------
+
+    private void onPasteTSV() {
+        String text = null;
+        try {
+            Transferable contents = Toolkit.getDefaultToolkit().getSystemClipboard().getContents(null);
+            if (contents != null && contents.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+                text = (String) contents.getTransferData(DataFlavor.stringFlavor);
+            }
+        } catch (Exception ex) {
+            // clipboard access can fail on some platforms — silently ignore
+        }
+
+        if (text == null || text.trim().isEmpty()) {
+            return;
+        }
+
+        int result = JOptionPane.showConfirmDialog(
+            this,
+            "Does the pasted data include a header row?",
+            "Paste TSV Data",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE);
+
+        if (result == JOptionPane.CLOSED_OPTION) {
+            return;
+        }
+
+        if (model instanceof DefaultGridModel) {
+            ((DefaultGridModel) model).loadFromTSV(text, result == JOptionPane.YES_OPTION);
+        }
+    }
+
+    /**
+     * Reinitializes the column-width array and default row-component pool when the
+     * model's column structure changes (different column count). Called from
+     * {@link #modelReset()} when column count diverges from {@code columnWidths.length}.
+     *
+     * Clears all canvas children so stale row panels with an old column count are
+     * discarded; subsequent {@link #reallocateSlots} calls create fresh instances
+     * from the new pool that capture the new column-width array.
+     */
+    private void reinitForColumns(List<ColumnDef> newCols) {
+        canvas.removeAll();
+        slots     = null;
+        slotTypes = null;
+
+        columnWidths = new int[newCols.size()];
+        for (int i = 0; i < newCols.size(); i++) {
+            columnWidths[i] = newCols.get(i).getPreferredWidth();
+        }
+        lastVpWidth = -1;
+
+        final List<ColumnDef> capturedCols   = newCols;
+        final int[]           capturedWidths = columnWidths;
+        final DefaultListSelectionModel sm   = selectionModel;
+        final Map<String, CellRenderer> rend = cellRenderers;
+        final boolean dark                   = darkTheme;
+        final GridModel capturedModel        = model;
+        pool = new ComponentPool(() -> new StandardRowPanel(capturedCols,
+            () -> {
+                if (capturedModel instanceof DefaultGridModel) {
+                    ((DefaultGridModel) capturedModel).notifyDataChanged();
+                }
+            },
+            sm, capturedWidths, rend, dark));
+
+        scrollPane.setColumnHeaderView(buildHeader(newCols));
+    }
+
+    // -------------------------------------------------------------------------
     // Internal — strip helpers
     // -------------------------------------------------------------------------
 
@@ -729,6 +821,9 @@ public class SmartGrid extends JPanel implements GridModelListener {
     // -------------------------------------------------------------------------
 
     private void computeColumnWidths(int vpWidth, List<ColumnDef> cols) {
+        if (cols.isEmpty()) {
+            return;
+        }
         int totalPref = 0;
         for (ColumnDef col : cols) {
             totalPref += col.getPreferredWidth();

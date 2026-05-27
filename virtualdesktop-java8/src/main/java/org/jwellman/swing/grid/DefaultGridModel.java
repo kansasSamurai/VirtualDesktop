@@ -59,6 +59,78 @@ public class DefaultGridModel implements GridModel {
         return this;
     }
 
+    /** Removes all rows without firing events. */
+    public DefaultGridModel clearRows() {
+        rows.clear();
+        visibleRowsDirty = true;
+        return this;
+    }
+
+    /**
+     * Populates the model from tab-delimited text, replacing all existing rows and columns.
+     *
+     * @param tsvData   the raw tab-delimited string (lines separated by \n or \r\n)
+     * @param hasHeader true if the first line contains column header labels;
+     *                  false to auto-generate headers A, B, C, ...
+     */
+    public DefaultGridModel loadFromTSV(String tsvData, boolean hasHeader) {
+        rows.clear();
+        columns.clear();
+
+        if (tsvData == null || tsvData.trim().isEmpty()) {
+            return notifyDataChanged();
+        }
+
+        String[] lines = tsvData.split("\\r?\\n", -1);
+        if (lines.length == 0) {
+            return notifyDataChanged();
+        }
+
+        int startLine;
+        if (hasHeader) {
+            String[] headers = lines[0].split("\\t", -1);
+            for (String h : headers) {
+                String label = h.trim().isEmpty() ? "col" + columns.size() : h.trim();
+                columns.add(new ColumnDef(label, label));
+            }
+            startLine = 1;
+        } else {
+            String[] firstFields = lines[0].split("\\t", -1);
+            for (int i = 0; i < firstFields.length; i++) {
+                String label = columnLabel(i);
+                columns.add(new ColumnDef(label, label));
+            }
+            startLine = 0;
+        }
+
+        for (int i = startLine; i < lines.length; i++) {
+            if (lines[i].trim().isEmpty()) {
+                continue;
+            }
+            String[] fields = lines[i].split("\\t", -1);
+            GridRow row = new GridRow();
+            for (int j = 0; j < columns.size(); j++) {
+                row.put(columns.get(j).getKey(), j < fields.length ? fields[j] : "");
+            }
+            rows.add(row);
+        }
+
+        visibleRowsDirty = true;
+        return notifyDataChanged();
+    }
+
+    /** Converts a zero-based column index to an Excel-style letter label (A, B, ..., Z, AA, ...). */
+    private static String columnLabel(int index) {
+        StringBuilder sb = new StringBuilder();
+        index++;
+        while (index > 0) {
+            index--;
+            sb.insert(0, (char) ('A' + (index % 26)));
+            index /= 26;
+        }
+        return sb.toString();
+    }
+
     /** Recomputes the visible-row projection then fires a model-reset event. */
     public DefaultGridModel notifyDataChanged() {
         computeVisibleRows();

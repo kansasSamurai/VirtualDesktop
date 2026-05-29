@@ -13,6 +13,18 @@ VirtualDesktop is a Java-based virtual desktop application providing a consisten
 - **Integrated development tools** - BeanShell, Groovy console, database tools, charting, etc.
 - **Extensibility** - Easy to add new tools via configuration or scripting
 
+### UI Architecture Philosophy
+
+The deeper goal behind abstracting the Desktop and Taskbar interfaces is **view substitutability**: the application's core logic — state, tool lifecycle, Redux data flow — should be completely independent of any particular view implementation. A different view can be dropped in and the application works exactly as before.
+
+This is a product strategy as much as an engineering goal. The measure of success is the first reaction someone has when they encounter VirtualDesktop:
+
+> *"This works great — I want to make it look like mine."*
+
+If that's their first thought, the architecture won. It means the features hold up, data flows correctly, and the only remaining opportunity is presentation. The alternative — "these features don't work right" — means behavior is still entangled in the view layer, and no amount of reskinning will fix it.
+
+Practically this means: state lives in Redux, controllers mediate all mutations, views are pure renderers, and operations go through defined service interfaces. The Taskbar is close to this ideal today. The Desktop is the next migration target.
+
 ---
 
 ## Terminology
@@ -29,10 +41,11 @@ VirtualDesktop is a Java-based virtual desktop application providing a consisten
 
 ## Features
 
-- [BeanShell Integration] #beanshell-integration
+- [BeanShell Integration](#beanshell-integration)
 - [External Applications](#external-applications)
 - [Tool Configuration](#tool-configuration)
-- [UI/UX Guidelines] #uiux-guidelines
+- [UI/UX Guidelines](#uiux-guidelines)
+- [Desktop](#desktop)
 - [Taskbar](#taskbar)
 - [State Management (Redux-Style)](#state-management-redux-style)
 
@@ -148,32 +161,21 @@ Tools should follow these guidelines for framework compatibility:
 
 ---
 
+### Desktop
+
+The desktop is the primary surface where shortcuts are placed and tools are launched. The target design follows the same Redux-subscriber pattern as the taskbar: an authoritative `DesktopState` slice in the Redux store, a `DesktopController` that subscribes to state changes, and `VShortcut` as a pure rendering component.
+
+Current implementation has shortcuts created imperatively in `App.java` with hardcoded positioning. Shortcut state is not tracked in Redux.
+
+See **[docs/features/DESKTOP.md](features/DESKTOP.md)** for full design, current deficiencies, and incremental migration plan.
+
+---
+
 ### Taskbar
 
-#### Grouping
+The taskbar shows all open tools and their lifecycle state (minimized, active, grouped). It is implemented as a Redux subscriber (`TaskbarController`) backed by immutable state (`TaskbarState`, `ToolInstance`). This is the reference architecture for reactive UI subsystems in VirtualDesktop.
 
-**Decision:** Taskbar supports grouping tools by type (class name).
-
-**Behavior:**
-
-- Model supports grouping; view optionally displays grouped/ungrouped based on user preference
-- Initial implementation: group by tool type (class)
-- Future: grouping by docking relationship
-
-**Rationale:** Reduces taskbar clutter when multiple instances of the same tool type are open.
-
-#### Docking Indicators
-
-**Decision:** Taskbar displays indicators for docking state changes.
-
-**Indicators:**
-
-- **Original panel present** - Whether the tool's original panel is still in its JInternalFrame
-- **Has external content** - Whether the JInternalFrame contains panels docked from other tools
-
-**Rationale:** Users need visual feedback when panels are moved between frames via docking.
-
-**View flexibility:** Model provides state; view decides rendering (icon badges, colors, text suffixes). Badge rendering deferred to future dependency addition.
+See **[docs/features/TASKBAR.md](features/TASKBAR.md)** for full architecture, data flow, and known gaps.
 
 ---
 
@@ -257,8 +259,10 @@ TASKBAR_GROUPING_TOGGLED, TASKBAR_TOOL_SELECTED
 ## Open Questions / Future Considerations
 
 - [ ] Configuration framework for main app (currently hardcoded)
-- [ ] Desktop layout persistence format
+- [ ] Desktop layout persistence format — see DESKTOP.md Phase 4
 - [ ] Dual-version strategy (Java 8 + Java 9+) implementation details
+- [ ] Taskbar docking indicator badge rendering (icon vs. text prefix)
+- [ ] `ToolInstance` should carry icon reference so taskbar has no direct `DesktopManager` dependency
 
 ---
 
@@ -273,3 +277,4 @@ TASKBAR_GROUPING_TOGGLED, TASKBAR_TOOL_SELECTED
 | 2026-01-17 | Redux-style state management | Centralized state, debuggability, future undo/redo |
 | 2026-01-17 | Taskbar grouping by tool type | Reduce clutter with multiple tool instances |
 | 2026-01-17 | Docking state indicators | Visual feedback for panel movement |
+| 2026-05-29 | Desktop/Taskbar feature docs | Formal design docs added; DESKTOP.md captures migration plan |

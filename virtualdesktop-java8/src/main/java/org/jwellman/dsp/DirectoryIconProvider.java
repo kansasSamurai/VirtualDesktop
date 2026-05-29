@@ -3,7 +3,6 @@ package org.jwellman.dsp;
 import java.awt.Color;
 import java.awt.Image;
 import java.io.File;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;

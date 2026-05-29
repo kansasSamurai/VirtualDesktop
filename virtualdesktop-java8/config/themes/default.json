@@ -119,12 +119,12 @@
 
   "iconMetadata": {
     "home156": {
-      "colorable": false,
-      "type": "raster"
+      "colorable": true,
+      "type": "font"
     },
     "calendar168": {
-      "colorable": false,
-      "type": "raster"
+      "colorable": true,
+      "type": "font"
     },
     "document176": {
       "colorable": false,

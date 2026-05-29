@@ -37,6 +37,7 @@ import org.jwellman.dsp.FontAwesomeIconProvider;
 import org.jwellman.dsp.icons.IconSpecifier;
 import org.jwellman.swing.plaf.metal.MetalThemeManager ;
 //import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
+import org.jwellman.virtualdesktop.theme.ThemeManager;
 import org.jwellman.virtualdesktop.desktop.VActionLNF;
 import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.VShortcut;
@@ -457,6 +458,10 @@ public class App extends JFrame implements ActionListener {
         DSP.Icons.register("jpad.leaf", new IconSpecifier( "FontAwesome", "LEAF", 18, null, iconColor, Color.white) );
         DSP.Icons.register("jpad.check", new IconSpecifier( "FontAwesome", "CHECK", 18, null, iconColor, Color.white) );
         DSP.Icons.register("jpad.clock", new IconSpecifier( "FontAwesome", "CLOCK_O", 14, null, Color.white, Color.white) );
+
+        Color desktopIconColor = ThemeManager.getComponentColor("desktopIcon", "foreground");
+        DSP.Icons.register("home156-large",     new IconSpecifier("FontAwesome", "HOME",     48, null, desktopIconColor, desktopIconColor));
+        DSP.Icons.register("calendar168-large", new IconSpecifier("FontAwesome", "CALENDAR", 48, null, desktopIconColor, desktopIconColor));
 
         IconFontSwing.register(GoogleMaterialDesignIcons.getIconFont());
 

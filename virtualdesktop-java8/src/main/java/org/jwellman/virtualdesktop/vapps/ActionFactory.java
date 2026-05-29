@@ -8,11 +8,9 @@ import java.util.List;
 import javax.swing.Action;
 import javax.swing.Icon;
 
+import org.jwellman.dsp.DSP;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.jwellman.dsp.DSP;
-import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 

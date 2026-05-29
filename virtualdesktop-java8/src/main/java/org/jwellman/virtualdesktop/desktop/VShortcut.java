@@ -1,11 +1,13 @@
 package org.jwellman.virtualdesktop.desktop;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.RenderingHints;
+import java.awt.Stroke;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -21,6 +23,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
+import javax.swing.border.Border;
 import javax.swing.plaf.ComponentUI;
 
 import org.apache.batik.transcoder.TranscoderException;
@@ -39,10 +42,14 @@ public class VShortcut extends JLabel {
     private static VShortcut lastItem;
 
     /** The shortcut where the mouse is being hovered over (i.e. can also be null) */
+    @SuppressWarnings("unused")
     private static VShortcut curItem;
 
     /** Logger for this class */
     private static final Logger log = Logger.getLogger(VShortcut.class.getName() );
+
+    /** Standard padding for all shortcuts */
+    private static final Border PADDING = BorderFactory.createEmptyBorder(12, 12, 12, 12);
 
     /** ... */
     private Action action;
@@ -77,22 +84,24 @@ public class VShortcut extends JLabel {
         this.setVerticalTextPosition(JLabel.BOTTOM);
         this.setHorizontalTextPosition(JLabel.CENTER);
 
-        oldUI = getUI();
-        if ( transparentBg ) { setUI( myui ); }
-
-        this.setBorder();
-        this.setLocation(xPos, yPos);
-
         // TODO we need a pane parameter; this may be critical at some point in the future;
         // or... more likely?  all shortcuts go one the same [bottom-most] layer
         this.pane = pane;
 
-        this.setSize(this.getPreferredSize());
+        oldUI = getUI();
+        if ( transparentBg ) { setUI( myui ); }
 
+        this.setLocation(xPos, yPos);
+
+        this.setBorder();
         this.setIcon(icon);
 
+        this.setSize(this.getPreferredSize());
+
         final Dimension d = this.getSize();
-        this.setSize(icon.getIconWidth() + 10, icon.getIconHeight() + d.height);
+//        this.setSize(75, 75);
+        this.setSize(icon.getIconWidth() + 30, d.height);
+//      this.setSize(icon.getIconWidth() + 10, icon.getIconHeight() + d.height);
 
         this.setVisible(true);
 
@@ -175,7 +184,7 @@ public class VShortcut extends JLabel {
      * Make the selectable object bigger to surround the text with coloring.
      */
     protected void setBorder() {
-        setBorder( BorderFactory.createEmptyBorder(5,5,5,5) );
+        setBorder( PADDING );
     }
 
     /**
@@ -360,6 +369,8 @@ public class VShortcut extends JLabel {
         }
     }
 
+    private static final Color SLATE_140 = new Color(24, 26, 32, 140);
+
     /** The original UI that we revert to when not selected, hovered or otherwise active. */
     @SuppressWarnings("unused")
 	private ComponentUI oldUI;
@@ -374,7 +385,7 @@ public class VShortcut extends JLabel {
     private MyMouseMotionListener mml;
 
     /** The ComponentUI used for normal rendering. */
-    protected static MyUI myui = new MyUI( new Color( 0, 0, 255, 0) );
+    protected static MyUI myui = new MyUI( SLATE_140 );
 
     /** The ComponentUI used for active rendering (hover). */
     protected static MyUI actui = new MyUI( new Color( 0, 0, 255, 20) );
@@ -450,6 +461,9 @@ public class VShortcut extends JLabel {
     @SuppressWarnings("restriction")
 	private static class MyUI extends com.sun.java.swing.plaf.windows.WindowsLabelUI {
 
+        private static final Color MUTED_GOLD = new Color(160, 151, 124); // Color(220, 168, 66);
+        private static final Stroke STROKE_1_0 = new BasicStroke(1.5f);
+        
         /** The color of the background. */
         Color col;
 
@@ -468,6 +482,7 @@ public class VShortcut extends JLabel {
           */
         public MyUI( Color c ) {
             col = c;
+            
         }
 
         /**
@@ -483,12 +498,24 @@ public class VShortcut extends JLabel {
             } else {
                 final Graphics2D g2 = (Graphics2D)g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
+                final int w = c.getWidth()-1;
+                final int h = c.getHeight()-1;
+                final int arc = 15;
+                
                 final Color original = g2.getColor();
 
                     g2.setColor(col);
                     // g2.fillRect(0, 0, c.getWidth(),c.getHeight());
-                    g2.fillRoundRect(0, 0, c.getWidth(),c.getHeight(), 15, 15 );
+                    g2.fillRoundRect(0, 0, w, h, arc, arc );
+
+                    // 2. Draw the Signature Accent Border
+                    g2.setColor(MUTED_GOLD); // Kansas Samurai Muted Gold
+
+                    // Set a nice, thin line weight (FlatLaf's border weight can be customized)
+                    g2.setStroke(STROKE_1_0); // Fine, precise 1px border
+
+                    // Draw the exact same rounded rectangle path on top of the fill
+                    g2.drawRoundRect(0, 0, w, h, arc, arc);
 
                 g2.setColor( original );
 

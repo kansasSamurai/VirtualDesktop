@@ -20,6 +20,7 @@
 | Cal | Year Calendar Demo — SmartGrid as calendar engine | ✅ Complete | Week-as-row; `CalendarWeekRowPanel`; `DayCellPanel` with chip buttons; `WeekNumberStrip`; event detail panel |
 | — | SmartGrid API: `addStrip()`, `getHeaderBackground()`, `setRowSelectionEnabled()` | ✅ Complete | Extensibility additions driven by the calendar demo |
 | — | `DefaultHeaderCellRenderer` — centered column header labels | ✅ Complete | |
+| — | TSV paste — `DefaultGridModel.loadFromTSV()`, toolbar Paste button, `setToolbarVisible()` | ✅ Complete | Clipboard → header-or-default dialog → grid; toolbar hidden by default |
 | 8 | Variable row height (`RowHeightProvider`) | ⬜ End | Deferred by design — touches core scroll math |
 | 12 | Header panel refactor: persistent panels, in-place bound updates | ⬜ End | |
 | 13 | Filter search cache with configurable row-count threshold | ⬜ End | |
@@ -33,6 +34,7 @@
 | 23 | Column visual polish — cell padding API, column separators, header alignment inheritance | ⬜ Future | See phase detail below |
 | 24 | Visualization renderers — mini bar chart / sparkline cell renderer + smart footers | ⬜ Future | See phase detail below |
 | 25 | RowDecorator + CellDecorator + Copyable — pluggable decoration; activeCell; cell focus, copy, keyboard nav | ⬜ Future | See phase detail below; prerequisite for all cell-level keyboard/clipboard features |
+| 26 | DataSource interface — `GridDataSource` fetch contract + `DataSourceGridModel` wrapper for lazy / remote data | ⬜ Future | Convenience layer for apps without existing external plumbing; see phase detail below |
 
 ---
 
@@ -1646,6 +1648,209 @@ Sub-phases B, C, and D depend on each other in the order listed. B is the
 prerequisite for C and D; C makes the focus state visible; D makes it useful.
 Sub-phase E (Copyable) can ship alongside sub-phase D or independently — it
 requires only that the Ctrl+C key handler from D exists to call it.
+
+---
+
+## Phase 26 — DataSource Interface
+
+### Motivation
+
+`GridModel` is already the correct abstraction between data and SmartGrid — it is, in
+effect, a datasource contract. But implementing `GridModel` directly requires the caller
+to handle filtering, sorting, visible-row management, and async-to-EDT bridging
+themselves. For applications that already have domain objects and their own data layer,
+this is appropriate: they implement `GridModel` directly against their own structures and
+never pay for infrastructure they don't need.
+
+For applications that *don't* have that external plumbing — a quick tool, a diagnostic
+view, a REST-backed grid — building all of that from scratch is friction. This phase
+defines a `GridDataSource` convenience layer that sits *above* `GridModel` and handles
+the common fetch lifecycle, leaving callers to supply only a fetch function.
+
+The key insight driving the design: **DataSource is for apps without existing external
+plumbing.** Apps that already own their data pipeline implement `GridModel` directly.
+`GridDataSource` is the shortcut for everyone else.
+
+---
+
+### Architecture
+
+```
+Your application
+      │
+      ▼
+  GridDataSource          ← you implement this (or use a built-in adapter)
+      │
+      ▼
+  DataSourceGridModel     ← implements GridModel; handles caching, placeholders,
+      │                       async-to-EDT bridging
+      ▼
+  SmartGrid               ← unchanged; queries GridModel as always
+```
+
+`SmartGrid` never knows a `GridDataSource` exists. The boundary stays at `GridModel`.
+
+---
+
+### GridDataSource Interface
+
+```java
+public interface GridDataSource {
+
+    /**
+     * Returns the total row count, or -1 if unknown (unbounded / streaming).
+     * Called once on attach and again whenever the filter or sort changes.
+     * Must be called on the EDT; implementations that need a background count
+     * should cache it and return the last known value here.
+     */
+    int getTotalRowCount();
+
+    /**
+     * Fetches a range of rows asynchronously. The datasource calls
+     * {@code callback.accept(rows)} when the rows are ready; the callback
+     * will be dispatched back onto the EDT by DataSourceGridModel.
+     *
+     * @param from     zero-based start index (in the current sort/filter view)
+     * @param count    number of rows requested
+     * @param callback receives the fetched rows; called exactly once
+     */
+    void fetchRows(int from, int count, Consumer<List<GridRow>> callback);
+
+    /**
+     * Returns the column definitions for this datasource.
+     * Called once on attach; columns are treated as fixed for the datasource lifetime.
+     */
+    List<ColumnDef> getColumns();
+
+    /**
+     * Optional: called when the active filter changes so the datasource can push
+     * the predicate to the backend (server-side filtering). If not overridden,
+     * DataSourceGridModel applies the filter client-side over cached rows.
+     * Default implementation returns {@code false} (client-side filter applies).
+     */
+    default boolean applyServerSideFilter(GridModelFilter filter) {
+        return false;
+    }
+
+    /**
+     * Optional: called when the active sort changes so the datasource can push
+     * sort specs to the backend. Default implementation returns {@code false}
+     * (client-side sort applies).
+     */
+    default boolean applyServerSideSort(List<SortSpec> specs) {
+        return false;
+    }
+}
+```
+
+The two `default` methods are the server-side delegation hooks. A datasource backed by
+a REST API overrides them, sends the sort/filter to the server, and returns `true` to
+signal that `DataSourceGridModel` should not apply them again client-side.
+
+---
+
+### DataSourceGridModel
+
+Implements `GridModel`. Wraps a `GridDataSource` and handles:
+
+- **Page cache** — `Map<Integer, List<GridRow>>` keyed by page index; pages are
+  populated on demand as `getRow(i)` is called near an uncached boundary
+- **Prefetch threshold** — when `getRow(i)` is called within N rows of a page boundary,
+  the next page fetch is triggered proactively; configurable via `setPrefetchThreshold(int)`
+- **Placeholder rows** — while a page is in flight, `getRow(i)` returns a blank
+  `GridRow` tagged `fnd-type=loading` so the grid can render a skeleton row
+- **EDT dispatch** — `fetchRows` callback is wrapped in `SwingUtilities.invokeLater`
+  before being passed to the datasource, so datasource implementations never need to
+  worry about threading
+- **Filter/sort delegation** — if `applyServerSideFilter()` returns `true`, the model
+  invalidates its cache and refetches; otherwise it applies the filter over cached rows
+  exactly as `DefaultGridModel` does
+
+```java
+public class DataSourceGridModel implements GridModel {
+
+    private final GridDataSource          source;
+    private final Map<Integer, List<GridRow>> pageCache = new HashMap<>();
+    private int pageSize         = 100;    // rows per fetch
+    private int prefetchThreshold = 20;    // rows from edge before prefetch fires
+
+    public DataSourceGridModel(GridDataSource source) { ... }
+
+    public void setPageSize(int n) { ... }
+    public void setPrefetchThreshold(int n) { ... }
+
+    /** Invalidates the cache and refires a total-count + first-page fetch. */
+    public void refresh() { ... }
+
+    @Override
+    public int getRowCount() { return source.getTotalRowCount(); }
+
+    @Override
+    public GridRow getRow(int index) {
+        int page = index / pageSize;
+        if (!pageCache.containsKey(page)) {
+            triggerFetch(page);
+            return placeholderRow();   // rendered while fetch is in flight
+        }
+        maybePreFetch(index);
+        return pageCache.get(page).get(index % pageSize);
+    }
+
+    // ...
+}
+```
+
+---
+
+### Built-In Datasource Adapters
+
+Three concrete `GridDataSource` implementations ship with SmartGrid:
+
+| Class | Description |
+|-------|-------------|
+| `ListDataSource` | Wraps an existing `List<?>` with a `RowMapper<T>` function that converts domain objects to `GridRow`. Zero-copy convenience for local collections. |
+| `CallbackDataSource` | Constructor takes two lambdas: `IntSupplier totalCount` and `BiConsumer<Integer,Integer> fetcher`. One-liner construction for simple cases. |
+| `JdbcDataSource` | Takes a `Connection`, table/query string, and column map. Issues `SELECT … LIMIT ? OFFSET ?` for each page. Handles server-side sort by rewriting the `ORDER BY` clause from `SortSpec` list. Optional for projects not on a JDBC classpath. |
+
+`ListDataSource` is the entry point for the common case — an in-memory list you already
+have — without needing to implement the interface at all:
+
+```java
+List<Employee> employees = service.getAllEmployees();
+
+GridDataSource ds = new ListDataSource<>(employees,
+    emp -> new GridRow()
+        .put("id",   emp.getId())
+        .put("name", emp.getName())
+        .put("dept", emp.getDepartment()));
+
+SmartGrid grid = new SmartGrid(new DataSourceGridModel(ds));
+```
+
+---
+
+### What This Phase Does NOT Do
+
+- **Does not replace `DefaultGridModel`** — that remains the primary API for fully
+  in-memory datasets where you populate rows explicitly. `DataSourceGridModel` is the
+  alternative when rows come from outside and shouldn't all be in memory at once.
+- **Does not change `GridModel`** — the interface is stable; `DataSourceGridModel` is
+  just another implementation of it.
+- **Does not add async rendering** — SmartGrid's EDT contract is unchanged. The async
+  work happens inside `DataSourceGridModel`; SmartGrid always receives data synchronously
+  from `getRow(i)`, which may return a placeholder while a fetch is in flight.
+
+---
+
+### Sequencing
+
+- No prerequisites; can be implemented independently of other future phases.
+- Phase 19 (GlazedLists `FilterSortStrategy`) complements this phase: the strategy
+  interface applies inside `DefaultGridModel`, while `GridDataSource` applies *outside*
+  the model entirely — they operate at different layers and compose cleanly.
+- `JdbcDataSource` can be deferred to a sub-phase; `ListDataSource` and
+  `CallbackDataSource` should ship first as they cover the most common use cases with
+  the least implementation risk.
 
 ---
 

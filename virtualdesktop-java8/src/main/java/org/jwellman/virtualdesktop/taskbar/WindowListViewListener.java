@@ -3,16 +3,16 @@ package org.jwellman.virtualdesktop.taskbar;
 import java.awt.Point;
 
 /**
- * Callback interface from a TaskbarView to its controller.
+ * Callback interface from a WindowListView to its controller.
  *
  * The view fires these events in response to user interaction. The controller
  * owns all action logic (activating tools, building context menus, dispatching
  * Redux actions) — the view just reports what the user did and where.
  */
-public interface TaskbarViewListener {
+public interface WindowListViewListener {
 
     /**
-     * The user selected a tool or group item in the taskbar.
+     * The user selected a tool or group item in the window list.
      *
      * @param toolId  the ToolInstance id for leaf items; the group type key
      *                (class name) for group items

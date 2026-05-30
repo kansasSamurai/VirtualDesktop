@@ -3,13 +3,13 @@ package org.jwellman.virtualdesktop.taskbar;
 import java.awt.Color;
 
 /**
- * Immutable color palette for a TaskbarView implementation.
+ * Immutable color palette for a WindowListView implementation.
  *
- * Concrete views receive a TaskbarTheme via applyTheme() and use it for all
+ * Concrete views receive a WindowListTheme via applyTheme() and use it for all
  * rendering decisions. The static factory methods provide ready-made palettes;
  * callers can also construct a custom instance via the builder.
  */
-public final class TaskbarTheme {
+public final class WindowListTheme {
 
     /** 2px left-edge indicator bar color for the active/focused row. */
     public final Color activeIndicator;
@@ -41,7 +41,7 @@ public final class TaskbarTheme {
     /** Close-button (×) foreground on hover. */
     public final Color closeButtonHover;
 
-    private TaskbarTheme(
+    private WindowListTheme(
             Color activeIndicator, Color activeBackground, Color progressTint,
             Color normalForeground, Color minimizedForeground,
             Color groupHeaderBackground, Color groupHeaderForeground,
@@ -67,8 +67,8 @@ public final class TaskbarTheme {
      * Active background: soft translucent gold tint (alpha 35)
      * Progress tint: slightly opaque gold (alpha 40)
      */
-    public static TaskbarTheme darkGold() {
-        return new TaskbarTheme(
+    public static WindowListTheme darkGold() {
+        return new WindowListTheme(
             new Color(220, 168,  66),       // activeIndicator  — Muted Gold
             new Color(220, 168,  66,  35),  // activeBackground — translucent gold
             new Color(220, 168,  66,  40),  // progressTint     — soft gold fill
@@ -85,8 +85,8 @@ public final class TaskbarTheme {
     /**
      * Light sidebar with blue active states — suitable for light Look and Feels.
      */
-    public static TaskbarTheme light() {
-        return new TaskbarTheme(
+    public static WindowListTheme light() {
+        return new WindowListTheme(
             new Color( 50, 100, 200),       // activeIndicator  — blue
             new Color( 50, 100, 200,  30),  // activeBackground
             new Color( 50, 100, 200,  40),  // progressTint

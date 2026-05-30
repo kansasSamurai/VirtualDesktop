@@ -41,8 +41,8 @@ import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
 import org.jwellman.virtualdesktop.state.reducers.AppReducer;
 import org.jwellman.virtualdesktop.state.store.AppStore;
 import org.jwellman.virtualdesktop.state.store.LoggingMiddleware;
-import org.jwellman.virtualdesktop.taskbar.SmartGridTaskbarView;
-import org.jwellman.virtualdesktop.taskbar.TaskbarController;
+import org.jwellman.virtualdesktop.taskbar.SmartGridWindowListView;
+import org.jwellman.virtualdesktop.taskbar.WindowListController;
 //import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
 import org.jwellman.virtualdesktop.theme.ThemeManager;
 import org.jwellman.virtualdesktop.vapps.ActionFactory;
@@ -95,8 +95,8 @@ public class App extends JFrame implements ActionListener {
     /** a custom scrollpane for a scrollable desktop */
     private DesktopScrollPane dsp;
 
-    /** Redux-backed taskbar controller (version 6+) */
-    private TaskbarController taskbarController;
+    /** Redux-backed window list controller (version 6+) */
+    private WindowListController windowListController;
 
     // These are a workaround because VirtualAppFrame needs to know the LAF
     // for a workaround that it employs for WEBLAF only
@@ -145,7 +145,7 @@ public class App extends JFrame implements ActionListener {
         desktop = new VDesktopPane(); // new JDesktopPane(); //a specialized layered pane
         DesktopManager.get().setDesktop(desktop);
 
-        int version = 6; // 5=GlazedLists, 6=Redux TaskbarController
+        int version = 6; // 5=GlazedLists, 6=Redux WindowListController
         switch (version) {
             // previous versions are in source control if needed
             case 5:
@@ -171,13 +171,13 @@ public class App extends JFrame implements ActionListener {
                 break;
 
             case 6:
-                // Redux-backed taskbar using TaskbarController
+                // Redux-backed window list using WindowListController
                 controls = new JPanel(new BorderLayout());
 
-                // JListTaskbarView taskbarView = new JListTaskbarView();
-                SmartGridTaskbarView taskbarView = new SmartGridTaskbarView();
-                this.taskbarController = new TaskbarController(taskbarView);
-                controls.add(taskbarView.getComponent(), BorderLayout.CENTER);
+                // JListWindowListView windowListView = new JListWindowListView();
+                SmartGridWindowListView windowListView = new SmartGridWindowListView();
+                this.windowListController = new WindowListController(windowListView);
+                controls.add(windowListView.getComponent(), BorderLayout.CENTER);
 
                 // Still need to set observed JList for DesktopManager compatibility
                 // Create a dummy list for now - DesktopManager will be refactored later

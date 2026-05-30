@@ -13,17 +13,17 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 /**
- * JList-based implementation of TaskbarView.
+ * JList-based implementation of WindowListView.
  *
  * Owns and manages its JList and DefaultListModel internally.
- * Interaction events are translated to TaskbarViewListener callbacks;
+ * Interaction events are translated to WindowListViewListener callbacks;
  * no action logic lives here.
  */
-public class JListTaskbarView implements TaskbarView {
+public class JListWindowListView implements WindowListView {
 
-    private final JList<TaskbarItem> list;
-    private final DefaultListModel<TaskbarItem> model;
-    private TaskbarViewListener listener;
+    private final JList<WindowListItem> list;
+    private final DefaultListModel<WindowListItem> model;
+    private WindowListViewListener listener;
 
     // Prevents selection-change events fired by setSelectedId() from looping back
     private boolean updatingSelection = false;
@@ -32,16 +32,16 @@ public class JListTaskbarView implements TaskbarView {
     // (valueChanged is triggered by mousePressed, before mouseClicked)
     private Point lastPressScreen = new Point(0, 0);
 
-    public JListTaskbarView() {
+    public JListWindowListView() {
         model = new DefaultListModel<>();
         list = new JList<>(model);
-        list.setCellRenderer(new TaskbarItemRenderer());
+        list.setCellRenderer(new WindowListItemRenderer());
         wireMouseListener();
         wireSelectionListener();
     }
 
     // -------------------------------------------------------------------------
-    // TaskbarView implementation
+    // WindowListView implementation
     // -------------------------------------------------------------------------
 
     @Override
@@ -50,9 +50,9 @@ public class JListTaskbarView implements TaskbarView {
     }
 
     @Override
-    public void setItems(List<TaskbarItem> items) {
+    public void setItems(List<WindowListItem> items) {
         model.clear();
-        for (TaskbarItem item : items) {
+        for (WindowListItem item : items) {
             model.addElement(item);
         }
     }
@@ -81,13 +81,13 @@ public class JListTaskbarView implements TaskbarView {
     }
 
     @Override
-    public void setListener(TaskbarViewListener listener) {
+    public void setListener(WindowListViewListener listener) {
         this.listener = listener;
     }
 
     @Override
-    public void applyTheme(TaskbarTheme theme) {
-        // The JList view uses TaskbarItemRenderer with its own hardcoded colors.
+    public void applyTheme(WindowListTheme theme) {
+        // The JList view uses WindowListItemRenderer with its own hardcoded colors.
         // Theme support for the JList view is deferred; this is a no-op stub
         // so the interface contract is satisfied.
     }
@@ -103,7 +103,7 @@ public class JListTaskbarView implements TaskbarView {
                 if (e.getValueIsAdjusting() || updatingSelection || listener == null) {
                     return;
                 }
-                TaskbarItem selected = list.getSelectedValue();
+                WindowListItem selected = list.getSelectedValue();
                 if (selected == null) {
                     return;
                 }
@@ -138,7 +138,7 @@ public class JListTaskbarView implements TaskbarView {
                 if (index < 0) {
                     return;
                 }
-                TaskbarItem item = model.get(index);
+                WindowListItem item = model.get(index);
 
                 if (e.getButton() == MouseEvent.BUTTON3) {
                     listener.onContextRequested(item.getId(), item.isGroup(),

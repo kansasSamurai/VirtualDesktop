@@ -22,7 +22,7 @@ import org.jwellman.swing.grid.Selectable;
 import org.jwellman.virtualdesktop.state.model.FrameState;
 
 /**
- * SmartGrid row panel for a single taskbar tool entry.
+ * SmartGrid row panel for a single active-window entry.
  *
  * Three-column layout: [Icon 16px] → [Title, expanding] → [Close × 16px]
  * Row height target: 32–36px (enforced via preferred size; SmartGrid's rowHeight
@@ -34,10 +34,10 @@ import org.jwellman.virtualdesktop.state.model.FrameState;
  *   Minimized       — title text rendered in dimmed foreground color
  *   Progress        — background fills left-to-right as executionProgress 0→1
  *
- * All colors come from a shared TaskbarTheme[] reference so that applyTheme()
+ * All colors come from a shared WindowListTheme[] reference so that applyTheme()
  * on the view takes effect on the next bind() without recreating pool instances.
  */
-public class TaskbarRowComponent extends JPanel implements Recyclable, Selectable {
+public class WindowListRowComponent extends JPanel implements Recyclable, Selectable {
 
     private static final int ROW_HEIGHT      = 34;
     private static final int INDICATOR_WIDTH =  2;
@@ -45,22 +45,22 @@ public class TaskbarRowComponent extends JPanel implements Recyclable, Selectabl
     private static final int RIGHT_INSET     =  8;
     private static final int VERT_INSET      =  2;
 
-    private final JLabel          iconLabel;
-    private final JLabel          nameLabel;
-    private final JButton         closeButton;
+    private final JLabel           iconLabel;
+    private final JLabel           nameLabel;
+    private final JButton          closeButton;
     private final Consumer<String> onClose;
     private final ListSelectionModel selectionModel;
-    private final TaskbarTheme[]  themeHolder;
+    private final WindowListTheme[]  themeHolder;
 
     private boolean      isSelected        = false;
     private float        executionProgress = 0.0f;
     private MouseAdapter rowListener       = null;
     private String       currentToolId     = null;
 
-    public TaskbarRowComponent(Consumer<String> onClose,
-                               ListSelectionModel selectionModel,
-                               int[] columnWidths,
-                               TaskbarTheme[] themeHolder) {
+    public WindowListRowComponent(Consumer<String> onClose,
+                                  ListSelectionModel selectionModel,
+                                  int[] columnWidths,
+                                  WindowListTheme[] themeHolder) {
         this.onClose        = onClose;
         this.selectionModel = selectionModel;
         this.themeHolder    = themeHolder;
@@ -77,7 +77,7 @@ public class TaskbarRowComponent extends JPanel implements Recyclable, Selectabl
         nameLabel = new JLabel();
         nameLabel.setForeground(themeHolder[0].normalForeground);
 
-        closeButton = new JButton("×");  // ×
+        closeButton = new JButton("×");
         closeButton.setFont(closeButton.getFont().deriveFont(Font.BOLD, 12f));
         closeButton.setFocusable(false);
         closeButton.setBorderPainted(false);
@@ -104,9 +104,9 @@ public class TaskbarRowComponent extends JPanel implements Recyclable, Selectabl
             }
         });
 
-        add(iconLabel,    BorderLayout.WEST);
-        add(nameLabel,    BorderLayout.CENTER);
-        add(closeButton,  BorderLayout.EAST);
+        add(iconLabel,   BorderLayout.WEST);
+        add(nameLabel,   BorderLayout.CENTER);
+        add(closeButton, BorderLayout.EAST);
     }
 
     // -------------------------------------------------------------------------
@@ -131,13 +131,12 @@ public class TaskbarRowComponent extends JPanel implements Recyclable, Selectabl
 
     @Override
     public void bind(GridRow row, int rowIndex) {
-        // Remove stale listener before rebinding.
         if (rowListener != null) {
             removeMouseListener(rowListener);
             rowListener = null;
         }
 
-        TaskbarItem item = (TaskbarItem) row.get("item");
+        WindowListItem item = (WindowListItem) row.get("item");
         currentToolId = item.getId();
 
         iconLabel.setIcon(item.getIcon());
@@ -152,7 +151,6 @@ public class TaskbarRowComponent extends JPanel implements Recyclable, Selectabl
 
         closeButton.setForeground(themeHolder[0].closeButtonDefault);
 
-        // Wire selection on press so the row highlights immediately.
         final int capturedIdx = rowIndex;
         final ListSelectionModel sm = selectionModel;
         rowListener = new MouseAdapter() {
@@ -175,7 +173,7 @@ public class TaskbarRowComponent extends JPanel implements Recyclable, Selectabl
     }
 
     // -------------------------------------------------------------------------
-    // Progress API (future: expose via GridRow tag or a direct setter)
+    // Progress API
     // -------------------------------------------------------------------------
 
     public void setExecutionProgress(float progress) {
@@ -189,18 +187,16 @@ public class TaskbarRowComponent extends JPanel implements Recyclable, Selectabl
 
     @Override
     protected void paintComponent(Graphics g) {
-        super.paintComponent(g); // no-op (not opaque); Swing renders children
+        super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                             RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // Execution progress fill — subtle background sweep
         if (executionProgress > 0.0f) {
             g2.setColor(themeHolder[0].progressTint);
             g2.fillRect(0, 0, (int) (getWidth() * executionProgress), getHeight());
         }
 
-        // Active/selected state — tint + left indicator bar
         if (isSelected) {
             g2.setColor(themeHolder[0].activeBackground);
             g2.fillRect(0, 0, getWidth(), getHeight());

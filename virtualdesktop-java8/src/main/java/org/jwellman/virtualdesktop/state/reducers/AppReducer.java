@@ -2,7 +2,7 @@ package org.jwellman.virtualdesktop.state.reducers;
 
 import org.jwellman.virtualdesktop.state.actions.Action;
 import org.jwellman.virtualdesktop.state.model.AppState;
-import org.jwellman.virtualdesktop.state.model.TaskbarState;
+import org.jwellman.virtualdesktop.state.model.WindowListState;
 import org.jwellman.virtualdesktop.state.model.ToolsState;
 
 /**
@@ -13,24 +13,24 @@ import org.jwellman.virtualdesktop.state.model.ToolsState;
 public class AppReducer implements Reducer {
 
     private final ToolsReducer toolsReducer;
-    private final TaskbarReducer taskbarReducer;
+    private final WindowListReducer windowListReducer;
 
     public AppReducer() {
         this.toolsReducer = new ToolsReducer();
-        this.taskbarReducer = new TaskbarReducer();
+        this.windowListReducer = new WindowListReducer();
     }
 
     @Override
     public AppState reduce(AppState currentState, Action action) {
         ToolsState newTools = toolsReducer.reduce(currentState.getTools(), action);
-        TaskbarState newTaskbar = taskbarReducer.reduce(currentState.getTaskbar(), action);
+        WindowListState newWindowList = windowListReducer.reduce(currentState.getWindowList(), action);
 
         // Only create new state if something changed
-        if (newTools == currentState.getTools() && newTaskbar == currentState.getTaskbar()) {
+        if (newTools == currentState.getTools() && newWindowList == currentState.getWindowList()) {
             return currentState;
         }
 
-        return AppState.create(newTools, newTaskbar);
+        return AppState.create(newTools, newWindowList);
     }
 
 }

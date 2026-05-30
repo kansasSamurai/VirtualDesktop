@@ -9,14 +9,14 @@ import javax.swing.Icon;
 import org.jwellman.virtualdesktop.state.model.FrameState;
 
 /**
- * View model representing an item in the taskbar.
+ * View model representing one entry in the active-windows list.
  *
- * Can represent either a single tool or a group of tools (when grouping is enabled).
- * This decouples the view from the Redux state model.
+ * Can represent either a single open window or a group of windows (when
+ * grouping is enabled). Decouples the view from the Redux state model.
  *
  * @author rwellman
  */
-public class TaskbarItem {
+public class WindowListItem {
 
     private final String id;
     private final String title;
@@ -25,51 +25,48 @@ public class TaskbarItem {
     private final FrameState frameState;
     private final DockingIndicator dockingIndicator;
     private final boolean isGroup;
-    private final List<TaskbarItem> groupedItems;
+    private final List<WindowListItem> groupedItems;
 
     /**
-     * Create a single tool item.
+     * Create a single window entry.
      */
-    public TaskbarItem(String id, String title, String toolType, Icon icon, FrameState frameState) {
+    public WindowListItem(String id, String title, String toolType, Icon icon, FrameState frameState) {
         this(id, title, toolType, icon, frameState, DockingIndicator.NORMAL);
     }
 
     /**
-     * Create a single tool item with docking indicator.
+     * Create a single window entry with docking indicator.
      */
-    public TaskbarItem(String id, String title, String toolType, Icon icon,
-                       FrameState frameState, DockingIndicator dockingIndicator) {
-        this.id = id;
-        this.title = title;
-        this.toolType = toolType;
-        this.icon = icon;
-        this.frameState = frameState;
+    public WindowListItem(String id, String title, String toolType, Icon icon,
+                          FrameState frameState, DockingIndicator dockingIndicator) {
+        this.id               = id;
+        this.title            = title;
+        this.toolType         = toolType;
+        this.icon             = icon;
+        this.frameState       = frameState;
         this.dockingIndicator = dockingIndicator;
-        this.isGroup = false;
-        this.groupedItems = Collections.emptyList();
+        this.isGroup          = false;
+        this.groupedItems     = Collections.emptyList();
     }
 
     /**
-     * Create a group item containing multiple tools.
+     * Create a group entry containing multiple windows.
      */
-    public TaskbarItem(String toolType, Icon icon, List<TaskbarItem> items) {
-        this.id = "group:" + toolType;
-        this.title = toolType + " (" + items.size() + ")";
-        this.toolType = toolType;
-        this.icon = icon;
-        this.frameState = FrameState.NORMAL;
+    public WindowListItem(String toolType, Icon icon, List<WindowListItem> items) {
+        this.id               = "group:" + toolType;
+        this.title            = toolType + " (" + items.size() + ")";
+        this.toolType         = toolType;
+        this.icon             = icon;
+        this.frameState       = FrameState.NORMAL;
         this.dockingIndicator = computeGroupIndicator(items);
-        this.isGroup = true;
-        this.groupedItems = new ArrayList<>(items);
+        this.isGroup          = true;
+        this.groupedItems     = new ArrayList<>(items);
     }
 
-    /**
-     * Compute the docking indicator for a group based on its items.
-     */
-    private static DockingIndicator computeGroupIndicator(List<TaskbarItem> items) {
-        boolean hasDockedOut = false;
+    private static DockingIndicator computeGroupIndicator(List<WindowListItem> items) {
+        boolean hasDockedOut    = false;
         boolean hasExtraContent = false;
-        for (TaskbarItem item : items) {
+        for (WindowListItem item : items) {
             DockingIndicator ind = item.getDockingIndicator();
             if (ind == DockingIndicator.DOCKED_OUT || ind == DockingIndicator.MIXED) {
                 hasDockedOut = true;
@@ -109,7 +106,7 @@ public class TaskbarItem {
         return isGroup;
     }
 
-    public List<TaskbarItem> getGroupedItems() {
+    public List<WindowListItem> getGroupedItems() {
         return Collections.unmodifiableList(groupedItems);
     }
 

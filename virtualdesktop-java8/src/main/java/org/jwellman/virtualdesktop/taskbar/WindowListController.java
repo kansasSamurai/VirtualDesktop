@@ -28,18 +28,18 @@ import org.jwellman.virtualdesktop.state.store.StoreSubscriber;
 import org.jwellman.virtualdesktop.state.store.Subscription;
 
 /**
- * Bridges Redux state to a TaskbarView implementation.
+ * Bridges Redux state to a WindowListView implementation.
  *
  * Subscribes to the store and pushes updated item lists to the view on every
- * state change. Implements TaskbarViewListener to handle user interactions
+ * state change. Implements WindowListViewListener to handle user interactions
  * reported by the view. The controller never references concrete view classes;
  * swapping the view (JList, SmartGrid, etc.) requires no changes here.
  *
  * @author rwellman
  */
-public class TaskbarController implements StoreSubscriber, TaskbarViewListener {
+public class WindowListController implements StoreSubscriber, WindowListViewListener {
 
-    private final TaskbarView view;
+    private final WindowListView view;
     private final Subscription subscription;
 
     // Cache of toolId -> VirtualAppFrame for icon lookup and frame activation
@@ -47,9 +47,9 @@ public class TaskbarController implements StoreSubscriber, TaskbarViewListener {
 
     // Last item list sent to the view; retained so context menu handlers can
     // look up group children by id without re-querying Redux state.
-    private List<TaskbarItem> currentItems = new ArrayList<>();
+    private List<WindowListItem> currentItems = new ArrayList<>();
 
-    public TaskbarController(TaskbarView view) {
+    public WindowListController(WindowListView view) {
         this.view = view;
         this.view.setListener(this);
 
@@ -73,11 +73,11 @@ public class TaskbarController implements StoreSubscriber, TaskbarViewListener {
         updateFrameCache();
         currentItems = buildItems(state);
         view.setItems(currentItems);
-        view.setSelectedId(state.getTaskbar().getSelectedToolId());
+        view.setSelectedId(state.getWindowList().getSelectedToolId());
     }
 
     // -------------------------------------------------------------------------
-    // TaskbarViewListener
+    // WindowListViewListener
     // -------------------------------------------------------------------------
 
     @Override
@@ -90,7 +90,7 @@ public class TaskbarController implements StoreSubscriber, TaskbarViewListener {
     @Override
     public void onContextRequested(String id, boolean isGroup, Point screenPoint) {
         if (isGroup) {
-            TaskbarItem group = findItemById(id);
+            WindowListItem group = findItemById(id);
             if (group != null) {
                 showGroupPopupMenu(group, screenPoint);
             }
@@ -113,7 +113,7 @@ public class TaskbarController implements StoreSubscriber, TaskbarViewListener {
     @Override
     public void onItemActivated(String id, boolean isGroup) {
         if (isGroup) {
-            TaskbarItem group = findItemById(id);
+            WindowListItem group = findItemById(id);
             if (group != null) {
                 activateAllInGroup(group);
             }
@@ -133,43 +133,43 @@ public class TaskbarController implements StoreSubscriber, TaskbarViewListener {
         }
     }
 
-    private List<TaskbarItem> buildItems(AppState state) {
+    private List<WindowListItem> buildItems(AppState state) {
         ToolsState tools = state.getTools();
-        boolean groupingEnabled = state.getTaskbar().isGroupingEnabled();
-        List<TaskbarItem> items = new ArrayList<>();
+        boolean groupingEnabled = state.getWindowList().isGroupingEnabled();
+        List<WindowListItem> items = new ArrayList<>();
 
         if (groupingEnabled) {
-            Map<String, List<TaskbarItem>> groups = new HashMap<>();
+            Map<String, List<WindowListItem>> groups = new HashMap<>();
 
             for (ToolInstance tool : tools.getAllTools()) {
                 String type = tool.getToolType() != null ? tool.getToolType() : "Unknown";
-                TaskbarItem item = createTaskbarItem(tool);
+                WindowListItem item = createWindowListItem(tool);
 
                 if (!groups.containsKey(type)) {
-                    groups.put(type, new ArrayList<TaskbarItem>());
+                    groups.put(type, new ArrayList<WindowListItem>());
                 }
                 groups.get(type).add(item);
             }
 
-            for (Map.Entry<String, List<TaskbarItem>> entry : groups.entrySet()) {
-                List<TaskbarItem> groupMembers = entry.getValue();
+            for (Map.Entry<String, List<WindowListItem>> entry : groups.entrySet()) {
+                List<WindowListItem> groupMembers = entry.getValue();
                 if (groupMembers.size() == 1) {
                     items.add(groupMembers.get(0));
                 } else {
                     Icon groupIcon = groupMembers.get(0).getIcon();
-                    items.add(new TaskbarItem(entry.getKey(), groupIcon, groupMembers));
+                    items.add(new WindowListItem(entry.getKey(), groupIcon, groupMembers));
                 }
             }
         } else {
             for (ToolInstance tool : tools.getAllTools()) {
-                items.add(createTaskbarItem(tool));
+                items.add(createWindowListItem(tool));
             }
         }
 
         return items;
     }
 
-    private TaskbarItem createTaskbarItem(ToolInstance tool) {
+    private WindowListItem createWindowListItem(ToolInstance tool) {
         VirtualAppFrame frame = frameCache.get(tool.getId());
         Icon icon = frame != null ? frame.getFrameIcon() : null;
 
@@ -178,7 +178,7 @@ public class TaskbarController implements StoreSubscriber, TaskbarViewListener {
                 dockingState.isOriginalPanelPresent(),
                 dockingState.hasExternalContent());
 
-        return new TaskbarItem(
+        return new WindowListItem(
                 tool.getId(),
                 tool.getTitle(),
                 tool.getToolType(),
@@ -210,10 +210,10 @@ public class TaskbarController implements StoreSubscriber, TaskbarViewListener {
         }
     }
 
-    private void showGroupPopupMenu(TaskbarItem group, Point screenPoint) {
+    private void showGroupPopupMenu(WindowListItem group, Point screenPoint) {
         JPopupMenu popup = new JPopupMenu(group.getToolType());
 
-        for (final TaskbarItem item : group.getGroupedItems()) {
+        for (final WindowListItem item : group.getGroupedItems()) {
             JMenuItem menuItem = new JMenuItem(item.getTitle(), item.getIcon());
 
             if (item.getFrameState() == FrameState.MINIMIZED) {
@@ -245,8 +245,8 @@ public class TaskbarController implements StoreSubscriber, TaskbarViewListener {
         popup.show(comp, pt.x, pt.y);
     }
 
-    private void activateAllInGroup(TaskbarItem group) {
-        for (TaskbarItem item : group.getGroupedItems()) {
+    private void activateAllInGroup(WindowListItem group) {
+        for (WindowListItem item : group.getGroupedItems()) {
             VirtualAppFrame frame = frameCache.get(item.getId());
             if (frame != null) {
                 if (!frame.isVisible()) {
@@ -261,7 +261,7 @@ public class TaskbarController implements StoreSubscriber, TaskbarViewListener {
         }
 
         if (!group.getGroupedItems().isEmpty()) {
-            TaskbarItem first = group.getGroupedItems().get(0);
+            WindowListItem first = group.getGroupedItems().get(0);
             VirtualAppFrame frame = frameCache.get(first.getId());
             if (frame != null) {
                 try {
@@ -274,8 +274,8 @@ public class TaskbarController implements StoreSubscriber, TaskbarViewListener {
         }
     }
 
-    private TaskbarItem findItemById(String id) {
-        for (TaskbarItem item : currentItems) {
+    private WindowListItem findItemById(String id) {
+        for (WindowListItem item : currentItems) {
             if (id.equals(item.getId())) {
                 return item;
             }
@@ -291,7 +291,7 @@ public class TaskbarController implements StoreSubscriber, TaskbarViewListener {
      * Applies a theme to the view. Delegates directly to the view; no Redux
      * dispatch needed since theme is managed outside the store.
      */
-    public void applyTheme(TaskbarTheme theme) {
+    public void applyTheme(WindowListTheme theme) {
         view.applyTheme(theme);
     }
 
@@ -301,34 +301,34 @@ public class TaskbarController implements StoreSubscriber, TaskbarViewListener {
         }
     }
 
-    public TaskbarView getView() {
+    public WindowListView getView() {
         return view;
     }
 
     public void toggleGrouping() {
-        boolean currentlyEnabled = AppStore.get().getState().getTaskbar().isGroupingEnabled();
-        AppStore.get().dispatch(SimpleAction.taskbarGroupingToggled(!currentlyEnabled));
+        boolean currentlyEnabled = AppStore.get().getState().getWindowList().isGroupingEnabled();
+        AppStore.get().dispatch(SimpleAction.windowListGroupingToggled(!currentlyEnabled));
     }
 
     public void setGroupingEnabled(boolean enabled) {
-        AppStore.get().dispatch(SimpleAction.taskbarGroupingToggled(enabled));
+        AppStore.get().dispatch(SimpleAction.windowListGroupingToggled(enabled));
     }
 
     public boolean isGroupingEnabled() {
-        return AppStore.get().getState().getTaskbar().isGroupingEnabled();
+        return AppStore.get().getState().getWindowList().isGroupingEnabled();
     }
 
     // -------------------------------------------------------------------------
     // Static convenience methods for BeanShell access
     // -------------------------------------------------------------------------
 
-    public static void toggleTaskbarGrouping() {
-        boolean currentlyEnabled = AppStore.get().getState().getTaskbar().isGroupingEnabled();
-        AppStore.get().dispatch(SimpleAction.taskbarGroupingToggled(!currentlyEnabled));
+    public static void toggleWindowListGrouping() {
+        boolean currentlyEnabled = AppStore.get().getState().getWindowList().isGroupingEnabled();
+        AppStore.get().dispatch(SimpleAction.windowListGroupingToggled(!currentlyEnabled));
     }
 
-    public static void setTaskbarGrouping(boolean enabled) {
-        AppStore.get().dispatch(SimpleAction.taskbarGroupingToggled(enabled));
+    public static void setWindowListGrouping(boolean enabled) {
+        AppStore.get().dispatch(SimpleAction.windowListGroupingToggled(enabled));
     }
 
 }

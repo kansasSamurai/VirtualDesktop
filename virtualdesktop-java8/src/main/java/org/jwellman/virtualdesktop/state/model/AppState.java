@@ -10,12 +10,12 @@ package org.jwellman.virtualdesktop.state.model;
 public final class AppState {
 
     private final ToolsState tools;
-    private final TaskbarState taskbar;
+    private final WindowListState windowList;
     private final long timestamp;
 
-    private AppState(ToolsState tools, TaskbarState taskbar, long timestamp) {
+    private AppState(ToolsState tools, WindowListState windowList, long timestamp) {
         this.tools = tools;
-        this.taskbar = taskbar;
+        this.windowList = windowList;
         this.timestamp = timestamp;
     }
 
@@ -25,7 +25,7 @@ public final class AppState {
     public static AppState initial() {
         return new AppState(
             ToolsState.empty(),
-            TaskbarState.initial(),
+            WindowListState.initial(),
             System.currentTimeMillis()
         );
     }
@@ -33,8 +33,8 @@ public final class AppState {
     /**
      * Create a new state with updated components.
      */
-    public static AppState create(ToolsState tools, TaskbarState taskbar) {
-        return new AppState(tools, taskbar, System.currentTimeMillis());
+    public static AppState create(ToolsState tools, WindowListState windowList) {
+        return new AppState(tools, windowList, System.currentTimeMillis());
     }
 
     // ========== Getters ==========
@@ -43,8 +43,8 @@ public final class AppState {
         return tools;
     }
 
-    public TaskbarState getTaskbar() {
-        return taskbar;
+    public WindowListState getWindowList() {
+        return windowList;
     }
 
     public long getTimestamp() {
@@ -54,16 +54,16 @@ public final class AppState {
     // ========== Copy-on-write modifiers ==========
 
     public AppState withTools(ToolsState newTools) {
-        return new AppState(newTools, taskbar, System.currentTimeMillis());
+        return new AppState(newTools, windowList, System.currentTimeMillis());
     }
 
-    public AppState withTaskbar(TaskbarState newTaskbar) {
-        return new AppState(tools, newTaskbar, System.currentTimeMillis());
+    public AppState withWindowList(WindowListState newWindowList) {
+        return new AppState(tools, newWindowList, System.currentTimeMillis());
     }
 
     @Override
     public String toString() {
-        return "AppState{tools=" + tools.getToolCount() + ", taskbar=" + taskbar + "}";
+        return "AppState{tools=" + tools.getToolCount() + ", windowList=" + windowList + "}";
     }
 
 }

@@ -50,12 +50,12 @@ public final class ActionTypes {
     /** Dispatched when a panel's docking location changes */
     public static final String PANEL_LOCATION_CHANGED = "PANEL_LOCATION_CHANGED";
 
-    // ========== Taskbar ==========
+    // ========== Window List ==========
 
-    /** Dispatched when taskbar grouping is toggled */
-    public static final String TASKBAR_GROUPING_TOGGLED = "TASKBAR_GROUPING_TOGGLED";
+    /** Dispatched when window list grouping is toggled */
+    public static final String WINDOWLIST_GROUPING_TOGGLED = "WINDOWLIST_GROUPING_TOGGLED";
 
-    /** Dispatched when a tool is selected in the taskbar */
-    public static final String TASKBAR_TOOL_SELECTED = "TASKBAR_TOOL_SELECTED";
+    /** Dispatched when a tool is selected in the window list */
+    public static final String WINDOWLIST_TOOL_SELECTED = "WINDOWLIST_TOOL_SELECTED";
 
 }

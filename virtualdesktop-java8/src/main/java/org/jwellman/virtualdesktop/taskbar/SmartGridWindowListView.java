@@ -12,33 +12,33 @@ import org.jwellman.swing.grid.GridRow;
 import org.jwellman.swing.grid.SmartGrid;
 
 /**
- * SmartGrid-based implementation of TaskbarView.
+ * SmartGrid-based implementation of WindowListView.
  *
- * Renders taskbar tool entries as compact 34px rows using TaskbarRowComponent,
+ * Renders window list entries as compact 34px rows using WindowListRowComponent,
  * with inline group expansion: when grouping is enabled the controller passes
- * group TaskbarItems and this view expands each group into a bold group header
+ * group WindowListItems and this view expands each group into a bold group header
  * row followed by indented child rows — all within the same SmartGrid canvas.
  *
  * Theme colors are propagated to the row component pool via a shared mutable
- * TaskbarTheme[] reference (the same pattern as CalendarDemo's highlightOn[]).
+ * WindowListTheme[] reference (the same pattern as CalendarDemo's highlightOn[]).
  * Calling applyTheme() updates the holder and fires notifyDataChanged() so the
  * next bind() cycle picks up the new colors without recreating pool instances.
  */
-public class SmartGridTaskbarView implements TaskbarView {
+public class SmartGridWindowListView implements WindowListView {
 
-    private static final String ROW_TYPE = "taskbar-tool";
+    private static final String ROW_TYPE = "windowlist-tool";
 
     private final SmartGrid        grid;
     private final DefaultGridModel model;
-    private       TaskbarViewListener listener;
+    private       WindowListViewListener listener;
 
     // Shared mutable reference — all pool instances read themeHolder[0].
-    private final TaskbarTheme[] themeHolder = { TaskbarTheme.darkGold() };
+    private final WindowListTheme[] themeHolder = { WindowListTheme.darkGold() };
 
     // Prevents selection-change events from setSelectedId() looping back.
     private boolean updatingSelection = false;
 
-    public SmartGridTaskbarView() {
+    public SmartGridWindowListView() {
         model = new DefaultGridModel()
             .addColumn(new ColumnDef("item", "Tool", 200, false, false, null));
 
@@ -48,7 +48,7 @@ public class SmartGridTaskbarView implements TaskbarView {
 
         final int[] columnWidths = grid.getColumnWidths();
         grid.registerRowRenderer(ROW_TYPE,
-            () -> new TaskbarRowComponent(
+            () -> new WindowListRowComponent(
                 toolId -> { if (listener != null) listener.onItemCloseRequested(toolId); },
                 grid.getSelectionModel(),
                 columnWidths,
@@ -58,7 +58,7 @@ public class SmartGridTaskbarView implements TaskbarView {
     }
 
     // -------------------------------------------------------------------------
-    // TaskbarView
+    // WindowListView
     // -------------------------------------------------------------------------
 
     @Override
@@ -67,10 +67,10 @@ public class SmartGridTaskbarView implements TaskbarView {
     }
 
     @Override
-    public void setItems(List<TaskbarItem> items) {
+    public void setItems(List<WindowListItem> items) {
         model.clearRows();
 
-        for (TaskbarItem item : items) {
+        for (WindowListItem item : items) {
             if (item.isGroup()) {
                 // Group header — rendered by the built-in GroupHeaderRowPanel
                 model.addRow(new GridRow()
@@ -78,8 +78,8 @@ public class SmartGridTaskbarView implements TaskbarView {
                     .setGroupHeader(true));
 
                 // Inline children — indented visually via left padding in
-                // TaskbarRowComponent; each child is a full tool row.
-                for (TaskbarItem child : item.getGroupedItems()) {
+                // WindowListRowComponent; each child is a full tool row.
+                for (WindowListItem child : item.getGroupedItems()) {
                     model.addRow(buildToolRow(child));
                 }
             } else {
@@ -108,8 +108,8 @@ public class SmartGridTaskbarView implements TaskbarView {
                 continue;
             }
             Object obj = row.get("item");
-            if (obj instanceof TaskbarItem) {
-                if (toolId.equals(((TaskbarItem) obj).getId())) {
+            if (obj instanceof WindowListItem) {
+                if (toolId.equals(((WindowListItem) obj).getId())) {
                     if (!grid.getSelectionModel().isSelectedIndex(i)) {
                         updatingSelection = true;
                         grid.getSelectionModel().setSelectionInterval(i, i);
@@ -122,12 +122,12 @@ public class SmartGridTaskbarView implements TaskbarView {
     }
 
     @Override
-    public void setListener(TaskbarViewListener listener) {
+    public void setListener(WindowListViewListener listener) {
         this.listener = listener;
     }
 
     @Override
-    public void applyTheme(TaskbarTheme theme) {
+    public void applyTheme(WindowListTheme theme) {
         themeHolder[0] = theme;
         // Trigger re-bind so pool instances pick up new colors immediately.
         model.notifyDataChanged();
@@ -137,7 +137,7 @@ public class SmartGridTaskbarView implements TaskbarView {
     // Internal helpers
     // -------------------------------------------------------------------------
 
-    private GridRow buildToolRow(TaskbarItem item) {
+    private GridRow buildToolRow(WindowListItem item) {
         return new GridRow()
             .put("item", item)
             .setTag("fnd-type", ROW_TYPE);
@@ -159,8 +159,8 @@ public class SmartGridTaskbarView implements TaskbarView {
                     return;
                 }
                 Object obj = row.get("item");
-                if (obj instanceof TaskbarItem) {
-                    TaskbarItem item = (TaskbarItem) obj;
+                if (obj instanceof WindowListItem) {
+                    WindowListItem item = (WindowListItem) obj;
                     listener.onItemSelected(item.getId(), false);
                 }
             }

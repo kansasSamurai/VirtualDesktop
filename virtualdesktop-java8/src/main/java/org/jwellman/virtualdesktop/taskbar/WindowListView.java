@@ -4,7 +4,7 @@ import java.util.List;
 import javax.swing.JComponent;
 
 /**
- * Abstraction for the taskbar's visual layer.
+ * Abstraction for the active-windows list visual layer (Zone 2 of the taskbar).
  *
  * The controller holds a reference to this interface and never knows which
  * concrete view is installed. Swapping implementations (JList, SmartGrid,
@@ -16,7 +16,7 @@ import javax.swing.JComponent;
  * The view renders whatever structure it receives; it has no responsibility
  * for grouping logic.
  */
-public interface TaskbarView {
+public interface WindowListView {
 
     /**
      * Returns the component to embed in the application's panel hierarchy.
@@ -26,9 +26,9 @@ public interface TaskbarView {
 
     /**
      * Replaces the full item list. Called by the controller on every Redux
-     * state change that affects visible taskbar content.
+     * state change that affects visible window-list content.
      */
-    void setItems(List<TaskbarItem> items);
+    void setItems(List<WindowListItem> items);
 
     /**
      * Syncs the visual selection to the given tool ID. May be called
@@ -43,12 +43,12 @@ public interface TaskbarView {
      * Registers the single listener that receives user-initiated events
      * from this view. Called once at wiring time, before the view is shown.
      */
-    void setListener(TaskbarViewListener listener);
+    void setListener(WindowListViewListener listener);
 
     /**
      * Applies a theme to the view. Called when the application theme changes.
      * Implementations should update their visual state immediately and repaint.
      */
-    void applyTheme(TaskbarTheme theme);
+    void applyTheme(WindowListTheme theme);
 
 }

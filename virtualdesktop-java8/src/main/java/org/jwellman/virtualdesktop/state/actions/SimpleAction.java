@@ -103,14 +103,14 @@ public final class SimpleAction implements Action {
             new DockingPayload(newWorkspaceId, panelId, null));
     }
 
-    // ========== Factory Methods for Taskbar ==========
+    // ========== Factory Methods for Window List ==========
 
-    public static Action taskbarGroupingToggled(boolean enabled) {
-        return new SimpleAction(ActionTypes.TASKBAR_GROUPING_TOGGLED, enabled);
+    public static Action windowListGroupingToggled(boolean enabled) {
+        return new SimpleAction(ActionTypes.WINDOWLIST_GROUPING_TOGGLED, enabled);
     }
 
-    public static Action taskbarToolSelected(String toolId) {
-        return new SimpleAction(ActionTypes.TASKBAR_TOOL_SELECTED, toolId);
+    public static Action windowListToolSelected(String toolId) {
+        return new SimpleAction(ActionTypes.WINDOWLIST_TOOL_SELECTED, toolId);
     }
 
     // ========== Payload Classes ==========

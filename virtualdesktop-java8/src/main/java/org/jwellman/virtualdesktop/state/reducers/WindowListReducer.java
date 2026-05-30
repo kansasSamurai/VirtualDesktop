@@ -3,28 +3,28 @@ package org.jwellman.virtualdesktop.state.reducers;
 import org.jwellman.virtualdesktop.state.actions.Action;
 import org.jwellman.virtualdesktop.state.actions.ActionTypes;
 import org.jwellman.virtualdesktop.state.model.GroupingMode;
-import org.jwellman.virtualdesktop.state.model.TaskbarState;
+import org.jwellman.virtualdesktop.state.model.WindowListState;
 
 /**
- * Reducer for taskbar-related state changes.
+ * Reducer for window-list-related state changes.
  *
  * @author rwellman
  */
-public class TaskbarReducer {
+public class WindowListReducer {
 
     /**
-     * Reduce taskbar state based on the action.
+     * Reduce window list state based on the action.
      *
-     * @param state current taskbar state
+     * @param state current window list state
      * @param action the action to process
-     * @return new taskbar state
+     * @return new window list state
      */
-    public TaskbarState reduce(TaskbarState state, Action action) {
+    public WindowListState reduce(WindowListState state, Action action) {
         switch (action.getType()) {
-            case ActionTypes.TASKBAR_GROUPING_TOGGLED:
+            case ActionTypes.WINDOWLIST_GROUPING_TOGGLED:
                 return handleGroupingToggled(state, action);
 
-            case ActionTypes.TASKBAR_TOOL_SELECTED:
+            case ActionTypes.WINDOWLIST_TOOL_SELECTED:
                 return handleToolSelected(state, action);
 
             case ActionTypes.TOOL_ACTIVATED:
@@ -38,7 +38,7 @@ public class TaskbarReducer {
         }
     }
 
-    private TaskbarState handleGroupingToggled(TaskbarState state, Action action) {
+    private WindowListState handleGroupingToggled(WindowListState state, Action action) {
         Object payload = action.getPayload();
         if (payload instanceof Boolean) {
             return state.withGroupingEnabled((Boolean) payload);
@@ -49,7 +49,7 @@ public class TaskbarReducer {
         return state.withGroupingEnabled(!state.isGroupingEnabled());
     }
 
-    private TaskbarState handleToolSelected(TaskbarState state, Action action) {
+    private WindowListState handleToolSelected(WindowListState state, Action action) {
         Object payload = action.getPayload();
         if (payload instanceof String) {
             return state.withSelectedToolId((String) payload);
@@ -57,7 +57,7 @@ public class TaskbarReducer {
         return state;
     }
 
-    private TaskbarState handleToolActivated(TaskbarState state, Action action) {
+    private WindowListState handleToolActivated(WindowListState state, Action action) {
         Object payload = action.getPayload();
         if (payload instanceof String) {
             return state.withSelectedToolId((String) payload);
@@ -65,7 +65,7 @@ public class TaskbarReducer {
         return state;
     }
 
-    private TaskbarState handleToolClosed(TaskbarState state, Action action) {
+    private WindowListState handleToolClosed(WindowListState state, Action action) {
         // If the closed tool was selected, clear selection
         Object payload = action.getPayload();
         if (payload instanceof String) {

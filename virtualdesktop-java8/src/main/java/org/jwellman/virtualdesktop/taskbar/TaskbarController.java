@@ -1,110 +1,118 @@
 package org.jwellman.virtualdesktop.taskbar;
 
-import java.awt.Rectangle;
+import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.beans.PropertyVetoException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.swing.DefaultListModel;
 import javax.swing.Icon;
-import javax.swing.JList;
+import javax.swing.JComponent;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.SwingUtilities;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 
 import org.jwellman.virtualdesktop.DesktopManager;
 import org.jwellman.virtualdesktop.VirtualAppFrame;
+import org.jwellman.virtualdesktop.state.actions.SimpleAction;
 import org.jwellman.virtualdesktop.state.model.AppState;
 import org.jwellman.virtualdesktop.state.model.DockingState;
+import org.jwellman.virtualdesktop.state.model.FrameState;
 import org.jwellman.virtualdesktop.state.model.ToolInstance;
 import org.jwellman.virtualdesktop.state.model.ToolsState;
-import org.jwellman.virtualdesktop.state.actions.SimpleAction;
 import org.jwellman.virtualdesktop.state.store.AppStore;
 import org.jwellman.virtualdesktop.state.store.StoreSubscriber;
 import org.jwellman.virtualdesktop.state.store.Subscription;
 
 /**
- * Controller that bridges Redux state to the taskbar JList view.
+ * Bridges Redux state to a TaskbarView implementation.
  *
- * Subscribes to the store and updates the JList model when state changes.
- * Handles grouping of tools by type when enabled.
+ * Subscribes to the store and pushes updated item lists to the view on every
+ * state change. Implements TaskbarViewListener to handle user interactions
+ * reported by the view. The controller never references concrete view classes;
+ * swapping the view (JList, SmartGrid, etc.) requires no changes here.
  *
  * @author rwellman
  */
-public class TaskbarController implements StoreSubscriber, ListSelectionListener {
+public class TaskbarController implements StoreSubscriber, TaskbarViewListener {
 
-    private final JList<TaskbarItem> taskbarList;
-    private final DefaultListModel<TaskbarItem> listModel;
+    private final TaskbarView view;
     private final Subscription subscription;
 
-    // Cache of toolId -> VirtualAppFrame for icon lookup
+    // Cache of toolId -> VirtualAppFrame for icon lookup and frame activation
     private final Map<String, VirtualAppFrame> frameCache = new HashMap<>();
 
-    // Flag to prevent recursive selection events
-    private boolean updatingSelection = false;
+    // Last item list sent to the view; retained so context menu handlers can
+    // look up group children by id without re-querying Redux state.
+    private List<TaskbarItem> currentItems = new ArrayList<>();
 
-    // Track last mouse click location for popup positioning
-    private int lastClickX = 0;
-    private int lastClickY = 0;
+    public TaskbarController(TaskbarView view) {
+        this.view = view;
+        this.view.setListener(this);
 
-    public TaskbarController(JList<TaskbarItem> taskbarList) {
-        this.taskbarList = taskbarList;
-        this.listModel = new DefaultListModel<>();
-        this.taskbarList.setModel(listModel);
-        this.taskbarList.setCellRenderer(new TaskbarItemRenderer());
-        this.taskbarList.addListSelectionListener(this);
-
-        // Add mouse listener for tracking click location and handling group clicks
-        this.taskbarList.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                lastClickX = e.getX();
-                lastClickY = e.getY();
-
-                // Handle double-click on group to expand all
-                if (e.getClickCount() == 2) {
-                    int index = taskbarList.locationToIndex(e.getPoint());
-                    if (index >= 0) {
-                        TaskbarItem item = listModel.get(index);
-                        if (item.isGroup()) {
-                            activateAllInGroup(item);
-                        }
-                    }
-                }
-            }
-        });
-
-        // Subscribe to store
         this.subscription = AppStore.get().subscribe(this);
 
         // Initial render
         onStateChanged(AppStore.get().getState());
     }
 
+    // -------------------------------------------------------------------------
+    // StoreSubscriber
+    // -------------------------------------------------------------------------
+
     @Override
     public void onStateChanged(AppState state) {
-        // Ensure we update on EDT
         if (!SwingUtilities.isEventDispatchThread()) {
             SwingUtilities.invokeLater(() -> onStateChanged(state));
             return;
         }
 
         updateFrameCache();
-        rebuildListModel(state);
-        updateSelection(state);
+        currentItems = buildItems(state);
+        view.setItems(currentItems);
+        view.setSelectedId(state.getTaskbar().getSelectedToolId());
     }
 
-    /**
-     * Update the frame cache from DesktopManager's frame list.
-     */
+    // -------------------------------------------------------------------------
+    // TaskbarViewListener
+    // -------------------------------------------------------------------------
+
+    @Override
+    public void onItemSelected(String toolId, boolean isGroup) {
+        if (!isGroup) {
+            activateTool(toolId);
+        }
+    }
+
+    @Override
+    public void onContextRequested(String id, boolean isGroup, Point screenPoint) {
+        if (isGroup) {
+            TaskbarItem group = findItemById(id);
+            if (group != null) {
+                showGroupPopupMenu(group, screenPoint);
+            }
+        }
+    }
+
+    @Override
+    public void onItemActivated(String id, boolean isGroup) {
+        if (isGroup) {
+            TaskbarItem group = findItemById(id);
+            if (group != null) {
+                activateAllInGroup(group);
+            }
+        } else {
+            activateTool(id);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // State building
+    // -------------------------------------------------------------------------
+
     private void updateFrameCache() {
         frameCache.clear();
         for (VirtualAppFrame frame : DesktopManager.get().getFrames()) {
@@ -112,17 +120,12 @@ public class TaskbarController implements StoreSubscriber, ListSelectionListener
         }
     }
 
-    /**
-     * Rebuild the list model from current state.
-     */
-    private void rebuildListModel(AppState state) {
+    private List<TaskbarItem> buildItems(AppState state) {
         ToolsState tools = state.getTools();
         boolean groupingEnabled = state.getTaskbar().isGroupingEnabled();
-
-        listModel.clear();
+        List<TaskbarItem> items = new ArrayList<>();
 
         if (groupingEnabled) {
-            // Build grouped items
             Map<String, List<TaskbarItem>> groups = new HashMap<>();
 
             for (ToolInstance tool : tools.getAllTools()) {
@@ -135,102 +138,46 @@ public class TaskbarController implements StoreSubscriber, ListSelectionListener
                 groups.get(type).add(item);
             }
 
-            // Add groups to model
             for (Map.Entry<String, List<TaskbarItem>> entry : groups.entrySet()) {
-                List<TaskbarItem> items = entry.getValue();
-                if (items.size() == 1) {
-                    // Single item - don't group
-                    listModel.addElement(items.get(0));
+                List<TaskbarItem> groupMembers = entry.getValue();
+                if (groupMembers.size() == 1) {
+                    items.add(groupMembers.get(0));
                 } else {
-                    // Multiple items - create group
-                    Icon groupIcon = items.get(0).getIcon(); // Use first item's icon
-                    TaskbarItem group = new TaskbarItem(entry.getKey(), groupIcon, items);
-                    listModel.addElement(group);
+                    Icon groupIcon = groupMembers.get(0).getIcon();
+                    items.add(new TaskbarItem(entry.getKey(), groupIcon, groupMembers));
                 }
             }
         } else {
-            // No grouping - add all tools directly
             for (ToolInstance tool : tools.getAllTools()) {
-                listModel.addElement(createTaskbarItem(tool));
+                items.add(createTaskbarItem(tool));
             }
         }
+
+        return items;
     }
 
-    /**
-     * Create a TaskbarItem from a ToolInstance.
-     */
     private TaskbarItem createTaskbarItem(ToolInstance tool) {
         VirtualAppFrame frame = frameCache.get(tool.getId());
         Icon icon = frame != null ? frame.getFrameIcon() : null;
 
-        // Compute docking indicator from tool's docking state
         DockingState dockingState = tool.getDockingState();
         DockingIndicator indicator = DockingIndicator.fromState(
-            dockingState.isOriginalPanelPresent(),
-            dockingState.hasExternalContent()
-        );
+                dockingState.isOriginalPanelPresent(),
+                dockingState.hasExternalContent());
 
         return new TaskbarItem(
-            tool.getId(),
-            tool.getTitle(),
-            tool.getToolType(),
-            icon,
-            tool.getFrameState(),
-            indicator
-        );
+                tool.getId(),
+                tool.getTitle(),
+                tool.getToolType(),
+                icon,
+                tool.getFrameState(),
+                indicator);
     }
 
-    /**
-     * Update selection to match the selected tool in state.
-     */
-    private void updateSelection(AppState state) {
-        String selectedId = state.getTaskbar().getSelectedToolId();
+    // -------------------------------------------------------------------------
+    // Action helpers
+    // -------------------------------------------------------------------------
 
-        if (selectedId == null) {
-            if (!taskbarList.isSelectionEmpty()) {
-                updatingSelection = true;
-                taskbarList.clearSelection();
-                updatingSelection = false;
-            }
-            return;
-        }
-
-        // Find and select the item
-        for (int i = 0; i < listModel.size(); i++) {
-            TaskbarItem item = listModel.get(i);
-            if (selectedId.equals(item.getId())) {
-                if (taskbarList.getSelectedIndex() != i) {
-                    updatingSelection = true;
-                    taskbarList.setSelectedIndex(i);
-                    updatingSelection = false;
-                }
-                return;
-            }
-        }
-    }
-
-    @Override
-    public void valueChanged(ListSelectionEvent e) {
-        if (e.getValueIsAdjusting() || updatingSelection) {
-            return;
-        }
-
-        TaskbarItem selected = taskbarList.getSelectedValue();
-        if (selected == null) {
-            return;
-        }
-
-        if (selected.isGroup()) {
-            showGroupPopupMenu(selected);
-        } else {
-            // Activate the tool
-            activateTool(selected.getId());
-        }
-    }
-
-    /**
-     * Activate a tool by its ID - restore and bring to front.
-     */
     private void activateTool(String toolId) {
         VirtualAppFrame frame = frameCache.get(toolId);
         if (frame == null) {
@@ -250,18 +197,13 @@ public class TaskbarController implements StoreSubscriber, ListSelectionListener
         }
     }
 
-    /**
-     * Show a popup menu with all items in a group.
-     */
-    private void showGroupPopupMenu(TaskbarItem group) {
+    private void showGroupPopupMenu(TaskbarItem group, Point screenPoint) {
         JPopupMenu popup = new JPopupMenu(group.getToolType());
 
-        // Add menu item for each tool in the group
         for (final TaskbarItem item : group.getGroupedItems()) {
             JMenuItem menuItem = new JMenuItem(item.getTitle(), item.getIcon());
 
-            // Style minimized items differently
-            if (item.getFrameState() == org.jwellman.virtualdesktop.state.model.FrameState.MINIMIZED) {
+            if (item.getFrameState() == FrameState.MINIMIZED) {
                 menuItem.setFont(menuItem.getFont().deriveFont(java.awt.Font.ITALIC));
             }
 
@@ -274,7 +216,6 @@ public class TaskbarController implements StoreSubscriber, ListSelectionListener
             popup.add(menuItem);
         }
 
-        // Add separator and "Show All" option
         popup.addSeparator();
         JMenuItem showAllItem = new JMenuItem("Show All (" + group.getGroupSize() + ")");
         showAllItem.addActionListener(new ActionListener() {
@@ -285,22 +226,12 @@ public class TaskbarController implements StoreSubscriber, ListSelectionListener
         });
         popup.add(showAllItem);
 
-        // Show popup at click location or near the selected item
-        int selectedIndex = taskbarList.getSelectedIndex();
-        if (selectedIndex >= 0 && lastClickX == 0 && lastClickY == 0) {
-            // Fallback: show near the cell if no click location recorded
-            Rectangle cellBounds = taskbarList.getCellBounds(selectedIndex, selectedIndex);
-            if (cellBounds != null) {
-                popup.show(taskbarList, cellBounds.x + cellBounds.width, cellBounds.y);
-                return;
-            }
-        }
-        popup.show(taskbarList, lastClickX, lastClickY);
+        JComponent comp = view.getComponent();
+        Point pt = new Point(screenPoint);
+        SwingUtilities.convertPointFromScreen(pt, comp);
+        popup.show(comp, pt.x, pt.y);
     }
 
-    /**
-     * Activate all tools in a group - restore and tile them.
-     */
     private void activateAllInGroup(TaskbarItem group) {
         for (TaskbarItem item : group.getGroupedItems()) {
             VirtualAppFrame frame = frameCache.get(item.getId());
@@ -316,7 +247,6 @@ public class TaskbarController implements StoreSubscriber, ListSelectionListener
             }
         }
 
-        // Bring the first one to front and select it
         if (!group.getGroupedItems().isEmpty()) {
             TaskbarItem first = group.getGroupedItems().get(0);
             VirtualAppFrame frame = frameCache.get(first.getId());
@@ -331,61 +261,51 @@ public class TaskbarController implements StoreSubscriber, ListSelectionListener
         }
     }
 
-    /**
-     * Unsubscribe from store when controller is no longer needed.
-     */
+    private TaskbarItem findItemById(String id) {
+        for (TaskbarItem item : currentItems) {
+            if (id.equals(item.getId())) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // -------------------------------------------------------------------------
+    // Public API
+    // -------------------------------------------------------------------------
+
     public void dispose() {
         if (subscription != null) {
             subscription.unsubscribe();
         }
     }
 
-    /**
-     * Get the managed JList.
-     */
-    public JList<TaskbarItem> getTaskbarList() {
-        return taskbarList;
+    public TaskbarView getView() {
+        return view;
     }
 
-    /**
-     * Toggle taskbar grouping on/off.
-     */
     public void toggleGrouping() {
         boolean currentlyEnabled = AppStore.get().getState().getTaskbar().isGroupingEnabled();
         AppStore.get().dispatch(SimpleAction.taskbarGroupingToggled(!currentlyEnabled));
     }
 
-    /**
-     * Set taskbar grouping explicitly.
-     * @param enabled true to enable grouping, false to disable
-     */
     public void setGroupingEnabled(boolean enabled) {
         AppStore.get().dispatch(SimpleAction.taskbarGroupingToggled(enabled));
     }
 
-    /**
-     * Check if grouping is currently enabled.
-     * @return true if grouping is enabled
-     */
     public boolean isGroupingEnabled() {
         return AppStore.get().getState().getTaskbar().isGroupingEnabled();
     }
 
-    // ========== Static convenience methods for BeanShell access ==========
+    // -------------------------------------------------------------------------
+    // Static convenience methods for BeanShell access
+    // -------------------------------------------------------------------------
 
-    /**
-     * Toggle taskbar grouping (static convenience method).
-     * Can be called from BeanShell: TaskbarController.toggleTaskbarGrouping()
-     */
     public static void toggleTaskbarGrouping() {
         boolean currentlyEnabled = AppStore.get().getState().getTaskbar().isGroupingEnabled();
         AppStore.get().dispatch(SimpleAction.taskbarGroupingToggled(!currentlyEnabled));
     }
 
-    /**
-     * Enable or disable taskbar grouping (static convenience method).
-     * Can be called from BeanShell: TaskbarController.setTaskbarGrouping(true)
-     */
     public static void setTaskbarGrouping(boolean enabled) {
         AppStore.get().dispatch(SimpleAction.taskbarGroupingToggled(enabled));
     }

@@ -43,8 +43,8 @@ import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.VShortcut;
 import org.jwellman.virtualdesktop.desktopmgr.VAppListCellRenderer;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
+import org.jwellman.virtualdesktop.taskbar.JListTaskbarView;
 import org.jwellman.virtualdesktop.taskbar.TaskbarController;
-import org.jwellman.virtualdesktop.taskbar.TaskbarItem;
 import org.jwellman.virtualdesktop.state.reducers.AppReducer;
 import org.jwellman.virtualdesktop.state.store.AppStore;
 import org.jwellman.virtualdesktop.state.store.LoggingMiddleware;
@@ -183,10 +183,9 @@ public class App extends JFrame implements ActionListener {
                 // Redux-backed taskbar using TaskbarController
                 controls = new JPanel(new BorderLayout());
 
-                // Create JList managed by TaskbarController
-                JList<TaskbarItem> taskbarList = new JList<>();
-                this.taskbarController = new TaskbarController(taskbarList);
-                controls.add(taskbarList, BorderLayout.CENTER);
+                JListTaskbarView taskbarView = new JListTaskbarView();
+                this.taskbarController = new TaskbarController(taskbarView);
+                controls.add(taskbarView.getComponent(), BorderLayout.CENTER);
 
                 // Still need to set observed JList for DesktopManager compatibility
                 // Create a dummy list for now - DesktopManager will be refactored later

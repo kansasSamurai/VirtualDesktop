@@ -30,4 +30,14 @@ public interface TaskbarViewListener {
      */
     void onContextRequested(String id, boolean isGroup, Point screenPoint);
 
+    /**
+     * The user explicitly activated an item via double-click or equivalent gesture.
+     * For groups, this typically means "activate all items in the group".
+     * For leaf items, this is equivalent to a single selection.
+     *
+     * @param id      tool id or group type key
+     * @param isGroup true if the activated item is a group header
+     */
+    void onItemActivated(String id, boolean isGroup);
+
 }

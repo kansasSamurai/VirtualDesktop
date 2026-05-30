@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "defaultIcon": "home156",
+  "defaultIcon": "home",
   "menuStructure": [
     {
       "type": "inline",
@@ -106,7 +106,7 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecCalendarDemo",
           "title": "Year Calendar",
-          "icon": "calendar168",
+          "icon": "calendar",
           "enabled": true,
           "desktopOnly": false
         },
@@ -162,7 +162,7 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecJDatePicker",
           "title": "Date Picker",
-          "icon": "calendar168",
+          "icon": "calendar",
           "enabled": true,
           "desktopOnly": false
         },
@@ -176,7 +176,7 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecScar",
           "title": "SCAR",
-          "icon": "home156",
+          "icon": "home",
           "enabled": true,
           "desktopOnly": false
         },
@@ -229,13 +229,13 @@
     {
       "class": "org.jwellman.virtualdesktop.vapps.SpecJCXConsole",
       "label": "Home",
-      "icon": "home156",
+      "icon": "home",
       "enabled": true
     },
     {
       "class": "org.jwellman.virtualdesktop.vapps.SpecJDatePicker",
       "label": "Calendar",
-      "icon": "calendar168",
+      "icon": "calendar",
       "enabled": true
     },
     {

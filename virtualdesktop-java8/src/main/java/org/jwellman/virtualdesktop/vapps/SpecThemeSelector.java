@@ -280,8 +280,8 @@ public class SpecThemeSelector extends VirtualAppSpec {
         gbc.insets = new Insets(5, 5, 5, 5);
         gbc.anchor = GridBagConstraints.WEST;
 
-        // Try to load a sample icon for preview (home156 is always registered)
-        final String sampleIconName = "home156";
+        // Try to load a sample icon for preview (home is always registered)
+        final String sampleIconName = "home";
 
         IconSize[] sizes = {IconSize.SMALL, IconSize.MENU, IconSize.TOOLBAR, IconSize.LARGE, IconSize.XLARGE};
         String[] sizeLabels = {"SMALL", "MENU", "TOOLBAR", "LARGE", "XLARGE"};

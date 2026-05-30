@@ -16,7 +16,7 @@ public class VappsConfig {
     private String version = "1.0.0";
 
     @JsonProperty("defaultIcon")
-    private String defaultIcon = "home156";
+    private String defaultIcon = "home";
 
     @JsonProperty("menuStructure")
     private List<MenuGroup> menuStructure = new ArrayList<MenuGroup>();

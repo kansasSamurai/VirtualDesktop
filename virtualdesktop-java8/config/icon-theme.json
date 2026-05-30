@@ -10,11 +10,11 @@
     "desktop": "desktopIcon.foreground"
   },
   "icons": [
-    { "key": "home156",     "provider": "FontAwesome",    "color": "desktop" },
-    { "key": "calendar168", "provider": "FontAwesome",    "color": "desktop" },
+    { "key": "home",     "provider": "FontAwesome",    "color": "desktop" },
+    { "key": "calendar", "provider": "FontAwesome",    "color": "desktop" },
     { "key": "file-text",   "provider": "FontAwesome",    "color": "desktop" },
     { "key": "file-word-o", "provider": "FontAwesome",    "color": "desktop" },
-    { "key": "paintbrush",  "provider": "FontAwesome",    "color": "desktop" },
+    { "key": "paint",        "provider": "GoogleMaterial", "color": "desktop" },
     { "key": "calculator",  "provider": "FontAwesome",    "color": "desktop" },
     { "key": "terminal",    "provider": "GoogleMaterial", "color": "desktop" }
   ]

@@ -118,11 +118,11 @@
   },
 
   "iconMetadata": {
-    "home156": {
+    "home": {
       "colorable": true,
       "type": "font"
     },
-    "calendar168": {
+    "calendar": {
       "colorable": true,
       "type": "font"
     },

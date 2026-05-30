@@ -24,7 +24,7 @@
     {
       "name": "Paint",
       "command": "mspaint.exe",
-      "icon": "paintbrush",
+      "icon": "paint",
       "desktopOnly": true,
       "waitForCompletion": false
     }

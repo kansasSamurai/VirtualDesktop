@@ -1,8 +1,7 @@
 {
-  "home156":     "HOME",
-  "calendar168": "CALENDAR",
+  "home":     "HOME",
+  "calendar": "CALENDAR",
   "file-text":   "FILE_TEXT",
   "file-word-o": "FILE_WORD_O",
-  "paintbrush":  "PAINT_BRUSH",
   "calculator":  "CALCULATOR"
 }

@@ -100,7 +100,7 @@ public class VShortcut extends JLabel {
 
         final Dimension d = this.getSize();
 //        this.setSize(75, 75);
-        this.setSize(icon.getIconWidth() + 30, d.height);
+        this.setSize(IconRegistryLoader.getShortcutWidth(), d.height);
 //      this.setSize(icon.getIconWidth() + 10, icon.getIconHeight() + d.height);
 
         this.setVisible(true);

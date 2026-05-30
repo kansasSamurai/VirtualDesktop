@@ -36,6 +36,7 @@ import org.jwellman.dsp.icons.IconSpecifier;
 import org.jwellman.swing.plaf.metal.MetalThemeManager ;
 import org.jwellman.virtualdesktop.desktop.VActionLNF;
 import org.jwellman.virtualdesktop.desktop.VException;
+import org.jwellman.virtualdesktop.desktop.IconRegistryLoader;
 import org.jwellman.virtualdesktop.desktop.VShortcut;
 import org.jwellman.virtualdesktop.desktopmgr.VAppListCellRenderer;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
@@ -451,19 +452,7 @@ public class App extends JFrame implements ActionListener {
         DSP.Icons.register("jpad.check", new IconSpecifier( "FontAwesome", "CHECK", 18, null, iconColor, Color.white) );
         DSP.Icons.register("jpad.clock", new IconSpecifier( "FontAwesome", "CLOCK_O", 14, null, Color.white, Color.white) );
 
-        Color desktopIconColor = ThemeManager.getComponentColor("desktopIcon", "foreground");
-        DSP.Icons.register("home156-large",     new IconSpecifier("FontAwesome", "HOME",      48, null, desktopIconColor, desktopIconColor));
-        DSP.Icons.register("calendar168-large", new IconSpecifier("FontAwesome", "CALENDAR",  48, null, desktopIconColor, desktopIconColor));
-        DSP.Icons.register("file-text-large",   new IconSpecifier("FontAwesome", "FILE_TEXT",  48, null, desktopIconColor, desktopIconColor));
-        DSP.Icons.register("file-text-small",   new IconSpecifier("FontAwesome", "FILE_TEXT",  18, null, desktopIconColor, desktopIconColor));
-        DSP.Icons.register("calculator-large",  new IconSpecifier("FontAwesome", "CALCULATOR",  48, null, desktopIconColor, desktopIconColor));
-        DSP.Icons.register("calculator-small",  new IconSpecifier("FontAwesome", "CALCULATOR",  18, null, desktopIconColor, desktopIconColor));
-        DSP.Icons.register("paintbrush-large",  new IconSpecifier("FontAwesome", "PAINT_BRUSH",  48, null, desktopIconColor, desktopIconColor));
-        DSP.Icons.register("paintbrush-small",  new IconSpecifier("FontAwesome", "PAINT_BRUSH",  18, null, desktopIconColor, desktopIconColor));
-        DSP.Icons.register("file-word-o-large", new IconSpecifier("FontAwesome", "FILE_WORD_O",  48, null, desktopIconColor, desktopIconColor));
-        DSP.Icons.register("file-word-o-small", new IconSpecifier("FontAwesome", "FILE_WORD_O",  18, null, desktopIconColor, desktopIconColor));
-        DSP.Icons.register("terminal-large",    new IconSpecifier("GoogleMaterial", "DESKTOP_WINDOWS", 48, null, desktopIconColor, desktopIconColor));
-        DSP.Icons.register("terminal-small",    new IconSpecifier("GoogleMaterial", "DESKTOP_WINDOWS", 18, null, desktopIconColor, desktopIconColor));
+        IconRegistryLoader.load();
 
     }
 

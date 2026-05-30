@@ -241,7 +241,7 @@
     {
       "class": "org.jwellman.virtualdesktop.vapps.SpecBeanShell",
       "label": "Office Writer",
-      "icon": "document176",
+      "icon": "file-word-o",
       "enabled": true
     },
     {

@@ -31,6 +31,7 @@ import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 import org.jwellman.dsp.DSP;
 import org.jwellman.dsp.DirectoryIconProvider;
 import org.jwellman.dsp.FontAwesomeIconProvider;
+import org.jwellman.dsp.GoogleMaterialIconProvider;
 import org.jwellman.dsp.icons.IconSpecifier;
 import org.jwellman.swing.plaf.metal.MetalThemeManager ;
 import org.jwellman.virtualdesktop.desktop.VActionLNF;
@@ -66,7 +67,6 @@ import com.jtattoo.plaf.aluminium.AluminiumLookAndFeel;
 
 import ca.odell.glazedlists.swing.DefaultEventListModel;
 import ca.odell.glazedlists.swing.GlazedListsSwing;
-import jiconfont.icons.GoogleMaterialDesignIcons;
 import jiconfont.swing.IconFontSwing;
 // import org.pushingpixels.substance.api.skin.SubstanceGraphiteLookAndFeel;
 import net.sourceforge.napkinlaf.NapkinLookAndFeel ;
@@ -423,7 +423,8 @@ public class App extends JFrame implements ActionListener {
         // Initialize ThemeManager first - loads user's preferred theme from preferences.json
         org.jwellman.virtualdesktop.theme.ThemeManager.getInstance().initialize();
 
-        DSP.Icons.registerProvider("FontAwesome", new FontAwesomeIconProvider());
+        DSP.Icons.registerProvider("FontAwesome",       new FontAwesomeIconProvider());
+        DSP.Icons.registerProvider("GoogleMaterial",    new GoogleMaterialIconProvider());
 
         // Create and configure DirectoryIconProvider for the global UI icons
         DirectoryIconProvider directoryProvider = new DirectoryIconProvider("org/jwellman/virtualdesktop/images/global_ui");
@@ -451,10 +452,18 @@ public class App extends JFrame implements ActionListener {
         DSP.Icons.register("jpad.clock", new IconSpecifier( "FontAwesome", "CLOCK_O", 14, null, Color.white, Color.white) );
 
         Color desktopIconColor = ThemeManager.getComponentColor("desktopIcon", "foreground");
-        DSP.Icons.register("home156-large",     new IconSpecifier("FontAwesome", "HOME",     48, null, desktopIconColor, desktopIconColor));
-        DSP.Icons.register("calendar168-large", new IconSpecifier("FontAwesome", "CALENDAR", 48, null, desktopIconColor, desktopIconColor));
-
-        IconFontSwing.register(GoogleMaterialDesignIcons.getIconFont());
+        DSP.Icons.register("home156-large",     new IconSpecifier("FontAwesome", "HOME",      48, null, desktopIconColor, desktopIconColor));
+        DSP.Icons.register("calendar168-large", new IconSpecifier("FontAwesome", "CALENDAR",  48, null, desktopIconColor, desktopIconColor));
+        DSP.Icons.register("file-text-large",   new IconSpecifier("FontAwesome", "FILE_TEXT",  48, null, desktopIconColor, desktopIconColor));
+        DSP.Icons.register("file-text-small",   new IconSpecifier("FontAwesome", "FILE_TEXT",  18, null, desktopIconColor, desktopIconColor));
+        DSP.Icons.register("calculator-large",  new IconSpecifier("FontAwesome", "CALCULATOR",  48, null, desktopIconColor, desktopIconColor));
+        DSP.Icons.register("calculator-small",  new IconSpecifier("FontAwesome", "CALCULATOR",  18, null, desktopIconColor, desktopIconColor));
+        DSP.Icons.register("paintbrush-large",  new IconSpecifier("FontAwesome", "PAINT_BRUSH",  48, null, desktopIconColor, desktopIconColor));
+        DSP.Icons.register("paintbrush-small",  new IconSpecifier("FontAwesome", "PAINT_BRUSH",  18, null, desktopIconColor, desktopIconColor));
+        DSP.Icons.register("file-word-o-large", new IconSpecifier("FontAwesome", "FILE_WORD_O",  48, null, desktopIconColor, desktopIconColor));
+        DSP.Icons.register("file-word-o-small", new IconSpecifier("FontAwesome", "FILE_WORD_O",  18, null, desktopIconColor, desktopIconColor));
+        DSP.Icons.register("terminal-large",    new IconSpecifier("GoogleMaterial", "DESKTOP_WINDOWS", 48, null, desktopIconColor, desktopIconColor));
+        DSP.Icons.register("terminal-small",    new IconSpecifier("GoogleMaterial", "DESKTOP_WINDOWS", 18, null, desktopIconColor, desktopIconColor));
 
     }
 

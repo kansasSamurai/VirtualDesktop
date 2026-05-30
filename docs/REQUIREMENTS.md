@@ -47,6 +47,7 @@ Practically this means: state lives in Redux, controllers mediate all mutations,
 - [UI/UX Guidelines](#uiux-guidelines)
 - [Desktop](#desktop)
 - [Taskbar](#taskbar)
+- [Credential Management](#credential-management)
 - [State Management (Redux-Style)](#state-management-redux-style)
 
 ### BeanShell Integration {#beanshell-integration}
@@ -173,9 +174,26 @@ See **[docs/features/DESKTOP.md](features/DESKTOP.md)** for full design, current
 
 ### Taskbar
 
-The taskbar shows all open tools and their lifecycle state (minimized, active, grouped). It is implemented as a Redux subscriber (`TaskbarController`) backed by immutable state (`TaskbarState`, `ToolInstance`). This is the reference architecture for reactive UI subsystems in VirtualDesktop.
+The taskbar shows all open tools and their lifecycle state (minimized, active, grouped). It is implemented as a Redux subscriber (`WindowListController`) backed by immutable state (`WindowListState`, `ToolInstance`). This is the reference architecture for reactive UI subsystems in VirtualDesktop.
 
 See **[docs/features/TASKBAR.md](features/TASKBAR.md)** for full architecture, data flow, and known gaps.
+
+---
+
+### Credential Management
+
+**Problem:** Sensitive values (database passwords, API keys) are currently stored as plain text in config files (e.g., `dbconfig.json`).
+
+**Chosen path:** `CredentialProvider` interface backed by KeePassJava2
+
+- Define a `CredentialProvider` interface that all config/service code calls when it needs a secret — never read passwords directly from JSON
+- Back the interface with **KeePassJava2** (`org.linguafranca.pwdb:KeePassJava2`), which reads an existing `.kdbx` database file
+- Provide a plaintext fallback implementation for development/testing
+- Unlock the `.kdbx` once at startup (master password prompt or key file); subsequent calls are in-memory lookups
+
+**Rationale:** KeePass `.kdbx` is a well-specified, battle-tested encrypted format (AES-256 + Argon2). All major KeePass UIs (KeePassXC, KeePass2, etc.) share this format, so the user's existing password database can be reused directly — no separate credential store to maintain. Rolling a custom encrypted store is not the goal; deferring to a proven external implementation is. The `CredentialProvider` abstraction keeps secret-resolution decoupled from config parsing and lets the backing store be swapped without touching callers.
+
+**Status:** Planned — no implementation yet.
 
 ---
 
@@ -207,7 +225,7 @@ AppState
 ├── ToolsState
 │   ├── toolsById: Map<String, ToolInstance>
 │   └── toolsByType: Map<String, Set<String>>
-├── TaskbarState
+├── WindowListState
 │   ├── groupingEnabled: boolean
 │   ├── groupingMode: BY_TYPE | BY_DOCKING | NONE
 │   └── selectedToolId: String
@@ -227,7 +245,7 @@ ToolInstance
 org.jwellman.virtualdesktop.state/
 ├── store/     - AppStore, StoreSubscriber, Middleware
 ├── actions/   - Action, ActionTypes, payloads/
-├── reducers/  - AppReducer, ToolsReducer, TaskbarReducer
+├── reducers/  - AppReducer, ToolsReducer, WindowListReducer
 └── model/     - AppState, ToolsState, ToolInstance, etc.
 ```
 
@@ -240,8 +258,8 @@ TOOL_OPENED, TOOL_CLOSED, TOOL_MINIMIZED, TOOL_RESTORED, TOOL_ACTIVATED
 // Docking
 PANEL_DOCKED_IN, PANEL_DOCKED_OUT, PANEL_LOCATION_CHANGED
 
-// Taskbar
-TASKBAR_GROUPING_TOGGLED, TASKBAR_TOOL_SELECTED
+// Window list
+WINDOWLIST_GROUPING_TOGGLED, WINDOWLIST_TOOL_SELECTED
 ```
 
 ---

@@ -28,41 +28,32 @@ import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.plaf.metal.MetalLookAndFeel;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.jwellman.dsp.DSP;
 import org.jwellman.dsp.DirectoryIconProvider;
 import org.jwellman.dsp.FontAwesomeIconProvider;
 import org.jwellman.dsp.icons.IconSpecifier;
 import org.jwellman.swing.plaf.metal.MetalThemeManager ;
-//import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
-import org.jwellman.virtualdesktop.theme.ThemeManager;
 import org.jwellman.virtualdesktop.desktop.VActionLNF;
 import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.VShortcut;
 import org.jwellman.virtualdesktop.desktopmgr.VAppListCellRenderer;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
-import org.jwellman.virtualdesktop.taskbar.JListTaskbarView;
-import org.jwellman.virtualdesktop.taskbar.TaskbarController;
 import org.jwellman.virtualdesktop.state.reducers.AppReducer;
 import org.jwellman.virtualdesktop.state.store.AppStore;
 import org.jwellman.virtualdesktop.state.store.LoggingMiddleware;
+import org.jwellman.virtualdesktop.taskbar.SmartGridTaskbarView;
+import org.jwellman.virtualdesktop.taskbar.TaskbarController;
+//import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
+import org.jwellman.virtualdesktop.theme.ThemeManager;
 import org.jwellman.virtualdesktop.vapps.ActionFactory;
 import org.jwellman.virtualdesktop.vapps.DesktopAction;
 import org.jwellman.virtualdesktop.vapps.MenuGroup;
 import org.jwellman.virtualdesktop.vapps.VappConfig;
 import org.jwellman.virtualdesktop.vapps.VappsConfig;
-import org.jwellman.virtualdesktop.vapps.SpecBeanShell;
-import org.jwellman.virtualdesktop.vapps.SpecDocking;
-import org.jwellman.virtualdesktop.vapps.SpecHyperSQL;
-import org.jwellman.virtualdesktop.vapps.SpecJCXConsole;
-import org.jwellman.virtualdesktop.vapps.SpecJFreeChart;
-import org.jwellman.virtualdesktop.vapps.SpecUberDragAndDrop;
-import org.jwellman.virtualdesktop.vapps.SpecXChartDemo;
-import org.jwellman.virtualdesktop.vapps.SpecXionFM;
 import org.jwellman.virtualdesktop.vapps.VirtualAppSpec;
 import org.jwellman.virtualdesktop.vswing.VDesktopPane;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.alee.laf.WebLookAndFeel;
 import com.formdev.flatlaf.FlatDarculaLaf;
@@ -183,7 +174,8 @@ public class App extends JFrame implements ActionListener {
                 // Redux-backed taskbar using TaskbarController
                 controls = new JPanel(new BorderLayout());
 
-                JListTaskbarView taskbarView = new JListTaskbarView();
+                // JListTaskbarView taskbarView = new JListTaskbarView();
+                SmartGridTaskbarView taskbarView = new SmartGridTaskbarView();
                 this.taskbarController = new TaskbarController(taskbarView);
                 controls.add(taskbarView.getComponent(), BorderLayout.CENTER);
 

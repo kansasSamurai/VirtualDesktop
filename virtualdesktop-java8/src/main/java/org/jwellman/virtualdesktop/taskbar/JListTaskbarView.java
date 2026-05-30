@@ -85,6 +85,13 @@ public class JListTaskbarView implements TaskbarView {
         this.listener = listener;
     }
 
+    @Override
+    public void applyTheme(TaskbarTheme theme) {
+        // The JList view uses TaskbarItemRenderer with its own hardcoded colors.
+        // Theme support for the JList view is deferred; this is a no-op stub
+        // so the interface contract is satisfied.
+    }
+
     // -------------------------------------------------------------------------
     // Internal wiring
     // -------------------------------------------------------------------------

@@ -45,4 +45,10 @@ public interface TaskbarView {
      */
     void setListener(TaskbarViewListener listener);
 
+    /**
+     * Applies a theme to the view. Called when the application theme changes.
+     * Implementations should update their visual state immediately and repaint.
+     */
+    void applyTheme(TaskbarTheme theme);
+
 }

@@ -98,6 +98,19 @@ public class TaskbarController implements StoreSubscriber, TaskbarViewListener {
     }
 
     @Override
+    public void onItemCloseRequested(String toolId) {
+        VirtualAppFrame frame = frameCache.get(toolId);
+        if (frame == null) {
+            return;
+        }
+        try {
+            frame.setClosed(true);
+        } catch (PropertyVetoException ex) {
+            // Close was vetoed by the frame; leave it open.
+        }
+    }
+
+    @Override
     public void onItemActivated(String id, boolean isGroup) {
         if (isGroup) {
             TaskbarItem group = findItemById(id);
@@ -273,6 +286,14 @@ public class TaskbarController implements StoreSubscriber, TaskbarViewListener {
     // -------------------------------------------------------------------------
     // Public API
     // -------------------------------------------------------------------------
+
+    /**
+     * Applies a theme to the view. Delegates directly to the view; no Redux
+     * dispatch needed since theme is managed outside the store.
+     */
+    public void applyTheme(TaskbarTheme theme) {
+        view.applyTheme(theme);
+    }
 
     public void dispose() {
         if (subscription != null) {

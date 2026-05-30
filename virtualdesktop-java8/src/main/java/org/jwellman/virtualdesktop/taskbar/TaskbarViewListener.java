@@ -31,6 +31,14 @@ public interface TaskbarViewListener {
     void onContextRequested(String id, boolean isGroup, Point screenPoint);
 
     /**
+     * The user requested that a tool be closed (e.g., via a kill-switch button in
+     * the row). The controller is responsible for dispatching the close action.
+     *
+     * @param toolId the ToolInstance id of the tool to close
+     */
+    void onItemCloseRequested(String toolId);
+
+    /**
      * The user explicitly activated an item via double-click or equivalent gesture.
      * For groups, this typically means "activate all items in the group".
      * For leaf items, this is equivalent to a single selection.

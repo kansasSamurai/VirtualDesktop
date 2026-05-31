@@ -8,5 +8,6 @@
   "play": "PLAY",
   "server": "SERVER",
   "svg": "PICTURE_O",
-  "power_off": "POWER_OFF"
+  "power_off": "POWER_OFF",
+  "settings": "COG"
 }

@@ -24,6 +24,7 @@
     { "key": "terminal",    "provider": "GoogleMaterial", "color": "desktop" },
     { "key": "cloud_download",    "provider": "GoogleMaterial", "color": "desktop" },
     { "key": "extension",    "provider": "GoogleMaterial", "color": "desktop" },
-    { "key": "power_off",   "provider": "FontAwesome",    "color": "desktop" }
+    { "key": "power_off",   "provider": "FontAwesome",    "color": "desktop" },
+    { "key": "settings",    "provider": "FontAwesome",    "color": "desktop" }
   ]
 }

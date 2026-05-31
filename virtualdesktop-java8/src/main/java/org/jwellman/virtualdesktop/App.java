@@ -101,6 +101,9 @@ public class App extends JFrame implements ActionListener {
     @SuppressWarnings("unused")
     private WindowListController windowListController;
 
+    /** Shared skin action list — same instances used by the Skin menu and the settings dialog. */
+    private VActionLNF[] skinActions;
+
     // These are a workaround because VirtualAppFrame needs to know the LAF
     // for a workaround that it employs for WEBLAF only
     public static final int LAF_SYSTEM = 1;
@@ -190,6 +193,19 @@ public class App extends JFrame implements ActionListener {
 
                 // Power-off button panel at the very bottom of the taskbar
                 JPanel powerPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 4));
+                JButton settingsButton = new JButton(DSP.Icons.getIcon("settings-small"));
+                settingsButton.setOpaque(false);
+                settingsButton.setContentAreaFilled(false);
+                settingsButton.setBorderPainted(false);
+                settingsButton.setFocusPainted(false);
+                settingsButton.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        DialogManager.showSkinDialog(getSkinActions());
+                    }
+                });
+                powerPanel.add(settingsButton);
+
                 JButton powerButton = new JButton(DSP.Icons.getIcon("power_off-small"));
 //                powerButton.setOpaque(false);
                 powerButton.setBackground(Color.red);
@@ -260,6 +276,17 @@ public class App extends JFrame implements ActionListener {
 
     }
 
+    private VActionLNF[] getSkinActions() {
+        if (skinActions == null) {
+            skinActions = new VActionLNF[] {
+                new VActionLNF("Web",    null, "com.alee.laf.WebLookAndFeel", this),
+                new VActionLNF("Nimbus", null, "javax.swing.plaf.nimbus.NimbusLookAndFeel", this),
+                new VActionLNF("System", null, UIManager.getSystemLookAndFeelClassName(), this)
+            };
+        }
+        return skinActions;
+    }
+
     protected JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
 
@@ -295,14 +322,9 @@ public class App extends JFrame implements ActionListener {
         // TODO for sake of precision, it should probably be determined that each
         // lookandfeel is available before adding it to the menu.
 
-        menuItem = new JMenuItem(new VActionLNF("Web",null,"com.alee.laf.WebLookAndFeel", this));
-        menu.add(menuItem);
-
-        menuItem = new JMenuItem(new VActionLNF("Nimbus",null,"javax.swing.plaf.nimbus.NimbusLookAndFeel", this));
-        menu.add(menuItem);
-
-        menuItem = new JMenuItem(new VActionLNF("System",null,UIManager.getSystemLookAndFeelClassName(), this));
-        menu.add(menuItem);
+        for (VActionLNF action : getSkinActions()) {
+            menu.add(new JMenuItem(action));
+        }
 
         return menuBar;
     }

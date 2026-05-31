@@ -36,21 +36,19 @@ import org.jwellman.dsp.FontAwesomeIconProvider;
 import org.jwellman.dsp.GoogleMaterialIconProvider;
 import org.jwellman.dsp.icons.IconSpecifier;
 import org.jwellman.swing.plaf.metal.MetalThemeManager ;
+import org.jwellman.swing.thirdparty.BetterMemoryMonitor;
 import org.jwellman.virtualdesktop.desktop.DialogManager;
+import org.jwellman.virtualdesktop.desktop.IconRegistryLoader;
 import org.jwellman.virtualdesktop.desktop.VActionLNF;
 import org.jwellman.virtualdesktop.desktop.VException;
-import org.jwellman.virtualdesktop.desktop.IconRegistryLoader;
 import org.jwellman.virtualdesktop.desktop.VShortcut;
 import org.jwellman.virtualdesktop.desktopmgr.VAppListCellRenderer;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
 import org.jwellman.virtualdesktop.state.reducers.AppReducer;
 import org.jwellman.virtualdesktop.state.store.AppStore;
 import org.jwellman.virtualdesktop.state.store.LoggingMiddleware;
-import org.jwellman.swing.thirdparty.BetterMemoryMonitor;
 import org.jwellman.virtualdesktop.taskbar.SmartGridWindowListView;
 import org.jwellman.virtualdesktop.taskbar.WindowListController;
-//import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
-import org.jwellman.virtualdesktop.theme.ThemeManager;
 import org.jwellman.virtualdesktop.vapps.ActionFactory;
 import org.jwellman.virtualdesktop.vapps.DesktopAction;
 import org.jwellman.virtualdesktop.vapps.MenuGroup;
@@ -100,6 +98,7 @@ public class App extends JFrame implements ActionListener {
     private DesktopScrollPane dsp;
 
     /** Redux-backed window list controller (version 6+) */
+    @SuppressWarnings("unused")
     private WindowListController windowListController;
 
     // These are a workaround because VirtualAppFrame needs to know the LAF
@@ -223,7 +222,7 @@ public class App extends JFrame implements ActionListener {
 
                 JSplitPane splitPane3 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, controls, dsp);
                 splitPane3.setOneTouchExpandable(true);
-                splitPane3.setDividerLocation(150);
+                splitPane3.setDividerLocation(230);
                 p.add(splitPane3);
 
                 this.setContentPane(p);
@@ -296,14 +295,11 @@ public class App extends JFrame implements ActionListener {
         // TODO for sake of precision, it should probably be determined that each
         // lookandfeel is available before adding it to the menu.
 
-        // I have decided that weblaf will be the default and baseline look and feel
         menuItem = new JMenuItem(new VActionLNF("Web",null,"com.alee.laf.WebLookAndFeel", this));
         menu.add(menuItem);
 
         menuItem = new JMenuItem(new VActionLNF("Nimbus",null,"javax.swing.plaf.nimbus.NimbusLookAndFeel", this));
         menu.add(menuItem);
-
-        // TODO add Metal
 
         menuItem = new JMenuItem(new VActionLNF("System",null,UIManager.getSystemLookAndFeelClassName(), this));
         menu.add(menuItem);

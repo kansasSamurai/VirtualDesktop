@@ -6,5 +6,7 @@
   "file-text":   "FILE_TEXT",
   "file-word-o": "FILE_WORD_O",
   "play": "PLAY",
-  "svg": "PICTURE_O"
+  "server": "SERVER",
+  "svg": "PICTURE_O",
+  "power_off": "POWER_OFF"
 }

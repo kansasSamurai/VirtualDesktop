@@ -183,7 +183,7 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecJetty",
           "title": "Jetty Server",
-          "icon": "internet56",
+          "icon": "server",
           "enabled": true,
           "desktopOnly": false
         },

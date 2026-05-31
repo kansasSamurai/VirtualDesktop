@@ -19,9 +19,11 @@
     { "key": "calculator",  "provider": "FontAwesome",    "color": "desktop" },
     { "key": "svg",  "provider": "FontAwesome",    "color": "desktop" },
     { "key": "play",  "provider": "FontAwesome",    "color": "desktop" },
+    { "key": "server",  "provider": "FontAwesome",    "color": "desktop" },
     { "key": "widgets",    "provider": "GoogleMaterial", "color": "desktop" },
     { "key": "terminal",    "provider": "GoogleMaterial", "color": "desktop" },
     { "key": "cloud_download",    "provider": "GoogleMaterial", "color": "desktop" },
-    { "key": "extension",    "provider": "GoogleMaterial", "color": "desktop" }
+    { "key": "extension",    "provider": "GoogleMaterial", "color": "desktop" },
+    { "key": "power_off",   "provider": "FontAwesome",    "color": "desktop" }
   ]
 }

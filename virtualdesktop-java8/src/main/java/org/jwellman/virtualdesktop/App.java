@@ -3,6 +3,7 @@ package org.jwellman.virtualdesktop;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -11,6 +12,7 @@ import java.util.Properties;
 
 import javax.swing.Action;
 import javax.swing.Icon;
+import javax.swing.JButton;
 import javax.swing.JDesktopPane;
 import javax.swing.JFrame;
 import javax.swing.JList;
@@ -34,6 +36,7 @@ import org.jwellman.dsp.FontAwesomeIconProvider;
 import org.jwellman.dsp.GoogleMaterialIconProvider;
 import org.jwellman.dsp.icons.IconSpecifier;
 import org.jwellman.swing.plaf.metal.MetalThemeManager ;
+import org.jwellman.virtualdesktop.desktop.DialogManager;
 import org.jwellman.virtualdesktop.desktop.VActionLNF;
 import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.IconRegistryLoader;
@@ -43,6 +46,7 @@ import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
 import org.jwellman.virtualdesktop.state.reducers.AppReducer;
 import org.jwellman.virtualdesktop.state.store.AppStore;
 import org.jwellman.virtualdesktop.state.store.LoggingMiddleware;
+import org.jwellman.swing.thirdparty.BetterMemoryMonitor;
 import org.jwellman.virtualdesktop.taskbar.SmartGridWindowListView;
 import org.jwellman.virtualdesktop.taskbar.WindowListController;
 //import org.jwellman.vfsjfilechooser2.SpecVfsFileChooser2;
@@ -68,7 +72,6 @@ import com.jtattoo.plaf.aluminium.AluminiumLookAndFeel;
 
 import ca.odell.glazedlists.swing.DefaultEventListModel;
 import ca.odell.glazedlists.swing.GlazedListsSwing;
-import jiconfont.swing.IconFontSwing;
 // import org.pushingpixels.substance.api.skin.SubstanceGraphiteLookAndFeel;
 import net.sourceforge.napkinlaf.NapkinLookAndFeel ;
 import net.sourceforge.napkinlaf.NapkinTheme ;
@@ -185,6 +188,36 @@ public class App extends JFrame implements ActionListener {
                 DefaultEventListModel<VirtualAppFrame> legacyModel = GlazedListsSwing.eventListModel(DesktopManager.get().getFrames());
                 JList<VirtualAppFrame> legacyList = new JList<>(legacyModel);
                 DesktopManager.get().setObservedJList(legacyList);
+
+                // Power-off button panel at the very bottom of the taskbar
+                JPanel powerPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 4));
+                JButton powerButton = new JButton(DSP.Icons.getIcon("power_off-small"));
+//                powerButton.setOpaque(false);
+                powerButton.setBackground(Color.red);
+//                powerButton.setContentAreaFilled(false);
+//                powerButton.setBorderPainted(false);
+//                powerButton.setFocusPainted(false);
+                powerButton.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        if (DialogManager.confirmAreYouSure()) {
+                            quit();
+                        }
+                    }
+                });
+                powerPanel.add(powerButton);
+
+                // Memory monitor panel above the power button
+                BetterMemoryMonitor betterMemoryMonitor = new BetterMemoryMonitor();
+                JPanel memMonitorPanel = betterMemoryMonitor.getMemoryMonitor();
+                betterMemoryMonitor.start();
+
+                // Stack: memory monitor CENTER, power button SOUTH
+                JPanel taskbarBottomPanel = new JPanel(new BorderLayout());
+                taskbarBottomPanel.add(memMonitorPanel, BorderLayout.CENTER);
+                taskbarBottomPanel.add(powerPanel, BorderLayout.SOUTH);
+
+                controls.add(taskbarBottomPanel, BorderLayout.SOUTH);
 
                 dsp = new DesktopScrollPane(desktop);
 

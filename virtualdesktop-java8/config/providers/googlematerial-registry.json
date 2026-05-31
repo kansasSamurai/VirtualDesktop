@@ -1,4 +1,7 @@
 {
-  "paint":    "PALETTE",
-  "terminal": "DESKTOP_WINDOWS"
+  "cloud_download": "CLOUD_DOWNLOAD",
+  "extension": "EXTENSION",
+  "paint": "PALETTE",
+  "terminal": "DESKTOP_WINDOWS",
+  "widgets": "WIDGETS"
 }

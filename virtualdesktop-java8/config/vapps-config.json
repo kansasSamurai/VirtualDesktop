@@ -11,14 +11,14 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecBeanShell",
           "title": "BeanShell Console",
-          "icon": "laptop123",
+          "icon": "terminal",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecWorkspace",
           "title": "BeanShell Development",
-          "icon": "code39",
+          "icon": "extension",
           "enabled": true,
           "desktopOnly": false,
           "attrs": {
@@ -29,63 +29,63 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecObjectBrowser",
           "title": "Object Browser",
-          "icon": "tree9",
+          "icon": "widgets",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecScriptBrowser",
           "title": "Script Browser",
-          "icon": "document176",
+          "icon": "file-text",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecBeanShellConsole",
           "title": "New Beanshell Console",
-          "icon": "laptop123",
+          "icon": "terminal",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecJavaScriptConsole",
           "title": "New JavaScript Console",
-          "icon": "laptop123",
+          "icon": "terminal",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecGroovyConsole",
           "title": "Groovy Console",
-          "icon": "laptop123",
+          "icon": "terminal",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecJCXConsole",
           "title": "JCX Console",
-          "icon": "laptop123",
+          "icon": "terminal",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecJediTerm",
           "title": "JediTerm Terminal",
-          "icon": "laptop123",
+          "icon": "terminal",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecGroovyGraphics",
           "title": "Groovy Graphics",
-          "icon": "palette7",
+          "icon": "paint",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecSVGViewer",
           "title": "SVG Viewer",
-          "icon": "add196",
+          "icon": "svg",
           "enabled": true,
           "desktopOnly": false
         },
@@ -120,42 +120,42 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecHyperSQL",
           "title": "HyperSQL Manager",
-          "icon": "download171",
+          "icon": "play",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecHyperSQLClient",
           "title": "HyperSQL Client",
-          "icon": "download171",
+          "icon": "cloud_download",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecCSVDemo",
           "title": "CSV Demo",
-          "icon": "download171",
+          "icon": "extension",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecJFreeChart",
           "title": "JFreeChart Demo",
-          "icon": "stats9",
+          "icon": "extension",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecXChartDemo",
           "title": "XChart Demo",
-          "icon": "stats9",
+          "icon": "bar_chart",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecXChartBarChart",
           "title": "XChart Bar Chart",
-          "icon": "signal49",
+          "icon": "bar_chart",
           "enabled": true,
           "desktopOnly": false
         },
@@ -176,7 +176,7 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecScar",
           "title": "SCAR",
-          "icon": "home",
+          "icon": "extension",
           "enabled": true,
           "desktopOnly": false
         },
@@ -190,7 +190,7 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecThemeSelector",
           "title": "Theme Selector",
-          "icon": "palette7",
+          "icon": "paint",
           "enabled": true,
           "desktopOnly": false
         },
@@ -207,7 +207,7 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecBeanShellScript",
           "title": "Scripted Notepad",
-          "icon": "document176",
+          "icon": "file-text",
           "enabled": true,
           "desktopOnly": false,
           "attrs": {
@@ -218,7 +218,7 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecScriptTester",
           "title": "Script Tester",
-          "icon": "document176",
+          "icon": "file-text",
           "enabled": true,
           "desktopOnly": false
         }
@@ -241,7 +241,7 @@
     {
       "class": "org.jwellman.virtualdesktop.vapps.SpecBeanShell",
       "label": "Office Writer",
-      "icon": "file-word-o",
+      "icon": "file-text",
       "enabled": true
     },
     {

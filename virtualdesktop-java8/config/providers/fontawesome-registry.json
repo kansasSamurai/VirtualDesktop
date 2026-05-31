@@ -1,7 +1,10 @@
 {
   "home":     "HOME",
+  "bar_chart": "BAR_CHART",
   "calendar": "CALENDAR",
+  "calculator":  "CALCULATOR",
   "file-text":   "FILE_TEXT",
   "file-word-o": "FILE_WORD_O",
-  "calculator":  "CALCULATOR"
+  "play": "PLAY",
+  "svg": "PICTURE_O"
 }

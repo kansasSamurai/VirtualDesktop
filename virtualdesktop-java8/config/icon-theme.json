@@ -12,10 +12,16 @@
   "icons": [
     { "key": "home",     "provider": "FontAwesome",    "color": "desktop" },
     { "key": "calendar", "provider": "FontAwesome",    "color": "desktop" },
+    { "key": "bar_chart", "provider": "FontAwesome",    "color": "desktop" },
     { "key": "file-text",   "provider": "FontAwesome",    "color": "desktop" },
     { "key": "file-word-o", "provider": "FontAwesome",    "color": "desktop" },
     { "key": "paint",        "provider": "GoogleMaterial", "color": "desktop" },
     { "key": "calculator",  "provider": "FontAwesome",    "color": "desktop" },
-    { "key": "terminal",    "provider": "GoogleMaterial", "color": "desktop" }
+    { "key": "svg",  "provider": "FontAwesome",    "color": "desktop" },
+    { "key": "play",  "provider": "FontAwesome",    "color": "desktop" },
+    { "key": "widgets",    "provider": "GoogleMaterial", "color": "desktop" },
+    { "key": "terminal",    "provider": "GoogleMaterial", "color": "desktop" },
+    { "key": "cloud_download",    "provider": "GoogleMaterial", "color": "desktop" },
+    { "key": "extension",    "provider": "GoogleMaterial", "color": "desktop" }
   ]
 }

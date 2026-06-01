@@ -9,13 +9,16 @@ import java.util.function.Consumer;
 /**
  * Top-level panel for the Lucene Management vapp.
  *
- * <p>Hosts a horizontal {@link JSplitPane}:
+ * <p>Hosts a {@link JTabbedPane} with two tabs:
  * <ul>
- *   <li>Left (~220px): {@link LuceneSidebarPanel} — sandbox list with live indicators</li>
- *   <li>Right: {@link LuceneDetailPanel} — config form + activity log</li>
+ *   <li><b>Management</b> — the original split-pane UI:
+ *       {@link LuceneSidebarPanel} (left) + {@link LuceneDetailPanel} (right)</li>
+ *   <li><b>Search</b> — {@link LuceneSearchPanel} with debounced omni-search
+ *       and SmartGrid results</li>
  * </ul>
  * </p>
  */
+@SuppressWarnings("serial")
 public class LuceneManagementPanel extends JPanel {
 
     private final LuceneSidebarPanel sidebarPanel = new LuceneSidebarPanel();
@@ -35,11 +38,15 @@ public class LuceneManagementPanel extends JPanel {
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sidebarPanel, detailPanel);
         split.setDividerLocation(220);
         split.setResizeWeight(0.0);
-        add(split, BorderLayout.CENTER);
 
         // Initial load — show global view
         sidebarPanel.reload();
         detailPanel.showGlobal();
+
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.addTab("Management", split);
+        tabs.addTab("Search", new LuceneSearchPanel());
+        add(tabs, BorderLayout.CENTER);
     }
 
     private void onSelectionChanged(IndexRowItem item) {

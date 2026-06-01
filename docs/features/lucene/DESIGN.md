@@ -26,11 +26,13 @@ org.jwellman.lucene
 │   ├── IndexSandboxManager       lifecycle — open/close/purge/commit per sandbox
 │   ├── BulkIndexer               Runnable — Phase 3 scan/incremental-update/commit pipeline
 │   ├── LuceneService             singleton — owns all managers + thread pool; adhoc init guard
-│   └── LuceneConfigLoader        I/O      — Jackson load/save of lucene-config.json
+│   ├── LuceneConfigLoader        I/O      — Jackson load/save of lucene-config.json
+│   └── SearchResult              DTO      — immutable Phase 4 search hit (title, path, score)
 └── ui
-    ├── LuceneManagementPanel     panel  — top-level JSplitPane container
+    ├── LuceneManagementPanel     panel  — top-level JTabbedPane (Management + Search tabs)
     ├── LuceneSidebarPanel        panel  — JTable-based sandbox list with live indicators
-    └── LuceneDetailPanel         panel  — config form + activity log (vertical JSplitPane)
+    ├── LuceneDetailPanel         panel  — config form + activity log (vertical JSplitPane)
+    └── LuceneSearchPanel         panel  — Phase 4 debounced omni-search + SmartGrid results
 ```
 
 ---
@@ -94,6 +96,20 @@ No file content is read and no Lucene documents are written for unchanged files,
 
 Status dot colors: IDLE=green, SCANNING=blue, WATCHING=green, ERROR=amber.
 (IDLE and WATCHING share green; when file monitoring is implemented the distinction can be revisited.)
+
+---
+
+## Write Lock Lifecycle
+
+Each sandbox index directory may contain a `write.lock` file managed by Lucene's `NativeFSLockFactory`.
+
+| Fact | Detail |
+| :--- | :--- |
+| **What holds it** | `BulkIndexer` — it opens an `IndexWriter` at the start of its run, commits, then closes the writer at the end (in a `finally` block). |
+| **When it exists** | Only during an active `BulkIndexer` run. Before indexing starts and after it finishes the directory is lock-free. |
+| **The file never disappears** | `NativeFSLockFactory` never deletes `write.lock`. The file persists on disk after the lock is released, but the OS channel lock is gone. Seeing the file between runs is normal; it is harmlessly re-locked on the next indexing run. |
+| **Abnormal termination** | If the JVM is killed while `BulkIndexer` is running, the OS channel lock is reclaimed when the process dies (immediately on Linux/macOS; occasionally delayed on Windows). |
+| **Automatic recovery** | `BulkIndexer.openWriter()` catches `LockObtainFailedException`. If the sandbox is not in SCANNING state (i.e., no other BulkIndexer is actively running), it deletes the stale `write.lock` and retries once. If the retry also fails the sandbox is placed in `ERROR` state. |
 
 ---
 
@@ -172,19 +188,39 @@ SpecLuceneManagement constructor
 
 ---
 
+## Known Gap: No Vapp Closing Lifecycle
+
+The virtual desktop has no mechanism to notify a vapp that its `JInternalFrame` has been dismissed.
+
+**Current behaviour:**
+
+| Event | Effect |
+| :--- | :--- |
+| First open of Lucene vapp | `LuceneService.initialize()` runs; `FSDirectory` handles opened; no write lock |
+| User closes the `JInternalFrame` | Nothing — `LuceneService` singleton is untouched; `FSDirectory` handles remain open |
+| User reopens the vapp | `isInitialized()` guard prevents double-init; existing directories reused |
+| Clean JVM exit | Shutdown hook fires → `FSDirectory.close()` on each sandbox |
+| JVM killed | No cleanup needed for the `FSDirectory`; if `BulkIndexer` was mid-run, stale `write.lock` is auto-cleared on next indexing attempt |
+
+**Consequence:** `FSDirectory` handles are held from first-open until JVM exit. This is a file-descriptor cost, not a lock, so it is far less impactful than the previous design where `IndexWriter` instances (and their write locks) were held indefinitely. It is acceptable for a single-session personal tool.
+
+**Future work:** When the desktop gains a vapp-closing lifecycle event (an `onClose()` callback or an `InternalFrameListener` wired by the framework), `SpecLuceneManagement` should call `LuceneService.get().shutdown()` there and reset `initialized` to `false` so a subsequent open reinitializes cleanly.
+
+---
+
 ## Implemented Phases
 
 | Phase | Description |
 | :--- | :--- |
-| Phase 1 | Infrastructure — `IndexSandboxManager`, `LuceneService`, `LuceneConfigLoader`, fail-fast lock |
+| Phase 1 | Infrastructure — `IndexSandboxManager`, `LuceneService`, `LuceneConfigLoader`, fail-fast lock with stale-lock auto-recovery |
 | Phase 2 | Document schema (`LuceneDocumentSchema`), `AnalyzerFactory`, full management UI |
 | Phase 3 | Indexing Pipeline — `BulkIndexer` with `Files.walk()`, incremental timestamp diffs, `ExecutorService` thread pool |
+| Phase 4 | Query UI — `LuceneSearchPanel`, `SearcherManager`, debounced omni-search (150 ms / 3-char minimum), async background thread, SmartGrid results |
 
 ## Deferred Phases
 
 | Phase | Description |
 | :--- | :--- |
 | Phase 3 (stretch) | Live File Monitoring — Java `WatchService` integration |
-| Phase 4 | Query UI — SmartGrid search results, `SearcherManager`, debounced keystrokes |
 | Phase 5 | Global Search — `MultiReader` coordinating all sandbox indexes |
 | Phase 5 | Highlighting — Lucene `Highlighter` for match emphasis in detail view |

@@ -16,7 +16,6 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -47,9 +46,8 @@ public class LuceneDetailPanel extends JPanel {
     private final JTextField indexField   = new JTextField();
     private final JTextField filterField  = new JTextField();
     private final JComboBox<AnalyzerType> analyzerCombo = new JComboBox<AnalyzerType>(AnalyzerType.values());
-    private final JButton reindexButton   = new JButton("Reindex Directory");
-    private final JButton commitButton    = new JButton("Commit Active Transactions");
-    private final JButton saveButton      = new JButton("Save Changes");
+    private final JButton reindexButton = new JButton("Reindex Directory");
+    private final JButton saveButton    = new JButton("Save Changes");
 
     // ── global card fields ────────────────────────────────────────────────────
     private final JTextField configPathField  = new JTextField();
@@ -222,7 +220,6 @@ public class LuceneDetailPanel extends JPanel {
         bc.insets = new Insets(8, 6, 4, 6);
         JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         buttonRow.add(reindexButton);
-        buttonRow.add(commitButton);
         buttonRow.add(saveButton);
         panel.add(buttonRow, bc);
 
@@ -236,12 +233,6 @@ public class LuceneDetailPanel extends JPanel {
             @Override
             public void actionPerformed(ActionEvent e) {
                 onReindex();
-            }
-        });
-        commitButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                onCommit();
             }
         });
         saveButton.addActionListener(new ActionListener() {
@@ -327,27 +318,6 @@ public class LuceneDetailPanel extends JPanel {
                     log(new LogEntry(LogEntry.Level.SUCCESS, "Purge complete: " + id));
                     LuceneService.get().startIndexing(id);
                     log(new LogEntry(LogEntry.Level.INFO, "Reindex started: " + id));
-                }
-            }
-        }).start();
-    }
-
-    private void onCommit() {
-        if (currentItem == null) {
-            return;
-        }
-        final String id = currentItem.getConfig().getId();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                IndexSandboxManager mgr = LuceneService.get().getManager(id);
-                if (mgr != null) {
-                    try {
-                        mgr.commit();
-                        log(new LogEntry(LogEntry.Level.SUCCESS, "Commit complete: " + id));
-                    } catch (IOException ex) {
-                        log(new LogEntry(LogEntry.Level.ERROR, "Commit failed: " + ex.getMessage()));
-                    }
                 }
             }
         }).start();

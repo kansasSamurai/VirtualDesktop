@@ -1,5 +1,6 @@
 package org.jwellman.lucene.engine;
 
+import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.LongPoint;
@@ -9,8 +10,10 @@ import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexNotFoundException;
 import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.store.AlreadyClosedException;
+import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.LockObtainFailedException;
 import org.jwellman.lucene.model.DirectorySandboxConfig;
 import org.jwellman.lucene.model.LogEntry;
 import org.jwellman.lucene.model.SandboxRuntimeState;
@@ -31,14 +34,22 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Background Runnable that populates a Lucene index by scanning the configured source directory.
+ * Background {@link Runnable} that populates a Lucene index by scanning the
+ * configured source directory.
  *
- * <p>On first run the entire directory is indexed. On subsequent runs only files whose
- * {@code last_modified} timestamp exceeds the stored value are re-indexed; deleted files
- * are removed from the index. The writer is committed once after the full scan.</p>
+ * <p>On first run the entire directory is indexed. On subsequent runs only files
+ * whose {@code last_modified} timestamp exceeds the stored value are re-indexed;
+ * deleted files are removed. The writer is committed and <em>closed</em> once at
+ * the end of the scan, so the write lock is held only for the duration of this
+ * run.</p>
  *
- * <p>All state updates go through {@link SandboxRuntimeState} volatile/Atomic fields so
- * the Swing sidebar reads them without synchronization.</p>
+ * <p>Stale-lock recovery: if a previous JVM was killed while indexing, the
+ * {@code write.lock} file may still be on disk. When {@link LockObtainFailedException}
+ * is caught and the sandbox is not currently scanning (IDLE/ERROR state), the stale
+ * lock file is deleted and the writer open is retried once.</p>
+ *
+ * <p>All state updates go through {@link SandboxRuntimeState} volatile/Atomic fields
+ * so the Swing sidebar reads them without synchronization.</p>
  */
 public class BulkIndexer implements Runnable {
 
@@ -52,10 +63,10 @@ public class BulkIndexer implements Runnable {
     public void run() {
         DirectorySandboxConfig config = manager.getConfig();
         SandboxRuntimeState state = manager.getRuntimeState();
-        IndexWriter writer = manager.getWriter();
+        Directory directory = manager.getDirectory();
 
-        if (writer == null) {
-            state.setError("IndexWriter not available — index may be locked");
+        if (directory == null) {
+            state.setError("Index directory not available");
             return;
         }
 
@@ -70,11 +81,17 @@ public class BulkIndexer implements Runnable {
             return;
         }
 
+        IndexWriter writer = null;
         try {
+            writer = openWriter(directory, config, state);
+            if (writer == null) {
+                return;
+            }
+
             state.updateProgress(IndexStatus.SCANNING, 0, 0);
             state.addLogEntry(new LogEntry(LogEntry.Level.INFO, "Starting scan: " + sourcePath));
 
-            Map<String, Long> existingDocs = readExistingDocs(writer);
+            Map<String, Long> existingDocs = readExistingDocs(directory);
 
             List<PathMatcher> matchers = buildMatchers(config.getFileInclusionFilter());
             List<Path> files = new ArrayList<Path>();
@@ -123,7 +140,7 @@ public class BulkIndexer implements Runnable {
             state.setLastCommittedTimestamp(System.currentTimeMillis());
 
             int finalCount = 0;
-            try (DirectoryReader reader = DirectoryReader.open(writer)) {
+            try (DirectoryReader reader = DirectoryReader.open(directory)) {
                 finalCount = reader.numDocs();
             } catch (IOException ignored) {
             }
@@ -133,17 +150,53 @@ public class BulkIndexer implements Runnable {
                 "Commit complete. " + added + " added, " + skipped + " unchanged, "
                 + removed + " removed. Total: " + finalCount));
 
-        } catch (AlreadyClosedException e) {
-            // Writer closed by JVM shutdown hook — silent exit
         } catch (IOException e) {
             state.setError("Indexing failed: " + e.getMessage());
             state.addLogEntry(new LogEntry(LogEntry.Level.ERROR, "Indexing failed: " + e.getMessage()));
+        } finally {
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (IOException ignored) {
+                }
+            }
         }
     }
 
-    private Map<String, Long> readExistingDocs(IndexWriter writer) throws IOException {
+    /**
+     * Opens an {@link IndexWriter} for the given directory, with one attempt at
+     * stale-lock recovery if the initial open fails.
+     *
+     * @return the open writer, or {@code null} if the open could not succeed
+     */
+    private IndexWriter openWriter(Directory directory, DirectorySandboxConfig config,
+                                   SandboxRuntimeState state) throws IOException {
+        Analyzer analyzer = AnalyzerFactory.create(config.getAnalyzerType());
+        IndexWriterConfig writerConfig = new IndexWriterConfig(analyzer);
+        try {
+            return new IndexWriter(directory, writerConfig);
+        } catch (LockObtainFailedException e) {
+            if (state.getStatus() == IndexStatus.SCANNING) {
+                // Another BulkIndexer is actively running for this sandbox — don't interfere
+                return null;
+            }
+            // Stale lock from a previously-killed JVM — attempt one recovery
+            if (tryDeleteStaleLock()) {
+                Analyzer retryAnalyzer = AnalyzerFactory.create(config.getAnalyzerType());
+                return new IndexWriter(directory, new IndexWriterConfig(retryAnalyzer));
+            }
+            state.setError("Index locked and stale-lock recovery failed: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Reads the id → last_modified map from the last committed index state.
+     * Returns an empty map if the index has never been committed (fresh directory).
+     */
+    private Map<String, Long> readExistingDocs(Directory directory) throws IOException {
         Map<String, Long> result = new HashMap<String, Long>();
-        try (DirectoryReader reader = DirectoryReader.open(writer)) {
+        try (DirectoryReader reader = DirectoryReader.open(directory)) {
             HashSet<String> fields = new HashSet<String>();
             fields.add(LuceneDocumentSchema.FIELD_ID);
             fields.add(LuceneDocumentSchema.FIELD_LAST_MODIFIED_STORED);
@@ -159,6 +212,20 @@ public class BulkIndexer implements Runnable {
             // Fresh index — no existing documents
         }
         return result;
+    }
+
+    /**
+     * Deletes the {@code write.lock} file left by an abnormally-terminated JVM.
+     *
+     * @return {@code true} if the file was deleted or did not exist
+     */
+    private boolean tryDeleteStaleLock() {
+        try {
+            Files.deleteIfExists(manager.getIndexPath().resolve("write.lock"));
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     private void indexFile(Path file, String id, long lastModified, IndexWriter writer) throws IOException {

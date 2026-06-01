@@ -1,5 +1,16 @@
 package org.jwellman.lucene.engine;
 
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.IndexNotFoundException;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
+import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.store.FSDirectory;
 import org.jwellman.lucene.model.DirectorySandboxConfig;
 import org.jwellman.lucene.model.IndexRowItem;
 import org.jwellman.lucene.model.LuceneGlobalConfig;
@@ -36,6 +47,7 @@ public class LuceneService {
     private volatile boolean initialized = false;
     private LuceneGlobalConfig globalConfig;
     private final Map<String, IndexSandboxManager> managers = new LinkedHashMap<String, IndexSandboxManager>();
+    private final Map<String, DirectoryReader> readerCache = new LinkedHashMap<String, DirectoryReader>();
     private ExecutorService threadPool;
 
     private LuceneService() {
@@ -95,11 +107,20 @@ public class LuceneService {
     }
 
     /**
-     * Closes all sandbox managers. Called by the JVM shutdown hook.
+     * Closes all cached readers and sandbox managers. Called by the JVM shutdown hook.
      */
     public void shutdown() {
         if (threadPool != null) {
             threadPool.shutdownNow();
+        }
+        synchronized (readerCache) {
+            for (DirectoryReader reader : readerCache.values()) {
+                try {
+                    reader.close();
+                } catch (IOException ignored) {
+                }
+            }
+            readerCache.clear();
         }
         for (IndexSandboxManager manager : managers.values()) {
             manager.close();
@@ -153,6 +174,114 @@ public class LuceneService {
             items.add(new IndexRowItem(manager.getConfig(), manager.getRuntimeState()));
         }
         return items;
+    }
+
+    /**
+     * Executes a full-text search across one or all sandboxes.
+     *
+     * <p>Searches {@link LuceneDocumentSchema#FIELD_TITLE} and
+     * {@link LuceneDocumentSchema#FIELD_CONTENTS} using a {@link MultiFieldQueryParser}.
+     * Uses a per-sandbox cached {@link DirectoryReader} that is only reopened when
+     * a new commit is detected (via {@link DirectoryReader#openIfChanged}), so
+     * repeated searches against an unchanged index pay no I/O cost.</p>
+     *
+     * @param sandboxId   the sandbox to search, or {@code null} / empty to search all
+     * @param queryString the raw query string (Lucene query syntax supported)
+     * @param maxResults  maximum results per sandbox
+     * @return combined results sorted by relevance score descending
+     */
+    public List<SearchResult> search(String sandboxId, String queryString, int maxResults) {
+        List<SearchResult> results = new ArrayList<SearchResult>();
+        boolean searchAll = (sandboxId == null || sandboxId.trim().isEmpty());
+
+        for (Map.Entry<String, IndexSandboxManager> entry : managers.entrySet()) {
+            if (!searchAll && !entry.getKey().equals(sandboxId)) {
+                continue;
+            }
+            IndexSandboxManager mgr = entry.getValue();
+            FSDirectory dir = mgr.getDirectory();
+            if (dir == null) {
+                continue;
+            }
+            DirectoryReader reader = acquireReader(entry.getKey(), dir);
+            if (reader == null) {
+                continue;
+            }
+            try {
+                IndexSearcher searcher = new IndexSearcher(reader);
+                Analyzer analyzer = AnalyzerFactory.create(mgr.getConfig().getAnalyzerType());
+                String[] fields = {
+                    LuceneDocumentSchema.FIELD_TITLE,
+                    LuceneDocumentSchema.FIELD_CONTENTS
+                };
+                MultiFieldQueryParser parser = new MultiFieldQueryParser(fields, analyzer);
+                parser.setAllowLeadingWildcard(true);
+                Query query = parser.parse(queryString);
+                TopDocs hits = searcher.search(query, maxResults);
+                for (ScoreDoc sd : hits.scoreDocs) {
+                    Document doc = searcher.doc(sd.doc);
+                    String title = doc.get(LuceneDocumentSchema.FIELD_TITLE);
+                    String path  = doc.get(LuceneDocumentSchema.FIELD_ID);
+                    String storedModified = doc.get(LuceneDocumentSchema.FIELD_LAST_MODIFIED_STORED);
+                    long millis = 0L;
+                    if (storedModified != null) {
+                        try {
+                            millis = Long.parseLong(storedModified);
+                        } catch (NumberFormatException ignored) {
+                        }
+                    }
+                    results.add(new SearchResult(entry.getKey(), title, path, millis, sd.score));
+                }
+            } catch (ParseException e) {
+                System.err.println("LuceneService: query parse error: " + e.getMessage());
+            } catch (IOException e) {
+                System.err.println("LuceneService: search error for " + entry.getKey() + ": " + e.getMessage());
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * Returns a live {@link DirectoryReader} for the given sandbox, using a
+     * cached instance where possible.
+     *
+     * <p>On the first call for a sandbox this opens a fresh reader. On subsequent
+     * calls {@link DirectoryReader#openIfChanged} checks whether a new commit has
+     * appeared; if not, the existing reader is returned immediately with no I/O.
+     * If a new commit is detected the old reader is closed and a new one opened.</p>
+     *
+     * <p>Returns {@code null} if the index has not been built yet
+     * ({@link IndexNotFoundException}).</p>
+     *
+     * <p>Synchronized to guard the shared {@link #readerCache} map against
+     * concurrent search calls from background threads.</p>
+     */
+    private synchronized DirectoryReader acquireReader(String sandboxId, FSDirectory dir) {
+        DirectoryReader cached = readerCache.get(sandboxId);
+        try {
+            if (cached == null) {
+                DirectoryReader fresh = DirectoryReader.open(dir);
+                readerCache.put(sandboxId, fresh);
+                return fresh;
+            }
+            DirectoryReader updated = DirectoryReader.openIfChanged(cached);
+            if (updated != null) {
+                try {
+                    cached.close();
+                } catch (IOException ignored) {
+                }
+                readerCache.put(sandboxId, updated);
+                return updated;
+            }
+            return cached;
+        } catch (IndexNotFoundException e) {
+            // Index not yet built for this sandbox
+            return null;
+        } catch (IOException e) {
+            System.err.println("LuceneService: failed to acquire reader for " + sandboxId + ": " + e.getMessage());
+            return null;
+        }
     }
 
     /**

@@ -1,10 +1,6 @@
 package org.jwellman.lucene.engine;
 
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.store.LockObtainFailedException;
 import org.jwellman.lucene.model.DirectorySandboxConfig;
 import org.jwellman.lucene.model.SandboxRuntimeState;
 import org.jwellman.lucene.model.SandboxRuntimeState.IndexStatus;
@@ -15,15 +11,29 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * Manages the full lifecycle of a single Lucene index sandbox directory.
+ * Manages the lifecycle of a single Lucene index sandbox directory.
  *
- * <p>One instance per configured sandbox. Responsible for creating the index
- * directory, acquiring the write lock (fail-fast on contention), and exposing
- * the live {@link SandboxRuntimeState} for the management UI.</p>
+ * <p>One instance per configured sandbox. Responsibilities are intentionally narrow:
+ * open and hold the {@link FSDirectory}, expose it to the indexing and search layers,
+ * and track live telemetry via {@link SandboxRuntimeState}.</p>
  *
- * <p>All public methods must be called from the same background thread or with
- * external synchronization, except {@link #getRuntimeState()} which is safe to
- * call from any thread.</p>
+ * <p>This class does <em>not</em> own an {@link org.apache.lucene.index.IndexWriter}.
+ * Writers are opened, used, committed, and closed entirely within
+ * {@link BulkIndexer#run()} so that the write lock ({@code write.lock}) only exists
+ * on disk during an active indexing run. Between runs the index directory is
+ * lock-free and open for reading.</p>
+ *
+ * <p>All public methods may be called from any thread.
+ * {@link #getRuntimeState()} is always safe to read from the Swing EDT.</p>
+ *
+ * <h3>Write Lock Lifecycle (summary)</h3>
+ * <ul>
+ *   <li>Lock acquired: when {@link BulkIndexer} opens an {@code IndexWriter}.</li>
+ *   <li>Lock released: when {@link BulkIndexer} closes the writer at the end of its run.</li>
+ *   <li>Between indexing runs: no lock held; the directory is readable at any time.</li>
+ *   <li>Stale lock (killed JVM during indexing): handled by {@link BulkIndexer}, which
+ *       deletes the stale {@code write.lock} and retries once.</li>
+ * </ul>
  */
 public class IndexSandboxManager {
 
@@ -32,7 +42,6 @@ public class IndexSandboxManager {
     private final SandboxRuntimeState runtimeState;
 
     private FSDirectory directory;
-    private IndexWriter writer;
 
     public IndexSandboxManager(DirectorySandboxConfig config, String baseIndexDir) {
         this.config = config;
@@ -41,46 +50,30 @@ public class IndexSandboxManager {
     }
 
     /**
-     * Opens the index directory and acquires a write lock.
-     *
-     * <p>If another JVM instance already holds the lock, the sandbox is marked
-     * {@link IndexStatus#ERROR} rather than throwing — the UI will show an amber
-     * indicator so the user can investigate without a crash.</p>
+     * Creates the index directory on disk and opens the {@link FSDirectory} handle.
+     * Does not acquire the write lock — that happens only when a
+     * {@link BulkIndexer} opens an {@code IndexWriter}.
      */
     public void open() {
         try {
             Files.createDirectories(indexPath);
             directory = FSDirectory.open(indexPath);
-            Analyzer analyzer = AnalyzerFactory.create(config.getAnalyzerType());
-            IndexWriterConfig writerConfig = new IndexWriterConfig(analyzer);
-            writer = new IndexWriter(directory, writerConfig);
             runtimeState.updateProgress(IndexStatus.IDLE, 0, 0);
-        } catch (LockObtainFailedException e) {
-            runtimeState.setError("Index locked by another process: " + e.getMessage());
         } catch (IOException e) {
-            runtimeState.setError("Failed to open index: " + e.getMessage());
+            runtimeState.setError("Failed to open index directory: " + e.getMessage());
         }
     }
 
     /**
-     * Commits pending changes and closes the index writer and directory.
+     * Closes the {@link FSDirectory} handle. Safe to call even if {@link #open()}
+     * was never called or failed.
      */
     public void close() {
-        if (writer != null) {
-            try {
-                writer.commit();
-                writer.close();
-            } catch (IOException e) {
-                // best-effort on shutdown
-            } finally {
-                writer = null;
-            }
-        }
         if (directory != null) {
             try {
                 directory.close();
             } catch (IOException e) {
-                // best-effort
+                // best-effort on shutdown
             } finally {
                 directory = null;
             }
@@ -88,13 +81,13 @@ public class IndexSandboxManager {
     }
 
     /**
-     * Drops all index data for this sandbox and reopens a fresh empty index.
-     * Used by the "Reindex Directory" action in the management UI.
+     * Drops all index data and reopens a fresh empty directory.
+     * Used by the "Reindex Directory" action; a {@link BulkIndexer} is expected to
+     * be submitted immediately after this call.
      */
     public void purge() {
         close();
         try {
-            // Delete all files in the index directory
             if (Files.exists(indexPath)) {
                 Files.walk(indexPath)
                     .sorted(java.util.Comparator.reverseOrder())
@@ -114,17 +107,6 @@ public class IndexSandboxManager {
     }
 
     /**
-     * Manually commits the writer's buffer to disk.
-     * Called from the "Commit Active Transactions" button.
-     */
-    public void commit() throws IOException {
-        if (writer != null) {
-            writer.commit();
-            runtimeState.setLastCommittedTimestamp(System.currentTimeMillis());
-        }
-    }
-
-    /**
      * Returns the live telemetry state object. Safe to call from any thread.
      */
     public SandboxRuntimeState getRuntimeState() {
@@ -139,7 +121,13 @@ public class IndexSandboxManager {
         return indexPath;
     }
 
-    public IndexWriter getWriter() {
-        return writer;
+    /**
+     * Returns the open {@link FSDirectory} for this sandbox, or {@code null} if
+     * {@link #open()} was never called or failed. Used by {@link BulkIndexer} to
+     * open an {@code IndexWriter} and by {@link LuceneService} to open a
+     * {@code DirectoryReader} for search.
+     */
+    public FSDirectory getDirectory() {
+        return directory;
     }
 }

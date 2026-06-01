@@ -37,6 +37,7 @@ public class DayCellPanel extends JPanel {
     private static final Color TODAY_ACCENT     = new Color(0xE9, 0x1E, 0x8C);
     private static final LocalDate TODAY        = LocalDate.now();
     private static final LocalDate WEEK_END     = TODAY.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+    private static final String[]  MONTH_ABBR   = {"JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"};
 
     private static final class Borders {
         private static final javax.swing.border.Border DAY_CELL      = BorderFactory.createMatteBorder(0, 1, 1, 0, BORDER_CLR);
@@ -129,7 +130,7 @@ public class DayCellPanel extends JPanel {
             primaryLabel.setText("");
             primaryLabel.setOpaque(false);
             primaryLabel.setHorizontalAlignment(SwingConstants.LEFT);
-            dayNumberLabel.setText(data != null ? String.valueOf(data.getDate().getDayOfMonth()) : "");
+            dayNumberLabel.setText(data != null ? dayBadgeText(data.getDate()) : "");
             dayNumberLabel.setOpaque(false);
             dayNumberLabel.setFont(Fonts.DAY_NUMBER);
             dayNumberLabel.setForeground(Colors.DAY_NUMBER);
@@ -155,7 +156,7 @@ public class DayCellPanel extends JPanel {
         }
 
         // ── day-number badge ─────────────────────────────────────────────────
-        dayNumberLabel.setText(String.valueOf(date.getDayOfMonth()));
+        dayNumberLabel.setText(dayBadgeText(date));
         if (isToday) {
             dayNumberLabel.setOpaque(true);
             dayNumberLabel.setBackground(TODAY_ACCENT);
@@ -197,6 +198,12 @@ public class DayCellPanel extends JPanel {
 
         revalidate();
         repaint();
+    }
+
+    private static String dayBadgeText(LocalDate date) {
+        return date.getDayOfMonth() == 1
+            ? MONTH_ABBR[date.getMonthValue() - 1]
+            : String.valueOf(date.getDayOfMonth());
     }
 
     public void clear() {

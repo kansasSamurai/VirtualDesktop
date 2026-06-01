@@ -24,7 +24,7 @@ import java.awt.event.MouseEvent;
  *   <li>6px right inset</li>
  * </ul>
  *
- * <p>Status dot colors: IDLE=gray, SCANNING=blue, WATCHING=green, ERROR=amber.</p>
+ * <p>Status dot colors: IDLE=green, SCANNING=blue, WATCHING=green, ERROR=amber.</p>
  *
  * <p>Implements {@link Recyclable} and {@link Selectable} as required by SmartGrid's
  * typed-pool mechanism. Rows are tagged {@code fnd-type="lucene-sidebar-row"} in the
@@ -176,9 +176,8 @@ public class LuceneSidebarRowComponent extends JPanel implements Recyclable, Sel
     private static Color dotColorFor(IndexStatus status) {
         switch (status) {
             case SCANNING: return COLOR_SCANNING;
-            case WATCHING: return COLOR_WATCHING;
             case ERROR:    return COLOR_ERROR;
-            default:       return COLOR_IDLE;
+            default:       return COLOR_WATCHING;
         }
     }
 

@@ -15,6 +15,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,8 +24,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 /**
  * Right-hand panel in the Lucene Management UI.
  *
- * <p>Vertically split: upper half shows the selected sandbox's config form;
- * lower half shows a live activity log fed from background indexing threads.</p>
+ * <p>Vertically split: upper half shows a configuration form whose content
+ * switches between a sandbox-specific card and a global-info card via
+ * {@link CardLayout}; lower half shows a live activity log.</p>
  *
  * <p>Call {@link #showSandbox(IndexRowItem)} or {@link #showGlobal()} to
  * hydrate the panel when the sidebar selection changes.</p>
@@ -33,8 +35,14 @@ public class LuceneDetailPanel extends JPanel {
 
     private static final int LOG_CAP = 500;
 
-    // ── config form fields ───────────────────────────────────────────────────
-    private final JLabel titleLabel       = new JLabel("Global / System Controls");
+    private static final String CARD_SANDBOX = "sandbox";
+    private static final String CARD_GLOBAL  = "global";
+
+    // ── shared header fields (visible in both cards) ─────────────────────────
+    private final JLabel titleLabel = new JLabel("Global / System Controls");
+    private final JLabel docsLabel  = new JLabel("Documents: 0");
+
+    // ── sandbox card fields ───────────────────────────────────────────────────
     private final JTextField sourceField  = new JTextField();
     private final JTextField indexField   = new JTextField();
     private final JTextField filterField  = new JTextField();
@@ -42,7 +50,14 @@ public class LuceneDetailPanel extends JPanel {
     private final JButton reindexButton   = new JButton("Reindex Directory");
     private final JButton commitButton    = new JButton("Commit Active Transactions");
     private final JButton saveButton      = new JButton("Save Changes");
-    private final JLabel docsLabel        = new JLabel("Documents: 0");
+
+    // ── global card fields ────────────────────────────────────────────────────
+    private final JTextField configPathField  = new JTextField();
+    private final JTextField baseIndexField   = new JTextField();
+    private final JLabel     threadsValueLabel = new JLabel();
+
+    // ── card container ────────────────────────────────────────────────────────
+    private final JPanel contentCards = new JPanel(new CardLayout());
 
     // ── log area ─────────────────────────────────────────────────────────────
     private final List<LogEntry> logEntries = new ArrayList<LogEntry>();
@@ -60,9 +75,18 @@ public class LuceneDetailPanel extends JPanel {
         JPanel configPanel = buildConfigPanel();
         JPanel logPanel    = buildLogPanel();
 
-        JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, configPanel, logPanel);
-        split.setDividerLocation(220);
-        split.setResizeWeight(0.4);
+        final JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, configPanel, logPanel);
+        split.setResizeWeight(0.5);
+        split.addHierarchyListener(new java.awt.event.HierarchyListener() {
+            @Override
+            public void hierarchyChanged(java.awt.event.HierarchyEvent e) {
+                if ((e.getChangeFlags() & java.awt.event.HierarchyEvent.SHOWING_CHANGED) != 0
+                        && split.isShowing()) {
+                    split.setDividerLocation(0.5);
+                    split.removeHierarchyListener(this);
+                }
+            }
+        });
         add(split, BorderLayout.CENTER);
 
         // Drain log queue every 200 ms on the EDT
@@ -82,31 +106,37 @@ public class LuceneDetailPanel extends JPanel {
         DirectorySandboxConfig cfg = item.getConfig();
 
         titleLabel.setText(cfg.getDisplayName());
+        docsLabel.setText("Documents: " + item.getRuntimeState().getDocumentCount());
         sourceField.setText(cfg.getSourcePath() != null ? cfg.getSourcePath() : "");
         LuceneService svc = LuceneService.get();
         IndexSandboxManager mgr = svc.getManager(cfg.getId());
         indexField.setText(mgr != null ? mgr.getIndexPath().toString() : "");
         filterField.setText(cfg.getFileInclusionFilter() != null ? cfg.getFileInclusionFilter() : "");
         analyzerCombo.setSelectedItem(cfg.getAnalyzerType());
-        docsLabel.setText("Documents: " + item.getRuntimeState().getDocumentCount());
 
-        setConfigFieldsVisible(true);
-        setGlobalControlsVisible(false);
+        ((CardLayout) contentCards.getLayout()).show(contentCards, CARD_SANDBOX);
     }
 
     /** Hydrate for the Global row. */
     public void showGlobal() {
         this.currentItem = null;
         titleLabel.setText("Global / System Controls");
+
         LuceneService svc = LuceneService.get();
         if (svc.isInitialized()) {
             docsLabel.setText("Total Documents: " + svc.getTotalDocumentCount()
                 + "  |  Active Indexers: " + svc.getActiveSandboxCount());
+            configPathField.setText(new File(LuceneConfigLoader.CONFIG_PATH).getAbsolutePath());
+            baseIndexField.setText(new File(svc.getGlobalConfig().getBaseIndexDirectory()).getAbsolutePath());
+            threadsValueLabel.setText(String.valueOf(svc.getGlobalConfig().getMaxBackgroundThreads()));
         } else {
             docsLabel.setText("Service not yet initialized");
+            configPathField.setText("");
+            baseIndexField.setText("");
+            threadsValueLabel.setText("");
         }
-        setConfigFieldsVisible(false);
-        setGlobalControlsVisible(true);
+
+        ((CardLayout) contentCards.getLayout()).show(contentCards, CARD_GLOBAL);
     }
 
     /**
@@ -119,8 +149,36 @@ public class LuceneDetailPanel extends JPanel {
     // ── construction helpers ─────────────────────────────────────────────────
 
     private JPanel buildConfigPanel() {
-        JPanel panel = new JPanel(new GridBagLayout());
+        JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createTitledBorder("Configuration"));
+
+        // Shared header: title + docs summary
+        JPanel header = new JPanel(new GridBagLayout());
+        GridBagConstraints tc = new GridBagConstraints();
+        tc.gridx = 0; tc.gridy = 0; tc.gridwidth = 2;
+        tc.anchor = GridBagConstraints.WEST;
+        tc.insets = new Insets(4, 6, 2, 6);
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 13f));
+        header.add(titleLabel, tc);
+
+        GridBagConstraints dc = new GridBagConstraints();
+        dc.gridx = 0; dc.gridy = 1; dc.gridwidth = 2;
+        dc.anchor = GridBagConstraints.WEST;
+        dc.insets = new Insets(0, 6, 6, 6);
+        header.add(docsLabel, dc);
+
+        panel.add(header, BorderLayout.NORTH);
+
+        // Switching content area
+        contentCards.add(buildSandboxCard(), CARD_SANDBOX);
+        contentCards.add(buildGlobalCard(), CARD_GLOBAL);
+        panel.add(contentCards, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private JPanel buildSandboxCard() {
+        JPanel panel = new JPanel(new GridBagLayout());
 
         GridBagConstraints lc = new GridBagConstraints();
         lc.anchor = GridBagConstraints.WEST;
@@ -133,48 +191,33 @@ public class LuceneDetailPanel extends JPanel {
         fc.insets = new Insets(3, 0, 3, 6);
         fc.gridx = 1;
 
-        // Title
-        GridBagConstraints tc = new GridBagConstraints();
-        tc.gridx = 0; tc.gridy = 0; tc.gridwidth = 2;
-        tc.anchor = GridBagConstraints.WEST;
-        tc.insets = new Insets(4, 6, 4, 6);
-        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 13f));
-        panel.add(titleLabel, tc);
-
-        // Docs label
-        GridBagConstraints dc = new GridBagConstraints();
-        dc.gridx = 0; dc.gridy = 1; dc.gridwidth = 2;
-        dc.anchor = GridBagConstraints.WEST;
-        dc.insets = new Insets(0, 6, 6, 6);
-        panel.add(docsLabel, dc);
-
         // Source path
-        lc.gridy = 2; fc.gridy = 2;
+        lc.gridy = 0; fc.gridy = 0;
         panel.add(new JLabel("Source Path:"), lc);
         sourceField.setEditable(false);
         sourceField.setBackground(UIManager.getColor("TextField.inactiveBackground"));
         panel.add(sourceField, fc);
 
         // Index path
-        lc.gridy = 3; fc.gridy = 3;
+        lc.gridy = 1; fc.gridy = 1;
         panel.add(new JLabel("Index Path:"), lc);
         indexField.setEditable(false);
         indexField.setBackground(UIManager.getColor("TextField.inactiveBackground"));
         panel.add(indexField, fc);
 
         // File filter
-        lc.gridy = 4; fc.gridy = 4;
+        lc.gridy = 2; fc.gridy = 2;
         panel.add(new JLabel("File Filter:"), lc);
         panel.add(filterField, fc);
 
         // Analyzer
-        lc.gridy = 5; fc.gridy = 5;
+        lc.gridy = 3; fc.gridy = 3;
         panel.add(new JLabel("Analyzer:"), lc);
         panel.add(analyzerCombo, fc);
 
         // Buttons
         GridBagConstraints bc = new GridBagConstraints();
-        bc.gridx = 0; bc.gridy = 6; bc.gridwidth = 2;
+        bc.gridx = 0; bc.gridy = 4; bc.gridwidth = 2;
         bc.anchor = GridBagConstraints.WEST;
         bc.insets = new Insets(8, 6, 4, 6);
         JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
@@ -185,7 +228,7 @@ public class LuceneDetailPanel extends JPanel {
 
         // Spacer
         GridBagConstraints sc = new GridBagConstraints();
-        sc.gridx = 0; sc.gridy = 7; sc.weighty = 1.0;
+        sc.gridx = 0; sc.gridy = 5; sc.weighty = 1.0;
         panel.add(new JLabel(), sc);
 
         // Wire actions
@@ -207,6 +250,47 @@ public class LuceneDetailPanel extends JPanel {
                 onSaveChanges();
             }
         });
+
+        return panel;
+    }
+
+    private JPanel buildGlobalCard() {
+        JPanel panel = new JPanel(new GridBagLayout());
+
+        GridBagConstraints lc = new GridBagConstraints();
+        lc.anchor = GridBagConstraints.WEST;
+        lc.insets = new Insets(3, 6, 3, 4);
+        lc.gridx = 0;
+
+        GridBagConstraints fc = new GridBagConstraints();
+        fc.fill = GridBagConstraints.HORIZONTAL;
+        fc.weightx = 1.0;
+        fc.insets = new Insets(3, 0, 3, 6);
+        fc.gridx = 1;
+
+        // Config file
+        lc.gridy = 0; fc.gridy = 0;
+        panel.add(new JLabel("Config File:"), lc);
+        configPathField.setEditable(false);
+        configPathField.setBackground(UIManager.getColor("TextField.inactiveBackground"));
+        panel.add(configPathField, fc);
+
+        // Base index directory
+        lc.gridy = 1; fc.gridy = 1;
+        panel.add(new JLabel("Index Directory:"), lc);
+        baseIndexField.setEditable(false);
+        baseIndexField.setBackground(UIManager.getColor("TextField.inactiveBackground"));
+        panel.add(baseIndexField, fc);
+
+        // Thread pool size
+        lc.gridy = 2; fc.gridy = 2;
+        panel.add(new JLabel("Indexing Threads:"), lc);
+        panel.add(threadsValueLabel, fc);
+
+        // Spacer
+        GridBagConstraints sc = new GridBagConstraints();
+        sc.gridx = 0; sc.gridy = 3; sc.weighty = 1.0;
+        panel.add(new JLabel(), sc);
 
         return panel;
     }
@@ -280,22 +364,6 @@ public class LuceneDetailPanel extends JPanel {
         log(new LogEntry(LogEntry.Level.SUCCESS,
             "Config saved for: " + cfg.getDisplayName()
             + " (analyzer change takes effect on next app start)"));
-    }
-
-    // ── visibility helpers ───────────────────────────────────────────────────
-
-    private void setConfigFieldsVisible(boolean visible) {
-        sourceField.setVisible(visible);
-        indexField.setVisible(visible);
-        filterField.setVisible(visible);
-        analyzerCombo.setVisible(visible);
-        reindexButton.setVisible(visible);
-        commitButton.setVisible(visible);
-        saveButton.setVisible(visible);
-    }
-
-    private void setGlobalControlsVisible(boolean visible) {
-        // Placeholder for future global-only buttons (Reindex All, Clean Locks)
     }
 
     // ── log drain ────────────────────────────────────────────────────────────

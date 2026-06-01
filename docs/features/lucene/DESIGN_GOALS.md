@@ -29,7 +29,7 @@ Let’s translate that high-craft philosophy into a structured, execution-focuse
 
 ## 2. Milestone Roadmap & Implementation Checklist
 
-### Phase 1: Infrastructure & The Lifecycle Bootstrap
+### Phase 1: Infrastructure & The Lifecycle Bootstrap ✅
 
 *Objective: Establish the directory architecture, verify library dependencies, and build a fail-fast startup sequence.*
 
@@ -42,9 +42,7 @@ Let’s translate that high-craft philosophy into a structured, execution-focuse
 * [ ] **The "Fail-Fast" Lock Strategy:** - [ ] Configure `FSDirectory.open(Path)` to safely acquire a native disk lock (`.lock`).
 * [ ] Write an explicit startup check that cleanly catches an `LockObtainFailedException` (in case a rogue or crashed instance of the desktop application is still holding a hook on the directory) and prompts the user gracefully.
 
-
-
-### Phase 2: Domain-Specific Document Engineering
+### Phase 2: Domain-Specific Document Engineering ✅
 
 *Objective: Model your business data as flat Lucene fields and implement tailored text analyzers.*
 
@@ -77,7 +75,7 @@ Let’s translate that high-craft philosophy into a structured, execution-focuse
 
 * [ ] **The Real-Time Searcher Pattern:** Implement a thread-safe `SearcherManager` to track `IndexSearcher` instances cleanly, utilizing its `maybeRefresh()` capability to instantly reveal background commits to the UI.
 * [ ] **Asynchronous Query Execution:** - [ ] Intercept keystrokes from your Omni-Search box.
-* [ ] Debounce the keyboard events (e.g., wait 150ms after typing stops) before spinning up a worker thread to execute the Lucene query.
+* [ ] Debounce the keyboard events (e.g., wait 150ms after typing stops) before spinning up a worker thread to execute the Lucene query - there must also be a minimum of 3 characters.
 
 * [ ] **The Model Hydration Loop:**
 * [ ] Execute `indexSearcher.search(query, maxResults)`.

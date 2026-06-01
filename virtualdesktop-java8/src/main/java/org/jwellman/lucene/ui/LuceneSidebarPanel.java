@@ -47,7 +47,7 @@ public class LuceneSidebarPanel extends JPanel {
         model = new DefaultGridModel()
             .addColumn(new ColumnDef("name", "Sandbox", 200, false, false, null));
 
-        grid = new SmartGrid(model);
+        grid = new SmartGrid(model, true);
         grid.setRowHeight(54);
         grid.setRowNumbersVisible(false);
         grid.setCheckboxColumnVisible(false);

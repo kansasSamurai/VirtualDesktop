@@ -15,7 +15,7 @@ import java.io.IOException;
  */
 public final class LuceneConfigLoader {
 
-    private static final String CONFIG_PATH = "config/lucene-config.json";
+    public static final String CONFIG_PATH = "config/lucene-config.json";
 
     private LuceneConfigLoader() {
     }

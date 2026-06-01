@@ -54,6 +54,7 @@ org.jwellman.lucene
 A `BulkIndexer` is submitted for every sandbox each time the service initializes (and again when a sandbox is added or reindexed via the UI button). The scan is **incremental**: it does not blindly rewrite the whole index on every startup.
 
 **Startup scan cost on a warm index** (nothing changed):
+
 1. Open a `DirectoryReader` on the existing index and read all stored `id` + `last_modified_stored` fields into a `Map<String, Long>`.
 2. Walk the source directory and collect matching files.
 3. Compare each file's `Files.getLastModifiedTime()` against the stored value — skip if equal or older.
@@ -62,6 +63,7 @@ A `BulkIndexer` is submitted for every sandbox each time the service initializes
 No file content is read and no Lucene documents are written for unchanged files, so a warm-index startup scan is cheap regardless of corpus size.
 
 **What triggers an actual write:**
+
 - File is new (not in the index map) → `addDocument`
 - File's `last_modified` is newer than the stored value → `deleteDocuments` + `addDocument`
 - File was deleted from disk but still in the index → `deleteDocuments`
@@ -90,7 +92,8 @@ No file content is read and no Lucene documents are written for unchanged files,
 +------------------------------------+---------------------------------------+
 ```
 
-Status dot colors: IDLE=gray, SCANNING=blue, WATCHING=green, ERROR=amber.
+Status dot colors: IDLE=green, SCANNING=blue, WATCHING=green, ERROR=amber.
+(IDLE and WATCHING share green; when file monitoring is implemented the distinction can be revisited.)
 
 ---
 

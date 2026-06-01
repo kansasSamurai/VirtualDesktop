@@ -38,7 +38,7 @@ public class LuceneManagementPanel extends JPanel {
         add(split, BorderLayout.CENTER);
 
         // Initial load — show global view
-        sidebarPanel.refresh();
+        sidebarPanel.reload();
         detailPanel.showGlobal();
     }
 

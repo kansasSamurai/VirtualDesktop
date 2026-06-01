@@ -963,6 +963,204 @@ only the default renderer.
 
 ---
 
+---
+
+## SmartGrid in List Mode — The Sidebar Navigation Pattern
+
+SmartGrid is usually discussed as a table. It works equally well as a single-column
+navigation list — a sidebar, a picker, a command palette, an inventory. The setup is
+slightly different from a multi-column table; this section captures the exact
+recipe learned from the Lucene Management sidebar implementation.
+
+### When to Choose List Mode
+
+Use a SmartGrid list (not a `JList` or `JTable`) when any of the following are true:
+
+- Each item needs live sub-components: a progress bar that updates in place, a status
+  dot with real color, a multi-line layout that is not possible with a cell renderer
+- Items have varying visual complexity (some show a progress bar, others a status label)
+- You need the footer zone for an "Add" action button tied to the list
+- You want live 1-second refresh without re-creating the entire component hierarchy
+
+A plain `JList` is fine when items are static text with a uniform icon. As soon as any
+item needs to paint something dynamic — a progress bar, a real-time count, a state dot
+— the rubber-stamp renderer ceiling is hit immediately. SmartGrid's live Swing
+components remove that ceiling.
+
+### Setup Checklist
+
+```java
+DefaultGridModel model = new DefaultGridModel()
+    .addColumn(new ColumnDef("name", "Items", 200, false, false, null));
+
+SmartGrid grid = new SmartGrid(model);
+grid.setRowHeight(54);                 // enough room for 2–3 text lines
+grid.setRowNumbersVisible(false);      // no row numbers on a nav list
+grid.setCheckboxColumnVisible(false);  // no checkboxes
+// toolbar is hidden by default; footer is where action buttons go
+```
+
+One column is enough. The column key (`"name"`) is not referenced by a custom row
+component — it exists only to satisfy the model API. The custom renderer reads the
+domain object stored under `"item"`, not the column key.
+
+Disable row numbers and the checkbox strip. Both are meaningful for multi-column data
+grids; on a navigation list they consume horizontal space and add visual noise.
+
+### Uniform Row Type Registration
+
+All rows in a navigation list are typically the same visual type. Tag every row with
+the same `fnd-type` constant and register one renderer:
+
+```java
+private static final String ROW_TYPE = "lucene-sidebar-row";
+
+grid.registerRowRenderer(ROW_TYPE,
+    () -> new LuceneSidebarRowComponent(grid.getSelectionModel()));
+
+// Building a row:
+new GridRow()
+    .put("item", indexRowItem)       // domain object — fetched in bind()
+    .setTag("fnd-type", ROW_TYPE);   // routes this row to the custom renderer
+```
+
+This is simpler than multi-type tables where different rows need different renderer
+registrations. The `fnd-type` tag is the only routing key; all other behavior lives
+in the component itself.
+
+### Storing the Domain Object in the Row
+
+Prefer `row.put("item", domainObject)` over `row.setSourceObject()`. The `"item"` key
+is the established convention in this codebase (see `WindowListRowComponent`). Both
+work; consistency matters more than which you pick.
+
+In `bind()`, cast it directly:
+
+```java
+MyItem item = (MyItem) row.get("item");
+```
+
+### Selection Wiring
+
+The selection callback is two lines: add a `ListSelectionListener` to the grid, then
+pull the domain object out of the selected row:
+
+```java
+grid.addListSelectionListener(e -> {
+    if (!e.getValueIsAdjusting() && selectionCallback != null) {
+        int idx = grid.getSelectionModel().getMinSelectionIndex();
+        if (idx >= 0 && idx < model.getRowCount()) {
+            MyItem item = (MyItem) model.getRow(idx).get("item");
+            selectionCallback.accept(item);
+        }
+    }
+});
+```
+
+Inside the row component's `bind()`, drive selection by installing a mouse listener
+that calls `selectionModel.setSelectionInterval(capturedIdx, capturedIdx)`. Remove the
+previous listener first (standard bind() cleanup rule). This is the `WindowListRowComponent`
+pattern and it works identically here.
+
+### Synthetic Sentinel Rows
+
+A navigation list often needs one special row that is not a data item — a "Global
+Controls" header, an "All Items" aggregate, a "New…" placeholder. Use a `static final`
+sentinel instance rather than a separate row type:
+
+```java
+// In the panel class:
+static final MyItem GLOBAL_ROW = new MyItem(null, null); // null config = sentinel
+
+// Building the row:
+model.addRow(new GridRow().put("item", GLOBAL_ROW).setTag("fnd-type", ROW_TYPE));
+
+// In the row component's bind():
+MyItem item = (MyItem) row.get("item");
+if (item == GLOBAL_ROW || item.getConfig() == null) {
+    // render as global/synthetic row
+} else {
+    // render as a real data row
+}
+
+// In the selection callback:
+if (item.getConfig() == null) {
+    detailPanel.showGlobal();
+} else {
+    detailPanel.showItem(item);
+}
+```
+
+Using `null` on a distinguishing field (here `config`) as the sentinel signal avoids
+registering a second row type and keeps the component pool unified. The identity check
+(`item == GLOBAL_ROW`) works equally well when the sentinel is a compile-time constant.
+
+### The Footer Zone as an Action Toolbar
+
+`addFooterRow(JComponent)` is the natural home for a list's primary action button
+(Add, Import, Refresh). It stays anchored at the bottom of the grid regardless of
+scroll position, which is exactly the UX you want for a "+" button:
+
+```java
+JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
+toolbar.setBackground(grid.getHeaderBackground()); // matches the grid chrome
+JButton addBtn = new JButton("+ Add Item");
+addBtn.addActionListener(e -> onAddItem());
+toolbar.add(addBtn);
+grid.addFooterRow(toolbar);
+```
+
+The footer toolbar background should match the surrounding grid chrome. The only
+exposed color getter is `getHeaderBackground()` — use it for consistency, or set
+a custom background that matches the host panel. A `getFooterBackground()` getter
+would be a useful addition if this pattern becomes common.
+
+### Live Data Refresh Pattern
+
+When items carry live telemetry (progress, counts, status that changes on background
+threads), a 1-second EDT timer rebuilds the model rows and calls `notifyDataChanged()`:
+
+```java
+new Timer(1000, e -> reload()).start();
+
+private void reload() {
+    model.clearRows();
+    model.addRow(buildRow(GLOBAL_ROW));
+    for (MyItem item : service.getItems()) {
+        model.addRow(buildRow(item));
+    }
+    model.notifyDataChanged();
+}
+```
+
+Because the domain objects (`IndexRowItem`, etc.) hold `volatile` / `AtomicInteger`
+fields updated by background threads, each `bind()` call that runs after
+`notifyDataChanged()` automatically reads the freshest values — no explicit push
+from the background thread to the grid is needed. The background thread mutates the
+state object; the timer triggers the re-bind; `bind()` reads it.
+
+This "poll at a human-visible frequency" model is simpler than a push-based observer
+chain and avoids threading complexity in the renderer. At 1 Hz it is invisible to the
+user and trivially cheap for typical list sizes (< 50 rows).
+
+### Row Height for List Items
+
+A list row needs more vertical space than a table row because it typically shows 2–3
+lines of information rather than a single formatted value:
+
+| Content | Suggested rowHeight |
+|---|---|
+| Single line (icon + label) | 32–36px |
+| Two lines (name + status) | 44–50px |
+| Three lines (name + stats + progress bar) | 54–64px |
+
+At 54px a three-line layout (bold name, normal stats, thin progress bar) fits cleanly
+with 5–6px of vertical padding. The progress bar at the bottom of the cell can be
+hidden when inactive — `progressBar.setVisible(false)` — without affecting layout
+because SmartGrid forces the row to exactly `rowHeight` pixels regardless.
+
+---
+
 ### Gap 5 — Builder Pattern for Construction
 
 For a publishable component, a builder reduces the "20 setter calls" ceremony

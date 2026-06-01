@@ -1,6 +1,7 @@
 package org.jwellman.lucene.ui;
 
 import org.jwellman.lucene.engine.IndexSandboxManager;
+import org.jwellman.lucene.engine.LuceneConfigLoader;
 import org.jwellman.lucene.engine.LuceneService;
 import org.jwellman.lucene.model.AnalyzerType;
 import org.jwellman.lucene.model.DirectorySandboxConfig;
@@ -39,6 +40,7 @@ public class LuceneDetailPanel extends JPanel {
     private final JComboBox<AnalyzerType> analyzerCombo = new JComboBox<AnalyzerType>(AnalyzerType.values());
     private final JButton reindexButton   = new JButton("Reindex Directory");
     private final JButton commitButton    = new JButton("Commit Active Transactions");
+    private final JButton saveButton      = new JButton("Save Changes");
     private final JLabel docsLabel        = new JLabel("Documents: 0");
 
     // ── log area ─────────────────────────────────────────────────────────────
@@ -177,6 +179,7 @@ public class LuceneDetailPanel extends JPanel {
         JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         buttonRow.add(reindexButton);
         buttonRow.add(commitButton);
+        buttonRow.add(saveButton);
         panel.add(buttonRow, bc);
 
         // Spacer
@@ -195,6 +198,12 @@ public class LuceneDetailPanel extends JPanel {
             @Override
             public void actionPerformed(ActionEvent e) {
                 onCommit();
+            }
+        });
+        saveButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                onSaveChanges();
             }
         });
 
@@ -257,6 +266,19 @@ public class LuceneDetailPanel extends JPanel {
         }).start();
     }
 
+    private void onSaveChanges() {
+        if (currentItem == null) {
+            return;
+        }
+        DirectorySandboxConfig cfg = currentItem.getConfig();
+        cfg.setFileInclusionFilter(filterField.getText().trim());
+        cfg.setAnalyzerType((AnalyzerType) analyzerCombo.getSelectedItem());
+        LuceneConfigLoader.save(LuceneService.get().getGlobalConfig());
+        log(new LogEntry(LogEntry.Level.SUCCESS,
+            "Config saved for: " + cfg.getDisplayName()
+            + " (analyzer change takes effect on next app start)"));
+    }
+
     // ── visibility helpers ───────────────────────────────────────────────────
 
     private void setConfigFieldsVisible(boolean visible) {
@@ -266,6 +288,7 @@ public class LuceneDetailPanel extends JPanel {
         analyzerCombo.setVisible(visible);
         reindexButton.setVisible(visible);
         commitButton.setVisible(visible);
+        saveButton.setVisible(visible);
     }
 
     private void setGlobalControlsVisible(boolean visible) {

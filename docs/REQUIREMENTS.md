@@ -44,13 +44,13 @@ Practically this means: state lives in Redux, controllers mediate all mutations,
 - [BeanShell Integration](#beanshell-integration)
 - [External Applications](#external-applications)
 - [Tool Configuration](#tool-configuration)
-- [UI/UX Guidelines](#uiux-guidelines)
+- [UI/UX Guidelines](#ui-ux-guidelines)
 - [Desktop](#desktop)
 - [Taskbar](#taskbar)
 - [Credential Management](#credential-management)
 - [State Management (Redux-Style)](#state-management-redux-style)
 
-### BeanShell Integration {#beanshell-integration}
+### BeanShell Integration
 
 #### Shared Interpreter Architecture
 
@@ -147,7 +147,7 @@ return global.myTool;  // Return "this" for lifecycle support
 
 ---
 
-### UI/UX Guidelines {#uiux-guidelines} {{anchor uiux-guidelines}}
+### UI/UX Guidelines
 
 #### Portable Tool Design
 

@@ -90,7 +90,12 @@ public class SmartGrid extends JPanel implements GridModelListener {
 
     private final GridModel model;
     private final DefaultListSelectionModel selectionModel = new DefaultListSelectionModel();
-    private int rowHeight = 32;
+    private int rowHeight    = 32;
+    private int headerHeight = -1; // -1 = auto (max preferred height of cells)
+    private int footerHeight = -1; // -1 = auto (max preferred height of cells)
+
+    // Stores the height actually used on the last build — needed by the corner fill painter.
+    private int effectiveHeaderHeight = rowHeight;
     private boolean rowSelectionEnabled = true;
 
     // Shared column-width array — updated in-place by computeColumnWidths().
@@ -243,9 +248,9 @@ public class SmartGrid extends JPanel implements GridModelListener {
                 super.paintComponent(g);
                 if (columnFiltersVisible) {
                     g.setColor(headerBg);
-                    g.fillRect(0, 0, getWidth(), rowHeight);
+                    g.fillRect(0, 0, getWidth(), effectiveHeaderHeight);
                     g.setColor(filterRowBg);
-                    g.fillRect(0, rowHeight, getWidth(), Math.max(0, getHeight() - rowHeight));
+                    g.fillRect(0, effectiveHeaderHeight, getWidth(), Math.max(0, getHeight() - effectiveHeaderHeight));
                 } else {
                     g.setColor(headerBg);
                     g.fillRect(0, 0, getWidth(), getHeight());
@@ -296,6 +301,39 @@ public class SmartGrid extends JPanel implements GridModelListener {
     public void setRowHeight(int rowHeight) {
         this.rowHeight = rowHeight;
         canvas.revalidate();
+        refresh();
+    }
+
+    /** Returns the explicit header height override, or -1 if auto-sizing is active. */
+    public int getHeaderHeight() {
+        return headerHeight;
+    }
+
+    /** Returns the height actually used for the header on the last build. */
+    public int getEffectiveHeaderHeight() {
+        return effectiveHeaderHeight;
+    }
+
+    /**
+     * Sets an explicit header row height. Pass -1 to restore auto-sizing,
+     * where the height is derived from the maximum preferred height of the header cells.
+     */
+    public void setHeaderHeight(int headerHeight) {
+        this.headerHeight = headerHeight;
+        refresh();
+    }
+
+    /** Returns the explicit footer height override, or -1 if auto-sizing is active. */
+    public int getFooterHeight() {
+        return footerHeight;
+    }
+
+    /**
+     * Sets an explicit footer row height. Pass -1 to restore auto-sizing,
+     * where the height is derived from the maximum preferred height of the footer cells.
+     */
+    public void setFooterHeight(int footerHeight) {
+        this.footerHeight = footerHeight;
         refresh();
     }
 
@@ -1112,6 +1150,14 @@ public class SmartGrid extends JPanel implements GridModelListener {
     // Internal — header / footer builders (null layout, absolute bounds)
     // -------------------------------------------------------------------------
 
+    private int maxPreferredHeight(List<JComponent> cells, int fallback) {
+        int max = 0;
+        for (JComponent cell : cells) {
+            max = Math.max(max, cell.getPreferredSize().height);
+        }
+        return max > 0 ? max : fallback;
+    }
+
     /**
      * Builds the columnHeaderView: a single label row, or a 2-row panel (label + filter)
      * when column filters are visible.
@@ -1121,7 +1167,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
         if (!columnFiltersVisible || columnFilterFields == null) {
             return labelRow;
         }
-        JPanel filterRow = buildHeaderFilterRow(cols);
+        JPanel filterRow = buildHeaderFilterRow(cols, effectiveHeaderHeight);
         JPanel combined  = new JPanel();
         combined.setLayout(new BoxLayout(combined, BoxLayout.Y_AXIS));
         combined.add(labelRow);
@@ -1132,17 +1178,18 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private JPanel buildHeaderLabelRow(List<ColumnDef> cols) {
         int leadW         = canvasLeadWidth();
         int totalColWidth = totalColumnWidth();
-        JPanel header = new JPanel(null);
-        header.setBackground(headerBg);
-        header.setPreferredSize(new Dimension(leadW + totalColWidth, rowHeight));
+
+        // Collect all cells and their x-positions before measuring, so height
+        // can be resolved from preferred sizes before any setBounds() call.
+        List<JComponent> cells   = new ArrayList<>();
+        List<int[]>      cellPos = new ArrayList<>(); // [x, w]
 
         int x = 0;
         for (Strip strip : strips) {
             if (strip.isVisible()) {
                 int sw = strip.getWidth();
-                JComponent cell = strip.headerCell(rowHeight);
-                cell.setBounds(x, 0, sw, rowHeight);
-                header.add(cell);
+                cells.add(strip.headerCell(0));
+                cellPos.add(new int[]{x, sw});
                 x += sw;
             }
         }
@@ -1152,19 +1199,17 @@ public class SmartGrid extends JPanel implements GridModelListener {
             ColumnDef col = cols.get(i);
             int w = columnWidths[i];
 
-            // Determine sort direction and rank for this column
             SortOrder colSort = SortOrder.NONE;
             int rank = 0;
             for (int j = 0; j < currentSortSpecs.size(); j++) {
                 if (currentSortSpecs.get(j).getKey().equals(col.getKey())) {
                     colSort = currentSortSpecs.get(j).getOrder();
-                    rank    = multiSort ? j + 1 : 0; // rank number shown only in multi-sort
+                    rank    = multiSort ? j + 1 : 0;
                     break;
                 }
             }
 
             JComponent cell = headerRenderer.render(col, colSort, rank);
-            cell.setBounds(x, 0, w, rowHeight);
             if (col.isSortable()) {
                 final String sortKey = col.getKey();
                 cell.addMouseListener(new MouseAdapter() {
@@ -1174,16 +1219,30 @@ public class SmartGrid extends JPanel implements GridModelListener {
                     }
                 });
             }
-            header.add(cell);
+            cells.add(cell);
+            cellPos.add(new int[]{x, w});
             x += w;
+        }
+
+        // Resolve height: explicit override or max preferred across all cells.
+        int h = headerHeight > 0 ? headerHeight : maxPreferredHeight(cells, rowHeight);
+        effectiveHeaderHeight = h;
+
+        JPanel header = new JPanel(null);
+        header.setBackground(headerBg);
+        header.setPreferredSize(new Dimension(leadW + totalColWidth, h));
+        for (int i = 0; i < cells.size(); i++) {
+            JComponent cell = cells.get(i);
+            cell.setBounds(cellPos.get(i)[0], 0, cellPos.get(i)[1], h);
+            header.add(cell);
         }
         return header;
     }
 
-    private JPanel buildHeaderFilterRow(List<ColumnDef> cols) {
+    private JPanel buildHeaderFilterRow(List<ColumnDef> cols, int labelRowHeight) {
         int leadW         = canvasLeadWidth();
         int totalColWidth = totalColumnWidth();
-        int filterHeight  = rowHeight - 2;
+        int filterHeight  = labelRowHeight - 2;
         JPanel filterRow  = new JPanel(null);
         filterRow.setBackground(filterRowBg);
         filterRow.setPreferredSize(new Dimension(leadW + totalColWidth, filterHeight));
@@ -1283,17 +1342,16 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private JPanel buildFooter(List<ColumnDef> cols) {
         int leadW         = canvasLeadWidth();
         int totalColWidth = totalColumnWidth();
-        JPanel footer = new JPanel(null);
-        footer.setBackground(footerBg);
-        footer.setPreferredSize(new Dimension(leadW + totalColWidth, rowHeight));
+
+        List<JComponent> cells   = new ArrayList<>();
+        List<int[]>      cellPos = new ArrayList<>();
 
         int x = 0;
         for (Strip strip : strips) {
             if (strip.isVisible()) {
                 int sw = strip.getWidth();
-                JComponent spacer = strip.footerSpacer(rowHeight);
-                spacer.setBounds(x, 0, sw, rowHeight);
-                footer.add(spacer);
+                cells.add(strip.footerSpacer(0));
+                cellPos.add(new int[]{x, sw});
                 x += sw;
             }
         }
@@ -1301,10 +1359,20 @@ public class SmartGrid extends JPanel implements GridModelListener {
         List<GridRow> pageRows = getPageRows();
         for (int i = 0; i < cols.size(); i++) {
             int w = columnWidths[i];
-            JComponent cell = footerRenderer.render(cols.get(i), pageRows, model);
-            cell.setBounds(x, 0, w, rowHeight);
-            footer.add(cell);
+            cells.add(footerRenderer.render(cols.get(i), pageRows, model));
+            cellPos.add(new int[]{x, w});
             x += w;
+        }
+
+        int h = footerHeight > 0 ? footerHeight : maxPreferredHeight(cells, rowHeight);
+
+        JPanel footer = new JPanel(null);
+        footer.setBackground(footerBg);
+        footer.setPreferredSize(new Dimension(leadW + totalColWidth, h));
+        for (int i = 0; i < cells.size(); i++) {
+            JComponent cell = cells.get(i);
+            cell.setBounds(cellPos.get(i)[0], 0, cellPos.get(i)[1], h);
+            footer.add(cell);
         }
         return footer;
     }

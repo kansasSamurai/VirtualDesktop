@@ -204,6 +204,7 @@ public class SmartGridDemo {
         }
 
         SmartGrid grid = new SmartGrid(model, darkTheme);
+        grid.setHeaderHeight(32);
         grid.registerCellRenderer("currency", (col, value, row, existing) -> {
             JLabel lbl = (existing instanceof JLabel) ? (JLabel) existing : new JLabel();
             lbl.setText(value != null ? String.format("$%,d", ((Number) value).longValue()) : "");
@@ -477,6 +478,7 @@ public class SmartGridDemo {
         }
 
         SmartGrid grid = new SmartGrid(model, darkTheme);
+        grid.setHeaderHeight(32);
         grid.setTreeZoneVisible(true);
         return buildPage(grid,
             "Department Hierarchy",
@@ -512,6 +514,7 @@ public class SmartGridDemo {
 
         // 36 languages + 2 highlighted scripting language entries
         SmartGrid grid = new SmartGrid(model, darkTheme);
+        grid.setHeaderHeight(32);
 
         // Search field lives here so it retains its text across rebuildHeaderView()
         // calls (which fire on resize).  The renderer re-parents it each time —
@@ -569,6 +572,7 @@ public class SmartGridDemo {
             .setTag("fnd-style", "warning-glow"));
 
         SmartGrid minimalGrid = new SmartGrid(minimalModel, darkTheme);
+        minimalGrid.setHeaderHeight(32);
         minimalGrid.setCheckboxColumnVisible(false);
 
         // --- Two cards sharing the same border instance ---
@@ -688,6 +692,7 @@ public class SmartGridDemo {
         }
 
         SmartGrid grid = new SmartGrid(model, darkTheme);
+        grid.setHeaderHeight(32);
         grid.setRowNumbersVisible(false);
         grid.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
@@ -777,6 +782,7 @@ public class SmartGridDemo {
         }
 
         SmartGrid grid = new SmartGrid(model, darkTheme);
+        grid.setHeaderHeight(32);
         grid.registerFormatter("currency", v -> String.format("$%,d", ((Number) v).longValue()));
 
         // Footer: row count on "name", salary sum (raw Number) on "salary", active count on "status"
@@ -891,6 +897,7 @@ public class SmartGridDemo {
         }
 
         SmartGrid grid = new SmartGrid(model, darkTheme);
+        grid.setHeaderHeight(32);
         grid.registerFormatter("currency", v -> String.format("$%,d", ((Number) v).longValue()));
 
         DefaultGridComponentFactory factory = new DefaultGridComponentFactory(grid);
@@ -1006,6 +1013,7 @@ public class SmartGridDemo {
         }
 
         SmartGrid grid = new SmartGrid(model, true);
+        grid.setHeaderHeight(32);
         grid.setRowHeight(64);
         grid.setRowNumbersVisible(true);
 
@@ -1089,6 +1097,7 @@ public class SmartGridDemo {
         DefaultGridModel smartModel = JTableAdapter.toSmartGrid(jtable);
 
         SmartGrid grid = new SmartGrid(smartModel, darkTheme);
+        grid.setHeaderHeight(32);
         grid.setRowNumbersVisible(true);
 
         JTextField filterField = new JTextField(18);

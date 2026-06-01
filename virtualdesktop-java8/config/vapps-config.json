@@ -221,6 +221,13 @@
           "icon": "file-text",
           "enabled": true,
           "desktopOnly": false
+        },
+        {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecLuceneManagement",
+          "title": "Lucene Management",
+          "icon": "server",
+          "enabled": true,
+          "desktopOnly": false
         }
       ]
     }

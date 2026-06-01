@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "baseIndexDirectory": "data/lucene",
+  "maxBackgroundThreads": 2,
+  "autoStartFileWatcher": false,
+  "sandboxes": []
+}

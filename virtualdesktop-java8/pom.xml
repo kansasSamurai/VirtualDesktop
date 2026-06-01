@@ -285,6 +285,16 @@
       <artifactId>javahelp</artifactId>
     </dependency>
 
+    <!-- Search -->
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-analyzers-common</artifactId>
+    </dependency>
+
     <!-- Database -->
     <dependency>
       <groupId>org.hsqldb</groupId>

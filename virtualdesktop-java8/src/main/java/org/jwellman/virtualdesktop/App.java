@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -331,15 +332,12 @@ public class App extends JFrame implements ActionListener {
 
     /**
      * React to menu selections.
+     * 
      * TODO This is just a placeholder; need to determine how menus
      * are globally handled and implement that feature.
      */
     @Override public void actionPerformed(ActionEvent e) {
-        if ("new".equals(e.getActionCommand())) {
-            // TODO: This temporary menu item is no longer functional after config-based system
-            // Consider implementing a proper "New" feature or remove this menu item
-            logger.info("New menu item - feature not implemented");
-        } else if ("exit".equals(e.getActionCommand())) {
+        if ("exit".equals(e.getActionCommand())) {
             quit();
         } else {
             throw new VException("Unknown Action", null);
@@ -472,6 +470,14 @@ public class App extends JFrame implements ActionListener {
     }
 
     private static void createTheme() {
+
+        // 1. Define your new typography theme
+        // (Monospaced or a clean sans-serif like Segoe UI / Inter)
+        Font customDefaultFont = new Font("Segoe UI", Font.PLAIN, 13);
+
+        // 2. Set FlatLaf's global font UI default key BEFORE L&F setup
+        UIManager.put("defaultFont", customDefaultFont);
+
         // Initialize ThemeManager first - loads user's preferred theme from preferences.json
         org.jwellman.virtualdesktop.theme.ThemeManager.getInstance().initialize();
 

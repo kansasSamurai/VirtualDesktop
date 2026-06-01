@@ -240,8 +240,8 @@
     },
     {
       "class": "org.jwellman.virtualdesktop.vapps.SpecBeanShell",
-      "label": "Office Writer",
-      "icon": "file-text",
+      "label": "Beanshell Console",
+      "icon": "terminal",
       "enabled": true
     },
     {

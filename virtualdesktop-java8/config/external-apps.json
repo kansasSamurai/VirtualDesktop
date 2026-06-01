@@ -15,14 +15,21 @@
       "waitForCompletion": false
     },
     {
-      "name": "Command Prompt",
+      "name": "Command.exe",
       "command": "cmd.exe",
       "icon": "terminal",
       "desktopOnly": true,
       "waitForCompletion": false
     },
     {
-      "name": "Paint",
+      "name": "MS Word",
+      "command": "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
+      "icon": "file-word-o",
+      "desktopOnly": true,
+      "waitForCompletion": false
+    },
+    {
+      "name": "MS Paint",
       "command": "mspaint.exe",
       "icon": "paint",
       "desktopOnly": true,

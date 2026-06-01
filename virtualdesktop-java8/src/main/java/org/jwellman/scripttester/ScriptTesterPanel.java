@@ -202,9 +202,12 @@ public class ScriptTesterPanel extends JPanel implements ActionListener {
         refreshView();
 
         try {
-            String preview = line.getText().substring(0, Math.max(30, line.getText().length()));
-            String alert = String.format("print(\"[ Tester: %s... ]\");", preview);
-            BeanShellService.get().eval(alert);
+// TODO there is an issue with this preview code - pretty sure it was working at one point in time
+// so not exactly sure what the issue is; the escaped attempt is AI code.
+//            String preview = line.getText().substring(0, Math.min(30, line.getText().length()));
+//            String escaped = preview.replace("\\", "\\\\").replace("\"", "\\\"");
+//            String alert = String.format("print(\"[ Tester: %s... ]\");", escaped);
+//            BeanShellService.get().eval(alert);
 
             // Use the shared BeanShell interpreter
             Object result = BeanShellService.get().eval(line.getText());

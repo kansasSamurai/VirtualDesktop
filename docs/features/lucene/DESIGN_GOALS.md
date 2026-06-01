@@ -58,16 +58,16 @@ Let’s translate that high-craft philosophy into a structured, execution-focuse
 * [ ] For text/notes: Standard `WhitespaceTokenizer` or `StandardAnalyzer` (handles word boundary punctuation and basic linguistic tokens).
 * [ ] For scripts/code: Implement a custom analyzer or use a token pattern that preserves crucial syntax characters like underscores (`USER_ID`) or dots (`sys.log`), avoiding standard word-breaking behavior that strips out code meaning.
 
-### Phase 3: The Indexing Engine Pipeline
+### Phase 3: The Indexing Engine Pipeline ✅
 
 *Objective: Build the mechanism that populates the index data on the background thread.*
 
-* [ ] **The Bulk Indexer:** Implement an initialization routine that scans the target directory on startup using `Files.walk()`.
-* [ ] Check file modification timestamps against existing index documents using an `IndexReader` to perform incremental updates instead of a full re-index every launch.
+* [x] **The Bulk Indexer:** Implement an initialization routine that scans the target directory on startup using `Files.walk()`.
+* [x] Check file modification timestamps against existing index documents using an `IndexReader` to perform incremental updates instead of a full re-index every launch.
 
-* [ ] **Thread-Safe Writer Access:** Implement a single-writer lifecycle pattern.
-* [ ] Ensure only a single `IndexWriter` instance is active per tool directory.
-* [ ] Manage the internal write commit cycles (`writer.commit()`) efficiently—batching file changes instead of flushing to disk on every single keystroke.
+* [x] **Thread-Safe Writer Access:** Implement a single-writer lifecycle pattern.
+* [x] Ensure only a single `IndexWriter` instance is active per tool directory.
+* [x] Manage the internal write commit cycles (`writer.commit()`) efficiently—batching file changes instead of flushing to disk on every single keystroke.
 
 * [ ] **Live File Monitoring (Optional/Stretch):** Wrap your directories in a Java `WatchService` to automatically trigger background `IndexWriter` updates when a script is modified or dropped into a monitored folder externally.
 

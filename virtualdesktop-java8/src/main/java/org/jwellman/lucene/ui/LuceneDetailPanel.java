@@ -6,6 +6,7 @@ import org.jwellman.lucene.engine.LuceneService;
 import org.jwellman.lucene.model.AnalyzerType;
 import org.jwellman.lucene.model.DirectorySandboxConfig;
 import org.jwellman.lucene.model.IndexRowItem;
+import org.jwellman.lucene.model.LogEntry;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -240,6 +241,8 @@ public class LuceneDetailPanel extends JPanel {
                 if (mgr != null) {
                     mgr.purge();
                     log(new LogEntry(LogEntry.Level.SUCCESS, "Purge complete: " + id));
+                    LuceneService.get().startIndexing(id);
+                    log(new LogEntry(LogEntry.Level.INFO, "Reindex started: " + id));
                 }
             }
         }).start();
@@ -300,6 +303,9 @@ public class LuceneDetailPanel extends JPanel {
     private void drainLogQueue() {
         List<LogEntry> batch = new ArrayList<LogEntry>();
         logQueue.drainTo(batch);
+        if (currentItem != null) {
+            currentItem.getRuntimeState().drainLogEntries(batch);
+        }
         if (batch.isEmpty()) {
             return;
         }

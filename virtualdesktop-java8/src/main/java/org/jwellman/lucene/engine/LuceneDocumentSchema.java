@@ -20,8 +20,9 @@ public final class LuceneDocumentSchema {
     private LuceneDocumentSchema() {
     }
 
-    public static final String FIELD_ID            = "id";
-    public static final String FIELD_TITLE         = "title";
-    public static final String FIELD_CONTENTS      = "contents";
-    public static final String FIELD_LAST_MODIFIED = "last_modified";
+    public static final String FIELD_ID                    = "id";
+    public static final String FIELD_TITLE                 = "title";
+    public static final String FIELD_CONTENTS              = "contents";
+    public static final String FIELD_LAST_MODIFIED         = "last_modified";
+    public static final String FIELD_LAST_MODIFIED_STORED  = "last_modified_stored";
 }

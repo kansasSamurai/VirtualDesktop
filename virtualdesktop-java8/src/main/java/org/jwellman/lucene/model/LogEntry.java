@@ -1,4 +1,4 @@
-package org.jwellman.lucene.ui;
+package org.jwellman.lucene.model;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;

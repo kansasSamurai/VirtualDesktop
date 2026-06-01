@@ -1,7 +1,13 @@
 {
-  "version": "1.0.0",
-  "baseIndexDirectory": "data/lucene",
-  "maxBackgroundThreads": 2,
-  "autoStartFileWatcher": false,
-  "sandboxes": []
+  "version" : "1.0.0",
+  "baseIndexDirectory" : "data/lucene",
+  "maxBackgroundThreads" : 2,
+  "autoStartFileWatcher" : false,
+  "sandboxes" : [ {
+    "id" : "xsl_viewer",
+    "displayName" : "XSL Viewer",
+    "sourcePath" : "C:\\dev\\workspaces\\git\\xsl-viewer",
+    "fileInclusionFilter" : "*.md",
+    "analyzerType" : "STANDARD"
+  } ]
 }

@@ -1,5 +1,7 @@
 package org.jwellman.lucene.model;
 
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -25,6 +27,7 @@ public class SandboxRuntimeState {
     private final AtomicInteger documentCount = new AtomicInteger(0);
     private final AtomicInteger currentProgress = new AtomicInteger(0);
     private volatile long lastCommittedTimestamp = 0;
+    private final ConcurrentLinkedQueue<LogEntry> logQueue = new ConcurrentLinkedQueue<LogEntry>();
 
     public SandboxRuntimeState(String sandboxId) {
         this.sandboxId = sandboxId;
@@ -67,5 +70,16 @@ public class SandboxRuntimeState {
 
     public void setLastCommittedTimestamp(long lastCommittedTimestamp) {
         this.lastCommittedTimestamp = lastCommittedTimestamp;
+    }
+
+    public void addLogEntry(LogEntry entry) {
+        logQueue.offer(entry);
+    }
+
+    public void drainLogEntries(List<LogEntry> target) {
+        LogEntry entry;
+        while ((entry = logQueue.poll()) != null) {
+            target.add(entry);
+        }
     }
 }

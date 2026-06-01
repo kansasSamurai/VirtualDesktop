@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Singleton service that owns all {@link IndexSandboxManager} instances.
@@ -34,6 +36,7 @@ public class LuceneService {
     private volatile boolean initialized = false;
     private LuceneGlobalConfig globalConfig;
     private final Map<String, IndexSandboxManager> managers = new LinkedHashMap<String, IndexSandboxManager>();
+    private ExecutorService threadPool;
 
     private LuceneService() {
     }
@@ -72,10 +75,13 @@ public class LuceneService {
             System.err.println("LuceneService: cannot create base index directory: " + e.getMessage());
         }
 
+        threadPool = Executors.newFixedThreadPool(config.getMaxBackgroundThreads());
+
         for (DirectorySandboxConfig sandboxConfig : config.getSandboxes()) {
             IndexSandboxManager manager = new IndexSandboxManager(sandboxConfig, config.getBaseIndexDirectory());
             manager.open();
             managers.put(sandboxConfig.getId(), manager);
+            startIndexing(sandboxConfig.getId());
         }
 
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -92,10 +98,24 @@ public class LuceneService {
      * Closes all sandbox managers. Called by the JVM shutdown hook.
      */
     public void shutdown() {
+        if (threadPool != null) {
+            threadPool.shutdownNow();
+        }
         for (IndexSandboxManager manager : managers.values()) {
             manager.close();
         }
         managers.clear();
+    }
+
+    /**
+     * Submits a background indexing job for the given sandbox.
+     * Safe to call from any thread; no-op if the pool is shut down or sandbox not found.
+     */
+    public void startIndexing(String sandboxId) {
+        IndexSandboxManager mgr = managers.get(sandboxId);
+        if (mgr != null && threadPool != null && !threadPool.isShutdown()) {
+            threadPool.submit(new BulkIndexer(mgr));
+        }
     }
 
     /**
@@ -110,6 +130,7 @@ public class LuceneService {
         managers.put(sandboxConfig.getId(), manager);
         globalConfig.getSandboxes().add(sandboxConfig);
         LuceneConfigLoader.save(globalConfig);
+        startIndexing(sandboxConfig.getId());
     }
 
     /**

@@ -24,10 +24,10 @@ org.jwellman.lucene
 │   ├── LuceneDocumentSchema      constants — field name literals
 │   ├── AnalyzerFactory           factory  — maps AnalyzerType → Lucene Analyzer
 │   ├── IndexSandboxManager       lifecycle — open/close/purge/commit per sandbox
-│   ├── LuceneService             singleton — owns all managers; adhoc init guard
+│   ├── BulkIndexer               Runnable — Phase 3 scan/incremental-update/commit pipeline
+│   ├── LuceneService             singleton — owns all managers + thread pool; adhoc init guard
 │   └── LuceneConfigLoader        I/O      — Jackson load/save of lucene-config.json
 └── ui
-    ├── LogEntry                  model  — single activity log line (level + timestamp + message)
     ├── LuceneManagementPanel     panel  — top-level JSplitPane container
     ├── LuceneSidebarPanel        panel  — JTable-based sandbox list with live indicators
     └── LuceneDetailPanel         panel  — config form + activity log (vertical JSplitPane)
@@ -44,7 +44,27 @@ org.jwellman.lucene
 | `SandboxRuntimeState` | Live thread-safe telemetry: status, docCount (AtomicInteger), progress, errorMessage |
 | `IndexRowItem` | UI bridge: pairs config + runtimeState for cell renderers |
 | `IndexSandboxManager` | Owns FSDirectory + IndexWriter for one sandbox; open/close/purge/commit |
-| `LuceneService` | Singleton; lazy init via vapp; holds map of managers; JVM shutdown hook |
+| `LuceneService` | Singleton; lazy init via vapp; holds map of managers + `ExecutorService`; JVM shutdown hook |
+| `BulkIndexer` | `Runnable` submitted to thread pool; scans source dir, performs incremental update, commits |
+
+---
+
+## BulkIndexer — Incremental Scan Behavior
+
+A `BulkIndexer` is submitted for every sandbox each time the service initializes (and again when a sandbox is added or reindexed via the UI button). The scan is **incremental**: it does not blindly rewrite the whole index on every startup.
+
+**Startup scan cost on a warm index** (nothing changed):
+1. Open a `DirectoryReader` on the existing index and read all stored `id` + `last_modified_stored` fields into a `Map<String, Long>`.
+2. Walk the source directory and collect matching files.
+3. Compare each file's `Files.getLastModifiedTime()` against the stored value — skip if equal or older.
+4. Call `writer.commit()` (a no-op if no documents were added/deleted).
+
+No file content is read and no Lucene documents are written for unchanged files, so a warm-index startup scan is cheap regardless of corpus size.
+
+**What triggers an actual write:**
+- File is new (not in the index map) → `addDocument`
+- File's `last_modified` is newer than the stored value → `deleteDocuments` + `addDocument`
+- File was deleted from disk but still in the index → `deleteDocuments`
 
 ---
 
@@ -149,11 +169,18 @@ SpecLuceneManagement constructor
 
 ---
 
+## Implemented Phases
+
+| Phase | Description |
+| :--- | :--- |
+| Phase 1 | Infrastructure — `IndexSandboxManager`, `LuceneService`, `LuceneConfigLoader`, fail-fast lock |
+| Phase 2 | Document schema (`LuceneDocumentSchema`), `AnalyzerFactory`, full management UI |
+| Phase 3 | Indexing Pipeline — `BulkIndexer` with `Files.walk()`, incremental timestamp diffs, `ExecutorService` thread pool |
+
 ## Deferred Phases
 
 | Phase | Description |
 | :--- | :--- |
-| Phase 3 | Indexing Pipeline — `Files.walk()` bulk indexer, incremental timestamp diffs, `ExecutorService` thread pool |
 | Phase 3 (stretch) | Live File Monitoring — Java `WatchService` integration |
 | Phase 4 | Query UI — SmartGrid search results, `SearcherManager`, debounced keystrokes |
 | Phase 5 | Global Search — `MultiReader` coordinating all sandbox indexes |

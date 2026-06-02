@@ -41,8 +41,9 @@ public class DayCellPanel extends JPanel {
     private static final String[]  MONTH_ABBR   = {"JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"};
 
     private static final class Borders {
-        private static final javax.swing.border.Border DAY_CELL      = BorderFactory.createMatteBorder(0, 1, 1, 0, BORDER_CLR);
-        private static final javax.swing.border.Border PRIMARY_LABEL = BorderFactory.createEmptyBorder(1, 3, 1, 3);
+        private static final javax.swing.border.Border DAY_CELL       = BorderFactory.createMatteBorder(0, 1, 1, 0, BORDER_CLR);
+        private static final javax.swing.border.Border DAY_CELL_TODAY = BorderFactory.createMatteBorder(2, 2, 2, 2, TODAY_ACCENT);
+        private static final javax.swing.border.Border PRIMARY_LABEL  = BorderFactory.createEmptyBorder(1, 3, 1, 3);
     }
 
     private static final class Fonts {
@@ -125,6 +126,7 @@ public class DayCellPanel extends JPanel {
         isFutureThisWeek     = false;
 
         if (data == null || !data.isInYear()) {
+            setBorder(Borders.DAY_CELL);
             setBackground(BG_OUT_YEAR);
             primaryLabel.setText("");
             primaryLabel.setOpaque(false);
@@ -147,7 +149,8 @@ public class DayCellPanel extends JPanel {
         isFutureCurrentWeek = highlights && date.isAfter(TODAY) && !date.isAfter(WEEK_END);
         isFutureThisWeek    = isFutureCurrentWeek && data.getEvents().isEmpty();
 
-        // ── background ──────────────────────────────────────────────────────
+        // ── background / cell border ─────────────────────────────────────────
+        setBorder(isToday ? Borders.DAY_CELL_TODAY : Borders.DAY_CELL);
         boolean isPastWeekday = !isWeekend && date.isBefore(TODAY);
         setBackground(isWeekend ? BG_WEEKEND : isPastWeekday ? BG_PAST : BG_IN_YEAR);
 
@@ -223,6 +226,7 @@ public class DayCellPanel extends JPanel {
         dayNumberLabel.setForeground(Colors.DAY_NUMBER);
         dayNumberLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         chipsPanel.removeAll();
+        setBorder(Borders.DAY_CELL);
         setBackground(BG_IN_YEAR);
     }
 

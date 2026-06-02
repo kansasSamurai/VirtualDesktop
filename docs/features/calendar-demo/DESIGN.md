@@ -89,8 +89,8 @@ strip. `DayCellPanel` handles all per-day rendering.
 #### Day Cell Layout
 
 ```
-┌──────────────────────────────┐
-│                          [dd]│  ← day-number badge (top-right, 12 px high)
+┌──────────────────────────────┐  ← 2 px hot-pink frame on today's cell
+│                          [dd]│  ← day-number badge (top-right)
 │ [Event Name banner          ]│  ← primaryLabel — 18 px high, at TOP_HEIGHT/2-9
 ├──────────────────────────────┤  ← TOP_HEIGHT = 36 px
 │ [■][■][■]                    │  ← chipsPanel — 14×14 px color chips (events 2+)
@@ -101,6 +101,29 @@ The primary event banner fills `w - 26` pixels wide (leaving room for the day ba
 and is positioned at `TOP_HEIGHT / 2 - 9` from the top. Additional events appear as
 small square color chips below the 36 px header zone.
 
+#### Day-Number Badge States
+
+The badge in the top-right corner of each cell has three visual states, all gated on
+highlight mode:
+
+| Condition | Size | Background | Text | Font |
+|-----------|------|------------|------|------|
+| Today | 20 px, centered | `TODAY_ACCENT` (hot pink) | White | Bold 13 pt |
+| Future day, current week | 20 px, centered | `Colors.DAY_NUMBER` (gray `#808080`) | White | Bold 13 pt |
+| All other days | 12 px, top-right | Transparent | Gray | Plain 11 pt |
+
+The two accented states share the same geometry (20 px tall, vertically centered in
+the header zone) so the current-week row reads as a cohesive unit. The only
+difference is background color: hot pink signals *now*, gray signals *soon*.
+
+#### Today Cell Border
+
+Today's `DayCellPanel` is given a 2 px `MatteBorder` on all four sides in
+`TODAY_ACCENT`, replacing the normal 1 px gray grid border. The border is set
+dynamically in `populate()` and reset in `clear()`, so it participates in the
+highlight toggle. Because day cells use `setLayout(null)` with hardcoded
+`setBounds()` positions, the thicker border does not shift any child component.
+
 #### Future Empty Day Marker
 
 When highlight mode is on and a day is after today but still within the current ISO
@@ -110,11 +133,6 @@ same position and dimensions as a standard event banner, so it reads visually as
 placeholder event rather than a special cell state. The cell background remains the
 normal white of any in-year weekday.
 
-#### Today Badge
-
-The day-number label for today is rendered as a filled hot-pink circle (`TODAY_ACCENT`
-background, white bold text, opaque, centered) to make today immediately visible.
-
 ### Strip Decorator System
 
 Strips are pluggable left-gutter columns registered via `grid.addStrip(strip)` in
@@ -123,20 +141,28 @@ Strips are pluggable left-gutter columns registered via `grid.addStrip(strip)` i
 | Strip | Width | Visual |
 |-------|-------|--------|
 | `WeekNumberStrip` | 34 px | ISO week label ("W22"); current week gets a 4 px hot-pink top border |
-| `OnCallStrip` | 70 px | Person's name for the week |
-| `SprintStrip` | 52 px | Sprint number; background cycles through a 7-color palette |
+| `OnCallStrip` | 70 px | Person's name for the week; current week gets a 4 px hot-pink top border |
+| `SprintStrip` | 52 px | Sprint number; background cycles through a 7-color palette; current week gets a 4 px hot-pink top border |
 
-`WeekNumberStrip` uses a compound `MatteBorder` (4 px top in `ACCENT`, 1 px
-bottom/right in border gray, inner padding) for the current-week marker. This keeps
-the label background a consistent gray across all weeks while the narrow top stripe
-provides a clear, non-disruptive accent.
+All three strips participate in the highlight toggle. When `highlightOn[0]` is
+`true` and the row represents the current ISO week, the slot's border is swapped from
+`SLOT_BORDER` to `ACCENT_SLOT_BORDER` — a compound `MatteBorder` of 4 px top in
+`ACCENT` (hot pink), 1 px bottom/right in border gray, and inner side padding.
+
+All slot borders include a 4 px empty top inset in their normal (`SLOT_BORDER`) state
+as well. This ensures text alignment is identical whether the accent border is active
+or not — the 4 px top space is either painted hot pink or left transparent, but it is
+always present. This also leaves a reserved top margin for any future per-row
+decoration that any strip might add.
 
 ### Highlight / Accent Mode Toggle
 
 A `boolean[] highlightOn` array (single-element, shared by reference) acts as a live
-toggle passed into `DayCellPanel`, `WeekNumberStrip`, and any other component that
-participates in highlight rendering. When `highlightOn[0]` is `false`, all cells
-render in their neutral state regardless of date.
+toggle passed into `DayCellPanel`, `WeekNumberStrip`, `OnCallStrip`, and `SprintStrip`.
+When `highlightOn[0]` is `false`, all cells and strips render in their neutral state
+regardless of date. Affected visuals include: today's cell border, today's and
+future-current-week day badges, the future-empty-day `"<<<"` banner, and the
+current-week hot-pink top border on all three strips.
 
 The toggle is wired to a toolbar button in `CalendarDemo` and triggers a full
 `repopulate()` cycle to redraw affected cells.

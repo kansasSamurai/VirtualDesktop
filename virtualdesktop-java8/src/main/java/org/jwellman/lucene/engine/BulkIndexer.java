@@ -23,10 +23,13 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -93,12 +96,31 @@ public class BulkIndexer implements Runnable {
 
             Map<String, Long> existingDocs = readExistingDocs(directory);
 
-            List<PathMatcher> matchers = buildMatchers(config.getFileInclusionFilter());
-            List<Path> files = new ArrayList<Path>();
-            Files.walk(sourcePath)
-                .filter(Files::isRegularFile)
-                .filter(p -> matchesFilter(p, matchers))
-                .forEach(files::add);
+            final List<PathMatcher> matchers = buildMatchers(config.getFileInclusionFilter());
+            final List<String> exclusions = config.getDirectoryExclusions() != null
+                    ? config.getDirectoryExclusions()
+                    : new ArrayList<String>();
+            final List<Path> files = new ArrayList<Path>();
+            Files.walkFileTree(sourcePath, new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                    if (!dir.equals(sourcePath)
+                            && exclusions.contains(dir.getFileName().toString())) {
+                        state.addLogEntry(new LogEntry(LogEntry.Level.INFO,
+                            "Skipping excluded dir: " + sourcePath.relativize(dir)));
+                        return FileVisitResult.SKIP_SUBTREE;
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    if (matchesFilter(file, matchers)) {
+                        files.add(file);
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+            });
 
             state.addLogEntry(new LogEntry(LogEntry.Level.INFO, "Found " + files.size() + " files to process"));
 

@@ -17,6 +17,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -44,7 +45,8 @@ public class LuceneDetailPanel extends JPanel {
     // ── sandbox card fields ───────────────────────────────────────────────────
     private final JTextField sourceField  = new JTextField();
     private final JTextField indexField   = new JTextField();
-    private final JTextField filterField  = new JTextField();
+    private final JTextField filterField     = new JTextField();
+    private final JTextField exclusionsField = new JTextField();
     private final JComboBox<AnalyzerType> analyzerCombo = new JComboBox<AnalyzerType>(AnalyzerType.values());
     private final JButton reindexButton = new JButton("Reindex Directory");
     private final JButton saveButton    = new JButton("Save Changes");
@@ -110,6 +112,8 @@ public class LuceneDetailPanel extends JPanel {
         IndexSandboxManager mgr = svc.getManager(cfg.getId());
         indexField.setText(mgr != null ? mgr.getIndexPath().toString() : "");
         filterField.setText(cfg.getFileInclusionFilter() != null ? cfg.getFileInclusionFilter() : "");
+        exclusionsField.setText(cfg.getDirectoryExclusions() != null
+                ? String.join(",", cfg.getDirectoryExclusions()) : "");
         analyzerCombo.setSelectedItem(cfg.getAnalyzerType());
 
         ((CardLayout) contentCards.getLayout()).show(contentCards, CARD_SANDBOX);
@@ -208,14 +212,19 @@ public class LuceneDetailPanel extends JPanel {
         panel.add(new JLabel("File Filter:"), lc);
         panel.add(filterField, fc);
 
-        // Analyzer
+        // Directory exclusions
         lc.gridy = 3; fc.gridy = 3;
+        panel.add(new JLabel("Dir Exclusions:"), lc);
+        panel.add(exclusionsField, fc);
+
+        // Analyzer
+        lc.gridy = 4; fc.gridy = 4;
         panel.add(new JLabel("Analyzer:"), lc);
         panel.add(analyzerCombo, fc);
 
         // Buttons
         GridBagConstraints bc = new GridBagConstraints();
-        bc.gridx = 0; bc.gridy = 4; bc.gridwidth = 2;
+        bc.gridx = 0; bc.gridy = 5; bc.gridwidth = 2;
         bc.anchor = GridBagConstraints.WEST;
         bc.insets = new Insets(8, 6, 4, 6);
         JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
@@ -225,7 +234,7 @@ public class LuceneDetailPanel extends JPanel {
 
         // Spacer
         GridBagConstraints sc = new GridBagConstraints();
-        sc.gridx = 0; sc.gridy = 5; sc.weighty = 1.0;
+        sc.gridx = 0; sc.gridy = 6; sc.weighty = 1.0;
         panel.add(new JLabel(), sc);
 
         // Wire actions
@@ -329,11 +338,25 @@ public class LuceneDetailPanel extends JPanel {
         }
         DirectorySandboxConfig cfg = currentItem.getConfig();
         cfg.setFileInclusionFilter(filterField.getText().trim());
+        cfg.setDirectoryExclusions(parseExclusions(exclusionsField.getText()));
         cfg.setAnalyzerType((AnalyzerType) analyzerCombo.getSelectedItem());
         LuceneConfigLoader.save(LuceneService.get().getGlobalConfig());
         log(new LogEntry(LogEntry.Level.SUCCESS,
             "Config saved for: " + cfg.getDisplayName()
             + " (analyzer change takes effect on next app start)"));
+    }
+
+    // ── helpers ──────────────────────────────────────────────────────────────
+
+    private List<String> parseExclusions(String text) {
+        List<String> result = new ArrayList<String>();
+        for (String part : text.split(",")) {
+            String trimmed = part.trim();
+            if (!trimmed.isEmpty()) {
+                result.add(trimmed);
+            }
+        }
+        return result;
     }
 
     // ── log drain ────────────────────────────────────────────────────────────

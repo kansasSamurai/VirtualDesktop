@@ -8,6 +8,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.util.ArrayList;
 
 /**
  * Modal dialog for adding a new Lucene index sandbox.
@@ -22,9 +23,10 @@ import java.io.File;
  */
 public class AddSandboxDialog extends JDialog {
 
-    private final JTextField nameField   = new JTextField(30);
-    private final JTextField sourceField = new JTextField(30);
-    private final JTextField filterField = new JTextField("*.txt,*.md", 30);
+    private final JTextField nameField        = new JTextField(30);
+    private final JTextField sourceField      = new JTextField(30);
+    private final JTextField filterField      = new JTextField("*.txt,*.md", 30);
+    private final JTextField exclusionsField  = new JTextField(".git,.claude", 30);
     private final JComboBox<AnalyzerType> analyzerCombo = new JComboBox<AnalyzerType>(AnalyzerType.values());
 
     private DirectorySandboxConfig result = null;
@@ -88,14 +90,19 @@ public class AddSandboxDialog extends JDialog {
         form.add(new JLabel("File Filter:"), lc);
         form.add(filterField, fc);
 
-        // Analyzer
+        // Directory Exclusions
         lc.gridy = 3; fc.gridy = 3;
+        form.add(new JLabel("Dir Exclusions:"), lc);
+        form.add(exclusionsField, fc);
+
+        // Analyzer
+        lc.gridy = 4; fc.gridy = 4;
         form.add(new JLabel("Analyzer:"), lc);
         form.add(analyzerCombo, fc);
 
         // ID note
         GridBagConstraints nc = new GridBagConstraints();
-        nc.gridx = 0; nc.gridy = 4; nc.gridwidth = 2;
+        nc.gridx = 0; nc.gridy = 5; nc.gridwidth = 2;
         nc.anchor = GridBagConstraints.WEST;
         nc.insets = new Insets(6, 0, 0, 0);
         JLabel note = new JLabel("The sandbox ID is auto-derived from the display name.");
@@ -167,10 +174,22 @@ public class AddSandboxDialog extends JDialog {
         cfg.setDisplayName(name);
         cfg.setSourcePath(src);
         cfg.setFileInclusionFilter(filterField.getText().trim());
+        cfg.setDirectoryExclusions(parseExclusions(exclusionsField.getText()));
         cfg.setAnalyzerType((AnalyzerType) analyzerCombo.getSelectedItem());
 
         result = cfg;
         dispose();
+    }
+
+    private java.util.List<String> parseExclusions(String text) {
+        java.util.List<String> result = new ArrayList<String>();
+        for (String part : text.split(",")) {
+            String trimmed = part.trim();
+            if (!trimmed.isEmpty()) {
+                result.add(trimmed);
+            }
+        }
+        return result;
     }
 
     /**

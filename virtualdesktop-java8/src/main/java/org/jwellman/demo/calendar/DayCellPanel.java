@@ -25,6 +25,7 @@ import javax.swing.SwingConstants;
  *   TOP_HEIGHT px  — day-number badge (top-right) + primary event label
  *   remainder      — row of small colored chip buttons, one per additional event
  */
+@SuppressWarnings("serial")
 public class DayCellPanel extends JPanel {
 
     private static final int   TOP_HEIGHT       = 36;
@@ -65,8 +66,9 @@ public class DayCellPanel extends JPanel {
     private final boolean[] highlightOn;
 
     private CalendarEvent primaryEvent;
-    private boolean isToday           = false;
-    private boolean isFutureThisWeek  = false;
+    private boolean isToday            = false;
+    private boolean isFutureCurrentWeek = false;
+    private boolean isFutureThisWeek   = false;
 
     public DayCellPanel(Consumer<CalendarEvent> onEventClicked, boolean[] highlightOn) {
         this.onEventClicked = onEventClicked;
@@ -107,23 +109,20 @@ public class DayCellPanel extends JPanel {
         int h = getHeight();
         int botH = h - TOP_HEIGHT;
 
-        int badgeH = isToday ? 20 : 12;
-        int badgeY = isToday ? TOP_HEIGHT / 2 - badgeH / 2 : 1;
+        int badgeH = (isToday || isFutureCurrentWeek) ? 20 : 12;
+        int badgeY = (isToday || isFutureCurrentWeek) ? TOP_HEIGHT / 2 - badgeH / 2 : 1;
         dayNumberLabel.setBounds(w - 22, badgeY, 20, badgeH);
 
-        if (isFutureThisWeek) {
-            primaryLabel.setBounds(2, h / 2 - 10, w - 4, 20);
-        } else {
-            primaryLabel.setBounds(2, TOP_HEIGHT / 2 - 9, w - 26, 18);
-        }
+        primaryLabel.setBounds(2, TOP_HEIGHT / 2 - 9, w - 26, 18);
         chipsPanel.setBounds(2, TOP_HEIGHT, w - 4, Math.max(0, botH));
     }
 
     public void populate(DayData data) {
         chipsPanel.removeAll();
-        primaryEvent     = null;
-        isToday          = false;
-        isFutureThisWeek = false;
+        primaryEvent         = null;
+        isToday              = false;
+        isFutureCurrentWeek  = false;
+        isFutureThisWeek     = false;
 
         if (data == null || !data.isInYear()) {
             setBackground(BG_OUT_YEAR);
@@ -144,16 +143,13 @@ public class DayCellPanel extends JPanel {
         boolean isWeekend  = dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY;
         boolean highlights = highlightOn[0];
 
-        isToday          = highlights && date.equals(TODAY);
-        isFutureThisWeek = highlights && date.isAfter(TODAY) && !date.isAfter(WEEK_END) && data.getEvents().isEmpty();
+        isToday             = highlights && date.equals(TODAY);
+        isFutureCurrentWeek = highlights && date.isAfter(TODAY) && !date.isAfter(WEEK_END);
+        isFutureThisWeek    = isFutureCurrentWeek && data.getEvents().isEmpty();
 
         // ── background ──────────────────────────────────────────────────────
-        if (isFutureThisWeek) {
-            setBackground(TODAY_ACCENT);
-        } else {
-            boolean isPastWeekday = !isWeekend && date.isBefore(TODAY);
-            setBackground(isWeekend ? BG_WEEKEND : isPastWeekday ? BG_PAST : BG_IN_YEAR);
-        }
+        boolean isPastWeekday = !isWeekend && date.isBefore(TODAY);
+        setBackground(isWeekend ? BG_WEEKEND : isPastWeekday ? BG_PAST : BG_IN_YEAR);
 
         // ── day-number badge ─────────────────────────────────────────────────
         dayNumberLabel.setText(dayBadgeText(date));
@@ -163,9 +159,15 @@ public class DayCellPanel extends JPanel {
             dayNumberLabel.setForeground(Color.WHITE);
             dayNumberLabel.setFont(Fonts.DAY_NUMBER_TODAY);
             dayNumberLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        } else if (isFutureCurrentWeek) {
+            dayNumberLabel.setOpaque(true);
+            dayNumberLabel.setBackground(Colors.DAY_NUMBER);
+            dayNumberLabel.setForeground(Color.WHITE);
+            dayNumberLabel.setFont(Fonts.DAY_NUMBER_TODAY);
+            dayNumberLabel.setHorizontalAlignment(SwingConstants.CENTER);
         } else {
             dayNumberLabel.setOpaque(false);
-            dayNumberLabel.setForeground(isFutureThisWeek ? Color.WHITE : Colors.DAY_NUMBER);
+            dayNumberLabel.setForeground(Colors.DAY_NUMBER);
             dayNumberLabel.setFont(Fonts.DAY_NUMBER);
             dayNumberLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         }
@@ -174,7 +176,8 @@ public class DayCellPanel extends JPanel {
         if (isFutureThisWeek) {
             primaryLabel.setText("<<<");
             primaryLabel.setForeground(Color.WHITE);
-            primaryLabel.setOpaque(false);
+            primaryLabel.setBackground(TODAY_ACCENT);
+            primaryLabel.setOpaque(true);
             primaryLabel.setHorizontalAlignment(SwingConstants.CENTER);
         } else {
             List<CalendarEvent> events = data.getEvents();
@@ -207,9 +210,10 @@ public class DayCellPanel extends JPanel {
     }
 
     public void clear() {
-        primaryEvent     = null;
-        isToday          = false;
-        isFutureThisWeek = false;
+        primaryEvent        = null;
+        isToday             = false;
+        isFutureCurrentWeek = false;
+        isFutureThisWeek    = false;
         primaryLabel.setText("");
         primaryLabel.setOpaque(false);
         primaryLabel.setHorizontalAlignment(SwingConstants.LEFT);

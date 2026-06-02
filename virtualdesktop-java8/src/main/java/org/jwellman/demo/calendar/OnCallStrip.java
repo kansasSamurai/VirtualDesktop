@@ -2,6 +2,7 @@ package org.jwellman.demo.calendar;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.time.LocalDate;
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -19,22 +20,31 @@ public class OnCallStrip implements Strip {
 
     static final int WIDTH = 70;
 
-    private static final Color BG  = new Color(0xE8, 0xE8, 0xE8);
-    private static final Color FG  = new Color(0x80, 0x80, 0x80);
-    private static final Color BDR = new Color(0xD0, 0xD0, 0xD0);
+    private static final Color BG     = new Color(0xE8, 0xE8, 0xE8);
+    private static final Color FG     = new Color(0x80, 0x80, 0x80);
+    private static final Color BDR    = new Color(0xD0, 0xD0, 0xD0);
+    private static final Color ACCENT = new Color(0xE9, 0x1E, 0x8C);
+    private static final LocalDate TODAY = LocalDate.now();
 
     private static final javax.swing.border.Border SLOT_BORDER = BorderFactory.createCompoundBorder(
         BorderFactory.createMatteBorder(0, 0, 1, 1, BDR),
-        BorderFactory.createEmptyBorder(0, 4, 0, 4));
+        BorderFactory.createEmptyBorder(4, 4, 0, 4));
+    private static final javax.swing.border.Border ACCENT_SLOT_BORDER = BorderFactory.createCompoundBorder(
+        BorderFactory.createMatteBorder(4, 0, 0, 0, ACCENT),
+        BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 1, BDR),
+            BorderFactory.createEmptyBorder(0, 4, 0, 4)));
     private static final javax.swing.border.Border HEADER_BORDER =
         BorderFactory.createMatteBorder(0, 0, 0, 1, BDR);
 
     private final Color headerBg;
+    private final boolean[] highlightOn;
     private JLabel[] slots;
     private boolean visible = true;
 
-    public OnCallStrip(Color headerBg) {
-        this.headerBg = headerBg;
+    public OnCallStrip(Color headerBg, boolean[] highlightOn) {
+        this.headerBg   = headerBg;
+        this.highlightOn = highlightOn;
     }
 
     public void setVisible(boolean visible) {
@@ -84,6 +94,12 @@ public class OnCallStrip implements Strip {
         JLabel lbl = slots[slotIdx];
         Object val = row.get("oncall");
         lbl.setText(val != null ? val.toString() : "");
+        Object mondayVal = row.get("mon");
+        if (mondayVal instanceof DayData) {
+            LocalDate monday = ((DayData) mondayVal).getDate();
+            boolean isCurrentWeek = highlightOn[0] && !TODAY.isBefore(monday) && !TODAY.isAfter(monday.plusDays(6));
+            lbl.setBorder(isCurrentWeek ? ACCENT_SLOT_BORDER : SLOT_BORDER);
+        }
         lbl.setBounds(xOffset, y, WIDTH, rowHeight);
         lbl.setVisible(true);
     }

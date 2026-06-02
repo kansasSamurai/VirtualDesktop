@@ -2,6 +2,7 @@ package org.jwellman.demo.calendar;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.time.LocalDate;
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -27,8 +28,10 @@ public class SprintStrip implements Strip {
 
     static final int WIDTH = 52;
 
-    private static final Color FG  = new Color(0x50, 0x50, 0x60);
-    private static final Color BDR = new Color(0xD0, 0xD0, 0xD0);
+    private static final Color FG     = new Color(0x50, 0x50, 0x60);
+    private static final Color BDR    = new Color(0xD0, 0xD0, 0xD0);
+    private static final Color ACCENT = new Color(0xE9, 0x1E, 0x8C);
+    private static final LocalDate TODAY = LocalDate.now();
 
     /** Soft weather-map palette: lavender → teal → sage → chartreuse → amber → peach → rose */
     private static final Color[] PALETTE = {
@@ -43,16 +46,23 @@ public class SprintStrip implements Strip {
 
     private static final javax.swing.border.Border SLOT_BORDER = BorderFactory.createCompoundBorder(
         BorderFactory.createMatteBorder(0, 0, 1, 1, BDR),
-        BorderFactory.createEmptyBorder(0, 4, 0, 4));
+        BorderFactory.createEmptyBorder(4, 4, 0, 4));
+    private static final javax.swing.border.Border ACCENT_SLOT_BORDER = BorderFactory.createCompoundBorder(
+        BorderFactory.createMatteBorder(4, 0, 0, 0, ACCENT),
+        BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 1, BDR),
+            BorderFactory.createEmptyBorder(0, 4, 0, 4)));
     private static final javax.swing.border.Border HEADER_BORDER =
         BorderFactory.createMatteBorder(0, 0, 0, 1, BDR);
 
     private final Color headerBg;
+    private final boolean[] highlightOn;
     private JLabel[] slots;
     private boolean visible = true;
 
-    public SprintStrip(Color headerBg) {
-        this.headerBg = headerBg;
+    public SprintStrip(Color headerBg, boolean[] highlightOn) {
+        this.headerBg   = headerBg;
+        this.highlightOn = highlightOn;
     }
 
     public void setVisible(boolean visible) {
@@ -101,6 +111,12 @@ public class SprintStrip implements Strip {
         JLabel lbl = slots[slotIdx];
         lbl.setText(String.valueOf(sprintForRow(modelIdx)));
         lbl.setBackground(PALETTE[paletteIndexForRow(modelIdx)]);
+        Object mondayVal = row.get("mon");
+        if (mondayVal instanceof DayData) {
+            LocalDate monday = ((DayData) mondayVal).getDate();
+            boolean isCurrentWeek = highlightOn[0] && !TODAY.isBefore(monday) && !TODAY.isAfter(monday.plusDays(6));
+            lbl.setBorder(isCurrentWeek ? ACCENT_SLOT_BORDER : SLOT_BORDER);
+        }
         lbl.setBounds(xOffset, y, WIDTH, rowHeight);
         lbl.setVisible(true);
     }

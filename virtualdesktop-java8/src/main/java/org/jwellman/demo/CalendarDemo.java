@@ -60,8 +60,8 @@ public class CalendarDemo {
             () -> new CalendarWeekRowPanel(columnWidths, onEventClicked, highlightOn));
 
         grid.addStrip(new WeekNumberStrip(grid.getHeaderBackground(), highlightOn));
-        grid.addStrip(new OnCallStrip(grid.getHeaderBackground()));
-        grid.addStrip(new SprintStrip(grid.getHeaderBackground()));
+        grid.addStrip(new OnCallStrip(grid.getHeaderBackground(), highlightOn));
+        grid.addStrip(new SprintStrip(grid.getHeaderBackground(), highlightOn));
         grid.setCheckboxColumnVisible(false);
         grid.setRowSelectionEnabled(false);
         grid.addFooterRow(buildFooter(highlightOn, model));

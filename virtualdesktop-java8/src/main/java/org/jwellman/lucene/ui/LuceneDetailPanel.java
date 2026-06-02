@@ -1,5 +1,35 @@
 package org.jwellman.lucene.ui;
 
+import java.awt.BorderLayout;
+import java.awt.CardLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.Timer;
+import javax.swing.UIManager;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
+
 import org.jwellman.lucene.engine.IndexSandboxManager;
 import org.jwellman.lucene.engine.LuceneConfigLoader;
 import org.jwellman.lucene.engine.LuceneService;
@@ -7,19 +37,6 @@ import org.jwellman.lucene.model.AnalyzerType;
 import org.jwellman.lucene.model.DirectorySandboxConfig;
 import org.jwellman.lucene.model.IndexRowItem;
 import org.jwellman.lucene.model.LogEntry;
-
-import javax.swing.*;
-import javax.swing.border.TitledBorder;
-import javax.swing.table.AbstractTableModel;
-import javax.swing.table.DefaultTableCellRenderer;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Right-hand panel in the Lucene Management UI.
@@ -31,6 +48,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * <p>Call {@link #showSandbox(IndexRowItem)} or {@link #showGlobal()} to
  * hydrate the panel when the sidebar selection changes.</p>
  */
+@SuppressWarnings("serial")
 public class LuceneDetailPanel extends JPanel {
 
     private static final int LOG_CAP = 500;

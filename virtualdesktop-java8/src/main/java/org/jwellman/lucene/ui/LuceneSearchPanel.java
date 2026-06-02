@@ -3,6 +3,7 @@ package org.jwellman.lucene.ui;
 import org.jwellman.lucene.engine.LuceneService;
 import org.jwellman.lucene.engine.SearchResult;
 import org.jwellman.lucene.model.IndexRowItem;
+import org.jwellman.lucene.model.SearchOperator;
 import org.jwellman.swing.grid.ColumnDef;
 import org.jwellman.swing.grid.DefaultGridModel;
 import org.jwellman.swing.grid.GridRow;
@@ -12,6 +13,8 @@ import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -34,13 +37,34 @@ public class LuceneSearchPanel extends JPanel {
 
     private final JComboBox<String> sandboxCombo;
     private final JTextField searchBox;
-    private final JLabel statusLabel;
+    private final JToggleButton andButton    = new JToggleButton("AND");
+    private final JToggleButton orButton     = new JToggleButton("OR");
+    private final JToggleButton phraseButton = new JToggleButton("Phrase");
     private final DefaultGridModel model;
     private final Timer debounceTimer;
 
     public LuceneSearchPanel() {
         super(new BorderLayout(0, 4));
         setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
+
+        // --- Operator button group ---
+        ButtonGroup operatorGroup = new ButtonGroup();
+        operatorGroup.add(andButton);
+        operatorGroup.add(orButton);
+        operatorGroup.add(phraseButton);
+        andButton.setSelected(true);
+
+        ActionListener retrigger = new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (searchBox.getText().trim().length() >= MIN_CHARS) {
+                    triggerSearch();
+                }
+            }
+        };
+        andButton.addActionListener(retrigger);
+        orButton.addActionListener(retrigger);
+        phraseButton.addActionListener(retrigger);
 
         // --- Toolbar ---
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
@@ -56,8 +80,9 @@ public class LuceneSearchPanel extends JPanel {
         searchBox.setPreferredSize(new Dimension(300, searchBox.getPreferredSize().height));
         toolbar.add(searchBox);
 
-        statusLabel = new JLabel(" ");
-        toolbar.add(statusLabel);
+        toolbar.add(andButton);
+        toolbar.add(orButton);
+        toolbar.add(phraseButton);
 
         add(toolbar, BorderLayout.NORTH);
 
@@ -90,7 +115,12 @@ public class LuceneSearchPanel extends JPanel {
         add(grid, BorderLayout.CENTER);
 
         // --- Debounce timer ---
-        debounceTimer = new Timer(DEBOUNCE_MS, e -> triggerSearch());
+        debounceTimer = new Timer(DEBOUNCE_MS, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                triggerSearch();
+            }
+        });
         debounceTimer.setRepeats(false);
 
         searchBox.getDocument().addDocumentListener(new DocumentListener() {
@@ -132,11 +162,12 @@ public class LuceneSearchPanel extends JPanel {
         }
         final String queryString = text;
         final String sandboxId = resolveSelectedSandboxId();
+        final SearchOperator operator = resolveOperator();
         new Thread(new Runnable() {
             @Override
             public void run() {
                 final List<SearchResult> results =
-                    LuceneService.get().search(sandboxId, queryString, MAX_RESULTS);
+                    LuceneService.get().search(sandboxId, queryString, MAX_RESULTS, operator);
                 SwingUtilities.invokeLater(new Runnable() {
                     @Override
                     public void run() {
@@ -145,6 +176,16 @@ public class LuceneSearchPanel extends JPanel {
                 });
             }
         }).start();
+    }
+
+    private SearchOperator resolveOperator() {
+        if (orButton.isSelected()) {
+            return SearchOperator.OR;
+        }
+        if (phraseButton.isSelected()) {
+            return SearchOperator.PHRASE;
+        }
+        return SearchOperator.AND;
     }
 
     private String resolveSelectedSandboxId() {
@@ -173,13 +214,10 @@ public class LuceneSearchPanel extends JPanel {
                 .put("modified", r.getLastModifiedMillis()));
         }
         model.notifyDataChanged();
-        int count = results.size();
-        statusLabel.setText(count == 0 ? "No results" : count + " result" + (count == 1 ? "" : "s"));
     }
 
     private void clearResults() {
         model.clearRows();
         model.notifyDataChanged();
-        statusLabel.setText(" ");
     }
 }

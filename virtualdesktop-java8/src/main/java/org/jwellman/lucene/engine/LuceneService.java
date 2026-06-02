@@ -6,6 +6,7 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexNotFoundException;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
@@ -15,6 +16,7 @@ import org.jwellman.lucene.model.DirectorySandboxConfig;
 import org.jwellman.lucene.model.IndexRowItem;
 import org.jwellman.lucene.model.LuceneGlobalConfig;
 import org.jwellman.lucene.model.SandboxRuntimeState;
+import org.jwellman.lucene.model.SearchOperator;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -188,9 +190,11 @@ public class LuceneService {
      * @param sandboxId   the sandbox to search, or {@code null} / empty to search all
      * @param queryString the raw query string (Lucene query syntax supported)
      * @param maxResults  maximum results per sandbox
+     * @param operator    how multiple words are combined ({@link SearchOperator#AND} by default)
      * @return combined results sorted by relevance score descending
      */
-    public List<SearchResult> search(String sandboxId, String queryString, int maxResults) {
+    public List<SearchResult> search(String sandboxId, String queryString, int maxResults,
+                                     SearchOperator operator) {
         List<SearchResult> results = new ArrayList<SearchResult>();
         boolean searchAll = (sandboxId == null || sandboxId.trim().isEmpty());
 
@@ -216,7 +220,16 @@ public class LuceneService {
                 };
                 MultiFieldQueryParser parser = new MultiFieldQueryParser(fields, analyzer);
                 parser.setAllowLeadingWildcard(true);
-                Query query = parser.parse(queryString);
+                Query query;
+                if (operator == SearchOperator.PHRASE) {
+                    String escaped = queryString.replace("\"", "\\\"");
+                    query = parser.parse("\"" + escaped + "\"");
+                } else {
+                    parser.setDefaultOperator(operator == SearchOperator.OR
+                        ? QueryParser.Operator.OR
+                        : QueryParser.Operator.AND);
+                    query = parser.parse(queryString);
+                }
                 TopDocs hits = searcher.search(query, maxResults);
                 for (ScoreDoc sd : hits.scoreDocs) {
                     Document doc = searcher.doc(sd.doc);

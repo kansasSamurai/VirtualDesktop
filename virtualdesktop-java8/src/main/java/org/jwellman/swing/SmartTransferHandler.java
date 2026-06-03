@@ -1,5 +1,7 @@
 package org.jwellman.swing;
 
+import java.awt.Image;
+import java.awt.Point;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.io.File;
@@ -46,14 +48,15 @@ public class SmartTransferHandler extends TransferHandler {
     private final Supplier<Object> payloadSupplier;
     private final DropAction dropAction;
     private final Runnable onExportDone;
+    private final Supplier<Image> imageSupplier;
 
     /** Import-only: accepts drops, no drag-out support. */
     public SmartTransferHandler(DropAction dropAction) {
-        this(null, dropAction, null);
+        this(null, dropAction, null, null);
     }
 
     /**
-     * Export + import: the component can both initiate drags and accept drops.
+     * Export + import without a drag image.
      *
      * @param payloadSupplier evaluated lazily at drag-start; return {@code null}
      *                        to suppress the drag (e.g. when nothing is selected)
@@ -62,9 +65,26 @@ public class SmartTransferHandler extends TransferHandler {
      *                        use to clear any "dragging" state. May be {@code null}.
      */
     public SmartTransferHandler(Supplier<Object> payloadSupplier, DropAction dropAction, Runnable onExportDone) {
+        this(payloadSupplier, dropAction, onExportDone, null);
+    }
+
+    /**
+     * Export + import with a drag image.
+     *
+     * @param payloadSupplier evaluated lazily at drag-start; return {@code null}
+     *                        to suppress the drag
+     * @param dropAction      called with the unwrapped payload on a successful drop
+     * @param onExportDone    called when the drag ends regardless of outcome. May be {@code null}.
+     * @param imageSupplier   evaluated at drag-start to produce the ghost image shown
+     *                        while dragging; return {@code null} to use the default
+     *                        OS cursor only. May be {@code null}.
+     */
+    public SmartTransferHandler(Supplier<Object> payloadSupplier, DropAction dropAction,
+                                Runnable onExportDone, Supplier<Image> imageSupplier) {
         this.payloadSupplier = payloadSupplier;
         this.dropAction      = dropAction;
         this.onExportDone    = onExportDone;
+        this.imageSupplier   = imageSupplier;
     }
 
     // ── Export side ──────────────────────────────────────────────────────────
@@ -78,6 +98,14 @@ public class SmartTransferHandler extends TransferHandler {
     protected Transferable createTransferable(JComponent c) {
         if (payloadSupplier == null) {
             return null;
+        }
+        if (imageSupplier != null) {
+            Image img = imageSupplier.get();
+            if (img != null) {
+                setDragImage(img);
+                // cursor tip at bottom-left corner of image
+                setDragImageOffset(new Point(0, img.getHeight(null)));
+            }
         }
         return SmartDragSource.forPayload(payloadSupplier);
     }

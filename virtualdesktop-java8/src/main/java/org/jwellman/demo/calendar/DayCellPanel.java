@@ -18,6 +18,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.TransferHandler;
+import org.jwellman.swing.DragImageFactory;
 import org.jwellman.swing.SmartTransferHandler;
 
 /**
@@ -102,7 +103,13 @@ public class DayCellPanel extends JPanel {
             () -> draggingEvent != null
                 ? new CalendarEventTransfer(draggingEvent, DayCellPanel.this) : null,
             this::onEventDropped,
-            () -> draggingEvent = null
+            () -> draggingEvent = null,
+            () -> draggingEvent != null
+                ? DragImageFactory.forColoredLabel(
+                    draggingEvent.getName(),
+                    draggingEvent.getCategory().getColor(),
+                    140)
+                : null
         ));
 
         dayNumberLabel = new JLabel();

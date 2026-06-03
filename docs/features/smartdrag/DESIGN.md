@@ -13,8 +13,9 @@ the way it is, or when wiring a new component into the drag/drop system.
 | `EmulatorPayload` | Generic envelope wrapping the dragged object; carries the shared `DataFlavor` |
 | `SmartTransferHandler` | Unified handler for export, import, or both; the primary wiring point for all components |
 | `SmartDragSource` | Makes any `JComponent` a pure drag source via a static factory; for components that drag but never receive drops |
+| `DragImageFactory` | Renders drag-ghost images on demand from text + color; decoupled from any theme or component |
 
-All three live in `org.jwellman.swing`.
+All four live in `org.jwellman.swing`.
 
 ---
 
@@ -33,11 +34,25 @@ component.setTransferHandler(new SmartTransferHandler(data -> {
 **Export + import** — the component both initiates drags and accepts drops:
 ```java
 panel.setTransferHandler(new SmartTransferHandler(
-    () -> draggingThing,      // payload supplier: evaluated lazily at drag-start
-    this::handleDrop,         // drop action: called with the unwrapped payload
+    () -> draggingThing,       // payload supplier: evaluated lazily at drag-start
+    this::handleDrop,          // drop action: called with the unwrapped payload
     () -> draggingThing = null // export-done: runs when drag ends (success or cancel)
 ));
 ```
+
+**Export + import with a drag image** — adds a visual ghost shown while dragging:
+```java
+panel.setTransferHandler(new SmartTransferHandler(
+    () -> draggingThing,
+    this::handleDrop,
+    () -> draggingThing = null,
+    () -> DragImageFactory.forColoredLabel(draggingThing.name, draggingThing.color, 140)
+));
+```
+
+The image supplier is evaluated at drag-start (lazily, same as the payload supplier)
+so it always reflects the current item. Return `null` to fall back to the OS default
+cursor with no ghost image.
 
 Child components that *initiate* the drag call `exportAsDrag` on the parent panel,
 which keeps the `TransferHandler` on one component:
@@ -56,6 +71,34 @@ childLabel.addMouseListener(new MouseAdapter() {
 (e.g. `draggingEvent`). Without cleanup, that state is left set if the user cancels
 a drag or drops onto a non-accepting target. `onExportDone` fires unconditionally,
 clearing it.
+
+---
+
+## DragImageFactory: drag ghost images
+
+`DragImageFactory` renders `BufferedImage` instances on demand for use as drag
+ghosts. Images are created fresh each drag so they always match the current item's
+state (color, text).
+
+```java
+BufferedImage img = DragImageFactory.forColoredLabel(text, categoryColor, 140);
+```
+
+`forColoredLabel` produces an 18 px tall image — matching the height of a
+`DayCellPanel` event banner — with a solid background fill and white text in
+`SansSerif 11pt`. Width is caller-supplied; **140 px is the standard fixed value**
+used throughout this project, chosen to be comfortably wider than most event names
+without exceeding a typical calendar column.
+
+The factory is intentionally decoupled from themes and components. The caller
+supplies the color (typically sourced from the event category or theme at the
+call-site) rather than the factory reaching into any global state. This makes it
+safe to use from any component without creating unwanted coupling.
+
+`SmartTransferHandler` positions the ghost so the cursor tip aligns with the
+bottom-left corner of the image: `offset = (0, -height)`. The image floats
+entirely above the cursor, keeping the drop target visible beneath it while
+the label travels above.
 
 ---
 
@@ -141,14 +184,20 @@ CalendarDemo is the first consumer of this infrastructure and serves as the
 reference implementation for same-JVM DnD between two instances of the same
 component type.
 
-`DayCellPanel` uses the export+import constructor of `SmartTransferHandler`:
+`DayCellPanel` uses the full 4-arg constructor of `SmartTransferHandler`:
 
 ```java
 setTransferHandler(new SmartTransferHandler(
     () -> draggingEvent != null
         ? new CalendarEventTransfer(draggingEvent, DayCellPanel.this) : null,
     this::onEventDropped,
-    () -> draggingEvent = null
+    () -> draggingEvent = null,
+    () -> draggingEvent != null
+        ? DragImageFactory.forColoredLabel(
+            draggingEvent.getName(),
+            draggingEvent.getCategory().getColor(),
+            140)
+        : null
 ));
 ```
 

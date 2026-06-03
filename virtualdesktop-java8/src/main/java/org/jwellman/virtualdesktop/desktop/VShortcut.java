@@ -3,6 +3,7 @@ package org.jwellman.virtualdesktop.desktop;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
@@ -28,6 +29,7 @@ import javax.swing.plaf.ComponentUI;
 
 import org.apache.batik.transcoder.TranscoderException;
 import org.jwellman.virtualdesktop.vapps.DesktopAction;
+import org.jwellman.virtualdesktop.vapps.ExternalAppAction;
 
 /**
  * A desktop shortcut
@@ -51,8 +53,14 @@ public class VShortcut extends JLabel {
     /** Standard padding for all shortcuts */
     private static final Border PADDING = BorderFactory.createEmptyBorder(12, 12, 12, 12);
 
+    /** Label font — will become theme-configurable in the future */
+    private static final Font LABEL_FONT = new Font("Segoe UI", Font.PLAIN, 11);
+
     /** ... */
     private Action action;
+
+    /** True when this shortcut launches an external (OS-level) application. */
+    private boolean external;
 
     public VShortcut(String label, Icon icon, int yPos, int xPos) {
         super();
@@ -75,9 +83,11 @@ public class VShortcut extends JLabel {
     }
 
     private void init(Action a, String label, Icon icon, int yPos, int xPos) {
-        this.action = a;
+        this.action   = a;
+        this.external = (a instanceof ExternalAppAction);
 
         this.setText(label);
+        this.setFont(LABEL_FONT);
         this.setHorizontalAlignment(JLabel.CENTER);
 
         this.setOpaque(false);
@@ -520,6 +530,33 @@ public class VShortcut extends JLabel {
                 g2.setColor( original );
 
                 super.update(g, c);
+
+                if (c instanceof VShortcut && ((VShortcut) c).external) {
+                    final JLabel  label  = (JLabel) c;
+                    final Icon    icon   = label.getIcon();
+                    if (icon != null) {
+                        final java.awt.Insets ins  = c.getInsets();
+                        final int iy2 = ins.top + icon.getIconHeight();  // icon bottom edge
+
+                        final int AS = 8;  // arrow span (axis-aligned units per axis)
+                        final int AH = 3;  // arrowhead arm length
+
+                        // tip: 6px inside tile's right border; 3px below icon-based position
+                        final int tipX = w - 6;
+                        final int tipY = iy2 - AS + 3;
+
+                        final Stroke savedStroke = g2.getStroke();
+                        g2.setStroke(STROKE_1_0);
+                        g2.setColor(MUTED_GOLD);
+
+                        g2.drawLine(tipX - AS, tipY + AS, tipX, tipY);  // stem
+                        g2.drawLine(tipX,      tipY,      tipX - AH, tipY);       // arrowhead left
+                        g2.drawLine(tipX,      tipY,      tipX,      tipY + AH);  // arrowhead down
+
+                        g2.setColor(original);
+                        g2.setStroke(savedStroke);
+                    }
+                }
             }
         }
 

@@ -36,6 +36,69 @@ for (DesktopAction a : ActionFactory.getListOfActions()) {
 
 Position is hardcoded (`x=10`, `y` incremented by 80). There is no persistence, layout manager, or grid.
 
+### VShortcut Visual Design
+
+Each shortcut tile is a `JLabel` whose painting is delegated to an inner `MyUI`
+class (extends `WindowsLabelUI`). `MyUI.update()` performs all custom Graphics2D
+work before and after the standard label rendering pipeline.
+
+#### Tile Rendering
+
+| Layer | What is painted |
+|-------|----------------|
+| 1 — fill | `fillRoundRect` in a semi-transparent slate (`#18191E` at α=140); hover and selection states use progressively higher-opacity blue tints |
+| 2 — border | `drawRoundRect` in `MUTED_GOLD` (`#A0977C`) at 1.5 px stroke, same arc as the fill |
+| 3 — label | `super.update()` — standard JLabel renders the icon centered above the text |
+| 4 — external indicator | painted on top of the label for external-app shortcuts only (see below) |
+
+Arc radius for all rounded rectangles is 15 px.
+
+#### Label Font
+
+All shortcuts use a single static font resource:
+
+```java
+private static final Font LABEL_FONT = new Font("Segoe UI", Font.PLAIN, 11);
+```
+
+This is applied in `init()` before `getPreferredSize()` so height calculations
+already account for it. The constant is the hook for future theme integration.
+
+#### External App Indicator
+
+Shortcuts backed by an `ExternalAppAction` (OS-level processes launched via
+`ExternalAppSpec`) display a small ↗ arrow in `MUTED_GOLD` at the bottom-right
+corner of the icon graphic to signal that activation will leave the JVM sandbox.
+
+**Detection:** `init()` sets `private boolean external = (a instanceof ExternalAppAction)`.
+The flag is read in `MyUI.update()` via the `JComponent c` parameter — static
+inner classes can access private members of the enclosing class through an
+instance reference, so no additional API is needed.
+
+**Geometry:** the arrow is drawn entirely in Graphics2D after `super.update()`:
+
+```
+tip   = (w - 6,  iy2 - AS + 3)   // 6px inside right border; icon-bottom-relative y
+base  = (tip.x - AS,  tip.y + AS) // lower-left of the diagonal stem
+AS    = 8   // arrow span in each axis
+AH    = 3   // arrowhead arm length
+```
+
+`iy2 = insets.top + icon.getIconHeight()` — the bottom edge of the icon, computed
+from the JLabel's insets (the 12 px `PADDING` border) and the icon's own height.
+Anchoring `tipX` to `w - 6` (tile-relative) rather than the icon's right edge
+keeps the indicator visible even when a large icon fills most of the tile area.
+
+The three draw calls form the arrow:
+- Stem: `(base) → (tip)`
+- Arrowhead left arm: `(tip) → (tip.x - AH, tip.y)`
+- Arrowhead down arm: `(tip) → (tip.x, tip.y + AH)`
+
+Color and stroke (`MUTED_GOLD`, `STROKE_1_0`) match the tile border, visually
+tying the indicator to the shortcut frame rather than to the icon content.
+
+---
+
 ### Known Design Deficiencies
 
 **1. `VShortcut` conflates model, view, and controller**

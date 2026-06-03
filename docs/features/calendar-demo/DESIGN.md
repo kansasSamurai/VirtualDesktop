@@ -177,3 +177,64 @@ The panel shows:
 - Event name (large, styled label)
 - Event date (formatted)
 - Category badge (colored label matching the event's category color)
+
+### Drag and Drop — Event Rescheduling
+
+Events can be dragged from one `DayCellPanel` to another. The drag-and-drop wiring
+uses the SmartDrag infrastructure (`SmartTransferHandler`, `SmartDragSource`) from
+`org.jwellman.swing`.
+
+#### How Swing is told that DayCellPanel owns DnD
+
+The export and import directions are routed through completely different mechanisms.
+
+**Export (drag-out)**: `primaryLabel` and chip buttons have no `TransferHandler`
+of their own. When `mousePressed` fires on either, the handler is manually invoked
+on the *panel*:
+
+```java
+panel.getTransferHandler().exportAsDrag(panel, e, TransferHandler.MOVE);
+```
+
+The first argument `panel` tells Swing "treat this as the drag source." We reach
+past the child component to the panel's handler by hand.
+
+**Import (drop-in)**: when `setTransferHandler(handler)` is called on `DayCellPanel`,
+Swing quietly installs a `DropTarget` on the panel. The child labels and chips have
+no `TransferHandler` and therefore no `DropTarget`. When a drop occurs, Swing's
+lightweight dispatcher routes it to the innermost component that *has* a `DropTarget`
+— and only `DayCellPanel` has one. Drops anywhere inside the cell, including over
+the event label, are handled by the panel automatically.
+
+This is why earlier designs that called `SmartDragSource.makeDraggable` on
+`primaryLabel` broke drop behaviour: `makeDraggable` installs a `TransferHandler`
+(and therefore a `DropTarget`) on the label, intercepting drops that should have
+reached the panel.
+
+| Direction | How routing works |
+|---|---|
+| Drag out | `mousePressed` on child explicitly calls `panel.getTransferHandler().exportAsDrag(panel, ...)` |
+| Drop in | Swing auto-routes to the innermost component with a `DropTarget`; only the panel has one |
+
+#### Payload
+
+`DayCellPanel` uses the export+import constructor of `SmartTransferHandler`:
+
+```java
+setTransferHandler(new SmartTransferHandler(
+    () -> draggingEvent != null
+        ? new CalendarEventTransfer(draggingEvent, DayCellPanel.this) : null,
+    this::onEventDropped,
+    () -> draggingEvent = null
+));
+```
+
+`draggingEvent` is set in `mousePressed` just before `exportAsDrag` is called. The
+supplier evaluates it lazily when Swing calls `createTransferable()` a fraction of
+a second later. `onExportDone` clears it unconditionally when the drag ends,
+whether the drop succeeded or was cancelled.
+
+`CalendarEventTransfer` (package-private inner class) carries both the `CalendarEvent`
+and a reference to the source `DayCellPanel`, so the drop handler can update both
+cells in one step: remove the event from the source cell's `DayData`, add it to the
+target's, and repopulate both.

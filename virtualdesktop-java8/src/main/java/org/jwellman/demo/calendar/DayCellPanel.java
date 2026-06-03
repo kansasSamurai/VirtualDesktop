@@ -5,7 +5,6 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.datatransfer.Transferable;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.time.DayOfWeek;
@@ -15,13 +14,11 @@ import java.util.List;
 import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
-import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.TransferHandler;
-import org.jwellman.swing.EmulatorPayload;
-import org.jwellman.swing.SmartDragSource;
+import org.jwellman.swing.SmartTransferHandler;
 
 /**
  * Renders a single calendar day within a CalendarWeekRowPanel.
@@ -82,58 +79,6 @@ public class DayCellPanel extends JPanel {
         }
     }
 
-    /**
-     * Unified TransferHandler that owns both the drag-export and drop-import
-     * sides of DnD for this cell. Having one handler on the panel (rather than
-     * export-only handlers on child components) means the drop cursor and import
-     * logic are consistent regardless of which pixel inside the cell the user
-     * hovers over or releases on.
-     */
-    private final class DayCellTransferHandler extends TransferHandler {
-
-        private static final long serialVersionUID = 1L;
-
-        @Override
-        public int getSourceActions(JComponent c) {
-            return draggingEvent != null ? MOVE : NONE;
-        }
-
-        @Override
-        protected Transferable createTransferable(JComponent c) {
-            if (draggingEvent == null) {
-                return null;
-            }
-            return SmartDragSource.forPayload(
-                () -> new CalendarEventTransfer(draggingEvent, DayCellPanel.this));
-        }
-
-        @Override
-        protected void exportDone(JComponent source, Transferable data, int action) {
-            draggingEvent = null;
-        }
-
-        @Override
-        public boolean canImport(TransferSupport support) {
-            return support.isDataFlavorSupported(EmulatorPayload.FLAVOR);
-        }
-
-        @Override
-        public boolean importData(TransferSupport support) {
-            if (!canImport(support)) {
-                return false;
-            }
-            try {
-                EmulatorPayload payload = (EmulatorPayload) support.getTransferable()
-                    .getTransferData(EmulatorPayload.FLAVOR);
-                onEventDropped(payload.getData(Object.class));
-                return true;
-            } catch (Exception e) {
-                e.printStackTrace();
-                return false;
-            }
-        }
-    }
-
     private final JLabel dayNumberLabel;
     private final JLabel primaryLabel;
     private final JPanel chipsPanel;
@@ -153,7 +98,12 @@ public class DayCellPanel extends JPanel {
         setLayout(null);
         setOpaque(true);
         setBorder(Borders.DAY_CELL);
-        setTransferHandler(new DayCellTransferHandler());
+        setTransferHandler(new SmartTransferHandler(
+            () -> draggingEvent != null
+                ? new CalendarEventTransfer(draggingEvent, DayCellPanel.this) : null,
+            this::onEventDropped,
+            () -> draggingEvent = null
+        ));
 
         dayNumberLabel = new JLabel();
         dayNumberLabel.setFont(Fonts.DAY_NUMBER);

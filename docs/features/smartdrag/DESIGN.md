@@ -11,10 +11,71 @@ the way it is, or when wiring a new component into the drag/drop system.
 | Class | Role |
 |---|---|
 | `EmulatorPayload` | Generic envelope wrapping the dragged object; carries the shared `DataFlavor` |
-| `SmartDragSource` | Makes any `JComponent` a drag source via a static factory; implements `Transferable` |
-| `SmartTransferHandler` | Makes any `JComponent` a drop target; unwraps the payload and dispatches to a `DropAction` lambda |
+| `SmartTransferHandler` | Unified handler for export, import, or both; the primary wiring point for all components |
+| `SmartDragSource` | Makes any `JComponent` a pure drag source via a static factory; for components that drag but never receive drops |
 
 All three live in `org.jwellman.swing`.
+
+---
+
+## SmartTransferHandler: the central primitive
+
+`SmartTransferHandler` handles all DnD responsibilities for a component through
+lambdas, requiring no subclassing.
+
+**Import-only** — the component accepts drops but never initiates drags:
+```java
+component.setTransferHandler(new SmartTransferHandler(data -> {
+    if (data instanceof MyType) { ... }
+}));
+```
+
+**Export + import** — the component both initiates drags and accepts drops:
+```java
+panel.setTransferHandler(new SmartTransferHandler(
+    () -> draggingThing,      // payload supplier: evaluated lazily at drag-start
+    this::handleDrop,         // drop action: called with the unwrapped payload
+    () -> draggingThing = null // export-done: runs when drag ends (success or cancel)
+));
+```
+
+Child components that *initiate* the drag call `exportAsDrag` on the parent panel,
+which keeps the `TransferHandler` on one component:
+```java
+childLabel.addMouseListener(new MouseAdapter() {
+    public void mousePressed(MouseEvent e) {
+        if (canDrag()) {
+            draggingThing = currentThing;
+            panel.getTransferHandler().exportAsDrag(panel, e, TransferHandler.MOVE);
+        }
+    }
+});
+```
+
+**Why the export-done callback matters**: `payloadSupplier` captures mutable state
+(e.g. `draggingEvent`). Without cleanup, that state is left set if the user cancels
+a drag or drops onto a non-accepting target. `onExportDone` fires unconditionally,
+clearing it.
+
+---
+
+## SmartDragSource: pure drag sources
+
+Use `SmartDragSource.makeDraggable()` for components that only ever *initiate* drags
+and have no drop responsibility — icons, thumbnails, simple labels. It installs a
+`TransferHandler` and a `MouseListener` in one call:
+
+```java
+SmartDragSource.makeDraggable(iconLabel, () -> myDataObject);
+```
+
+Do **not** call `makeDraggable` on a component that also needs to accept drops —
+`makeDraggable` sets a `TransferHandler`, and any subsequent `setTransferHandler`
+call on the same component silently overwrites it. Use the export+import constructor
+of `SmartTransferHandler` on the parent panel instead (see above).
+
+`SmartDragSource.forPayload()` is package-private: it is the internal bridge used
+by `SmartTransferHandler.createTransferable()` and is not part of the public API.
 
 ---
 
@@ -74,49 +135,33 @@ on the caller, who is the only party that knows what the payload means in OS ter
 
 ---
 
-## The Same-Component TransferHandler Conflict
-
-A single `JComponent` can hold only one `TransferHandler`. `SmartDragSource.makeDraggable()`
-sets one; `new SmartTransferHandler(...)` sets another. Calling both on the same
-component silently overwrites the first.
-
-**Pattern to avoid:**
-```java
-// BROKEN — second setTransferHandler overwrites the first
-SmartDragSource.makeDraggable(this, payloadSupplier);   // sets export handler
-this.setTransferHandler(new SmartTransferHandler(...)); // overwrites it
-```
-
-**Correct pattern — parent/child split:**
-```java
-// Child handles drag-out
-SmartDragSource.makeDraggable(childLabel, payloadSupplier);
-
-// Parent handles drop-in (different component, no conflict)
-parentPanel.setTransferHandler(new SmartTransferHandler(this::onDrop));
-```
-
-The CalendarDemo demonstrates this split: `primaryLabel` and chip buttons are drag
-sources; `DayCellPanel` (the parent) is the drop target.
-
-One side-effect: drops that land precisely on a drag-source child component hit
-that child's export-only `TransferHandler` and are silently rejected. In practice
-the affected area is small; aim at the background of the target cell.
-
----
-
 ## CalendarDemo Integration
 
 CalendarDemo is the first consumer of this infrastructure and serves as the
 reference implementation for same-JVM DnD between two instances of the same
 component type.
 
-- `DayCellPanel.primaryLabel` — drag source (carries `CalendarEventTransfer`)
-- Chip buttons — drag sources (same payload type)
-- `DayCellPanel` — drop target; `onEventDropped()` removes the event from the
-  source cell's `DayData` and adds it to the target cell's `DayData`, then
+`DayCellPanel` uses the export+import constructor of `SmartTransferHandler`:
+
+```java
+setTransferHandler(new SmartTransferHandler(
+    () -> draggingEvent != null
+        ? new CalendarEventTransfer(draggingEvent, DayCellPanel.this) : null,
+    this::onEventDropped,
+    () -> draggingEvent = null
+));
+```
+
+- `primaryLabel` and chip buttons — trigger drag on `DayCellPanel` via `mousePressed`;
+  carry no `TransferHandler` of their own
+- `DayCellPanel` — owns the unified handler; `onEventDropped()` removes the event
+  from the source cell's `DayData`, adds it to the target cell's `DayData`, and
   repopulates both cells
+- Cursor — `primaryLabel` cursor is set to `HAND_CURSOR` in `populate()` only when
+  an event is present; reset to `DEFAULT` otherwise
 
 `CalendarEventTransfer` (package-private inner class of `DayCellPanel`) bundles the
 `CalendarEvent` with a back-reference to its source `DayCellPanel` so the drop
-handler can update both sides of the move in one step.
+handler can update both sides of the move in one step. Because `DayCellPanel` owns
+the `TransferHandler` (not the child labels), drops landing anywhere inside the
+target cell — including over the event label — are handled consistently.

@@ -10,6 +10,7 @@ import org.jwellman.swing.grid.Recyclable;
  * Holds seven DayCellPanel instances (Mon–Sun) and positions them to align
  * with SmartGrid's column headers via the shared columnWidths[] reference.
  */
+@SuppressWarnings("serial")
 public class CalendarWeekRowPanel extends JPanel implements Recyclable {
 
     private static final String[] DAY_KEYS = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"};

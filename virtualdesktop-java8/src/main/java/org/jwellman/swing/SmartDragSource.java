@@ -47,12 +47,12 @@ public class SmartDragSource implements Transferable {
     }
 
     /**
-     * Creates a bare {@link Transferable} that wraps the lazy payload in an
-     * {@link EmulatorPayload}. Use this when the calling component manages its
-     * own {@link TransferHandler} and just needs a {@code Transferable} to return
-     * from {@code createTransferable()}.
+     * Creates a {@link Transferable} that wraps the lazy payload in an
+     * {@link EmulatorPayload}. Package-private: the intended entry point for
+     * callers is {@link SmartTransferHandler}, which calls this internally from
+     * {@code createTransferable()}.
      */
-    public static Transferable forPayload(Supplier<Object> payloadSupplier) {
+    static Transferable forPayload(Supplier<Object> payloadSupplier) {
         return new SmartDragSource(payloadSupplier);
     }
 

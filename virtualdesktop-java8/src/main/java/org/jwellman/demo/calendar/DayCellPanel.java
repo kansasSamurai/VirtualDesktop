@@ -5,6 +5,7 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.datatransfer.Transferable;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.time.DayOfWeek;
@@ -14,11 +15,13 @@ import java.util.List;
 import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
+import javax.swing.TransferHandler;
+import org.jwellman.swing.EmulatorPayload;
 import org.jwellman.swing.SmartDragSource;
-import org.jwellman.swing.SmartTransferHandler;
 
 /**
  * Renders a single calendar day within a CalendarWeekRowPanel.
@@ -26,6 +29,12 @@ import org.jwellman.swing.SmartTransferHandler;
  * Layout (top to bottom):
  *   TOP_HEIGHT px  — day-number badge (top-right) + primary event label
  *   remainder      — row of small colored chip buttons, one per additional event
+ *
+ * DnD: DayCellPanel owns a single unified TransferHandler that handles both
+ * drag-export and drop-import. primaryLabel and chip buttons trigger the drag
+ * via mousePressed but carry no TransferHandler themselves, so drops landing
+ * anywhere on the panel — including over those child components — are handled
+ * consistently by the panel's handler.
  */
 @SuppressWarnings("serial")
 public class DayCellPanel extends JPanel {
@@ -73,6 +82,58 @@ public class DayCellPanel extends JPanel {
         }
     }
 
+    /**
+     * Unified TransferHandler that owns both the drag-export and drop-import
+     * sides of DnD for this cell. Having one handler on the panel (rather than
+     * export-only handlers on child components) means the drop cursor and import
+     * logic are consistent regardless of which pixel inside the cell the user
+     * hovers over or releases on.
+     */
+    private final class DayCellTransferHandler extends TransferHandler {
+
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public int getSourceActions(JComponent c) {
+            return draggingEvent != null ? MOVE : NONE;
+        }
+
+        @Override
+        protected Transferable createTransferable(JComponent c) {
+            if (draggingEvent == null) {
+                return null;
+            }
+            return SmartDragSource.forPayload(
+                () -> new CalendarEventTransfer(draggingEvent, DayCellPanel.this));
+        }
+
+        @Override
+        protected void exportDone(JComponent source, Transferable data, int action) {
+            draggingEvent = null;
+        }
+
+        @Override
+        public boolean canImport(TransferSupport support) {
+            return support.isDataFlavorSupported(EmulatorPayload.FLAVOR);
+        }
+
+        @Override
+        public boolean importData(TransferSupport support) {
+            if (!canImport(support)) {
+                return false;
+            }
+            try {
+                EmulatorPayload payload = (EmulatorPayload) support.getTransferable()
+                    .getTransferData(EmulatorPayload.FLAVOR);
+                onEventDropped(payload.getData(Object.class));
+                return true;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
+    }
+
     private final JLabel dayNumberLabel;
     private final JLabel primaryLabel;
     private final JPanel chipsPanel;
@@ -80,6 +141,7 @@ public class DayCellPanel extends JPanel {
     private final boolean[] highlightOn;
 
     private CalendarEvent primaryEvent;
+    private CalendarEvent draggingEvent;
     private DayData currentData;
     private boolean isToday            = false;
     private boolean isFutureCurrentWeek = false;
@@ -91,10 +153,7 @@ public class DayCellPanel extends JPanel {
         setLayout(null);
         setOpaque(true);
         setBorder(Borders.DAY_CELL);
-        // Drop target for the panel background. Note: drops that land exactly on primaryLabel
-        // hit its export-only TransferHandler (installed by makeDraggable below) and are silently
-        // rejected; aim at any non-label area of the target cell.
-        setTransferHandler(new SmartTransferHandler(this::onEventDropped));
+        setTransferHandler(new DayCellTransferHandler());
 
         dayNumberLabel = new JLabel();
         dayNumberLabel.setFont(Fonts.DAY_NUMBER);
@@ -106,18 +165,16 @@ public class DayCellPanel extends JPanel {
         primaryLabel.setFont(Fonts.PRIMARY_LABEL);
         primaryLabel.setBorder(Borders.PRIMARY_LABEL);
         primaryLabel.setOpaque(false);
-        primaryLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         primaryLabel.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
                 if (primaryEvent != null) {
                     onEventClicked.accept(primaryEvent);
+                    draggingEvent = primaryEvent;
+                    getTransferHandler().exportAsDrag(DayCellPanel.this, e, TransferHandler.MOVE);
                 }
             }
         });
-        // Lazy supplier reads primaryEvent at drag-start; installed once to avoid accumulating listeners.
-        SmartDragSource.makeDraggable(primaryLabel,
-            () -> primaryEvent != null ? new CalendarEventTransfer(primaryEvent, DayCellPanel.this) : null);
         add(primaryLabel);
 
         chipsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 1));
@@ -153,6 +210,7 @@ public class DayCellPanel extends JPanel {
             primaryLabel.setText("");
             primaryLabel.setOpaque(false);
             primaryLabel.setHorizontalAlignment(SwingConstants.LEFT);
+            primaryLabel.setCursor(Cursor.getDefaultCursor());
             dayNumberLabel.setText(data != null ? dayBadgeText(data.getDate()) : "");
             dayNumberLabel.setOpaque(false);
             dayNumberLabel.setFont(Fonts.DAY_NUMBER);
@@ -204,12 +262,14 @@ public class DayCellPanel extends JPanel {
             primaryLabel.setBackground(TODAY_ACCENT);
             primaryLabel.setOpaque(true);
             primaryLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            primaryLabel.setCursor(Cursor.getDefaultCursor());
         } else {
             List<CalendarEvent> events = data.getEvents();
             if (events.isEmpty()) {
                 primaryLabel.setText("");
                 primaryLabel.setOpaque(false);
                 primaryLabel.setHorizontalAlignment(SwingConstants.LEFT);
+                primaryLabel.setCursor(Cursor.getDefaultCursor());
             } else {
                 primaryEvent = events.get(0);
                 primaryLabel.setText(primaryEvent.getName());
@@ -217,6 +277,7 @@ public class DayCellPanel extends JPanel {
                 primaryLabel.setForeground(Color.WHITE);
                 primaryLabel.setOpaque(true);
                 primaryLabel.setHorizontalAlignment(SwingConstants.LEFT);
+                primaryLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
                 for (int i = 1; i < events.size(); i++) {
                     chipsPanel.add(makeChip(events.get(i)));
@@ -242,6 +303,7 @@ public class DayCellPanel extends JPanel {
         primaryLabel.setText("");
         primaryLabel.setOpaque(false);
         primaryLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        primaryLabel.setCursor(Cursor.getDefaultCursor());
         dayNumberLabel.setText("");
         dayNumberLabel.setOpaque(false);
         dayNumberLabel.setFont(Fonts.DAY_NUMBER);
@@ -279,7 +341,13 @@ public class DayCellPanel extends JPanel {
         chip.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         chip.setToolTipText(event.getName() + " (" + event.getCategory().getDisplayName() + ")");
         chip.addActionListener(e -> onEventClicked.accept(event));
-        SmartDragSource.makeDraggable(chip, () -> new CalendarEventTransfer(event, DayCellPanel.this));
+        chip.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                draggingEvent = event;
+                getTransferHandler().exportAsDrag(DayCellPanel.this, e, TransferHandler.MOVE);
+            }
+        });
         return chip;
     }
 }

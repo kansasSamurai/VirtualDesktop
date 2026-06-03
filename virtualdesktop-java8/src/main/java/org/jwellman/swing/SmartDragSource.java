@@ -18,15 +18,23 @@ import javax.swing.TransferHandler;
  * The {@code payloadSupplier} is evaluated lazily at drag-start so the
  * component always hands over its current state, not a stale snapshot.
  *
+ * <p><b>Transport scope:</b> transfers are JVM-local only. {@link EmulatorPayload#FLAVOR}
+ * uses {@code application/x-java-jvm-local-objectref}, so the OS never sees the
+ * payload and no serialization occurs. Dragging out to a host OS application
+ * (e.g. Windows Explorer) is not supported by this class; see
+ * {@code docs/features/smartdrag/DESIGN.md} for the extension strategy.
+ *
+ * <p><b>One TransferHandler per component:</b> {@code makeDraggable} sets a
+ * TransferHandler on the component for export. Do not also call
+ * {@code setTransferHandler(new SmartTransferHandler(...))} on the same component —
+ * the second call silently overwrites the first. Use a parent/child split instead:
+ * drag source on the child, drop target on the parent.
+ *
  * Usage:
  * <pre>
- *   SmartDragSource.makeDraggable(myLabel, () -> myDataObject);
+ *   SmartDragSource.makeDraggable(childLabel, () -> myDataObject);
+ *   parentPanel.setTransferHandler(new SmartTransferHandler(this::onDrop));
  * </pre>
- *
- * Note: {@code makeDraggable} sets a TransferHandler on the component.
- * Do not also set a separate TransferHandler for dropping on the same
- * component — use a parent/child split instead (drag source on child,
- * drop target on parent).
  */
 public class SmartDragSource implements Transferable {
 
@@ -36,6 +44,16 @@ public class SmartDragSource implements Transferable {
 
     private SmartDragSource(Supplier<Object> payloadSupplier) {
         this.payloadSupplier = payloadSupplier;
+    }
+
+    /**
+     * Creates a bare {@link Transferable} that wraps the lazy payload in an
+     * {@link EmulatorPayload}. Use this when the calling component manages its
+     * own {@link TransferHandler} and just needs a {@code Transferable} to return
+     * from {@code createTransferable()}.
+     */
+    public static Transferable forPayload(Supplier<Object> payloadSupplier) {
+        return new SmartDragSource(payloadSupplier);
     }
 
     /**

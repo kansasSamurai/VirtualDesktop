@@ -156,7 +156,7 @@ jvd.app = org.jwellman.virtualdesktop.App.getVSystem();
 // so that everything else runs; particularly the jvd.app
 // line above which is required by the better.bsh which 
 // I use a lot.
-jvd.browser = jvdClassBrowser();
+// jvd.browser = jvdClassBrowser();  // disabled: heavyweight; launch on demand from console
 
 /*
 Examples:

@@ -32,4 +32,13 @@ public class DayData {
     public boolean hasEvents() {
         return !events.isEmpty();
     }
+
+    public void addEvent(CalendarEvent event) {
+        events.add(event);
+    }
+
+    public boolean removeEvent(CalendarEvent event) {
+        return events.remove(event);
+    }
+
 }

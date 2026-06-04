@@ -48,6 +48,6 @@ if (void == global.jvd.unix) {
 }
 
 // Not only does this clear the console but it reprints the banner now that the banner script is "fixed"
-print("INIT COMPLETE");
-
 cls();
+
+print("JVD INIT COMPLETE");

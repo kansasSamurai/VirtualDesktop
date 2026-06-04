@@ -1,10 +1,17 @@
 package org.jwellman.virtualdesktop.vapps;
 
+import java.awt.GridLayout;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.swing.ButtonGroup;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+
 import org.jwellman.console.ConsoleTheme;
 import org.jwellman.console.impl.BeanShellAdapter;
+import org.jwellman.virtualdesktop.bsh.BeanShellService;
 
 import bsh.EvalError;
 import bsh.Interpreter;
@@ -15,13 +22,11 @@ import bsh.Interpreter;
  * <p>This is an alternative to {@link SpecBeanShell} that uses the
  * interpreter-agnostic GenericConsole with a BeanShellAdapter.</p>
  *
- * <p><b>Note:</b> This implementation creates a standalone BeanShell
- * interpreter rather than sharing with BeanShellService. This is because
- * BeanShell's Interpreter requires the console in its constructor for
- * proper REPL functionality, which conflicts with the GenericConsole's
- * stream-based approach.</p>
- *
- * <p>For shared interpreter access, use the original {@link SpecBeanShell}.</p>
+ * <p>This implementation shares the global interpreter from
+ * {@link BeanShellService}, so variables set here are visible in
+ * {@code SpecObjectBrowser} and {@code SpecScriptTester} and vice versa.
+ * Output is redirected to the GenericConsole streams after interpreter
+ * construction rather than via the BeanShell ConsoleInterface constructor.</p>
  *
  * @author Rick Wellman
  */
@@ -29,6 +34,10 @@ public class SpecBeanShellConsole extends SpecGenericConsole implements Runnable
 
     private static final Logger LOGGER = Logger.getLogger(SpecBeanShellConsole.class.getName());
 
+    /** Temp bridge: set by createAdapterFromPrompt() before super() returns. */
+    private static boolean lastChoiceWasGlobal = true;
+
+    private boolean usingGlobalInterpreter;
     private Interpreter interpreter;
     private Thread interpreterThread;
 
@@ -45,7 +54,10 @@ public class SpecBeanShellConsole extends SpecGenericConsole implements Runnable
      * @param theme the visual theme
      */
     public SpecBeanShellConsole(ConsoleTheme theme) {
-        super("BeanShell Console (New)", createAdapter(), theme);
+        super("BeanShell Console (New)", createAdapterFromPrompt(), theme);
+
+        // createAdapterFromPrompt() set lastChoiceWasGlobal as a side effect
+        this.usingGlobalInterpreter = lastChoiceWasGlobal;
 
         // Get the interpreter from our adapter
         this.interpreter = ((BeanShellAdapter) adapter).getInterpreter();
@@ -57,8 +69,31 @@ public class SpecBeanShellConsole extends SpecGenericConsole implements Runnable
         startInterpreterThread();
     }
 
-    private static BeanShellAdapter createAdapter() {
-        return new BeanShellAdapter();
+    private static boolean promptForInterpreterChoice() {
+        JRadioButton rbCommon = new JRadioButton("Common interpreter  (shared with Object Browser, Script Tester)", true);
+        JRadioButton rbStandalone = new JRadioButton("Standalone interpreter  (isolated namespace)");
+
+        ButtonGroup group = new ButtonGroup();
+        group.add(rbCommon);
+        group.add(rbStandalone);
+
+        JPanel panel = new JPanel(new GridLayout(0, 1, 0, 4));
+        panel.add(rbCommon);
+        panel.add(rbStandalone);
+
+        int result = JOptionPane.showConfirmDialog(
+            null, panel, "BeanShell Interpreter",
+            JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+
+        // Default to common on cancel or close
+        return result != JOptionPane.OK_OPTION || rbCommon.isSelected();
+    }
+
+    private static BeanShellAdapter createAdapterFromPrompt() {
+        lastChoiceWasGlobal = promptForInterpreterChoice();
+        return lastChoiceWasGlobal
+            ? new BeanShellAdapter(BeanShellService.get().getInterpreter())
+            : new BeanShellAdapter();
     }
 
     private void configureInterpreter() {
@@ -84,6 +119,14 @@ public class SpecBeanShellConsole extends SpecGenericConsole implements Runnable
 
         } catch (EvalError e) {
             LOGGER.log(Level.WARNING, "Failed to configure BeanShell namespace", e);
+        }
+
+        if (usingGlobalInterpreter) {
+            try {
+                interpreter.source("src/main/resources/jvdClassBrowser.bsh");
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Failed to source jvdClassBrowser.bsh", e);
+            }
         }
     }
 

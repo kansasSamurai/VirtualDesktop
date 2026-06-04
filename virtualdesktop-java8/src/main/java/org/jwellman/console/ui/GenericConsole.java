@@ -808,10 +808,9 @@ public class GenericConsole extends JScrollPane implements
             byte[] buffer = new byte[256];
             int read;
             StringBuilder acc = new StringBuilder();
-            final int holdBack = FLUSH_SENTINEL.length() - 1;
             while (running && (read = inPipe.read(buffer)) != -1) {
                 acc.append(new String(buffer, 0, read, StandardCharsets.UTF_8));
-                processBuffer(acc, holdBack);
+                processBuffer(acc);
             }
             if (acc.length() > 0) {
                 print(acc.toString());
@@ -827,12 +826,15 @@ public class GenericConsole extends JScrollPane implements
     /**
      * Drain any complete flush sentinels from {@code acc}, signalling the
      * waiting {@code flushOutput()} caller for each one found, then print
-     * all content that cannot be part of a partial sentinel at the tail.
+     * all content that cannot be the start of a partial sentinel at the tail.
      *
-     * @param acc      accumulated unprinted text from the pipe
-     * @param holdBack number of tail chars to retain per cycle (= sentinel length - 1)
+     * <p>Rather than blindly withholding the last N chars (where N = sentinel
+     * length - 1), we only hold back the tail that is actually a prefix of
+     * {@link #FLUSH_SENTINEL}.  Normal output characters that don't begin the
+     * sentinel sequence are printed immediately, so short results like
+     * {@code "hello\n"} are never delayed until the next read.</p>
      */
-    private void processBuffer(StringBuilder acc, int holdBack) {
+    private void processBuffer(StringBuilder acc) {
         while (true) {
             int idx = acc.indexOf(FLUSH_SENTINEL);
             if (idx == -1) {
@@ -848,12 +850,30 @@ public class GenericConsole extends JScrollPane implements
             }
             acc.delete(0, idx + FLUSH_SENTINEL.length());
         }
-        // Print safe prefix; keep last holdBack chars in case they start a sentinel.
-        int safeLength = acc.length() - holdBack;
+        // Hold back only the tail that is a genuine prefix of the sentinel,
+        // so a sentinel straddling two reads is still detected correctly.
+        int hold = sentinelPrefixTailLength(acc);
+        int safeLength = acc.length() - hold;
         if (safeLength > 0) {
             print(acc.substring(0, safeLength));
             acc.delete(0, safeLength);
         }
+    }
+
+    /**
+     * Returns the length of the longest suffix of {@code acc} that is also a
+     * non-empty proper prefix of {@link #FLUSH_SENTINEL}.  That suffix must be
+     * kept in the accumulator so that, if the next read delivers the remainder
+     * of the sentinel, the two pieces can be joined and recognised.
+     */
+    private static int sentinelPrefixTailLength(StringBuilder acc) {
+        int maxLen = Math.min(acc.length(), FLUSH_SENTINEL.length() - 1);
+        for (int len = maxLen; len > 0; len--) {
+            if (FLUSH_SENTINEL.startsWith(acc.substring(acc.length() - len))) {
+                return len;
+            }
+        }
+        return 0;
     }
 
     // ========== Helper Methods ==========

@@ -63,6 +63,11 @@ public class SpecBeanShellConsole extends SpecGenericConsole implements Runnable
 
     private void configureInterpreter() {
         try {
+            // Redirect interpreter output to the console pipe so that BeanShell's
+            // built-in print() goes to the GUI rather than System.out.
+            interpreter.setOut(console.getOut());
+            interpreter.setErr(console.getOut());
+
             // Expose references in the namespace
             interpreter.set("_interpreter", interpreter);
             interpreter.set("_console", console);

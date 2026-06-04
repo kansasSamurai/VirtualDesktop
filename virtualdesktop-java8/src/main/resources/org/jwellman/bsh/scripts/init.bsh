@@ -18,7 +18,7 @@
 importCommands("org.jwellman.bsh.commands");
 
 // A closure to help navigate the shell/console
-print("INIT: sourceUTF8(.../env.bsh");
+print("INIT: sourceUTF8(.../env.bsh)");
 sourceUTF8("/org/jwellman/bsh/scripts/env.bsh");
 
 // Unfortunately, importCommands() does not override default commands

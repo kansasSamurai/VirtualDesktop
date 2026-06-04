@@ -186,6 +186,23 @@ public class JConsole extends JScrollPane implements
      */
     public JTextPane getTextpane() { return text; }
 
+    /**
+     * Clear all text from the console and reset the command-start marker.
+     *
+     * <p>Exposed so that BeanShell scripts (e.g. cls.bsh) can call
+     * {@code _console.clear()} without knowing which console implementation
+     * is in use. Mirrors the same method on GenericConsole.</p>
+     */
+    public void clear() {
+        invokeAndWait(new Runnable() {
+            @Override
+            public void run() {
+                text.setText("");
+                cmdStart = 0;
+            }
+        });
+    }
+
     // ========== Interface Implementations ==========
 
     @Override

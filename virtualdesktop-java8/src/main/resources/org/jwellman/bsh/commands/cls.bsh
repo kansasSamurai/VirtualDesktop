@@ -2,16 +2,25 @@
     cls() - Clears the console (just like DOS/Unix/Linux)
 
     This command requires/assumes the JVD framework as it needs access
-    to console itself via the '_console' variable, and the console needs
-    to expose the underlying JTextPane with a 'textpane' property
-    (which is only available when using JVD version of JConsole)
+    to the console itself via the '_console' variable.
+
+    Primary path: call clear() which both JConsole (JVD) and GenericConsole expose.
+    Fallback: reach into the textpane directly for non-JVD JConsole instances
+    that predate the clear() method.
 */
 
 cls() {
     if (void == _console) {
         print("ERR: _console is undefined");
-    } else {
-        _console.textpane.setText("");
-        printBanner();
+        return;
     }
+    // Primary: both JConsole (JVD) and GenericConsole expose clear().
+    // Fallback: older or third-party JConsole instances that lack clear()
+    // still expose textpane, so fall back to direct setText access.
+    try {
+        _console.clear();
+    } catch (Exception e) {
+        _console.textpane.setText("");
+    }
+    printBanner();
 }

@@ -21,6 +21,8 @@ import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.Icon;
 import javax.swing.JMenuItem;
@@ -31,15 +33,13 @@ import javax.swing.UIManager;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.jwellman.console.CommandHistory;
 import org.jwellman.console.CompletionProvider;
 import org.jwellman.console.ConsoleTheme;
 import org.jwellman.console.InterpreterAdapter;
-import org.jwellman.console.InterpreterException;
 import org.jwellman.console.impl.DefaultCommandHistory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Generic console/REPL component that works with any InterpreterAdapter.
@@ -98,6 +98,11 @@ public class GenericConsole extends JScrollPane implements
     private int cmdStart = 0;
     private boolean gotUp = true;  // Hack to prevent key repeat issues
     private volatile boolean running = true;
+
+    // Flush synchronization: sentinel travels through the same pipe as output,
+    // guaranteeing it is ordered after all preceding command output.
+    private static final String FLUSH_SENTINEL = "^F.L.U.S.H.$";
+    private volatile CountDownLatch flushLatch = null;
 
     /**
      * Create a console with default theme.
@@ -323,10 +328,48 @@ public class GenericConsole extends JScrollPane implements
     }
 
     /**
+     * Block until all output previously written to {@code out} has been
+     * displayed by the InputWatcher thread.
+     *
+     * <p>A sentinel string is written into the same pipe that command output
+     * travels through. Because the pipe is FIFO, the sentinel cannot overtake
+     * any output written before it. When the InputWatcher finds and removes the
+     * sentinel, it signals this method that all preceding output is on-screen.</p>
+     *
+     * <p>Must not be called from the EDT: the InputWatcher posts to the EDT via
+     * invokeAndWait, so blocking the EDT here would deadlock.</p>
+     */
+    private void flushOutput() {
+        if (SwingUtilities.isEventDispatchThread()) {
+            return;
+        }
+        if (out == null) {
+            return;
+        }
+        final CountDownLatch latch = new CountDownLatch(1);
+        // Volatile write BEFORE writing to the pipe. JMM volatile happens-before
+        // guarantees the InputWatcher sees this non-null value when it reads
+        // flushLatch after finding the sentinel in the pipe.
+        flushLatch = latch;
+        out.print(FLUSH_SENTINEL);
+        try {
+            boolean signalled = latch.await(2, TimeUnit.SECONDS);
+            if (!signalled) {
+                logger.warn("flushOutput() timed out; sentinel may have been lost");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            flushLatch = null;
+        }
+    }
+
+    /**
      * Print the prompt.
      */
     public void printPrompt() {
         if (interpreter != null) {
+            flushOutput();
             print(interpreter.getPrompt(), theme.getPromptColor());
         }
     }
@@ -764,8 +807,14 @@ public class GenericConsole extends JScrollPane implements
         try {
             byte[] buffer = new byte[256];
             int read;
+            StringBuilder acc = new StringBuilder();
+            final int holdBack = FLUSH_SENTINEL.length() - 1;
             while (running && (read = inPipe.read(buffer)) != -1) {
-                print(new String(buffer, 0, read, StandardCharsets.UTF_8));
+                acc.append(new String(buffer, 0, read, StandardCharsets.UTF_8));
+                processBuffer(acc, holdBack);
+            }
+            if (acc.length() > 0) {
+                print(acc.toString());
             }
         } catch (IOException e) {
             if (running) {
@@ -773,6 +822,38 @@ public class GenericConsole extends JScrollPane implements
             }
         }
         println("Console: Input closed...");
+    }
+
+    /**
+     * Drain any complete flush sentinels from {@code acc}, signalling the
+     * waiting {@code flushOutput()} caller for each one found, then print
+     * all content that cannot be part of a partial sentinel at the tail.
+     *
+     * @param acc      accumulated unprinted text from the pipe
+     * @param holdBack number of tail chars to retain per cycle (= sentinel length - 1)
+     */
+    private void processBuffer(StringBuilder acc, int holdBack) {
+        while (true) {
+            int idx = acc.indexOf(FLUSH_SENTINEL);
+            if (idx == -1) {
+                break;
+            }
+            if (idx > 0) {
+                print(acc.substring(0, idx));
+            }
+            // Read flushLatch once to avoid TOCTOU with flushOutput()'s finally block.
+            CountDownLatch latch = flushLatch;
+            if (latch != null) {
+                latch.countDown();
+            }
+            acc.delete(0, idx + FLUSH_SENTINEL.length());
+        }
+        // Print safe prefix; keep last holdBack chars in case they start a sentinel.
+        int safeLength = acc.length() - holdBack;
+        if (safeLength > 0) {
+            print(acc.substring(0, safeLength));
+            acc.delete(0, safeLength);
+        }
     }
 
     // ========== Helper Methods ==========

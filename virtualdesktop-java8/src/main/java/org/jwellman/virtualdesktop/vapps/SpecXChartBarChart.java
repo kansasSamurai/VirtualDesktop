@@ -27,12 +27,12 @@ public class SpecXChartBarChart extends VirtualAppSpec {
         };
 
     final Color[] PALETTE1 = {
-            Color.decode("#4A148C"), // red
-            Color.decode("#62468D"), // green
-            Color.decode("#886AB5"), // blue
-            Color.decode("#967BBD"), // magenta
-            Color.decode("#AA99C4"), // purple
-            Color.decode("#B19DCE")  // brown
+            Color.decode("#4A148C"), // purple900
+            Color.decode("#62468D"), // purple800
+            Color.decode("#886AB5"), // purple700
+            Color.decode("#967BBD"), // purple600
+            Color.decode("#AA99C4"), // purple500
+            Color.decode("#B19DCE")  // purple400
         };
 //    --cg1-1: #BEAED7;
 //    --cg1-2: ;
@@ -67,7 +67,7 @@ public class SpecXChartBarChart extends VirtualAppSpec {
             LocalDate date = LocalDate.now(); // start today
             for (int i=0; i<7; i++) {
                 xData.add(java.sql.Date.valueOf(date));
-                value = value - Math.random()/5;
+                value = value - Math.random()*5;
                 yData.add(value);
                 date = date.plusDays(1);
             }

@@ -30,9 +30,19 @@ public class Engine {
 
         public void updateElapsed(long elapsedMs) {
             this.elapsedTimeMs = elapsedMs;
+    
             double rawProgress = loopStrategy.calculateProgress(elapsedMs, totalDurationMs);
-            this.value = easingStrategy.ease(rawProgress);
+            double calculated = easingStrategy.ease(rawProgress);
+
+            // Engine Security Guard: If the timeline strategy is completely done,
+            // the output value MUST be a clean 1.0!
+            if (rawProgress >= 1.0 && loopStrategy instanceof OnceStrategy) {
+                this.value = 1.0;
+            } else {
+                this.value = calculated;
+            }
         }
+
     }
 
     private static class RegisteredAnimation {
@@ -42,8 +52,9 @@ public class Engine {
         final TweenContext context;
         final Callback callback;
 
-        RegisteredAnimation(long durationMs, LoopStrategy loop, EasingStrategy ease, Callback callback) {
-            this.startTime = System.currentTimeMillis();
+        // Modified constructor accepting the explicit anchor time
+        RegisteredAnimation(long durationMs, LoopStrategy loop, EasingStrategy ease, long startTime, Callback callback) {
+            this.startTime = startTime; // Directly lock to the injected timestamp!
             this.durationMs = durationMs;
             this.loopStrategy = loop;
             this.callback = callback;
@@ -51,11 +62,13 @@ public class Engine {
         }
     }
 
-    private final List<RegisteredAnimation> activeAnimations = new CopyOnWriteArrayList<>();
     private final Timer masterTimer;
     private static final Engine INSTANCE = new Engine(16); // ~60 FPS
+    private final List<RegisteredAnimation> activeAnimations = new CopyOnWriteArrayList<>();
 
-    public static Engine getInstance() { return INSTANCE; }
+    public static Engine getInstance() {
+        return INSTANCE;
+    }
 
     private Engine(int delayMs) {
         this.masterTimer = new Timer(delayMs, e -> processFrame());
@@ -63,19 +76,33 @@ public class Engine {
     }
 
     public void register(long durationMs, LoopStrategy loop, EasingStrategy ease, Callback callback) {
-        activeAnimations.add(new RegisteredAnimation(durationMs, loop, ease, callback));
+        // Simply forwards to the anchor method using "now"
+        register(durationMs, loop, ease, System.currentTimeMillis(), callback);
+    }
+
+    // --- NEW OVERLOAD: PERMISSIVE TIMESTAMPS FOR LOCK-STEP SYNCHRONIZATION ---
+    public void register(long durationMs, LoopStrategy loop, EasingStrategy ease, long anchorStartTime, Callback callback) {
+        activeAnimations.add(new RegisteredAnimation(durationMs, loop, ease, anchorStartTime, callback));
     }
 
     private void processFrame() {
-        if (activeAnimations.isEmpty()) return;
+        if (activeAnimations.isEmpty())
+            return;
 
         long now = System.currentTimeMillis();
         for (RegisteredAnimation anim : activeAnimations) {
             long elapsed = now - anim.startTime;
-            
+
+            // --- NEW OPTIMIZATION GUARD ---
+            // If the timeline has hit or exceeded the deadline under OnceStrategy,
+            // force elapsed to exactly match durationMs to wipe out floating-point noise!
+            if (anim.loopStrategy instanceof OnceStrategy && elapsed >= anim.durationMs) {
+                elapsed = anim.durationMs;
+            }
+
             anim.context.updateElapsed(elapsed);
             boolean keepAlive = anim.callback.onTick(anim.context);
-            
+
             if (!keepAlive || (anim.loopStrategy instanceof OnceStrategy && elapsed >= anim.durationMs)) {
                 activeAnimations.remove(anim);
             }

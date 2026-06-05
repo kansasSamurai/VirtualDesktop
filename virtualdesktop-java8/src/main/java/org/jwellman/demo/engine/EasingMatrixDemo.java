@@ -24,7 +24,6 @@ import org.jwellman.demo.engine.Strategy.EaseInSine;
 import org.jwellman.demo.engine.Strategy.EaseOutCubic;
 import org.jwellman.demo.engine.Strategy.EaseOutQuint;
 import org.jwellman.demo.engine.Strategy.EaseOutSine;
-import org.jwellman.demo.engine.Strategy.OnceStrategy;
 import org.jwellman.demo.gauge.VRadialIndicator;
 
 public class EasingMatrixDemo {
@@ -91,20 +90,22 @@ public class EasingMatrixDemo {
             // Execution trigger
             triggerBtn.addActionListener(e -> {
                 long animationDuration = 2000; // 2.0 second visual sweep
-                
+
+                // 1. CAPTURE A SINGLE ANCHOR TIMESTAMP FOR THE ENTIRE MATRIX
+                long unifiedStartTime = System.currentTimeMillis();
+
                 for (EasingCell cell : cells) {
-                    Engine.getInstance().register(
-                        animationDuration, 
-                        new OnceStrategy(), // Use our point-to-point strategy
-                        cell.strategy, 
-                        context -> {
-                            if (!cell.indicator.isDisplayable()) return false;
-                            
-                            // Map 0.0 -> 1.0 value smoothly to 0 -> 100 percentage
-                            cell.indicator.setPercentage(context.value * 100.0);
-                            return true;
-                        }
-                    );
+                    // 2. Pass 'unifiedStartTime' to lock every indicator to the exact same clock
+                    // tick
+                    Engine.getInstance().register(animationDuration, new Strategy.OnceStrategy(), cell.strategy,
+                            unifiedStartTime, // <-- The magic sync anchor
+                            context -> {
+                                if (!cell.indicator.isDisplayable())
+                                    return false;
+
+                                cell.indicator.setPercentage(context.value * 100.0);
+                                return true;
+                            });
                 }
             });
 

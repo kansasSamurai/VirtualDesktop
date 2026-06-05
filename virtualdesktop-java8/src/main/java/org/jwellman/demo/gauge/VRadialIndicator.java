@@ -94,9 +94,17 @@ public class VRadialIndicator extends JComponent {
         // --- NEW: DYNAMICALLY SCALING CENTER TEXT READOUT ---
 
      // --- DYNAMICALLY SCALING CENTER TEXT READOUT (OPTIMIZED) ---
-        int displayInt = (int) Math.round(Math.max(0.0, Math.min(100.0, percentage)));
-        String textDisplay = String.format("%d%%", displayInt);
+//        int displayInt = (int) Math.round(Math.max(0.0, Math.min(100.0, percentage)));
+//        String textDisplay = String.format("%d%%", displayInt);
+         // --- THE HONEST GEOMETRY GUARD ---
+         int displayInt = 100;
+         if (percentage < 100.0) {
+             // Math.floor forces 99.999% to stay firmly at 99%!
+             // This preserves the visual illusion of ongoing movement until the finish line.
+             displayInt = (int) Math.floor(Math.max(0.0, percentage));
+         }
 
+        String textDisplay = String.format("%d%%", displayInt);
         // 1. Use the pre-computed, cached font reference directly!
         if (cachedFont != null) {
             g2.setFont(cachedFont);

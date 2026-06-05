@@ -7,9 +7,15 @@ import java.awt.GridLayout;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 
+import org.jwellman.demo.animation.Engine;
+import org.jwellman.demo.gauge.VRadialIndicator;
+
 public class RadialGridDemo {
 
     public static void main(String[] args) {
+
+        long duration = 6283; // 2pi seconds per complete loop round-trip
+
         // Run UI creation on the Event Dispatch Thread (EDT)
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("Master Engine Grid Proof of Concept");
@@ -31,16 +37,20 @@ public class RadialGridDemo {
                 frame.add(indicator);
 
                 // Register this specific element to the single master engine loop
-                Engine.getInstance().register(context -> {
-                    // Safety valve: if the indicator is removed or window closes, kill the hook
-                    if (!indicator.isDisplayable()) {
-                        return false; 
-                    }
-                    
-                    // Route the unified wave parameter directly to the component
-                    indicator.setPercentage(context.sineWave * 100.0);
-                    return true; 
-                });
+                Engine.getInstance().register(
+                    duration / 2, Engine.Easing.LINEAR, // Uniform velocity progression
+                    Engine.LoopMode.SINE, // Continuous smooth harmonic timeline
+                    context -> {
+
+                        // Safety valve: if the indicator is removed or window closes, kill the hook
+                        if (!indicator.isDisplayable()) {
+                            return false;
+                        }
+
+                        // Route the unified wave parameter directly to the component
+                        indicator.setPercentage(context.value * 100.0);
+                        return true;
+                    });
             }
 
             frame.setSize(600, 600);

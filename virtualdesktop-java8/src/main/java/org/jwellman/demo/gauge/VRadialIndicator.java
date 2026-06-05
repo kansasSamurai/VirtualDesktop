@@ -1,4 +1,4 @@
-package org.jwellman.demo;
+package org.jwellman.demo.gauge;
 
 import javax.swing.*;
 import java.awt.*;

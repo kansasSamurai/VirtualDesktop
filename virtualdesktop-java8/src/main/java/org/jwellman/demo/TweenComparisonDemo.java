@@ -1,6 +1,10 @@
 package org.jwellman.demo;
 
 import javax.swing.*;
+
+import org.jwellman.demo.animation.Engine;
+import org.jwellman.demo.gauge.VRadialIndicator;
+
 import java.awt.*;
 
 public class TweenComparisonDemo {

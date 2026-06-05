@@ -1,4 +1,4 @@
-package org.jwellman.demo;
+package org.jwellman.demo.animation;
 
 import javax.swing.Timer;
 import java.util.List;

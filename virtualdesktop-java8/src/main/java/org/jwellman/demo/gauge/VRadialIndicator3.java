@@ -1,4 +1,4 @@
-package org.jwellman.demo;
+package org.jwellman.demo.gauge;
 
 import javax.swing.*;
 import java.awt.*;
@@ -6,18 +6,22 @@ import java.awt.geom.Arc2D;
 import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 
-public class VRadialIndicator2 extends JComponent {
+public class VRadialIndicator3 extends JComponent {
 
     private static final long serialVersionUID = 1L;
 
-    private static final Stroke TRACK_STROKE = new BasicStroke(14f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND);
+    private static final float TRACK_STROKE_WIDTH = 14f;
+    
+    private static final Stroke TRACK_STROKE = new BasicStroke(TRACK_STROKE_WIDTH, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND);
 
     private static final Stroke BRACKET_STROKE = new BasicStroke(1.5f);
-    
-    private boolean indeterminate = false;
+
+    private float currentCoreHue = 0.0f; // Shifts from 0.0 to 1.0
+    private float rainbowColorAngle = 0.0f;
     private double percentage = 0.0;    // Used in determinate mode (0 to 100)
     private double animationAngle = -90; // Used in indeterminate mode (tracks rotation)
-    
+    private boolean indeterminate = false;
+
     // Theme Colors
     private final Color colorTrackBg = new Color(0, 50, 100, 80);
     private final Color colorTrackActive = new Color(0, 150, 255);
@@ -28,7 +32,7 @@ public class VRadialIndicator2 extends JComponent {
     private final int capSize = 28; // 24; // Slightly larger to allow the gradient bloom to blend nicely
     private final BufferedImage cachedCapImage;
 
-    public VRadialIndicator2() {
+    public VRadialIndicator3() {
         setPreferredSize(new Dimension(150, 150));
         this.cachedCapImage = createCachedCap(capSize);
     }
@@ -115,6 +119,49 @@ public class VRadialIndicator2 extends JComponent {
             extentAngle = -(percentage * 3.6);
         }
 
+        // start
+     // --- FIXED UNIFORM RAINBOW CORE DRAWING LOGIC ---
+
+     // 1. Calculate the exact bounding circle for the blank inner core
+     int corePadding = 0; // Slight spacing so it doesn't bleed into the progress ring
+     int track = (int)(TRACK_STROKE_WIDTH / 2) + 7; // TODO need to figure out this formula so no manual adjustment is necessary
+     int coreDiameter = diameter - track - (corePadding * 2); // subtract track stroke width
+     int coreX = (getWidth() - coreDiameter) / 2;
+     int coreY = (getHeight() - coreDiameter) / 2;
+
+     // 2. Generate the pure spectral color based on our current animated hue
+     // Saturation = 0.9 (vibrant), Brightness = 0.8 (bright but not blinding)
+     Color spectralColor = Color.getHSBColor(currentCoreHue, 0.9f, 0.8f);
+
+     // 3. Inject an elegant transparency alpha channel (e.g., 90 out of 255) 
+     // so it matches your dark cyberpunk theme backdrop
+     Color fadingCoreColor = new Color(
+         spectralColor.getRed(), 
+         spectralColor.getGreen(), 
+         spectralColor.getBlue(), 
+         210 // 90
+     );
+
+     // 4. Fill the entire inner core uniformly with our solid shifting color
+     g2.setColor(fadingCoreColor);
+     g2.fill(new java.awt.geom.Ellipse2D.Double(coreX, coreY, coreDiameter, coreDiameter));
+     // end
+
+     // 4. Draw Outer Brackets
+     g2.setStroke(BRACKET_STROKE);
+     g2.setColor(colorOuterAccents);
+     int accentPadding = 16; // 8
+     int outerD = diameter + (accentPadding * 2);
+     int outerX = (getWidth() - outerD) / 2;
+     int outerY = (getHeight() - outerD) / 2;
+
+     g2.draw(new Arc2D.Double(outerX, outerY, outerD, outerD, 110, 140, Arc2D.OPEN));
+     g2.draw(new Arc2D.Double(outerX, outerY, outerD, outerD, -70, 140, Arc2D.OPEN));
+
+     if (true) {
+         g2.dispose();
+         return;
+     }
         // 1. Draw Background Track Ring
         g2.setStroke(TRACK_STROKE);
         g2.setColor(colorTrackBg);
@@ -143,18 +190,54 @@ public class VRadialIndicator2 extends JComponent {
             );
         }
 
-        // 4. Draw Outer Brackets
-        g2.setStroke(BRACKET_STROKE);
-        g2.setColor(colorOuterAccents);
-        int accentPadding = 16; // 8
-        int outerD = diameter + (accentPadding * 2);
-        int outerX = (getWidth() - outerD) / 2;
-        int outerY = (getHeight() - outerD) / 2;
-        
-        g2.draw(new Arc2D.Double(outerX, outerY, outerD, outerD, 110, 140, Arc2D.OPEN));
-        g2.draw(new Arc2D.Double(outerX, outerY, outerD, outerD, -70, 140, Arc2D.OPEN));
-
         g2.dispose();
+    }
+
+    @SuppressWarnings("unused")
+    private void saturnCore(Graphics2D g2, int diameter) {
+
+        // --- NEW RAINBOW CORE DRAWING LOGIC ---
+
+        // 1. Calculate the exact bounding circle for the blank inner core
+        int corePadding = 2; // Slight spacing so it doesn't bleed into the progress ring
+        int coreDiameter = diameter - (int)(TRACK_STROKE_WIDTH * 2) - (corePadding * 2); // subtract track stroke width
+        int coreX = (getWidth() - coreDiameter) / 2;
+        int coreY = (getHeight() - coreDiameter) / 2;
+
+        // 2. Find the exact center point of the component
+        float centerX = getWidth() / 2f;
+        float centerY = getHeight() / 2f;
+
+        // 3. Use trigonometry to calculate a moving line across the center based on our angle
+        double rads = Math.toRadians(rainbowColorAngle);
+        float lineLength = coreDiameter / 2f; // The width of the gradient transition
+        float p1x = centerX - (float)Math.cos(rads) * lineLength;
+        float p1y = centerY - (float)Math.sin(rads) * lineLength;
+        float p2x = centerX + (float)Math.cos(rads) * lineLength;
+        float p2y = centerY + (float)Math.sin(rads) * lineLength;
+
+        // 4. Define the pure rainbow spectrum fractions (0.0 to 1.0)
+        float[] fractions = {0.0f, 0.2f, 0.4f, 0.6f, 0.8f, 1.0f};
+
+        // 5. Define the matching colors of the rainbow (with an elegant 40% transparency so it fits the theme)
+        Color[] rainbowColors = {
+            new Color(255, 0, 0, 100),     // Red
+            new Color(255, 200, 0, 100),   // Yellow / Orange
+            new Color(0, 255, 0, 100),     // Green
+            new Color(0, 255, 255, 100),   // Cyan / Blue
+            new Color(200, 0, 255, 100),   // Purple
+            new Color(255, 0, 0, 100)      // Wrap back to Red for a perfect, seamless loop
+        };
+
+        // 6. Create and apply the moving linear gradient
+        LinearGradientPaint rainbowGradient = new LinearGradientPaint(
+            p1x, p1y, p2x, p2y, fractions, rainbowColors
+        );
+        g2.setPaint(rainbowGradient);
+
+        // 7. Fill the inner circle with the shifting rainbow spectrum
+        g2.fill(new java.awt.geom.Ellipse2D.Double(coreX, coreY, coreDiameter, coreDiameter));
+        
     }
 
     // --- RUNNABLE DEMO SHOWCASING INDETERMINATE MODE ---
@@ -164,7 +247,7 @@ public class VRadialIndicator2 extends JComponent {
         frame.getContentPane().setBackground(new Color(5, 15, 30));
         frame.setLayout(new GridBagLayout());
 
-        VRadialIndicator2 indicator = new VRadialIndicator2();
+        VRadialIndicator3 indicator = new VRadialIndicator3();
         
         // Turn on our brand-new indeterminate tracking mode
         indicator.setIndeterminate(true);
@@ -178,6 +261,18 @@ public class VRadialIndicator2 extends JComponent {
         Timer timer = new Timer(16, e -> {
             // Advance the spinner 4 degrees clockwise every frame (~60 FPS feel)
             indicator.advanceIndeterminateLoop(4.0);
+            
+            // Advance the rainbow shift 2 degrees every frame for a smooth, active swirl
+            indicator.rainbowColorAngle += 2.0f;
+            if (indicator.rainbowColorAngle > 360.0f) {
+                indicator.rainbowColorAngle -= 360.0f;
+            }
+
+            // Advance the color hue by 0.005 every frame for a mesmerizing, slow morph
+            indicator.currentCoreHue += 0.005f;
+            if (indicator.currentCoreHue > 1.0f) {
+                indicator.currentCoreHue -= 1.0f; // Wrap around seamlessly
+            }
         });
         timer.start();
     }

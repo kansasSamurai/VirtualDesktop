@@ -11,11 +11,12 @@ public class Engine {
         SINE_WAVE
     }
 
-    // NEW: Define how the time boundaries behave when reaching the duration limit
     public enum LoopMode {
-        ONCE,        // Run from 0 to 1 and terminate
-        SAWTOOTH,    // 0 -> 1, snap back to 0, repeat indefinitely
-        TRIANGLE     // 0 -> 1 -> 0 -> 1 (ping-pong) repeat indefinitely
+        ONCE,
+        SAWTOOTH,
+        TRIANGLE,
+        COSINE, // Pure, continuous oscillation with zero turnaround velocity
+        SINE // Pure, continuous oscillation with ...
     }
 
     @FunctionalInterface
@@ -26,44 +27,56 @@ public class Engine {
     public static class TweenContext {
         public final long elapsedTimeMs;
         public final long totalDurationMs;
-        
-        public final double linear;
-        public final double sine;
-        public final double value;
+        public final double value; // The final calculated progress (0.0 to 1.0)
 
         public TweenContext(long elapsedMs, long durationMs, Easing easing, LoopMode loopMode) {
             this.totalDurationMs = durationMs;
-            long calculatedElapsed = elapsedMs;
+            this.elapsedTimeMs = elapsedMs;
 
-            // --- NEW: Loop Modifier Math ---
-            if (loopMode == LoopMode.SAWTOOTH && durationMs > 0) {
-                // Modulo resets our position back to 0 the millisecond we hit durationMs
-                calculatedElapsed = elapsedMs % durationMs;
-            } else if (loopMode == LoopMode.TRIANGLE && durationMs > 0) {
-                long cycle = elapsedMs / durationMs;
-                long remainder = elapsedMs % durationMs;
-                if (cycle % 2 == 0) {
-                    // Even cycle: traveling forward from 0 to durationMs
-                    calculatedElapsed = remainder;
-                } else {
-                    // Odd cycle: traveling backward from durationMs down to 0
-                    calculatedElapsed = durationMs - remainder;
+            // 1. PHASE ONE: Determine macro timeline progress (0.0 to 1.0) based on LoopMode
+            double timelineProgress = 0.0;
+            
+            if (durationMs > 0) {
+                if (loopMode == LoopMode.ONCE) {
+                    timelineProgress = Math.min(1.0, Math.max(0.0, (double) elapsedMs / durationMs));
+                } else if (loopMode == LoopMode.SAWTOOTH) {
+                    timelineProgress = (double) (elapsedMs % durationMs) / durationMs;
+                } else if (loopMode == LoopMode.TRIANGLE) {
+                    long cycle = elapsedMs / durationMs;
+                    double remainder = (double) (elapsedMs % durationMs) / durationMs;
+                    timelineProgress = (cycle % 2 == 0) ? remainder : (1.0 - remainder);
+                } else if (loopMode == LoopMode.COSINE) {
+                    // TRUE SEPARATION: The infinite, smooth harmonic wave lives here now!
+                    // A full 360-degree round trip period completes every durationMs
+                    double radians = (2.0 * Math.PI * elapsedMs) / durationMs;
+                    timelineProgress = (1.0 - Math.cos(radians)) / 2.0;
                 }
-            }
-            this.elapsedTimeMs = calculatedElapsed;
-
-            // --- Standard Easing Assignments ---
-            if (durationMs <= 0) {
-                this.linear = 1.0;
+//                else if (loopMode == LoopMode.SINE) {
+//                    // --- EXACT ORIGINAL PROTOTYPE RHYTHM ---
+//                    // A pure, traditional harmonic loop period mapping 0 -> 2*PI radians
+//                    double radians = (2.0 * Math.PI * elapsedMs) / durationMs;
+//                    timelineProgress = (Math.sin(radians) + 1.0) / 2.0;
+//                }
+                else if (loopMode == LoopMode.SINE) {
+                    // 1. Calculate the base radians exactly like before
+                    double radians = (2.0 * Math.PI * elapsedMs) / durationMs;
+                    
+                    // 2. NEW: Subtract PI/2 to phase-shift the wave backward by 90 degrees.
+                    // This forces sin(0 - PI/2) to equal -1.0, making our starting value exactly 0.0!
+                    timelineProgress = (Math.sin(radians - (Math.PI / 2.0)) + 1.0) / 2.0;
+                }
             } else {
-                // If running ONCE, clamp it at 1.0. Otherwise, loop math handled boundaries.
-                double rawProg = (double) calculatedElapsed / durationMs;
-                this.linear = (loopMode == LoopMode.ONCE) ? Math.min(1.0, Math.max(0.0, rawProg)) : rawProg;
+                timelineProgress = 1.0;
             }
 
-            // Map 0->1 progress cleanly to 0 -> PI/2 radians
-            this.sine = Math.sin(this.linear * (Math.PI / 2.0));
-            this.value = (easing == Easing.SINE_WAVE) ? this.sine : this.linear;
+            // 2. PHASE TWO: Apply acceleration adjustment based on Easing
+            if (easing == Easing.SINE_WAVE) {
+                // Apply a standard trigonometric curve adjustment to the timeline progress
+                this.value = Math.sin(timelineProgress * (Math.PI / 2.0));
+            } else {
+                // Easing.LINEAR: Keep the timeline progress exactly as it was generated
+                this.value = timelineProgress;
+            }
         }
     }
 
@@ -71,7 +84,7 @@ public class Engine {
         final long startTime;
         final long durationMs;
         final Easing easing;
-        final LoopMode loopMode; // Track loop status
+        final LoopMode loopMode;
         final Callback callback;
 
         RegisteredAnimation(long durationMs, Easing easing, LoopMode loopMode, Callback callback) {
@@ -85,7 +98,7 @@ public class Engine {
 
     private final List<RegisteredAnimation> activeAnimations = new CopyOnWriteArrayList<>();
     private final Timer masterTimer;
-    private static final Engine INSTANCE = new Engine(16);
+    private static final Engine INSTANCE = new Engine(16); // ~60 FPS
 
     public static Engine getInstance() {
         return INSTANCE;
@@ -96,9 +109,6 @@ public class Engine {
         this.masterTimer.start();
     }
 
-    /**
-     * Upgraded Register call accepting LoopMode configurations
-     */
     public void register(long durationMs, Easing easing, LoopMode loopMode, Callback callback) {
         activeAnimations.add(new RegisteredAnimation(durationMs, easing, loopMode, callback));
     }
@@ -109,11 +119,9 @@ public class Engine {
         long now = System.currentTimeMillis();
         for (RegisteredAnimation anim : activeAnimations) {
             long elapsed = now - anim.startTime;
-            
             TweenContext context = new TweenContext(elapsed, anim.durationMs, anim.easing, anim.loopMode);
-            boolean keepAlive = anim.callback.onTick(context);
             
-            // Auto-kill ONLY if explicitly requested by component or if ONCE has finished
+            boolean keepAlive = anim.callback.onTick(context);
             if (!keepAlive || (anim.loopMode == LoopMode.ONCE && elapsed >= anim.durationMs)) {
                 activeAnimations.remove(anim);
             }

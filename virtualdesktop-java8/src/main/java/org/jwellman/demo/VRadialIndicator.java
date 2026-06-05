@@ -87,6 +87,30 @@ public class VRadialIndicator extends JComponent {
         // Right accent bracket
         g2.draw(new Arc2D.Double(outerX, outerY, outerD, outerD, -70, 140, Arc2D.OPEN));
 
+        // --- NEW: DYNAMICALLY SCALING CENTER TEXT READOUT ---
+
+        // 1. Convert the current percentage to a clean integer string (e.g., "75%")
+        String textDisplay = String.format("%d%%", (int) Math.round(percentage));
+
+        // 2. Compute a proportional target font size based on current circle diameter
+        // 28% of the core diameter keeps the text crisp, highly visible, and perfectly
+        // safely framed
+        float targetFontSize = diameter * 0.28f;
+        g2.setFont(new Font("SansSerif", Font.BOLD, (int) targetFontSize));
+
+        // 3. Measure the exact pixel geometry of the string using FontMetrics
+        FontMetrics fm = g2.getFontMetrics();
+        int textWidth = fm.stringWidth(textDisplay);
+        int textHeight = fm.getAscent(); // Use ascent for vertical positioning rather than full height
+
+        // 4. Center the text perfectly inside the available space
+        int textX = (getWidth() - textWidth) / 2;
+        int textY = (getHeight() + textHeight) / 2 - (fm.getDescent() / 2);
+
+        // 5. Apply a high-contrast glowing cyan color matching your sci-fi motif
+        g2.setColor(new Color(200, 240, 255));
+        g2.drawString(textDisplay, textX, textY);
+     
         g2.dispose();
     }
 

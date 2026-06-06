@@ -23,6 +23,20 @@ When deciding whether to build a feature inside the desktop vs. delegate to an e
 - Document search → Lucene embedded in-process (tight integration with the app's data)
 - Scripting → BeanShell as the glue layer between Java components and external tools
 
+### Tool UI Modes
+
+Tools in this desktop fall into three categories:
+
+1. **In-desktop vapps** — traditional JPanel-based tools running inside JInternalFrames on the desktop pane
+2. **Browser-based tools** — launched from a desktop shortcut, but the entire UI lives in the browser; the desktop acts as launcher and the embedded HTTP server acts as mediator/backend
+3. **Hybrid tools** — UI split between an in-desktop component and a browser window; the two halves communicate via the local server
+
+The **embedded HTTP server** is a first-class architectural component that mediates between the desktop JVM and browser-based UIs. It serves as a local API/data layer that browser tools consume. This is analogous to Electron's main/renderer process split but without bundling a browser.
+
+The existing **HTML Viewer** tool (in the Tools menu) is a proof-of-concept of the serverless variant: it opens a static HTML app that merges a template with a data model entirely client-side. Future tools will use the embedded server to provide dynamic data from the JVM to browser-based frontends.
+
+**Deliberate decision: use the system browser, not an embedded one.** Embedding a browser (e.g., via JavaFX WebView or JCEF) is technically possible but not pursued — the integration cost outweighs the benefit. Using the user's chosen browser gives better rendering, free updates, developer tools, and extension support. Do not suggest embedded browser as an improvement; the system browser integration is the intended design.
+
 ## Build System
 
 This is a Maven project targeting **Java 8**.

@@ -2,12 +2,24 @@ package org.jwellman.demo.d3ish;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.UIManager;
+
+import org.apache.batik.dom.GenericDOMImplementation;
+import org.apache.batik.svggen.SVGGeneratorContext;
+import org.apache.batik.svggen.SVGGraphics2D;
+import org.w3c.dom.DOMImplementation;
+import org.w3c.dom.Document;
 
 public class StylePrototypeDemo {
 
@@ -15,8 +27,8 @@ public class StylePrototypeDemo {
 
         // This ensures the tooltip pane itself doesn't add extra margins
         UIManager.put("ToolTip.border", BorderFactory.createEmptyBorder());
-        UIManager.put("ToolTip.background", new Color(0,0,0,0)); // Transparent wrapper
-        
+        UIManager.put("ToolTip.background", new Color(0, 0, 0, 0)); // Transparent wrapper
+
         JFrame frame = new JFrame("Foundation StyleRegistry Prototype");
 
         BarChartPanelTwo chart = new BarChartPanelTwo();
@@ -49,12 +61,59 @@ public class StylePrototypeDemo {
             chart.refreshStyles();
         });
 
+        JButton exportBtn = new JButton("Export to SVG");
+        exportBtn.addActionListener( e -> {
+            exportPanelToSvg(chart, new File("/dev/env/unittests/chartpanel.svg"));
+        });
+
+        JPanel pnlButtons = new JPanel();
+        pnlButtons.add(themeBtn);
+        pnlButtons.add(exportBtn);
+
         frame.add(splitPane, BorderLayout.CENTER);
-        frame.add(themeBtn, BorderLayout.SOUTH);
-        
+        frame.add(pnlButtons, BorderLayout.SOUTH);
+
         frame.setSize(700, 450);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
+    }
+
+    
+    // ... Inside your export action context ...
+    public static void exportPanelToSvg(javax.swing.JPanel targetPanel, File outputFile) {
+        try {
+            // 1. Initialize Batik's SVG DOM pipeline
+            String svgNS = "http://www.w3.org/2000/svg";
+            DOMImplementation domImpl = GenericDOMImplementation.getDOMImplementation();
+            Document document = domImpl.createDocument(svgNS, "svg", null);
+
+            // 2. Build the default generation context instead of letting the engine guess
+            SVGGeneratorContext ctx = SVGGeneratorContext.createDefault(document);
+
+            // 2. Create the specialized graphics context matching your canvas size
+            // This tells Batik to serialize text as vector vector geometries, not raw text tags!
+            SVGGraphics2D svgGenerator = new SVGGraphics2D(ctx, true);
+            svgGenerator.setSVGCanvasSize(targetPanel.getSize());
+
+            // --- THE VECTOR GLYPH FORCE ---
+//            svgGenerator.setEmbeddedFontsOn(false); // Disables raw font embedding hooks
+//            svgGenerator.setTextAsShapes(true);    // <--- THIS IS THE MAGIC LINE            
+
+            // 3. THE MAGIC INTERCEPT: Force the Swing container and all its
+            // polymorphic children to draw their current visual vectors into Batik!
+            targetPanel.printAll(svgGenerator);
+
+            // 4. Stream it cleanly to disk using UTF-8 to protect any text primitives
+            try (Writer out = new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
+                // Use 'true' to use standard CSS inline styling formatting
+                svgGenerator.stream(out, true);
+            }
+
+            System.out.println("Vector HUD snapshot successfully saved to: " + outputFile.getAbsolutePath());
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
 }

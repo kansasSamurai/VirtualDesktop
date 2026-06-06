@@ -1,6 +1,7 @@
 package org.jwellman.virtualdesktop.taskbar;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -12,9 +13,11 @@ import java.util.function.Consumer;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.ListSelectionModel;
+import javax.swing.border.Border;
 
 import org.jwellman.swing.grid.GridRow;
 import org.jwellman.swing.grid.Recyclable;
@@ -37,25 +40,57 @@ import org.jwellman.virtualdesktop.state.model.FrameState;
  * All colors come from a shared WindowListTheme[] reference so that applyTheme()
  * on the view takes effect on the next bind() without recreating pool instances.
  */
+@SuppressWarnings("serial")
 public class WindowListRowComponent extends JPanel implements Recyclable, Selectable {
 
-    private static final int ROW_HEIGHT      = 34;
-    private static final int INDICATOR_WIDTH =  2;
-    private static final int LEFT_INSET      = 10; // 2px indicator + 8px gap
-    private static final int RIGHT_INSET     =  8;
-    private static final int VERT_INSET      =  2;
+    private static final int VERT_INSET = 2;
+    private static final int LEFT_INSET = 10; // 2px indicator + 8px gap
+    private static final int RIGHT_INSET = 8;
+    private static final int ROW_HEIGHT = 34;
+    private static final int INDICATOR_WIDTH = 2;
 
-    private final JLabel           iconLabel;
-    private final JLabel           nameLabel;
-    private final JButton          closeButton;
+    private final JLabel iconLabel;
+    private final JLabel nameLabel;
+    private final JButton closeButton;
+    @SuppressWarnings("unused")
     private final Consumer<String> onClose;
     private final ListSelectionModel selectionModel;
-    private final WindowListTheme[]  themeHolder;
+    private final WindowListTheme[] themeHolder;
 
-    private boolean      isSelected        = false;
-    private float        executionProgress = 0.0f;
-    private MouseAdapter rowListener       = null;
-    private String       currentToolId     = null;
+    private boolean isSelected = false;
+    private float executionProgress = 0.0f;
+    private MouseAdapter rowListener = null;
+    private String currentToolId = null;
+
+    public interface Resources {
+        Border rowBorder();
+        Dimension preferredSize();
+        Dimension iconPreferredSize();
+        Dimension closeButtonPreferredSize();
+    }
+
+    public static class Customizer implements Resources {
+
+        private Border rowBorder = BorderFactory.createEmptyBorder(VERT_INSET, LEFT_INSET, VERT_INSET, RIGHT_INSET);
+        private Dimension preferredSize = new Dimension(180, ROW_HEIGHT);
+        private Dimension iconPreferredSize = new Dimension(20, 16);
+        private Dimension closeButtonPreferredSize = new Dimension(20, 20);
+
+        @Override
+        public Dimension preferredSize() { return preferredSize; }
+
+        @Override
+        public Dimension iconPreferredSize() { return iconPreferredSize; }
+
+        @Override
+        public Border rowBorder() { return rowBorder; }
+
+        @Override
+        public Dimension closeButtonPreferredSize() { return closeButtonPreferredSize; }
+
+    }
+
+    public static Customizer CUSTOMIZER = new Customizer();
 
     public WindowListRowComponent(Consumer<String> onClose,
                                   ListSelectionModel selectionModel,
@@ -67,12 +102,11 @@ public class WindowListRowComponent extends JPanel implements Recyclable, Select
 
         setOpaque(false);
         setLayout(new BorderLayout(8, 0));
-        setBorder(BorderFactory.createEmptyBorder(VERT_INSET, LEFT_INSET,
-                                                  VERT_INSET, RIGHT_INSET));
-        setPreferredSize(new Dimension(180, ROW_HEIGHT));
+        setBorder(CUSTOMIZER.rowBorder());
+        setPreferredSize(CUSTOMIZER.preferredSize());
 
         iconLabel = new JLabel();
-        iconLabel.setPreferredSize(new Dimension(16, 16));
+        iconLabel.setPreferredSize(CUSTOMIZER.iconPreferredSize());
 
         nameLabel = new JLabel();
         nameLabel.setForeground(themeHolder[0].normalForeground);
@@ -83,19 +117,14 @@ public class WindowListRowComponent extends JPanel implements Recyclable, Select
         closeButton.setBorderPainted(false);
         closeButton.setContentAreaFilled(false);
         closeButton.setForeground(themeHolder[0].closeButtonDefault);
-        closeButton.setPreferredSize(new Dimension(20, 20));
+        closeButton.setPreferredSize(CUSTOMIZER.closeButtonPreferredSize());
 
-        closeButton.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                closeButton.setForeground(themeHolder[0].closeButtonHover);
-            }
+        // 1. Store the colors directly inside the component's dictionary
+        closeButton.putClientProperty(HoverColorListener.KEY_DEFAULT_COLOR, themeHolder[0].closeButtonDefault);
+        closeButton.putClientProperty(HoverColorListener.KEY_HOVER_COLOR, themeHolder[0].closeButtonHover);
 
-            @Override
-            public void mouseExited(MouseEvent e) {
-                closeButton.setForeground(themeHolder[0].closeButtonDefault);
-            }
-        });
+        // 2. Wire it straight to the immutable global Singleton
+        closeButton.addMouseListener(HoverColorListener.INSTANCE);
 
         // ActionListener set once; reads currentToolId at click time.
         closeButton.addActionListener(e -> {
@@ -104,8 +133,8 @@ public class WindowListRowComponent extends JPanel implements Recyclable, Select
             }
         });
 
-        add(iconLabel,   BorderLayout.WEST);
-        add(nameLabel,   BorderLayout.CENTER);
+        add(iconLabel, BorderLayout.WEST);
+        add(nameLabel, BorderLayout.CENTER);
         add(closeButton, BorderLayout.EAST);
     }
 
@@ -124,9 +153,9 @@ public class WindowListRowComponent extends JPanel implements Recyclable, Select
         nameLabel.setFont(nameLabel.getFont().deriveFont(Font.PLAIN));
         nameLabel.setForeground(themeHolder[0].normalForeground);
         closeButton.setForeground(themeHolder[0].closeButtonDefault);
-        isSelected        = false;
+        isSelected = false;
         executionProgress = 0.0f;
-        currentToolId     = null;
+        currentToolId = null;
     }
 
     @Override
@@ -206,6 +235,41 @@ public class WindowListRowComponent extends JPanel implements Recyclable, Select
         }
 
         g2.dispose();
+    }
+
+    // The mouse adapter can be a global/singleton object as follows...
+    private static class HoverColorListener extends MouseAdapter {
+
+        // 1. A single, globally accessible instance
+        public static final HoverColorListener INSTANCE = new HoverColorListener();
+
+        // String keys for Swing's internal Client Property map
+        public static final String KEY_HOVER_COLOR = "HoverColor.hover";
+        public static final String KEY_DEFAULT_COLOR = "HoverColor.default";
+
+        private HoverColorListener() {} // Prevent direct instantiation
+
+        @Override
+        public void mouseEntered(MouseEvent e) {
+            if (e.getSource() instanceof JComponent) {
+                JComponent comp = (JComponent) e.getSource();
+                Color hoverColor = (Color) comp.getClientProperty(KEY_HOVER_COLOR);
+                if (hoverColor != null) {
+                    comp.setForeground(hoverColor);
+                }
+            }
+        }
+
+        @Override
+        public void mouseExited(MouseEvent e) {
+            if (e.getSource() instanceof JComponent) {
+                JComponent comp = (JComponent) e.getSource();
+                Color defaultColor = (Color) comp.getClientProperty(KEY_DEFAULT_COLOR);
+                if (defaultColor != null) {
+                    comp.setForeground(defaultColor);
+                }
+            }
+        }
     }
 
 }

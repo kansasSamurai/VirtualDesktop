@@ -4,9 +4,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-VirtualDesktop is a Java-based virtual desktop application - not a "remote desktop", but a standalone application that provides desktop features within a single JVM. The goal is to create a consistent, cross-platform desktop metaphor independent of the underlying OS, with integrated development tools and utilities.
+VirtualDesktop is a Java-based virtual desktop application - not a "remote desktop", but a standalone application that provides a consistent desktop experience independent of the underlying OS and the gyrations that OS vendors impose on users.
+
+### Design Philosophy
+
+**Orchestrator, not replacement.** VirtualDesktop is not meant to replace every tool a developer uses - it is meant to *participate* and *orchestrate*. The guiding principle is "best tool for the job": when a browser renders documents better than an embedded panel, use the browser; when an external CLI does something better than a Java implementation, invoke it. VirtualDesktop provides the connective tissue.
+
+**Polyglot by design.** The application is explicitly a polyglot environment. BeanShell scripting is the primary orchestration glue - a script that spins up a JPanel, queries a database, fires off a Lucene search, and opens a browser tab is exactly the kind of cross-tool workflow the desktop is designed to enable.
+
+**Consistent cross-platform desktop metaphor.** The goal is a stable, predictable desktop experience that doesn't shift under the user when OS vendors change their UI paradigms.
 
 This is in the proof-of-concept stage but provides personal utility, particularly with BeanShell and JCXConsole integration. Note: One misbehaving tool can crash the entire JVM, so save files frequently.
+
+### Architectural Decisions Informed by This Philosophy
+
+When deciding whether to build a feature inside the desktop vs. delegate to an external tool, ask: does internalizing this add value beyond what the external tool already provides? If not, delegate and orchestrate. Examples:
+- Help/documentation viewing → delegate to the system browser (richer rendering, future-proof)
+- Document search → Lucene embedded in-process (tight integration with the app's data)
+- Scripting → BeanShell as the glue layer between Java components and external tools
 
 ## Build System
 

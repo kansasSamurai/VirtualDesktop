@@ -27,7 +27,13 @@ public class ChessPiece {
     public Type getType() { return type; }
     public boolean isWhite() { return isWhite; }
 
-    public Point getPosition() { return position; }
+    public Point getPosition() { 
+        // 2. Format the starting coordinate before overwriting it
+        String originNotation = toAlgebraic(this.position);
+        System.out.printf("Piece is at %s (%s,%s)%n", originNotation, this.position.x, this.position.y );
+
+        return position; 
+    }
 
     public void setPosition(Point newPos) {
         // 1. Guard against null or redundant assignments
@@ -77,7 +83,7 @@ public class ChessPiece {
      * to the validator engine without exposing internal implementation details.
      */
     public boolean isStepLimited() {
-        return type == Type.KING || type == Type.KNIGHT;
+        return type == Type.KING || type == Type.KNIGHT || type == Type.PAWN;
     }
 
     // switch on enum must be java14+
@@ -93,17 +99,17 @@ public class ChessPiece {
 
     public Point[] getMovementVectors() {
         if (Type.ROOK.equals(this.type)) 
-            return MoveVectors.STRAIGHT;
+            return ChessMoveVectors.STRAIGHT;
         if (Type.BISHOP.equals(this.type)) 
-            return MoveVectors.DIAGONAL;
+            return ChessMoveVectors.DIAGONAL;
         if (Type.KNIGHT.equals(this.type)) 
-            return MoveVectors.KNIGHT_LEAPS;
+            return ChessMoveVectors.KNIGHT_LEAPS;
         if (Type.KING.equals(this.type)) 
-            return MoveVectors.OMNIDIRECTIONAL;
+            return ChessMoveVectors.OMNIDIRECTIONAL;
         if (Type.QUEEN.equals(this.type)) 
-            return MoveVectors.OMNIDIRECTIONAL;
+            return ChessMoveVectors.OMNIDIRECTIONAL;
         if (Type.PAWN.equals(this.type))
-            return isWhite ? MoveVectors.PAWN_WHITE : MoveVectors.PAWN_BLACK;
+            return isWhite ? ChessMoveVectors.PAWN_WHITE : ChessMoveVectors.PAWN_BLACK;
 
         return null;
     }

@@ -14,12 +14,20 @@ import javax.swing.JToggleButton;
 
 import org.jwellman.demo.chess.ChessUiEngine.PieceFlightController;
 
-// --- The Visual Token Primitive ---
-// Inherits JToggleButton to capture focus, rollover hooks, and interaction states for free!
+/**
+ * The Visual Token Primitive<br>
+ * Inherits JToggleButton to capture focus, rollover hooks, and interaction states for free!
+ *  
+ * @author rwellman
+ *
+ */
 @SuppressWarnings("serial")
 public class ChessPieceToken extends JToggleButton {
+
     private final String glyph;
     private final Color pieceColor;
+
+    // for now, needs to be package visibility until accessor is created 
     final ChessPiece piece;
 
     public ChessPieceToken(String glyph, Color pieceColor) {
@@ -71,7 +79,7 @@ public class ChessPieceToken extends JToggleButton {
             // Render dynamic vector dropshadow if flying in upper atmosphere!
             if (isFlying) {
                 g2.setColor(new Color(0, 0, 0, 60));
-                g2.fillOval(pad + 4, pad + 8, size, size);
+                g2.fillOval(pad + 4, pad + 6, size, size);
             }
 
             // Smoothly color transition based on hover/selection interaction states
@@ -101,4 +109,5 @@ public class ChessPieceToken extends JToggleButton {
             g2.dispose();
         }
     }
+
 }

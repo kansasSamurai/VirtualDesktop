@@ -2,7 +2,7 @@ package org.jwellman.demo.chess;
 
 import java.awt.Point;
 
-public class MoveVectors {
+public class ChessMoveVectors {
 
  // Cross-shaped vectors (Rook)
     public static final Point[] STRAIGHT = {
@@ -27,11 +27,11 @@ public class MoveVectors {
     };
 
     public static final Point[] PAWN_WHITE = {
-        new Point(0,1)
+            new Point(0,1)
     };
 
     public static final Point[] PAWN_BLACK = {
-        new Point(1,0)
+            new Point(0,-1)
     };
 
 }

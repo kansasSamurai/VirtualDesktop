@@ -18,7 +18,7 @@ import javax.swing.border.EmptyBorder;
 public class ChessGutterBorder extends EmptyBorder {
 
     private final Color gutterBgColor = new Color(45, 45, 45);
-    private final Color slotBorderColor = new Color(70, 70, 70);
+    private final Color slotBorderColor = new Color(140, 140, 140); // new Color(70, 70, 70);
     private final Color slotFillColor = new Color(55, 55, 55);
 
     /**

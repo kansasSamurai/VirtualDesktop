@@ -13,7 +13,6 @@ import java.awt.LayoutManager2;
 import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,8 +23,6 @@ import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
-import org.jwellman.demo.chess.ChessPiece.Type;
-
 /**
  * An architectural Proof of Concept demonstrating a domain-specific
  * LayoutManager operating directly on a JLayeredPane to manage spatial tracking,
@@ -33,10 +30,12 @@ import org.jwellman.demo.chess.ChessPiece.Type;
  */
 public class ChessUiEngine {
 
+    private static final int BOARD_BORDER_SIZE = 40;
+
     // Board Squares - they only know how to draw a square and whether they are targeted or highlighted.
     private static final BoardSquare[][] boardSquareMatrix = new BoardSquare[8][8];
 
-    private static final int BOARD_BORDER_SIZE = 40;
+    private static final ChessGame game = new ChessGame();
 
     public static void main(String[] args) {
 
@@ -78,61 +77,26 @@ public class ChessUiEngine {
             // Apply the domain-specific layout manager straight to the layered pane!
             chessBoard.setLayout(new ChessBoardLayout());
 
-            // Populate some mock pieces using algebraic Points (x=File, y=Rank)
-            // 0=A, 1=B, 2=C, 3=D, 4=E, 5=F, 6=G, 7=H
-            // 0=1st Rank, 7=8th Rank
-            
-            // White Pieces (Bottom)
-            // In your final system, your interactive ChessPieceToken swing component 
-            // simply holds a reference to its backend ChessPiece domain object.
-            
-            ArrayList<ChessPiece> white = new ArrayList<>();
-            white.add(new ChessPiece(Type.ROOK, true, new Point(0, 0)));
-            white.add(new ChessPiece(Type.KNIGHT, true, new Point(1, 0)));
-            white.add(new ChessPiece(Type.BISHOP, true, new Point(2, 0)));
-            white.add(new ChessPiece(Type.QUEEN, true, new Point(3, 0)));
-            white.add(new ChessPiece(Type.KING, true, new Point(4, 0)));
-            white.add(new ChessPiece(Type.BISHOP, true, new Point(5, 0)));
-            white.add(new ChessPiece(Type.KNIGHT, true, new Point(6, 0)));
-            white.add(new ChessPiece(Type.ROOK, true, new Point(7, 0)));
-            for (int file=0; file<8; file++) {
-                white.add(new ChessPiece(Type.PAWN, true, new Point(file, 1)));
-            }
-            for (ChessPiece apiece : white) {
-                chessBoard.add(new ChessPieceToken(apiece, Color.WHITE), apiece.getPosition());
-            }
 
-            // Black Pieces (Top)
-            ArrayList<ChessPiece> black = new ArrayList<>();
-            black.add(new ChessPiece(Type.ROOK, false, new Point(0, 7)));
-            black.add(new ChessPiece(Type.KNIGHT, false, new Point(1, 7)));
-            black.add(new ChessPiece(Type.BISHOP, false, new Point(2, 7)));
-            black.add(new ChessPiece(Type.QUEEN, false, new Point(3, 7)));
-            black.add(new ChessPiece(Type.KING, false, new Point(4, 7)));
-            black.add(new ChessPiece(Type.BISHOP, false, new Point(5, 7)));
-            black.add(new ChessPiece(Type.KNIGHT, false, new Point(6, 7)));
-            black.add(new ChessPiece(Type.ROOK, false, new Point(7, 7)));
-            for (int file=0; file<8; file++) {
-                black.add(new ChessPiece(Type.PAWN, false, new Point(file, 6)));
-            }
-            for (ChessPiece apiece : black) {
-                chessBoard.add(new ChessPieceToken(apiece, Color.DARK_GRAY), apiece.getPosition());
-            }
-//            chessBoard.add(new ChessPieceToken("k", Color.DARK_GRAY), new Point(4, 7));
-//            chessBoard.add(new ChessPieceToken("p", Color.DARK_GRAY), new Point(4, 6));
-//            chessBoard.add(new ChessPieceToken("n", Color.DARK_GRAY), new Point(6, 7));
 
             Color lightSquare = new Color(235, 236, 208); // Modern tactical tones
             Color darkSquare  = new Color(119, 149, 86);
 
             // 1. Create a structural grid for the squares
+            // files are vertical columns, ranks are rows
             JPanel boardBackground = new JPanel(new GridLayout(8, 8));
-            for (int rank = 0; rank < 8; rank++) {
+            for (int rank = 7; rank > -1; rank--) {
                 for (int file = 0; file < 8; file++) {
-                    BoardSquare square = new BoardSquare(((file + rank) % 2 == 0) ? lightSquare : darkSquare);
+                    BoardSquare square = new BoardSquare(((file + rank) % 2 == 0) ? lightSquare : darkSquare, rank, file);
                     boardBackground.add(square);
-                    boardSquareMatrix[rank][file] = square;
+                    boardSquareMatrix[file][rank] = square;
                 }
+            }
+
+            Map<Point, ChessPiece> activePieces = game.getActivePieces();
+            for (Point p : activePieces.keySet()) {
+                ChessPiece piece = activePieces.get(p);
+                chessBoard.add(new ChessPieceToken(piece, piece.isWhite() ? Color.WHITE : Color.DARK_GRAY), piece.getPosition());
             }
 
             // 2. Lock the background panel to the absolute bottom of your JLayeredPane
@@ -223,6 +187,7 @@ public class ChessUiEngine {
         // controller, there will be no conflicts piece to piece.
         private Point dragStartOffset = null;
         private Point logicalOriginPoint = null;
+        private List<Point> validDestinations;
 
         private PieceFlightController() {}
 
@@ -234,18 +199,17 @@ public class ChessUiEngine {
             ChessBoardLayout layout = (ChessBoardLayout) board.getLayout();
 
             // Inside your Game State Coordinator during a drag-start event:
-            Component[][] pieceGrid = new Component[8][8];
-            for (Component comp : board.getComponents()) {
-                // Skip things flying in the drag layer or background board panels
-                if (board.getLayer(comp) == JLayeredPane.DEFAULT_LAYER && comp instanceof ChessPieceToken) {
-                    Point p = layout.getCoordinate(comp);
-                    if (p != null) {
-                        pieceGrid[p.x][p.y] = comp; // Map visual piece to its physical space
-                    }
-                }
-            }
+//            Component[][] pieceGrid = new Component[8][8];
+//            for (Component comp : board.getComponents()) {
+//                // Skip things flying in the drag layer or background board panels
+//                if (board.getLayer(comp) == JLayeredPane.DEFAULT_LAYER && comp instanceof ChessPieceToken) {
+//                    Point p = layout.getCoordinate(comp);
+//                    if (p != null) {
+//                        pieceGrid[p.x][p.y] = comp; // Map visual piece to its physical space
+//                    }
+//                }
+//            }
 
-           
             /* On Lift (`mousePressed`):** 
              * Your coordinator runs the fast vector raycasting math we discussed 
              * to get a list of valid destination `Point` coordinates. 
@@ -254,15 +218,13 @@ public class ChessUiEngine {
              * 
              */
             // 1. Get your targeted points from the validator
-            final List<Point> validDestinations = this.getValidNonCaptureMoves(null, piece, 'c');
+            validDestinations = game.getValidator().getValidNonCaptureMoves(game.getActivePieces(), ((ChessPieceToken)piece).piece);
 
             // 2. Direct index routing—zero searching required!
             for (Point targetPoint : validDestinations) {
                 BoardSquare square = boardSquareMatrix[targetPoint.x][targetPoint.y];
-                if (square != null) {
-                    square.setTargeted(true);
-                    square.setHighlighted(true);
-                }
+                square.setTargeted(true);
+                square.setHighlighted(true);
             }
 
             // Cache the original anchor coordinate in case the move is canceled
@@ -304,13 +266,26 @@ public class ChessUiEngine {
             int targetFile = centerX / squareSize;
             int targetRank = 7 - (centerY / squareSize); // Flip the layout math back to chess orientation
 
-
             // 2. BOUNDARY DEFENSE: Verify the drop is inside the actual 8x8 matrix boundaries
             if (targetFile >= 0 && targetFile < 8 && targetRank >= 0 && targetRank < 8) {
-                layout.updateCoordinate(piece, new Point(targetFile, targetRank));
+                Point droppedAt = new Point(targetFile, targetRank);
+
+                if (game.submitMove(logicalOriginPoint, droppedAt)) {
+                    layout.updateCoordinate(piece, droppedAt);                    
+                } else {
+                    // Return safely back to where it was picked up
+                    layout.updateCoordinate(piece, logicalOriginPoint);
+                }
             } else {
                 // Return safely back to where it was picked up
                 layout.updateCoordinate(piece, logicalOriginPoint);
+            }
+
+            // 2a. undecorate destination squares
+            for (Point targetPoint : validDestinations) {
+                BoardSquare square = boardSquareMatrix[targetPoint.x][targetPoint.y];
+                square.setTargeted(false);
+                square.setHighlighted(false);
             }
 
             // 3. DROP TO BEDROCK: Land the piece back down and re-assert layout control
@@ -321,32 +296,6 @@ public class ChessUiEngine {
             dragStartOffset = null;
             logicalOriginPoint = null;
         }
-        
-        public List<Point> getValidNonCaptureMoves(Map<Component, Point> activePieces, Component selectedPiece, char pieceType) {
-            
-            List<Point> validMoves = new ArrayList<>();
-            validMoves.add(new Point(4,4));
-            validMoves.add(new Point(5,5));
-            
-            return validMoves;
-//            // 1. Create a lightweight, high-speed virtual matrix projection
-//            // An empty square is represented by null.
-//            Component[][] virtualMatrix = new Component[8][8];
-//            
-//            // Project the current game state into the matrix bounds
-//            for (Map.Entry<Component, Point> entry : activePieces.entrySet()) {
-//                Point p = entry.getValue();
-//                virtualMatrix[p.x][p.y] = entry.getKey();
-//            }
-//            
-//            // 2. Locate the current coordinates of our target component
-//            Point start = activePieces.get(selectedPiece);
-//            if (start == null) return new ArrayList<>();
-//
-//            // 3. Feed the virtual matrix directly into our single vector-raycasting loop!
-//            return executeRaycastValidation(virtualMatrix, start, pieceType);
-        }        
-
     }
-
+    
 }

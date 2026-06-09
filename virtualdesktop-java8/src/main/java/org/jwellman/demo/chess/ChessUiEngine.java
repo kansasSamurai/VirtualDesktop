@@ -104,7 +104,7 @@ public class ChessUiEngine {
 
             // Force it to fill the entire board canvas via your layout manager
             boardBackground.setBounds(0, 0, 640, 640);
-            boardBackground.setBorder(new ChessGutterBorder(BOARD_BORDER_SIZE));
+            boardBackground.setBorder(new ChessGutterBorder(BOARD_BORDER_SIZE, game));
 
             boardWrapper.add(chessBoard);
             frame.add(boardWrapper, BorderLayout.CENTER);

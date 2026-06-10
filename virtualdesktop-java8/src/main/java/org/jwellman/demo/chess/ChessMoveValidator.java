@@ -23,19 +23,20 @@ public class ChessMoveValidator {
 
     public List<Point> getValidMoves(ChessGame game, ChessPiece selectedPiece) {
 
-        // 1. Create a lightweight, high-speed virtual matrix projection
-        // An empty square is represented by null.
-        ChessPiece[][] virtualMatrix = new ChessPiece[8][8];
-
-        // Project the current game state into the matrix bounds
-        for (Map.Entry<Point, ChessPiece> entry : game.getActivePieces().entrySet()) {
-            Point p = entry.getKey();
-            virtualMatrix[p.x][p.y] = entry.getValue();
-        }
-        
-        // 2. Locate the current coordinates of our target component
-        Point start = selectedPiece.getPosition();
-        if (start == null) return new ArrayList<>();
+// This was old original code... commenting out on 6/10; remove eventually
+//        // 1. Create a lightweight, high-speed virtual matrix projection
+//        // An empty square is represented by null.
+//        ChessPiece[][] virtualMatrix = new ChessPiece[8][8];
+//
+//        // Project the current game state into the matrix bounds
+//        for (Map.Entry<Point, ChessPiece> entry : game.getActivePieces().entrySet()) {
+//            Point p = entry.getKey();
+//            virtualMatrix[p.x][p.y] = entry.getValue();
+//        }
+//        
+//        // 2. Locate the current coordinates of our target component
+//        Point start = selectedPiece.getPosition();
+//        if (start == null) return new ArrayList<>();
 
         // 3. Feed the virtual matrix directly into our single vector-raycasting loop!
         return executeRaycastValidation(game, selectedPiece );

@@ -69,7 +69,7 @@ public class ChessPieceToken extends JToggleButton {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-            int pad = 6;
+            int pad = 12; // 6
             int size = getWidth() - (pad * 2);
 
             // Check z-stack positioning via the LayeredPane hierarchy state

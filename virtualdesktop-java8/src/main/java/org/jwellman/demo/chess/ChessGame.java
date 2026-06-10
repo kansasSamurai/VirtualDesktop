@@ -63,6 +63,9 @@ public class ChessGame {
     // Encapsulated validation object
     private final ChessMoveValidator validator = new ChessMoveValidator();
 
+    // Encapsulated square control matrix - initialize empty matrix for start of game
+    private SquareControlMatrix currentControlMatrix = new SquareControlMatrix();
+
     public ChessGame() {
         initializeStandardBoard();
     }
@@ -118,6 +121,17 @@ public class ChessGame {
         piece.setPosition(to);
         activePieces.put(to, piece);
 
+        {
+            // 1. Commit the move to your layout map...
+            activePieces.put(to, piece);
+
+            // 2. REGENERATE THE HEATMAP (Runs once per move, taking less than a millisecond)
+            this.generateMatrix(this.activePieces);
+
+            // 3. Broadcast to UI - ChessUIEngine/mouseRelease will automatically repaint
+            // this.boardBackground.repaint();
+        }
+
         // 5. Compute Side-Effects
         boolean opponentInCheck = validator.isKingInCheck(this.getCollisionMap(), !isWhiteTurn);
         ResultType outcome = (target != null) ? ResultType.SUCCESS_CAPTURE : ResultType.SUCCESS_STANDARD;
@@ -134,6 +148,20 @@ public class ChessGame {
         String logText = "logtext tbd"; // formatAlgebraicNotation(piece, to, target != null);
 
         return new MoveAnalysis(outcome, opponentInCheck, target, logText);
+    }
+
+    public SquareControlMatrix getControlMatrix() {
+        return this.currentControlMatrix;
+    }
+
+    private void generateMatrix(Map<Point, ChessPiece> activePieces2) {
+        this.currentControlMatrix = new SquareControlMatrix();
+        
+        // TODO implement loop/logic
+        for (final ChessPiece cursorPiece : this.activePieces.values() ) {
+            getValidator().getValidMoves(this, cursorPiece);
+        }
+
     }
 
     /**

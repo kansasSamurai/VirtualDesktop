@@ -87,7 +87,7 @@ public class ChessUiEngine {
             JPanel boardBackground = new JPanel(new GridLayout(8, 8));
             for (int rank = 7; rank > -1; rank--) {
                 for (int file = 0; file < 8; file++) {
-                    BoardSquare square = new BoardSquare(((file + rank) % 2 == 0) ? lightSquare : darkSquare, rank, file);
+                    BoardSquare square = new BoardSquare(game, ((file + rank) % 2 == 0) ? lightSquare : darkSquare, rank, file);
                     boardBackground.add(square);
                     boardSquareMatrix[file][rank] = square;
                 }

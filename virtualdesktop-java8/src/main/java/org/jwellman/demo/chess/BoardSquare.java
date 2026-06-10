@@ -3,6 +3,7 @@ package org.jwellman.demo.chess;
 import javax.swing.JPanel;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -10,6 +11,7 @@ import java.awt.RenderingHints;
 @SuppressWarnings("serial")
 public class BoardSquare extends JPanel {
 
+    private ChessGame game;
     private Color baseColor;
     private boolean targeted = false;
     private boolean highlighted = false;
@@ -18,12 +20,13 @@ public class BoardSquare extends JPanel {
 
     private static final Color HIGHLIGHT = new Color(59, 130, 246, 60);
 
-    public BoardSquare(Color baseColor, int rank, int file) {
+    public BoardSquare(ChessGame g, Color baseColor, int rank, int file) {
         this.baseColor = baseColor;
         this.setOpaque(true); // Let Swing optimize background clearing
         this.setBackground(this.baseColor);
         this.rank = rank;
         this.file = file;
+        this.game = g;
     }
 
     // --- Reactive Setters ---
@@ -44,6 +47,86 @@ public class BoardSquare extends JPanel {
 
     @Override
     protected void paintComponent(Graphics g) {
+
+        // Paints the underlying tile background
+        super.paintComponent(g); 
+
+        final Graphics2D g2 = (Graphics2D) g.create();
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 10));
+
+            // 2. Render web-style target overlays based on active state properties
+            if (targeted) {
+                // Draw a sleek, modern, semi-transparent center dot for a valid move
+                g2.setColor(new Color(34, 197, 94, 180)); // Velvet Emerald Green tint
+                int radius = getWidth() / 4;
+                int center = getWidth() / 2;
+                g2.fillOval(center - (radius / 2), center - (radius / 2), radius, radius);
+            } 
+
+            if (highlighted) {
+                // If it's the last moved square or a special check context, wash it in a soft glow
+                g2.setColor(HIGHLIGHT); // Sleek translucent blue
+                g2.fillRect(0, 0, getWidth(), getHeight());
+            }
+
+            // Reach into the fast, pre-calculated engine cache
+            final SquareControlMatrix matrix = game.getControlMatrix();
+            final int whiteAttackers = matrix.getWhiteAttackerCount(this.file, this.rank);
+            final int blackAttackers = matrix.getBlackAttackerCount(this.file, this.rank);
+
+            final int badgeRadius = 14; // Diameter of the control pill
+            final int margin = 4;       // Inset distance from the square's edges
+
+            // 1. Draw White Control Badge (Upper Left)
+            if (whiteAttackers > -1) {
+                final int x = margin;
+                final int y = margin;
+                
+                g2.setColor(Color.WHITE);
+                g2.fillOval(x, y, badgeRadius, badgeRadius);
+                
+                g2.setColor(Color.BLACK);
+                drawCenteredString(g2, String.valueOf(whiteAttackers), x, y, badgeRadius, badgeRadius);
+            }
+
+            // 2. Draw Black Control Badge (Upper Right)
+            if (blackAttackers > -1) {
+                final int x = getWidth() - badgeRadius - margin;
+                final int y = margin;
+                
+                g2.setColor(Color.BLACK);
+                g2.fillOval(x, y, badgeRadius, badgeRadius);
+                
+                g2.setColor(Color.WHITE);
+                drawCenteredString(g2, String.valueOf(blackAttackers), x, y, badgeRadius, badgeRadius);
+            }
+
+            // --- Option 1 Target Rings & Piece Overlays go here ---
+
+        } finally {
+            g2.dispose(); // Guarantee disposal to prevent graphic context memory leaks
+        }
+    }
+
+    /**
+     * Aligns and renders a text string directly into the center of a defined geometric bounding box.
+     */
+    private void drawCenteredString(Graphics2D g2, String text, int x, int y, int width, int height) {
+        final FontMetrics metrics = g2.getFontMetrics(g2.getFont());
+
+        // Determine the x coordinate for the text
+        final int textX = x + (width - metrics.stringWidth(text)) / 2;
+
+        // Determine the y coordinate for the text (utilizing the font's ascent for
+        // perfect baseline leveling)
+        final int textY = y + ((height - metrics.getHeight()) / 2) + metrics.getAscent();
+
+        g2.drawString(text, textX, textY);
+    }
+
+    protected void paintComponent_old(Graphics g) {
         // 1. Let the native pipeline handle the default flat background square fill
         super.paintComponent(g); 
         

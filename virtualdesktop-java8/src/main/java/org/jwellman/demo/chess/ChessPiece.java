@@ -13,8 +13,9 @@ public class ChessPiece {
     }
 
     private final Type type;
-    private final boolean isWhite;
     private Point position; // Its current logical Point(file, rank)
+    private final boolean isWhite;
+    private boolean hasMoved = false; // The magic tracking flag
 
     public ChessPiece(Type type, boolean isWhite, Point startingPosition) {
         this.type = type;
@@ -24,8 +25,21 @@ public class ChessPiece {
 
     // --- Domain Capabilities ---
     
-    public Type getType() { return type; }
-    public boolean isWhite() { return isWhite; }
+    public Type getType() {
+        return type;
+    }
+
+    public boolean isWhite() {
+        return isWhite;
+    }
+
+    protected boolean hasMoved() {
+        return hasMoved;
+    }
+
+    protected boolean hasNotMoved() {
+        return !hasMoved();
+    }
 
     public Point getPosition() { 
         // 2. Format the starting coordinate before overwriting it
@@ -41,6 +55,8 @@ public class ChessPiece {
             if (newPos != null) this.position = new Point(newPos);
             return;
         }
+
+        this.hasMoved = true;
 
         // 2. Format the starting coordinate before overwriting it
         String originNotation = toAlgebraic(this.position);
@@ -129,6 +145,21 @@ public class ChessPiece {
             return "P";
 
         return null;
+    }
+
+    /**
+     * The number of times the move vector can be applied.
+     * 
+     * @return
+     */
+    public int getStepCount() {
+        if (this.getType() == Type.PAWN) {
+            if (this.hasMoved()) return 1; else return 2;
+        }
+        if (this.getType() == Type.KING) {
+            return 1;
+        }
+        return 8;
     }
 
 }

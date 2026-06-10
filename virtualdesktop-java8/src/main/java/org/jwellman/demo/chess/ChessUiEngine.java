@@ -198,18 +198,6 @@ public class ChessUiEngine {
             JLayeredPane board = (JLayeredPane) piece.getParent();
             ChessBoardLayout layout = (ChessBoardLayout) board.getLayout();
 
-            // Inside your Game State Coordinator during a drag-start event:
-//            Component[][] pieceGrid = new Component[8][8];
-//            for (Component comp : board.getComponents()) {
-//                // Skip things flying in the drag layer or background board panels
-//                if (board.getLayer(comp) == JLayeredPane.DEFAULT_LAYER && comp instanceof ChessPieceToken) {
-//                    Point p = layout.getCoordinate(comp);
-//                    if (p != null) {
-//                        pieceGrid[p.x][p.y] = comp; // Map visual piece to its physical space
-//                    }
-//                }
-//            }
-
             /* On Lift (`mousePressed`):** 
              * Your coordinator runs the fast vector raycasting math we discussed 
              * to get a list of valid destination `Point` coordinates. 
@@ -218,13 +206,12 @@ public class ChessUiEngine {
              * 
              */
             // 1. Get your targeted points from the validator
-            validDestinations = game.getValidator().getValidNonCaptureMoves(game.getActivePieces(), ((ChessPieceToken)piece).piece);
+            validDestinations = game.getValidator().getValidMoves(game, ((ChessPieceToken)piece).piece);
 
             // 2. Direct index routing—zero searching required!
             for (Point targetPoint : validDestinations) {
                 BoardSquare square = boardSquareMatrix[targetPoint.x][targetPoint.y];
                 square.setTargeted(true);
-                square.setHighlighted(true);
             }
 
             // Cache the original anchor coordinate in case the move is canceled
@@ -270,8 +257,9 @@ public class ChessUiEngine {
             if (targetFile >= 0 && targetFile < 8 && targetRank >= 0 && targetRank < 8) {
                 Point droppedAt = new Point(targetFile, targetRank);
 
-                if (game.submitMove(logicalOriginPoint, droppedAt)) {
-                    layout.updateCoordinate(piece, droppedAt);                    
+                MoveAnalysis result = game.submitMove(logicalOriginPoint, droppedAt);
+                if (result.isAccepted()) {
+                    layout.updateCoordinate(piece, droppedAt);
                 } else {
                     // Return safely back to where it was picked up
                     layout.updateCoordinate(piece, logicalOriginPoint);

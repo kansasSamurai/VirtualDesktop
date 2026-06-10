@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.jwellman.demo.chess.ChessPiece.Type;
+import org.jwellman.demo.chess.MoveAnalysis.ResultType;
 
 /**
  * High-Craft Domain State Machine managing the lifecycle, turn rules, 
@@ -86,40 +87,49 @@ public class ChessGame {
      * 
      * The UI requests a move; the Game determines if it's allowed.
      */
-    public boolean submitMove(Point from, Point to) {
+    public MoveAnalysis submitMove(Point from, Point to) {
         ChessPiece piece = activePieces.get(from);
 
-        // 1. Rule Defense
-        if (piece == null)
-            return false;
-        if (piece.isWhite() != isWhiteTurn)
-            return false; // Out of turn!
-
-        // 2. Structural Validation (Vector math + Check validation)
-        if (!validator.isMoveLegal(this, piece, to)) {
-            return false;
+        // 1. Guard Defense
+        if (piece == null) {
+            return new MoveAnalysis(ResultType.REJECTED_ILLEGAL_GEOMETRY, false, null, "");
+        }
+        if (piece.isWhite() != isWhiteTurn) {
+            return new MoveAnalysis(ResultType.REJECTED_OUT_OF_TURN, false, null, "");
         }
 
-        // 3. Execute Capture if a piece occupies the destination
-        ChessPiece target = activePieces.remove(to);
-        if (target != null) {
-            if (target.isWhite()) 
-                whiteCaptured.add(target);
-            else 
-                blackCaptured.add(target);
+        // 2. Validate Geometry (Hand off to your vector map)
+        if (!validator.isMoveLegal(this.getCollisionMap(), piece, to)) {
+            return new MoveAnalysis(ResultType.REJECTED_ILLEGAL_GEOMETRY, false, null, "");
         }
 
-        // 4. Update Position State
+        // 3. Dry-run Check Validation (Ensure this move doesn't expose our King)
+        if (validator.exposesKingToCheck(this, from, to)) {
+            return new MoveAnalysis(ResultType.REJECTED_SELF_CHECK, false, null, "");
+        }
+
+        // 4. ATOMIC MUTATION: Commit the change to the spatial index map
+        ChessPiece target = activePieces.remove(to); // Captures null if empty
         activePieces.remove(from);
-        piece.setPosition(to); // This triggers your clean console notation!
+        piece.setPosition(to);
         activePieces.put(to, piece);
 
-        // 5. Flip the Turn state
-        isWhiteTurn = !isWhiteTurn;
-        String who = isWhiteTurn ? "white's" : "black's";
-        System.out.println("It is now " + who + " turn.");
+        // 5. Compute Side-Effects
+        boolean opponentInCheck = validator.isKingInCheck(this.getCollisionMap(), !isWhiteTurn);
+        ResultType outcome = (target != null) ? ResultType.SUCCESS_CAPTURE : ResultType.SUCCESS_STANDARD;
 
-        return true;
+        // Check for future promotion hook
+        if (piece.getType() == ChessPiece.Type.PAWN && (to.y == 0 || to.y == 7)) {
+            outcome = ResultType.SUCCESS_PROMOTION_REQUIRED;
+        }
+
+        // 6. Flip internal turn clock
+        isWhiteTurn = !isWhiteTurn;
+
+        // Generate clean console logging string
+        String logText = "logtext tbd"; // formatAlgebraicNotation(piece, to, target != null);
+
+        return new MoveAnalysis(outcome, opponentInCheck, target, logText);
     }
 
     /**
@@ -195,6 +205,10 @@ public class ChessGame {
 
     protected ChessMoveValidator getValidator() {
         return validator;
+    }
+
+    public ChessPiece getPieceAt(Point targetSquare) {
+        return this.getActivePieces().get(targetSquare);
     }
 
 }

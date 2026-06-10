@@ -21,7 +21,7 @@ public class ChessMoveValidator {
         return ! moveIsLegal(collisionMap, piece, to);
     }
 
-    public List<Point> getValidMoves(ChessGame game, ChessPiece selectedPiece) {
+    public List<Point> getValidMoves(ChessGame game, ChessPiece selectedPiece, RaycastObserver observer) {
 
 // This was old original code... commenting out on 6/10; remove eventually
 //        // 1. Create a lightweight, high-speed virtual matrix projection
@@ -39,7 +39,7 @@ public class ChessMoveValidator {
 //        if (start == null) return new ArrayList<>();
 
         // 3. Feed the virtual matrix directly into our single vector-raycasting loop!
-        return executeRaycastValidation(game, selectedPiece );
+        return executeRaycastValidation(game, selectedPiece, observer);
     }
 
     /**
@@ -49,28 +49,21 @@ public class ChessMoveValidator {
      * @param start The current logical Point(file, rank) of the piece
      * @param pieceType The character representation ('R', 'B', 'Q', 'N', 'K')
      */
-    private List<Point> executeRaycastValidation(ChessGame game, ChessPiece piece) {
-        List<Point> validSquares = new ArrayList<>();
+    private List<Point> executeRaycastValidation(ChessGame game, ChessPiece piece, RaycastObserver observer) {
+        final List<Point> validSquares = new ArrayList<>();
 
-        // 5. Get a readable label for the piece identity
-        String side = piece.isWhite() ? "White" : "Black";
-        String pieceName = piece.getType().name().toLowerCase();
+        final String side = piece.isWhite() ? "White" : "Black";
+        final String pieceName = piece.getType().name().toLowerCase();
 
-        // 1. Resolve the piece's identity down to vectors and step boundaries
-        Point start = piece.getPosition();
-        System.out.println("Raycasting from center: " + start);
-        // If it prints the OLD position instead of the new destination, your state map has drifted!
+        final Point start = piece.getPosition();
+        final Point[] directions = piece.getMovementVectors();
+        final int maxSteps = piece.getStepCount();
 
-        Point[] directions = piece.getMovementVectors();
-        int maxSteps = piece.getStepCount();
-        System.out.printf("%s %s maxSteps: %s%n", side, pieceName, maxSteps);
-
-        // 2. Raycast out along each vector direction
-        for (Point vector : directions) {
+        for (final Point vector : directions) {
             int nextX = start.x;
             int nextY = start.y;
-
             int stepsTaken = 0;
+
             while (stepsTaken < maxSteps) {
                 nextX += vector.x;
                 nextY += vector.y;
@@ -80,29 +73,34 @@ public class ChessMoveValidator {
                     break; 
                 }
 
-                Point targetSquare = new Point(nextX, nextY);
-                ChessPiece occupant = game.getPieceAt(targetSquare);
+                final Point targetSquare = new Point(nextX, nextY);
+                final ChessPiece occupant = game.getPieceAt(targetSquare);
+                
+                // --- HIGH CRAFT HOOK INJECTION ---
+                // A piece exerts control over a square whether it is empty, occupied by an enemy, 
+                // OR occupied by a friend (defending it). So we notify the observer immediately!
+                if (observer != null) {
+                    final boolean isCollisionObstacle = (occupant != null);
+                    observer.onSquareVisited(piece, targetSquare, isCollisionObstacle);
+                }
+                // ----------------------------------
 
-                // 2. Collision Matrix Check
+                // 2. Collision Matrix Check (Remains identical for movement paths)
                 if (occupant == null) {
-                    // Case 1: Empty Space. Valid move, keep sliding.
                     validSquares.add(targetSquare);
                 } 
                 else if (occupant.isWhite() != piece.isWhite()) {
-                    // Case 2: Enemy Piece! Valid capture, but the ray must stop here.
                     validSquares.add(targetSquare);
-                    break; 
+                    break; // Enemy blocks the move ray
                 } 
                 else {
-                    // Case 3: Friendly Piece. Blocked completely. Stop the ray.
-                    break; 
+                    break; // Friend blocks the move ray
                 }
 
                 stepsTaken++;
             }
         }
 
-        System.out.println("Found this many valid moves: " + validSquares.size());
         return validSquares;
     }
 

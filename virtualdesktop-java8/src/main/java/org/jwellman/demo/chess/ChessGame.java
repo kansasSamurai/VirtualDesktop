@@ -156,10 +156,12 @@ public class ChessGame {
 
     private void generateMatrix(Map<Point, ChessPiece> activePieces2) {
         this.currentControlMatrix = new SquareControlMatrix();
-        
-        // TODO implement loop/logic
+
         for (final ChessPiece cursorPiece : this.activePieces.values() ) {
-            getValidator().getValidMoves(this, cursorPiece);
+            getValidator().getValidMoves(this, cursorPiece,(piece, coordinate, isCollisionObstacle) -> {
+                // This lambda block matches the RaycastObserver signature perfectly!
+                currentControlMatrix.incrementControl(coordinate.x, coordinate.y, piece.isWhite());
+            });
         }
 
     }

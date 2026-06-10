@@ -79,10 +79,16 @@ public class BoardSquare extends JPanel {
             final int badgeRadius = 14; // Diameter of the control pill
             final int margin = 4;       // Inset distance from the square's edges
 
+            // Upper positions become lower positions:
+            final int lowerY = getHeight() - badgeRadius - margin; 
+
+            // White lower left: (margin, lowerY)
+            // Black lower right: (getWidth() - badgeRadius - margin, lowerY)
+
             // 1. Draw White Control Badge (Upper Left)
-            if (whiteAttackers > -1) {
+            if (whiteAttackers > 0) {
                 final int x = margin;
-                final int y = margin;
+                final int y = lowerY; // margin;
                 
                 g2.setColor(Color.WHITE);
                 g2.fillOval(x, y, badgeRadius, badgeRadius);
@@ -92,10 +98,10 @@ public class BoardSquare extends JPanel {
             }
 
             // 2. Draw Black Control Badge (Upper Right)
-            if (blackAttackers > -1) {
+            if (blackAttackers > 0) {
                 final int x = getWidth() - badgeRadius - margin;
-                final int y = margin;
-                
+                final int y = lowerY; // margin;
+
                 g2.setColor(Color.BLACK);
                 g2.fillOval(x, y, badgeRadius, badgeRadius);
                 

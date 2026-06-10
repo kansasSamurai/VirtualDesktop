@@ -12,9 +12,13 @@ import java.util.Map;
  */
 public class ChessMoveValidator {
 
-    public boolean isMoveLegal(CollisionMap collisionMap, ChessPiece piece, Point to) {
+    public boolean moveIsLegal(CollisionMap collisionMap, ChessPiece piece, Point to) {
         // TODO Auto-generated method stub
         return true;
+    }
+
+    public boolean moveIsNotLegal(CollisionMap collisionMap, ChessPiece piece, Point to) {
+        return ! moveIsLegal(collisionMap, piece, to);
     }
 
     public List<Point> getValidMoves(ChessGame game, ChessPiece selectedPiece) {
@@ -47,12 +51,18 @@ public class ChessMoveValidator {
     private List<Point> executeRaycastValidation(ChessGame game, ChessPiece piece) {
         List<Point> validSquares = new ArrayList<>();
 
+        // 5. Get a readable label for the piece identity
+        String side = piece.isWhite() ? "White" : "Black";
+        String pieceName = piece.getType().name().toLowerCase();
+
         // 1. Resolve the piece's identity down to vectors and step boundaries
         Point start = piece.getPosition();
         System.out.println("Raycasting from center: " + start);
         // If it prints the OLD position instead of the new destination, your state map has drifted!
+
         Point[] directions = piece.getMovementVectors();
         int maxSteps = piece.getStepCount();
+        System.out.printf("%s %s maxSteps: %s%n", side, pieceName, maxSteps);
 
         // 2. Raycast out along each vector direction
         for (Point vector : directions) {

@@ -215,8 +215,8 @@ public class ChessUiEngine {
             }
 
             // Cache the original anchor coordinate in case the move is canceled
-            logicalOriginPoint = layout.getCoordinate(piece);
             dragStartOffset = e.getPoint();
+            logicalOriginPoint = layout.getCoordinate(piece);
 
             // 1. POP INTO ATMOSPHERE: Lift the piece to the absolute highest layer
             board.setLayer(piece, JLayeredPane.DRAG_LAYER);
@@ -254,9 +254,9 @@ public class ChessUiEngine {
             int targetRank = 7 - (centerY / squareSize); // Flip the layout math back to chess orientation
 
             // 2. BOUNDARY DEFENSE: Verify the drop is inside the actual 8x8 matrix boundaries
-            if (targetFile >= 0 && targetFile < 8 && targetRank >= 0 && targetRank < 8) {
-                Point droppedAt = new Point(targetFile, targetRank);
-
+            Point droppedAt = new Point(targetFile, targetRank);
+            boolean onboard = targetFile >= 0 && targetFile < 8 && targetRank >= 0 && targetRank < 8;
+            if (onboard && validDestinations.contains(droppedAt)) {
                 MoveAnalysis result = game.submitMove(logicalOriginPoint, droppedAt);
                 if (result.isAccepted()) {
                     layout.updateCoordinate(piece, droppedAt);

@@ -156,7 +156,7 @@ public class ChessPiece {
         if (this.getType() == Type.PAWN) {
             if (this.hasMoved()) return 1; else return 2;
         }
-        if (this.getType() == Type.KING) {
+        if (this.getType() == Type.KING || this.getType() == Type.KNIGHT) {
             return 1;
         }
         return 8;

@@ -97,9 +97,13 @@ public class ChessGame {
         if (piece.isWhite() != isWhiteTurn) {
             return new MoveAnalysis(ResultType.REJECTED_OUT_OF_TURN, false, null, "");
         }
+        // Make sure the piece moved
+        if (to.equals(from)) {
+            return new MoveAnalysis(ResultType.REJECTED_DID_NOT_MOVE, false, null, "");
+        }
 
         // 2. Validate Geometry (Hand off to your vector map)
-        if (!validator.isMoveLegal(this.getCollisionMap(), piece, to)) {
+        if (validator.moveIsNotLegal(this.getCollisionMap(), piece, to)) {
             return new MoveAnalysis(ResultType.REJECTED_ILLEGAL_GEOMETRY, false, null, "");
         }
 

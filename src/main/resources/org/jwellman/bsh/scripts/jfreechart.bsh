@@ -1,4 +1,14 @@
+import org.jwellman.virtualdesktop.*;
+import org.jwellman.jfreechart.*;
+import org.jwellman.jfreechart.editor.*;
+import org.jwellman.jpreechart.*;
+
 import org.jfree.chart.*;
+import org.jfree.chart.demo.*;
+import org.jfree.chart.plot.*;
+import org.jfree.chart.renderer.xy.*;
+import org.jfree.chart.renderer.xy.*;
+import org.jfree.data.category.*;
 import org.jfree.chart.ui.*; // needed for runtime manipulation
 import org.jwellman.jfreechart.AnyChartTest;
 // https://www.jootoor.com/shades-of-orange-color-with-names-hex-rgb-cmyk-codes/
@@ -76,7 +86,6 @@ import org.jwellman.jpreechart.*;
 import org.jfree.chart.*;
 import org.jfree.chart.demo.*;
 import org.jfree.chart.plot.*;
-import org.jfree.chart.renderer.xy.*;
 import org.jfree.chart.renderer.xy.*;
 import org.jfree.data.category.*;
 
@@ -318,6 +327,10 @@ myjfreechart = demoJFreeChart();
 //pre.setFontName("Segoe UI");
 //pre.decorate(barchart.chart);
 
+// pre.decorate() hardcodes some changes so you can use this also:
+//pre.theme.setTitlePaint(Color.white);
+//pre.theme.apply(barchart.chart);
+
 //r = barchart.chart.getCategoryPlot().getRenderer();
 //r.setSeriesPaint(0, paintseq[0]);
 //r.setSeriesPaint(1, paintseq[1]);
@@ -346,20 +359,206 @@ myjfreechart = demoJFreeChart();
 
 
 
+// ==================================================
+// https://www.baeldung.com/jfreechart-visualize-data
+// ==================================================
+
+//// Let’s start by using DefaultCategoryDataset to create a dataset for our graph:
+//DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+//dataset.addValue(200, "Sales", "January");
+//dataset.addValue(150, "Sales", "February");
+//dataset.addValue(180, "Sales", "March");
+//dataset.addValue(260, "Sales", "April");
+//dataset.addValue(300, "Sales", "May");
+
+
+//// Now, we can create a JFreeChart object that uses the previous dataset to plot a line chart.
+//// The ChartFactory.createLineChart method takes the chart title, the x-axis and y-axis labels, and the dataset as parameters:
+//JFreeChart chart = ChartFactory.createLineChart(
+//    "Monthly Sales",
+//    "Month",
+//    "Sales",
+//    dataset);
+
+//// Next, a ChartPanel object is essential for displaying our chart within a Swing component. 
+//// This object is then used as a JFrame content pane to create the application window:
+//ChartPanel chartPanel = new ChartPanel(chart);
+//DesktopManager.get().createVApp(chartPanel, "Baeldung Bar Chart");
+
+// chart = ChartFactory.createBarChart(
+//    "Monthly Sales",
+//    "Month",
+//    "Sales",
+//    dataset);
+// chartPanel.setChart(chart);
+// plot = chart.getPlot();
+// plot.setOrientation(PlotOrientation.HORIZONTAL);
+
+//// Now, you can use jpreechart or other mechanisms 
+//// to decorate the chart for better visual appeal.
 
 
 
 
 
+// Example of how to create a common UI framework:
+// JPanel containing JTree in the WEST.
+// the followup shows how to create a vapp
+// and then update the jtree with a new datamodel.
+jfc() {
+
+    pre = new JPreeChart();
+
+    createUI() {
+        tree = new JTree();
+
+        p = new JPanel(new BorderLayout());
+        p.add(tree, BorderLayout.WEST);
+
+        return this;
+    }
+
+    container = createUI();
+
+    return this;
+}
+jfc = jfc();
+
+// 
+DesktopManager.get().createVApp(jfc.container.p, "jfc" );
+
+// 'cn' is an existing variable that is a ChartNode
+jfc.container.tree.getModel().setRoot(cn);
+
+// or, fully encapsulated example... ///////////////////////
 
 
+import org.jwellman.virtualdesktop.*;
+import org.jwellman.jfreechart.*;
+import org.jwellman.jfreechart.editor.*;
+import org.jwellman.jpreechart.*;
+
+import org.jfree.chart.*;
+import org.jfree.chart.demo.*;
+import org.jfree.chart.plot.*;
+import org.jfree.chart.renderer.xy.*;
+import org.jfree.chart.renderer.xy.*;
+import org.jfree.data.category.*;
+import org.jfree.chart.ui.*; // needed for runtime manipulation
+import org.jfree.chart.title.*; // needed for runtime manipulation
 
 
+jfc() {
+
+    // for convenience, show the api in the beanshell class browser
+    jvd.browser.go2("org.jfree.chart.JFreeChart");
+
+    Color[] paint = new Color[] {
+            Color.decode("#CD4E3C"), // red
+            Color.decode("#579340"), // green
+            Color.decode("#5582A6"), // blue
+            Color.decode("#CA4FCC"), // magenta
+            Color.decode("#7D6EC7"), // purple
+            Color.decode("#A87829")  // brown
+        };
+
+    // Let’s start by using DefaultCategoryDataset to create a dataset for our graph:
+    DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+    dataset.addValue(200, "Laptops", "January");
+    dataset.addValue(150, "Laptops", "February");
+    dataset.addValue(180, "Laptops", "March");
+    dataset.addValue(260, "Laptops", "April");
+    dataset.addValue(300, "Laptops", "May");
+
+    // Create a Random object
+    var random = new Random();
+
+    // Generate a random integer within the specified range
+    // The formula is: random.nextInt(max - min + 1) + min
+    // int randomNumber = random.nextInt(max - min + 1) + min;
+    addDataset(category) {
+        dataset.addValue(random.nextInt(400 - 50 + 1) + 50, category, "January");
+        dataset.addValue(random.nextInt(400 - 50 + 1) + 50, category, "February");
+        dataset.addValue(random.nextInt(400 - 50 + 1) + 50, category, "March");
+        dataset.addValue(random.nextInt(400 - 50 + 1) + 50, category, "April");
+        dataset.addValue(random.nextInt(400 - 50 + 1) + 50, category, "May");        
+    }
+
+    addDataset("Cell Phones");
 
 
+    // Now, we can create a JFreeChart object that uses the previous dataset to plot a bar chart.
+    // The ChartFactory.createLineChart method takes the chart title, the x-axis and y-axis labels, and the dataset as parameters:
+    JFreeChart chart = ChartFactory.createBarChart(
+        "Monthly Sales",
+        "Month",
+        "Sales",
+        dataset);
+
+    // Create a new TextTitle for the subtitle
+    var subtitle = new TextTitle("This is a subtitle", 
+                                       new Font("SansSerif", Font.PLAIN, 24), 
+                                       Color.DARK_GRAY, 
+                                       RectangleEdge.TOP, 
+                                       org.jfree.chart.ui.HorizontalAlignment.CENTER, 
+                                       org.jfree.chart.ui.VerticalAlignment.BOTTOM, 
+                                       org.jfree.chart.ui.RectangleInsets.ZERO_INSETS);
+    
+    // Add the subtitle to the chart
+    chart.addSubtitle(subtitle);
+
+    // Next, a ChartPanel object is essential for displaying our chart within a Swing component. 
+    ChartPanel chartPanel = new ChartPanel(chart);
+    // put the chart (via the chartpanel) on the desktop
+    DesktopManager.get().createVApp(chartPanel, "Baeldung Bar Chart");
+
+    // Closure/object to create the chart editor and put it on the desktop
+    createUI() {
+        var p = new JFCEditor(chart);
+        DesktopManager.get().createVApp(p, "jfc" );
+
+        return this;
+    }
+
+    // Closure/object to create some usable painters
+    createPainters() {
+        var stdbarpainter = new org.jfree.chart.renderer.category.StandardBarPainter();
+        return this;
+    }
+
+    // Create the user interface (for the editor)
+    var container = createUI();
+
+    // Create utility objects to be used ad hoc
+    var pre = new JPreeChart();
+    var painters = createPainters();
+
+    return this;
+}
+jfc = jfc();
+
+//jfc.pre.decorate(jfc.chart);
+//jfc.pre.setAllPainters(Color.white);
+//jfc.pre.decorate(jfc.chart);
+
+//jfc.addDataset("monkeys");
+//jfc.addDataset("gorillas");
+//jfc.addDataset("bears");
+//jfc.addDataset("horses");
 
 
+//r = jfc.chart.categoryPlot.renderer;
+//r.setItemMargin(0.05);
+//r.setSeriesPaint(0, paint[1]);
+//r.setSeriesPaint(1, paint[2]);
 
+//jfc.chart.legend.setPosition(RectangleEdge.TOP);
+
+
+// Not sure **when** I would use this but it does work:
+//import org.jfree.chart.labels.*;
+//generator = new StandardCategorySeriesLabelGenerator("a:{0}");
+//r.setLegendItemLabelGenerator(generator);
 
 
 

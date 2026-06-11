@@ -1,37 +1,44 @@
 /*
-This script creates a JTree that can be used
-for browsing a user interface.  As each node
-is selected, it can be referenced by 'y.selected'.
-
-Mostly this script could be run standalone;
-however, currently it relies on dockables.bsh
-in order to place the user interface in a 
-usable container.
+This script creates a JTree that can be used for browsing a user interface.  
+As each node is selected, it can be referenced by 'y.selected'.
+Note:  It is usually safest and most common to browse JPanel's
+vs JFrame's/JInternalFrame's.  Also, you don't have to place your
+target JPanel into the swingbrowser center panel... it is just available
+if you wish to use it such as building a prototype UI.
+The swingbrowser can browse any JPanel you give it via the treemodel.
 */
 
-import javax.swing.tree.DefaultTreeModel;
-import org.jwellman.swing.jtree.SwingTreeNode;
-import javax.swing.tree.DefaultMutableTreeNode;
+// Step 1
+//import javax.swing.tree.DefaultTreeModel;
+//import org.jwellman.swing.jtree.SwingTreeNode;
+//import javax.swing.tree.DefaultMutableTreeNode;
+//
+//swingbrowser() {
+//    this.ui = 1; // placeholder for optional contents of central panel
+//    this.tree = new JTree();
+//    
+//    this.panel = new JPanel();
+//    this.panel.setLayout(new BorderLayout());
+//    this.panel.add(this.tree, BorderLayout.WEST);
+//
+//    this.iframe = DesktopManager.get().createVApp(this.panel, "Swing Browser");
+//
+//    setModel(component) {
+//        super.tree.setModel(new DefaultTreeModel(new SwingTreeNode(component), true));
+//    }
+//
+//    print("Swing Browser started...");
+//    return this;
+//}
+//
+//jvd.swingbrowser = swingbrowser();
 
-swingbrowser() {
-    this.tree = new JTree();
-    
-    this.panel = new JPanel();
-    this.panel.setLayout(new BorderLayout());
-    this.panel.add(this.tree, BorderLayout.WEST);
-
-    this.iframe = DesktopManager.get().createVApp(this.panel, "Swing Browser");
-
-    print("Swing Browser started...");
-    return this;
-}
-
-jvd.swingbrowser = swingbrowser();
-
+// Step 2
 //y = jvd.swingbrowser;
 //y.tree.setModel(new DefaultTreeModel(new SwingTreeNode(y.panel), true));
 //y.tree.setModel(new DefaultTreeModel(new SwingTreeNode(treedemo.panel), true));
 
+// Step 3
 //y.listener = 
 // new TreeSelectionListener() {
 //    public void valueChanged(TreeSelectionEvent e) {
@@ -52,5 +59,61 @@ jvd.swingbrowser = swingbrowser();
 //
 //y.tree.addTreeSelectionListener(y.listener);
 
+// Step 4
 // after you select a node, you can do things like this:
-print(y.selected);
+// print(y.selected);
+
+
+// Example Interface
+public class SwingComponentsPanel extends JPanel {
+
+    public SwingComponentsPanel() {
+        // Set a layout manager for the panel
+        setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10)); // FlowLayout with spacing
+
+        // 1. JButton
+        JButton myButton = new JButton("Click Me!");
+        myButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                JOptionPane.showMessageDialog(SwingComponentsPanel.this, "Button Clicked!");
+            }
+        });
+        add(myButton);
+
+        // 2. JLabel
+        JLabel myLabel = new JLabel("Enter your name:");
+        add(myLabel);
+
+        // 3. JTextField
+        JTextField myTextField = new JTextField(20); // 20 columns wide
+        add(myTextField);
+
+        // 4. JCheckBox
+        JCheckBox myCheckBox = new JCheckBox("Agree to terms");
+        myCheckBox.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                if (myCheckBox.isSelected()) {
+                    System.out.println("Checkbox selected.");
+                } else {
+                    System.out.println("Checkbox deselected.");
+                }
+            }
+        });
+        add(myCheckBox);
+
+        // Set a border for visual separation (optional)
+        setBorder(BorderFactory.createTitledBorder("Example Components"));
+    }
+
+
+}
+
+y.ui = new SwingComponentsPanel();
+y.panel.add(y.ui, BorderLayout.CENTER);
+y.setModel(y.ui);
+
+
+
+
+
+

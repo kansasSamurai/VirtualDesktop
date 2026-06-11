@@ -6,8 +6,6 @@ import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -42,11 +40,16 @@ jvd.cdemo.panel.createAndShowGUI();
  */
 public class ClipboardHistory extends JPanel implements ClipboardListener.EntryListener {
 
-    private static final long serialVersionUID = 1L;
-
     // for the list of entries copied in clipboard
     private final JList<String> list = new JList<String>();
     private final DefaultListModel<String> listModel = new DefaultListModel<String>();
+    private JPanel controlPane = new JPanel();
+    private JButton btnCopy = new JButton("Copy");
+    private JButton btnClear = new JButton("Clear");
+    private JButton btnDelete = new JButton("Delete");
+    private Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+
+    private static final long serialVersionUID = 1L;
 
     public ClipboardHistory() {
         super(new BorderLayout());
@@ -57,24 +60,18 @@ public class ClipboardHistory extends JPanel implements ClipboardListener.EntryL
 
         // we create a JScrollPane to embed our control pane
         JScrollPane listPane = new JScrollPane(list);
-        JPanel controlPane = new JPanel();
 
         // we add a button to let users copy old entries to the clipboard
-        final JButton button = new JButton("Copy");
-        button.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String value = (String) list.getSelectedValue();
-                int index = list.getSelectedIndex();
-                // remove selected index to avoid duplicate in our list ...
-                listModel.remove(index);
-                // copy to clipboard
-                copyToClipboard(value);
-            }
-        });
+        btnCopy.addActionListener(e -> copyCurrentSelection() );
+
+        btnClear.addActionListener(e -> clear());
+
+        btnDelete.addActionListener(e -> deleteCurrentSelection());
 
         // we add the button
-        controlPane.add(button);
+        controlPane.add(btnCopy);
+        controlPane.add(btnDelete);
+        controlPane.add(btnClear);
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
         add(splitPane, BorderLayout.CENTER);
@@ -97,8 +94,30 @@ public class ClipboardHistory extends JPanel implements ClipboardListener.EntryL
         splitPane.add(bottomHalf);
     }
 
+    public void clear() {
+        DefaultListModel<String> model = (DefaultListModel<String>) list.getModel();
+        model.removeAllElements();
+    }
+
+    public void copyCurrentSelection() {
+        // get the selected value before we clobber it
+        String value = (String) list.getSelectedValue();
+
+        // remove selected index to avoid duplicate when we copy it back to the clipboard ...
+        deleteCurrentSelection();
+
+        // copy to clipboard (which puts this back in the list on top)
+        copyToClipboard(value);
+    }
+
+    public void deleteCurrentSelection() {
+        if ( ! list.isSelectionEmpty() ) {
+            int index = list.getSelectedIndex();
+            listModel.remove(index);
+        }
+    }
+
     public void copyToClipboard(String value) {
-        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         StringSelection data = new StringSelection(value);
         clipboard.setContents(data, data);
     }
@@ -107,6 +126,7 @@ public class ClipboardHistory extends JPanel implements ClipboardListener.EntryL
 
         setOpaque(true); // This probably isn't necessary but is from the original code
 
+        // TODO put this in an internalframe / use jpad 
         // We create a top JFrame
         JFrame frame = new JFrame("Clipboard History");
         try { frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); }

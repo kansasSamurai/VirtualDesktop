@@ -1,0 +1,5 @@
+<svg width="24" height="24" viewBox="0 0 24 24">
+  <circle fill="#ff4444" cx="8" cy="8" r="5" opacity="0.8"/>
+  <circle fill="#44ff44" cx="16" cy="8" r="5" opacity="0.8"/>
+  <circle fill="#4444ff" cx="12" cy="16" r="5" opacity="0.8"/>
+</svg>

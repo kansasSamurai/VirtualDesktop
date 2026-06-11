@@ -32,6 +32,12 @@ import javax.swing.filechooser.FileSystemView;
  * This isn't something I will probably use but it is an interesting
  * proof of concept.  Creates a Mac-like file browser.
  * 
+ * UPDATE AUG 2025:  I don't remember what this looks like with the
+ * metal look and feel but with the FlatLaf the panel display is
+ * very nice and pretty much emulates the native* folder/file display.
+ * [*] well, at least on windows... haven't tested linux/mac yet
+ * 
+ * 
  * @see http://stackoverflow.com/a/15104660/230513
  */
 @SuppressWarnings("serial")

@@ -327,17 +327,20 @@ public class App extends JFrame implements ActionListener {
     private static void createTheme() {
         DSP.Icons.registerProvider("FontAwesome", new FontAwesomeIconProvider());
 
-        DSP.Icons.register("jpad.java", new IconSpecifier( "FontAwesome", "COFFEE", 18, null, Color.black, Color.white) );
-        DSP.Icons.register("jpad.eye", new IconSpecifier( "FontAwesome", "EYE", 18, null, Color.black, Color.white) );
-        DSP.Icons.register("jpad.bsh_class_browser", new IconSpecifier( "FontAwesome", "EYE", 18, null, Color.black, Color.white) );
-        DSP.Icons.register("jpad.calendar", new IconSpecifier( "FontAwesome", "CALENDAR", 18, null, Color.black, Color.white) );
-        DSP.Icons.register("jpad.cog", new IconSpecifier( "FontAwesome", "COG", 18, null, Color.black, Color.white) );
-        DSP.Icons.register("jpad.leaf", new IconSpecifier( "FontAwesome", "LEAF", 18, null, Color.black, Color.white) );
-        DSP.Icons.register("jpad.check", new IconSpecifier( "FontAwesome", "CHECK", 18, null, Color.black, Color.white) );
+        // TODO create something like DSP.Theme for color definitions (I think I have some previous notes somewhere)
+        Color iconColor = Color.lightGray;
+
+        DSP.Icons.register("jpad.java", new IconSpecifier( "FontAwesome", "COFFEE", 18, null, iconColor, Color.white) );
+        DSP.Icons.register("jpad.eye", new IconSpecifier( "FontAwesome", "EYE", 18, null, iconColor, Color.white) );
+        DSP.Icons.register("jpad.bsh_class_browser", new IconSpecifier( "FontAwesome", "EYE", 18, null, iconColor, Color.white) );
+        DSP.Icons.register("jpad.calendar", new IconSpecifier( "FontAwesome", "CALENDAR", 18, null, iconColor, Color.white) );
+        DSP.Icons.register("jpad.cog", new IconSpecifier( "FontAwesome", "COG", 18, null, iconColor, Color.white) );
+        DSP.Icons.register("jpad.leaf", new IconSpecifier( "FontAwesome", "LEAF", 18, null, iconColor, Color.white) );
+        DSP.Icons.register("jpad.check", new IconSpecifier( "FontAwesome", "CHECK", 18, null, iconColor, Color.white) );
         DSP.Icons.register("jpad.clock", new IconSpecifier( "FontAwesome", "CLOCK_O", 14, null, Color.white, Color.white) );
 
         IconFontSwing.register(GoogleMaterialDesignIcons.getIconFont());
-            
+
     }
 
     public static void main(String[] args) {
@@ -353,6 +356,10 @@ public class App extends JFrame implements ActionListener {
         SwingUtilities.invokeLater(
             new Runnable() { @Override public void run() {
                 try {
+
+                    for (LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+                        System.out.println("Installed LAF: " + info.getName() + " : " + info.getClassName());
+                    }
 
                     //Make sure we have nice window decorations.
                     JFrame.setDefaultLookAndFeelDecorated(true);

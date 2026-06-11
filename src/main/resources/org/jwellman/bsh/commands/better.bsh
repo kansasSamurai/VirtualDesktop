@@ -3,8 +3,8 @@
     Java Swing (JFrame, JPanel, etc.) and the RSyntaxTextArea (extends JTextArea).
 
     Open a GUI editor from the command line or in the GUI desktop mode.
-    When run from the command line the editor is a simple standalone
-    frame.  When run inside the GUI desktop it is a workspace editor.
+    When run from the command line the editor is a simple standalone frame.
+    When run inside the GUI desktop, the editor is a workspace editor.
     See workspaceEditor()
 */
 

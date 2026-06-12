@@ -2,6 +2,8 @@ package org.jwellman.demo.chess;
 
 import java.awt.Point;
 
+import org.jwellman.demo.chess.ChessMoveValidator.EvaluationContext;
+
 public class ChessPiece {
 
     /**
@@ -113,7 +115,8 @@ public class ChessPiece {
 //        };
 //    }
 
-    public Point[] getMovementVectors() {
+    public Point[] getMovementVectors(EvaluationContext context) {
+
         if (Type.ROOK.equals(this.type)) 
             return ChessMoveVectors.STRAIGHT;
         if (Type.BISHOP.equals(this.type)) 
@@ -124,8 +127,16 @@ public class ChessPiece {
             return ChessMoveVectors.OMNIDIRECTIONAL;
         if (Type.QUEEN.equals(this.type)) 
             return ChessMoveVectors.OMNIDIRECTIONAL;
-        if (Type.PAWN.equals(this.type))
+        if (Type.PAWN.equals(this.type)) {
+            if (context == EvaluationContext.CONTROL) {
+                // Pawns ONLY control the diagonal attack squares
+                return isWhite() 
+                    ? new Point[] { new Point(-1, 1), new Point(1, 1) }   // White attacks up-left, up-right
+                    : new Point[] { new Point(-1, -1), new Point(1, -1) }; // Black attacks down-left, down-right
+            }
+            // Otherwise, return standard forward marching vectors...
             return isWhite ? ChessMoveVectors.PAWN_WHITE : ChessMoveVectors.PAWN_BLACK;
+        }
 
         return null;
     }
@@ -150,15 +161,25 @@ public class ChessPiece {
     /**
      * The number of times the move vector can be applied.
      * 
-     * @return
+     * @return int representing maximum "possible" steps per rules (the engine must apply board geometry limitations)
      */
-    public int getStepCount() {
+    public int getStepCount(EvaluationContext context) {
+        // Pawns are quite special - evaluate first
         if (this.getType() == Type.PAWN) {
-            if (this.hasMoved()) return 1; else return 2;
+            // A pawn on starting rank gets 2 steps for MOVEMENT, but always 1 for CONTROL
+            if (context == EvaluationContext.MOVEMENT) {
+                return this.hasMoved() ? 1 : 2;
+            } 
+            // context equals CONTROL
+            return 1;
         }
+
+        // Kings and Knights can only move/capture in one step
         if (this.getType() == Type.KING || this.getType() == Type.KNIGHT) {
             return 1;
         }
+
+        // All other pieces can "slide" maximum board dimension (8)
         return 8;
     }
 

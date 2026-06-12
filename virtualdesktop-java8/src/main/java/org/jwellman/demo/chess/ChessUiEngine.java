@@ -206,7 +206,8 @@ public class ChessUiEngine {
              * 
              */
             // 1. Get your targeted points from the validator
-            validDestinations = game.getValidator().getValidMoves(game, ((ChessPieceToken)piece).piece, null);
+            validDestinations = game.getValidator().getValidMoves(game, ((ChessPieceToken)piece).piece,
+                    ChessMoveValidator.EvaluationContext.MOVEMENT, null);
 
             // 2. Direct index routing—zero searching required!
             for (Point targetPoint : validDestinations) {

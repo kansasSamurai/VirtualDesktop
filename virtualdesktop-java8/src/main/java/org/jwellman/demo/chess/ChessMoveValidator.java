@@ -5,12 +5,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.jwellman.demo.chess.ChessMoveValidator.EvaluationContext;
+
 /**
  * 
  * @author rwellman
  *
  */
 public class ChessMoveValidator {
+
+    public enum EvaluationContext {
+        MOVEMENT, // Looking for legal squares to slide/step into
+        CONTROL // Looking for squares the piece actively attacks/defends
+    }
 
     public boolean moveIsLegal(CollisionMap collisionMap, ChessPiece piece, Point to) {
         // TODO Auto-generated method stub
@@ -21,7 +28,7 @@ public class ChessMoveValidator {
         return ! moveIsLegal(collisionMap, piece, to);
     }
 
-    public List<Point> getValidMoves(ChessGame game, ChessPiece selectedPiece, RaycastObserver observer) {
+    public List<Point> getValidMoves(ChessGame game, ChessPiece piece, EvaluationContext context, RaycastObserver observer) {
 
 // This was old original code... commenting out on 6/10; remove eventually
 //        // 1. Create a lightweight, high-speed virtual matrix projection
@@ -38,26 +45,14 @@ public class ChessMoveValidator {
 //        Point start = selectedPiece.getPosition();
 //        if (start == null) return new ArrayList<>();
 
-        // 3. Feed the virtual matrix directly into our single vector-raycasting loop!
-        return executeRaycastValidation(game, selectedPiece, observer);
-    }
-
-    /**
-     * Generates all valid non-capture destinations for a piece at a given square.
-     * 
-     * @param board The 8x8 tracking array (null indicates an empty square)
-     * @param start The current logical Point(file, rank) of the piece
-     * @param pieceType The character representation ('R', 'B', 'Q', 'N', 'K')
-     */
-    private List<Point> executeRaycastValidation(ChessGame game, ChessPiece piece, RaycastObserver observer) {
         final List<Point> validSquares = new ArrayList<>();
 
         final String side = piece.isWhite() ? "White" : "Black";
         final String pieceName = piece.getType().name().toLowerCase();
 
         final Point start = piece.getPosition();
-        final Point[] directions = piece.getMovementVectors();
-        final int maxSteps = piece.getStepCount();
+        final Point[] directions = piece.getMovementVectors(context);
+        final int maxSteps = piece.getStepCount(context);
 
         for (final Point vector : directions) {
             int nextX = start.x;

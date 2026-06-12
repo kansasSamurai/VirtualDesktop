@@ -158,7 +158,8 @@ public class ChessGame {
         this.currentControlMatrix = new SquareControlMatrix();
 
         for (final ChessPiece cursorPiece : this.activePieces.values() ) {
-            getValidator().getValidMoves(this, cursorPiece,(piece, coordinate, isCollisionObstacle) -> {
+            getValidator().getValidMoves(this, cursorPiece, ChessMoveValidator.EvaluationContext.CONTROL,
+                    (piece, coordinate, isCollisionObstacle) -> {
                 // This lambda block matches the RaycastObserver signature perfectly!
                 currentControlMatrix.incrementControl(coordinate.x, coordinate.y, piece.isWhite());
             });

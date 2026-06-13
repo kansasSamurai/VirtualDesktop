@@ -1,12 +1,15 @@
 package org.jwellman.demo.chess;
 
 import javax.swing.JPanel;
+
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.Stroke;
 
 @SuppressWarnings("serial")
 public class BoardSquare extends JPanel {
@@ -19,6 +22,7 @@ public class BoardSquare extends JPanel {
     private int file;
 
     private static final Color HIGHLIGHT = new Color(59, 130, 246, 60);
+    private static final Stroke STROKE_TARGETTED = new BasicStroke(4.0f);
 
     public BoardSquare(ChessGame g, Color baseColor, int rank, int file) {
         this.baseColor = baseColor;
@@ -58,12 +62,26 @@ public class BoardSquare extends JPanel {
 
             // 2. Render web-style target overlays based on active state properties
             if (targeted) {
-                // Draw a sleek, modern, semi-transparent center dot for a valid move
-                g2.setColor(new Color(34, 197, 94, 180)); // Velvet Emerald Green tint
-                int radius = getWidth() / 4;
-                int center = getWidth() / 2;
-                g2.fillOval(center - (radius / 2), center - (radius / 2), radius, radius);
-            } 
+                // Peek ahead to see if a piece component is currently sitting on top of us
+                boolean holdsPiece = (this.getComponentCount() > 0) || game.hasPieceAt(this.file, this.rank);
+
+                if (holdsPiece) {
+                    // TARGET CAPTURE: Draw a thick, gorgeous outer ring framing the square
+                    // g2.setColor(new Color(34, 197, 94, 180)); // Velvet Emerald Green tint
+                    g2.setColor(new Color(180, 180, 180, 180)); 
+                    g2.setStroke(STROKE_TARGETTED); // Thick vector ring
+
+                    // Inset it by 3px so it sits cleanly inside the square margins
+                    g2.drawOval(3, 3, getWidth() - 6, getHeight() - 6);
+                } else {
+                    // STANDARD MOVE: Draw the clean, modern center dot
+                    // g2.setColor(new Color(34, 197, 94, 180)); // Velvet Emerald Green tint
+                    g2.setColor(new Color(90, 90, 90, 180)); 
+                    int radius = getWidth() / 4;
+                    int center = getWidth() / 2;
+                    g2.fillOval(center - (radius / 2), center - (radius / 2), radius, radius);
+                }
+            }
 
             if (highlighted) {
                 // If it's the last moved square or a special check context, wash it in a soft glow
@@ -71,45 +89,48 @@ public class BoardSquare extends JPanel {
                 g2.fillRect(0, 0, getWidth(), getHeight());
             }
 
-            // Reach into the fast, pre-calculated engine cache
-            final SquareControlMatrix matrix = game.getControlMatrix();
-            final int whiteAttackers = matrix.getWhiteAttackerCount(this.file, this.rank);
-            final int blackAttackers = matrix.getBlackAttackerCount(this.file, this.rank);
+            boolean drawControlBadges = false;
+            if (drawControlBadges) {
+                // Reach into the fast, pre-calculated engine cache
+                final SquareControlMatrix matrix = game.getControlMatrix();
+                final int whiteAttackers = matrix.getWhiteAttackerCount(this.file, this.rank);
+                final int blackAttackers = matrix.getBlackAttackerCount(this.file, this.rank);
 
-            final int badgeRadius = 14; // Diameter of the control pill
-            final int margin = 4;       // Inset distance from the square's edges
+                final int badgeRadius = 14; // Diameter of the control pill
+                final int margin = 4;       // Inset distance from the square's edges
 
-            // Upper positions become lower positions:
-            final int lowerY = getHeight() - badgeRadius - margin; 
+                // Upper positions become lower positions:
+                final int lowerY = getHeight() - badgeRadius - margin; 
 
-            // White lower left: (margin, lowerY)
-            // Black lower right: (getWidth() - badgeRadius - margin, lowerY)
+                // White lower left: (margin, lowerY)
+                // Black lower right: (getWidth() - badgeRadius - margin, lowerY)
 
-            // 1. Draw White Control Badge (Upper Left)
-            if (whiteAttackers > 0) {
-                final int x = margin;
-                final int y = lowerY; // margin;
-                
-                g2.setColor(Color.WHITE);
-                g2.fillOval(x, y, badgeRadius, badgeRadius);
-                
-                g2.setColor(Color.BLACK);
-                drawCenteredString(g2, String.valueOf(whiteAttackers), x, y, badgeRadius, badgeRadius);
+                // 1. Draw White Control Badge (Upper Left)
+                if (whiteAttackers > 0) {
+                    final int x = margin;
+                    final int y = lowerY; // margin;
+                    
+                    g2.setColor(Color.WHITE);
+                    g2.fillOval(x, y, badgeRadius, badgeRadius);
+                    
+                    g2.setColor(Color.BLACK);
+                    drawCenteredString(g2, String.valueOf(whiteAttackers), x, y, badgeRadius, badgeRadius);
+                }
+
+                // 2. Draw Black Control Badge (Upper Right)
+                if (blackAttackers > 0) {
+                    final int x = getWidth() - badgeRadius - margin;
+                    final int y = lowerY; // margin;
+
+                    g2.setColor(Color.BLACK);
+                    g2.fillOval(x, y, badgeRadius, badgeRadius);
+                    
+                    g2.setColor(Color.WHITE);
+                    drawCenteredString(g2, String.valueOf(blackAttackers), x, y, badgeRadius, badgeRadius);
+                }
+
+                // --- Option 1 Target Rings & Piece Overlays go here ---
             }
-
-            // 2. Draw Black Control Badge (Upper Right)
-            if (blackAttackers > 0) {
-                final int x = getWidth() - badgeRadius - margin;
-                final int y = lowerY; // margin;
-
-                g2.setColor(Color.BLACK);
-                g2.fillOval(x, y, badgeRadius, badgeRadius);
-                
-                g2.setColor(Color.WHITE);
-                drawCenteredString(g2, String.valueOf(blackAttackers), x, y, badgeRadius, badgeRadius);
-            }
-
-            // --- Option 1 Target Rings & Piece Overlays go here ---
 
         } finally {
             g2.dispose(); // Guarantee disposal to prevent graphic context memory leaks
@@ -143,13 +164,27 @@ public class BoardSquare extends JPanel {
 
             // 2. Render web-style target overlays based on active state properties
             if (targeted) {
-                // Draw a sleek, modern, semi-transparent center dot for a valid move
-                g2.setColor(new Color(34, 197, 94, 180)); // Velvet Emerald Green tint
-                int radius = getWidth() / 4;
-                int center = getWidth() / 2;
-                g2.fillOval(center - (radius / 2), center - (radius / 2), radius, radius);
-            } 
-                
+                // Peek ahead to see if a piece component is currently sitting on top of us
+                boolean holdsPiece = (this.getComponentCount() > 0) || game.hasPieceAt(this.file, this.rank);
+
+                if (holdsPiece) {
+                    // TARGET CAPTURE: Draw a thick, gorgeous outer ring framing the square
+                    // g2.setColor(new Color(34, 197, 94, 180)); // Velvet Emerald Green tint
+                    g2.setColor(new Color(180, 180, 180, 180)); 
+                    g2.setStroke(STROKE_TARGETTED); // Thick vector ring
+
+                    // Inset it by 3px so it sits cleanly inside the square margins
+                    g2.drawOval(3, 3, getWidth() - 6, getHeight() - 6);
+                } else {
+                    // STANDARD MOVE: Draw the clean, modern center dot
+                    // g2.setColor(new Color(34, 197, 94, 180)); // Velvet Emerald Green tint
+                    g2.setColor(new Color(180, 180, 180, 180)); 
+                    int radius = getWidth() / 4;
+                    int center = getWidth() / 2;
+                    g2.fillOval(center - (radius / 2), center - (radius / 2), radius, radius);
+                }
+            }
+
             if (highlighted) {
                 // If it's the last moved square or a special check context, wash it in a soft glow
                 g2.setColor(HIGHLIGHT); // Sleek translucent blue

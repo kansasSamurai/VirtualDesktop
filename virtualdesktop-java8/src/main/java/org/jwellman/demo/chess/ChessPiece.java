@@ -183,4 +183,10 @@ public class ChessPiece {
         return 8;
     }
 
+    // This is only necessary to support undo/redo - otherwise it would be immutable
+    public void setHasMoved(boolean b) {
+        this.hasMoved = b;
+        System.out.println("setHasMoved: " + b);
+    }
+
 }

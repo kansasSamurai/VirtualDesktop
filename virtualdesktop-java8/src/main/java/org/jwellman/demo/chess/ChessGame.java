@@ -50,7 +50,7 @@ import org.jwellman.demo.chess.MoveAnalysis.ResultType;
  */
 public class ChessGame {
 
-    // Authoritative lookup: Where is every piece right now?
+    // Authoritative lookup: Where is every active piece right now?
     private final Map<Point, ChessPiece> activePieces = new HashMap<>();
 
     // Captures inventories for the gutter banks
@@ -72,6 +72,10 @@ public class ChessGame {
 
     // --- High-Craft Accessor Methods for the Views ---
 
+    public boolean isWhiteTurn() {
+        return isWhiteTurn;
+    }
+
     public Map<Point, ChessPiece> getActivePieces() {
         // Return unmodifiable view to prevent external views from mutating state sideways
         return Collections.unmodifiableMap(activePieces);
@@ -81,8 +85,20 @@ public class ChessGame {
         return Collections.unmodifiableList(isWhiteBank ? whiteCaptured : blackCaptured);
     }
 
-    public boolean isWhiteTurn() {
-        return isWhiteTurn;
+    protected ChessMoveValidator getValidator() {
+        return validator;
+    }
+
+    public ChessPiece getPieceAt(Point targetSquare) {
+        return activePieces.get(targetSquare);
+    }
+
+    public boolean hasPieceAt(int file, int rank) {
+        return this.getPieceAt(new Point(file, rank)) != null;
+    }
+
+    public SquareControlMatrix getControlMatrix() {
+        return this.currentControlMatrix;
     }
 
     /**
@@ -115,15 +131,23 @@ public class ChessGame {
             return new MoveAnalysis(ResultType.REJECTED_SELF_CHECK, false, null, "");
         }
 
-        // 4. ATOMIC MUTATION: Commit the change to the spatial index map
-        ChessPiece target = activePieces.remove(to); // Captures null if empty
+        // 4. Move the piece...
+        // ... remove/capture the piece at the target square (can be null if empty)
+        ChessPiece capturedPiece = activePieces.remove(to); // Captures null if empty
+        // ... remove the moving piece from its current square
         activePieces.remove(from);
-        piece.setPosition(to);
-        activePieces.put(to, piece);
+        if (capturedPiece != null) {
+             // 4b. Execute Capture if a piece occupies the destination
+            if (capturedPiece.isWhite()) 
+                whiteCaptured.add(capturedPiece);
+            else 
+                blackCaptured.add(capturedPiece);
+        }
 
         {
             // 1. Commit the move to your layout map...
             activePieces.put(to, piece);
+            piece.setPosition(to);
 
             // 2. REGENERATE THE HEATMAP (Runs once per move, taking less than a millisecond)
             this.generateMatrix(this.activePieces);
@@ -134,7 +158,7 @@ public class ChessGame {
 
         // 5. Compute Side-Effects
         boolean opponentInCheck = validator.isKingInCheck(this.getCollisionMap(), !isWhiteTurn);
-        ResultType outcome = (target != null) ? ResultType.SUCCESS_CAPTURE : ResultType.SUCCESS_STANDARD;
+        ResultType outcome = (capturedPiece != null) ? ResultType.SUCCESS_CAPTURE : ResultType.SUCCESS_STANDARD;
 
         // Check for future promotion hook
         if (piece.getType() == ChessPiece.Type.PAWN && (to.y == 0 || to.y == 7)) {
@@ -144,14 +168,21 @@ public class ChessGame {
         // 6. Flip internal turn clock
         isWhiteTurn = !isWhiteTurn;
 
+        // Fire and forget the background worker thread
+        new Thread(() -> {
+            // Run the console output loop inside the worker thread context
+            dumpBoardToConsole(activePieces);
+        }, "Chess-Diagnostic-Dumper").start();
+
         // Generate clean console logging string
         String logText = "logtext tbd"; // formatAlgebraicNotation(piece, to, target != null);
 
-        return new MoveAnalysis(outcome, opponentInCheck, target, logText);
+        return new MoveAnalysis(outcome, opponentInCheck, capturedPiece, logText);
     }
 
-    public SquareControlMatrix getControlMatrix() {
-        return this.currentControlMatrix;
+    public void setEnPassantVulnerableSquare(Point enPassantSquareBeforeMove) {
+        // TODO Auto-generated method stub
+        
     }
 
     private void generateMatrix(Map<Point, ChessPiece> activePieces2) {
@@ -238,12 +269,82 @@ public class ChessGame {
         };
     }
 
-    protected ChessMoveValidator getValidator() {
-        return validator;
+    /**
+     * Diagnostic utility to dump the active pieces map to the console as an 8x8 grid view.
+     */
+    public void dumpBoardToConsole(Map<Point, ChessPiece> activePieces) {
+        System.out.println("\n--- ENGINE BOARD DIAGNOSTIC MATRIX ---");
+        
+        // Chess ranks traditional layout goes from 8 down to 1 (y = 7 down to 0)
+        for (int rank = 7; rank >= 0; rank--) {
+            // Print the rank index prefix for quick coordinate tracking
+            System.out.print(rank + " "); 
+            
+            for (int file = 0; file < 8; file++) {
+                final Point currentCoordinate = new Point(file, rank);
+                final ChessPiece piece = activePieces.get(currentCoordinate);
+
+                if (piece == null) {
+                    System.out.print("[ ]");
+                } else {
+                    // Snatch the first letter of the type enum name (KING -> "K")
+                    String symbol = piece.getGlyph();
+//                            piece.getType().name().substring(0, 1);
+//                    
+//                    // Special case for Knight since both King and Knight start with 'K'
+//                    if (piece.getType() == Type.KNIGHT) {
+//                        symbol = "N"; // The standard chess notation symbol for Knight
+//                    }
+                    
+                    System.out.print("[" + symbol + "]");
+                }
+            }
+            // Advance to the next rank line
+            System.out.println();
+        }
+        
+        // Print the file index footer
+        System.out.println("   0  1  2  3  4  5  6  7\n");
     }
 
-    public ChessPiece getPieceAt(Point targetSquare) {
-        return this.getActivePieces().get(targetSquare);
+    /**
+     * Restore all game state based on the MoveEvent.
+     * 
+     * @param event
+     */
+    public void restoreMovedPiece(MoveEvent event) {
+        // update the map : since the map key is the point, it has to be removed and then re-added
+        activePieces.remove(event.getDestination());
+        activePieces.put(event.getOrigin(), event.getMovedPiece());
+
+        // update the piece itself
+        event.getMovedPiece().setPosition(event.getOrigin());
+
+        // Reset the moved flag if this transaction was its maiden voyage
+        if (event.getMovedPiece().getType() == Type.PAWN) {
+            if (event.wasInitialPawnMove()) {
+                System.out.println("restoreMovedPiece: " );
+                event.getMovedPiece().setHasMoved(false);
+            }
+        }
+
+        // restore whose turn it is
+        isWhiteTurn = event.getMovedPiece().isWhite();
+
+    }
+
+    public void restoreCapturedPiece(MoveEvent event) {
+        ChessPiece piece = event.getCapturedPiece();
+        if (piece != null) {
+            // Handle standard vs en passant placement
+            Point spawnPoint = event.getDestination(); // TODO test this, the original AI code is below
+                    // .getCapturedLocation(); 
+            activePieces.put(spawnPoint, event.getCapturedPiece());
+            if (piece.isWhite())
+                whiteCaptured.remove(piece);
+            else
+                blackCaptured.remove(piece);
+        }
     }
 
 }

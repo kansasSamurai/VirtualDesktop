@@ -27,28 +27,16 @@ public class ChessPieceToken extends JToggleButton {
     private final String glyph;
     private final Color pieceColor;
 
+    // Theme capable constants TODO create setters for theme injection
+    private static Color whiteColor = Color.WHITE;
+    private static Color blackColor = Color.BLACK;
+
     // for now, needs to be package visibility until accessor is created 
-    final ChessPiece piece;
+    private final ChessPiece piece;
 
-    public ChessPieceToken(String glyph, Color pieceColor) {
-        this.glyph = glyph;
-        this.pieceColor = pieceColor;
-        this.piece = null;
-
-        // Strip default look-and-feel painting pipelines
-        this.setContentAreaFilled(false);
-        this.setBorderPainted(false);
-        this.setFocusPainted(false);
-        this.setRolloverEnabled(true);
-
-        // Bind to the zero-allocation global flight singleton
-        this.addMouseListener(PieceFlightController.INSTANCE);
-        this.addMouseMotionListener(PieceFlightController.INSTANCE);
-    }
-
-    public ChessPieceToken(ChessPiece p, Color pieceColor) {
+    public ChessPieceToken(ChessPiece p, PieceFlightController c) {
         this.glyph = p.getGlyph();
-        this.pieceColor = pieceColor;
+        this.pieceColor = p.isWhite() ? whiteColor : blackColor;
         this.piece = p;
 
         // Strip default look-and-feel painting pipelines
@@ -58,8 +46,8 @@ public class ChessPieceToken extends JToggleButton {
         this.setRolloverEnabled(true);
 
         // Bind to the zero-allocation global flight singleton
-        this.addMouseListener(PieceFlightController.INSTANCE);
-        this.addMouseMotionListener(PieceFlightController.INSTANCE);
+        this.addMouseListener(c);
+        this.addMouseMotionListener(c);
     }
 
     @Override
@@ -108,6 +96,10 @@ public class ChessPieceToken extends JToggleButton {
         } finally {
             g2.dispose();
         }
+    }
+
+    protected ChessPiece getPiece() {
+        return piece;
     }
 
 }

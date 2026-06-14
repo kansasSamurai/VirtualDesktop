@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagLayout;
@@ -37,7 +38,10 @@ import javax.swing.border.TitledBorder;
 public class ChessUiEngine {
 
     private static final int BOARD_BORDER_SIZE = 40;
-
+    public static final Integer LAYER_BOARD_SQUARES = Integer.valueOf(0);
+    public static final Integer LAYER_CHESS_PIECES  = Integer.valueOf(20);
+    // (And remember, your dragging piece temporarily jumps up to JLayeredPane.DRAG_LAYER)
+    
     private ChessGame game; // model
     private JLayeredPane chessBoard; // board view
     private MovesScoresheetPanel scoresheetPanel; // game view / interactions
@@ -64,7 +68,11 @@ public class ChessUiEngine {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g.create();
                 try {
-                    int squareSize = getWidth() / 8;
+                    // Replace your integer division with a clean, precise double calculation:
+                    // int squareSize = getWidth() / 8;
+                    double squareSizeDouble = (double) getWidth() / 8.0;
+                    int squareSize = (int)squareSizeDouble;
+
                     Color lightSquare = new Color(240, 217, 181); // Classic wood tones
                     Color darkSquare  = new Color(181, 136, 99);
 
@@ -227,9 +235,14 @@ public class ChessUiEngine {
         @Override
         public void mousePressed(MouseEvent e) {
             if (!(e.getSource() instanceof JComponent)) return;
-            JComponent piece = (JComponent) e.getSource();
-            JLayeredPane board = (JLayeredPane) piece.getParent();
-            ChessBoardLayout layout = (ChessBoardLayout) board.getLayout();
+            final JComponent piece = (JComponent) e.getSource();
+            final JLayeredPane board = (JLayeredPane) piece.getParent();
+            final ChessBoardLayout layout = (ChessBoardLayout) board.getLayout();
+            final ChessPieceToken token = (ChessPieceToken)piece;
+
+            // Only initiate drag logic if it is your turn
+            if (token.getPiece().isWhite() != game.isWhiteTurn())
+                return;
 
             /* On Lift (`mousePressed`):** 
              * Your coordinator runs the fast vector raycasting math we discussed 
@@ -238,14 +251,30 @@ public class ChessUiEngine {
              * calls `square.setTargeted(true)`
              * 
              */
-            // 1. Get your targeted points from the validator
-            List<Point> validCaptures = game.getValidator().getValidMoves(game, ((ChessPieceToken)piece).getPiece(),
-                    ChessMoveValidator.EvaluationContext.CONTROL, null);
-            // System.out.println("Valid Captures: " + validCaptures);
 
-            validDestinations = game.getValidator().getValidMoves(game, ((ChessPieceToken)piece).getPiece(),
-                    ChessMoveValidator.EvaluationContext.MOVEMENT, null);
-            validDestinations.addAll(validCaptures);
+            // 1. Get your targeted points from the validator
+            validDestinations = game.getValidMovementSquares(token.getPiece());
+//                    .getValidator().getValidMoves(game, token.getPiece(),
+//                    ChessMoveValidator.EvaluationContext.MOVEMENT, null);
+
+            List<Point> validCaptures = game.getValidControlSquares(token.getPiece());
+//                    .getValidator().getValidMoves(game, ((ChessPieceToken)piece).getPiece(),
+//                    ChessMoveValidator.EvaluationContext.CONTROL, null);
+            // Filter captures: Only allow a CONTROL square if it actively contains an eligible victim
+            for (Point capturePoint : validCaptures) {
+                ChessPiece occupant = game.getPieceAt(capturePoint);
+                if (occupant == null) {
+                    // Case B: En Passant Capture (Square is empty, but it's the active temporal target)
+                    if (capturePoint.equals(game.getEnPassantVulnerableSquare())) {
+                        validDestinations.add(capturePoint);
+                    }
+                } else {
+                    // Case A: Standard Capture (An enemy piece occupies the target square)
+                    if (occupant.isWhite() != ((ChessPieceToken)piece).getPiece().isWhite()) {
+                        validDestinations.add(capturePoint);
+                    }
+                }
+            }
 
             // 2. Direct index routing—zero searching required!
             for (Point targetPoint : validDestinations) {
@@ -255,7 +284,17 @@ public class ChessUiEngine {
 
             // Cache the original anchor coordinate in case the move is canceled
             dragStartOffset = e.getPoint();
-            logicalOriginPoint = layout.getCoordinate(piece);
+            
+            // logicalOriginPoint - The bulletproof trap inside mousePressed():
+            Point domainPoint = token.getPiece().getPosition();
+            Point layoutPoint = layout.getCoordinate(piece);
+            if (layoutPoint == null || !layoutPoint.equals(domainPoint)) {
+                System.out.println("FORENSIC ALERT -> Component Tracking Desynchronization Detected!");
+                System.out.println("   Token Domain Position: " + domainPoint);
+                System.out.println("   Layout Map Position:   " + layoutPoint);
+                System.out.println("   Component Identity:    " + token.getPiece().getType() + " (" + (token.getPiece().isWhite() ? "White" : "Black") + ")");
+            }
+            logicalOriginPoint = domainPoint; // Fall back to domain truth to keep gameplay running
 
             // 1. POP INTO ATMOSPHERE: Lift the piece to the absolute highest layer
             board.setLayer(piece, JLayeredPane.DRAG_LAYER);
@@ -265,10 +304,11 @@ public class ChessUiEngine {
 
         @Override
         public void mouseDragged(MouseEvent e) {
-            if (dragStartOffset == null || !(e.getSource() instanceof JComponent)) return;
-            JComponent piece = (JComponent) e.getSource();
+            if (dragStartOffset == null || !(e.getSource() instanceof JComponent)) 
+                return;
 
             // Translate native cursor deltas straight to raw layout pixels
+            JComponent piece = (JComponent) e.getSource();
             int newX = piece.getX() + e.getX() - dragStartOffset.x;
             int newY = piece.getY() + e.getY() - dragStartOffset.y;
 
@@ -277,45 +317,100 @@ public class ChessUiEngine {
 
         @Override
         public void mouseReleased(MouseEvent e) {
-            if (!(e.getSource() instanceof JComponent)) return;
-            ChessPieceToken piece = (ChessPieceToken) e.getSource();
-            JLayeredPane board = (JLayeredPane) piece.getParent();
+            if (!(e.getSource() instanceof JComponent)) 
+                return;
+
+            ChessPieceToken token = (ChessPieceToken) e.getSource();
+            ChessPiece piece = token.getPiece();
+            JLayeredPane board = (JLayeredPane) token.getParent();
             ChessBoardLayout layout = (ChessBoardLayout) board.getLayout();
 
-            int boardSize = board.getWidth() - (BOARD_BORDER_SIZE*2);
-            int squareSize = boardSize / 8;
+            // original...
+            int boardSize = board.getWidth() - (BOARD_BORDER_SIZE * 2);
+            // Replace your integer division with a clean, precise double calculation:
+            // int squareSize = getWidth() / 8;
+            double squareSize = (double) boardSize / 8.0;
 
             // Compute center point of the token to find the targeted square midpoint
-            int centerX = piece.getX() + (piece.getWidth() / 2) - BOARD_BORDER_SIZE;
-            int centerY = piece.getY() + (piece.getHeight() / 2) - BOARD_BORDER_SIZE;
+            int centerX = token.getX() + (token.getWidth() / 2) - BOARD_BORDER_SIZE;
+            int centerY = token.getY() + (token.getHeight() / 2) - BOARD_BORDER_SIZE;
 
-            int targetFile = centerX / squareSize;
-            int targetRank = 7 - (centerY / squareSize); // Flip the layout math back to chess orientation
+            int targetFile = (int) (centerX / squareSize);
+            int targetRank = 7 - (int) (centerY / squareSize);
+//            int targetFile = centerX / squareSize;
+//            int targetRank = 7 - (centerY / squareSize); // Flip the layout math back to chess orientation
 
-            // 2. BOUNDARY DEFENSE: Verify the drop is inside the actual 8x8 matrix boundaries
             Point droppedAt = new Point(targetFile, targetRank);
-            boolean onboard = targetFile >= 0 && targetFile < 8 && targetRank >= 0 && targetRank < 8;
-            if (onboard && validDestinations.contains(droppedAt)) {
-                // cache this value because submitMove will alter it
-                boolean hasNotMoved = piece.getPiece().hasNotMoved();
-                MoveAnalysis result = game.submitMove(logicalOriginPoint, droppedAt);
-                if (result.isAccepted()) {
-                    layout.updateCoordinate(piece, droppedAt);
-                    if (result.getCapturedPiece().isPresent())
-                        board.remove(viewTokens.get(result.getCapturedPiece().get()));
 
-                    boolean wasInitialPawnMove = ChessPiece.Type.PAWN == piece.getPiece().getType() && hasNotMoved;
-                    MoveEvent move = new MoveEvent(logicalOriginPoint, droppedAt, 
-                            piece.getPiece(), result.getCapturedPiece().orElse(null), 
-                            null, wasInitialPawnMove );
-                    recordMove(move);
-                } else {
-                    // Return safely back to where it was picked up
-                    layout.updateCoordinate(piece, logicalOriginPoint);
-                }
+            // Check if this specific drop triggers the promotion state
+            if (game.isPromotionPending(token.getPiece(), droppedAt)) {
+
+                // 1. Pause the loop and block the UI with our modal choice selection
+                Frame mainFrame = (Frame) SwingUtilities.getWindowAncestor(chessBoard);
+
+                new PromotionChoiceDialog(mainFrame, piece.isWhite(), (chosenType) -> {
+
+                    // 2. DOMAIN MUTATION: Swap the Pawn out for the shiny new piece!
+                    ChessPiece promotedPiece = game.executePromotion(piece, droppedAt, chosenType);
+
+                    // 3. UI RENDERING MUTATION: Clean up your view maps
+                    viewTokens.remove(piece); // Purge old pawn visual reference
+                    chessBoard.remove(token); // Yank the token out of the layout container
+
+                    // Generate the new visual piece token wrapper
+                    ChessPieceToken newVisualToken = new ChessPieceToken(promotedPiece, engine.mouseController);
+                    viewTokens.put(promotedPiece, newVisualToken);
+
+                    // 1. Permanently anchor it into the dedicated piece stratosphere
+                    chessBoard.setLayer(newVisualToken, LAYER_CHESS_PIECES);
+
+                    // 2. Map it straight back into your custom layout coordinates
+                    layout.updateCoordinate(newVisualToken, droppedAt);
+                    chessBoard.add(newVisualToken);
+
+                    // 4. TIMELINE HISTORY UPDATE: Capture the event delta
+                    MoveEvent event = new MoveEvent(logicalOriginPoint, droppedAt, 
+                            piece, promotedPiece, 
+                            null, false);
+                    undoStack.push(event);
+                    redoStack.clear();
+
+                    game.advanceTurn();
+
+                    // Refresh scoreboard and matrices (this is part of standard "cleanup"
+                    // engine.scoresheetPanel.synchronizeHistory(engine.undoStack);
+
+                }).setVisible(true);
+
             } else {
-                // Return safely back to where it was picked up
-                layout.updateCoordinate(piece, logicalOriginPoint);
+                // 2. BOUNDARY DEFENSE: Verify the drop is inside the actual 8x8 matrix boundaries
+                boolean onboard = targetFile >= 0 && targetFile < 8 && targetRank >= 0 && targetRank < 8;
+                if (onboard && validDestinations.contains(droppedAt)) {
+                    // cache this value because submitMove will alter it
+                    boolean hasNotMoved = token.getPiece().hasNotMoved();
+                    MoveAnalysis result = game.submitMove(logicalOriginPoint, droppedAt);
+                    if (result.isAccepted()) {
+                        System.out.println("Move was accepted to: " + droppedAt);
+                        layout.updateCoordinate(token, droppedAt);
+                        if (result.getCapturedPiece().isPresent())
+                            board.remove(viewTokens.get(result.getCapturedPiece().get()));
+
+                        boolean wasInitialPawnMove = ChessPiece.Type.PAWN == token.getPiece().getType() && hasNotMoved;
+                        MoveEvent move = new MoveEvent(logicalOriginPoint, droppedAt, 
+                                token.getPiece(), result.getCapturedPiece().orElse(null), 
+                                null, wasInitialPawnMove );
+                        recordMove(move);
+                    } else {
+                        System.out.println("Move was rejected to: " + droppedAt + ", because " + result.getResultType());
+                        // Return safely back to where it was picked up
+                        layout.updateCoordinate(token, logicalOriginPoint);
+                    }
+                } else {
+                    System.out.println("Move not valid to: " + droppedAt + ", onboard: " + onboard);
+                    System.out.println("Valid Destination were: " + validDestinations);
+                    // Return safely back to where it was picked up
+                    layout.updateCoordinate(token, logicalOriginPoint);
+                }
             }
 
             // 2a. undecorate destination squares
@@ -326,7 +421,7 @@ public class ChessUiEngine {
             }
 
             // 3. DROP TO BEDROCK: Land the piece back down and re-assert layout control
-            board.setLayer(piece, 20); // JLayeredPane.DEFAULT_LAYER);
+            board.setLayer(token, LAYER_CHESS_PIECES); // JLayeredPane.DEFAULT_LAYER);
             board.revalidate(); 
             board.repaint();
 
@@ -334,6 +429,16 @@ public class ChessUiEngine {
 
             dragStartOffset = null;
             logicalOriginPoint = null;
+
+         // Place this at the absolute end of mouseReleased()
+            Point modelPoint = token.getPiece().getPosition(); // game.getCoordinateOfPiece(token.getPiece());
+            if (modelPoint != null && !modelPoint.equals(droppedAt)) {
+                // If a move was truly accepted by the model, modelPoint will match droppedAt.
+                // If it was rejected, modelPoint should still match logicalOriginPoint.
+                System.out.println("DIAGNOSTIC -> Token View vs Model Integrity Check:");
+                System.out.println("   Calculated Target: " + droppedAt);
+                System.out.println("   Actual Model State: " + modelPoint);
+            }
         }
     }
     
@@ -392,6 +497,9 @@ public class ChessUiEngine {
             this.undoLastMove();
         });
         btn = new JButton("Redo");
+        south.add(btn);
+
+        btn = new JButton("Resign");
         south.add(btn);
 
         controlPanel.add(scoresheetPanel, BorderLayout.CENTER);

@@ -57,8 +57,21 @@ public class ChessGame {
     private final List<ChessPiece> whiteCaptured = new ArrayList<>();
     private final List<ChessPiece> blackCaptured = new ArrayList<>();
 
+    // The Core King Pointers
+    private ChessPiece whiteKing;
+    private ChessPiece blackKing;
+
+    // The Four Fixed Rook Anchors for O(1) Castling Audits
+    private ChessPiece whiteKingsideRook;
+    private ChessPiece whiteQueensideRook;
+    private ChessPiece blackKingsideRook;
+    private ChessPiece blackQueensideRook;
+
     // Who's turn is it?
     private boolean isWhiteTurn = true;
+
+    // Support en passant captures
+    private Point enPassantVulnerableSquare;
 
     // Encapsulated validation object
     private final ChessMoveValidator validator = new ChessMoveValidator();
@@ -102,20 +115,60 @@ public class ChessGame {
     }
 
     /**
+     * Retrieves all geometrically valid movement coordinates for a given piece.
+     */
+    public List<Point> getValidMovementSquares(ChessPiece piece) {
+        return this.validator.getValidMoves(this, piece, ChessMoveValidator.EvaluationContext.MOVEMENT, null);
+    }
+
+    /**
+     * Retrieves all coordinates actively controlled or targeted for attack by a given piece.
+     */
+    public List<Point> getValidControlSquares(ChessPiece piece) {
+        return this.validator.getValidMoves(this, piece, ChessMoveValidator.EvaluationContext.CONTROL, null);
+    }
+
+    /** */
+    public boolean isPromotionPending(ChessPiece piece, Point destination) {
+        if (!piece.isPawn()) {
+            return false;
+        }
+        // White pawn reaches rank 8 (index 7) or Black pawn reaches rank 1 (index 0)
+        int promotionRank = piece.isWhite() ? 7 : 0;
+        return destination.y == promotionRank;
+    }
+    
+    public ChessPiece executePromotion(ChessPiece piece, Point droppedAt, Type chosenType) {
+
+        // remove the piece/pawn
+        activePieces.remove(piece.getPosition());
+
+        // add the promoted piece according to type
+        ChessPiece promoted = new ChessPiece(chosenType, piece.isWhite(), droppedAt);
+        activePieces.put(droppedAt, promoted);
+
+        return promoted;
+    }
+
+    /**
      * The Definitive State Mutation Gatekeeper.
      * 
      * The UI requests a move; the Game determines if it's allowed.
      */
     public MoveAnalysis submitMove(Point from, Point to) {
         ChessPiece piece = activePieces.get(from);
+        System.out.printf("Submit move: from %s to %s%n", from, to);
 
         // 1. Guard Defense
         if (piece == null) {
-            return new MoveAnalysis(ResultType.REJECTED_ILLEGAL_GEOMETRY, false, null, "");
+            return new MoveAnalysis(ResultType.REJECTED_NULL_PIECE, false, null, "");
         }
+        System.out.printf("...        : Piece %s %n", piece.getGlyph() );
+
         if (piece.isWhite() != isWhiteTurn) {
             return new MoveAnalysis(ResultType.REJECTED_OUT_OF_TURN, false, null, "");
         }
+
         // Make sure the piece moved
         if (to.equals(from)) {
             return new MoveAnalysis(ResultType.REJECTED_DID_NOT_MOVE, false, null, "");
@@ -166,13 +219,14 @@ public class ChessGame {
         }
 
         // 6. Flip internal turn clock
-        isWhiteTurn = !isWhiteTurn;
+        advanceTurn();
 
         // Fire and forget the background worker thread
-        new Thread(() -> {
-            // Run the console output loop inside the worker thread context
-            dumpBoardToConsole(activePieces);
-        }, "Chess-Diagnostic-Dumper").start();
+        dumpBoardToConsole(activePieces);
+//        new Thread(() -> {
+//            // Run the console output loop inside the worker thread context
+//            dumpBoardToConsole(activePieces);
+//        }, "Chess-Diagnostic-Dumper").start();
 
         // Generate clean console logging string
         String logText = "logtext tbd"; // formatAlgebraicNotation(piece, to, target != null);
@@ -181,8 +235,11 @@ public class ChessGame {
     }
 
     public void setEnPassantVulnerableSquare(Point enPassantSquareBeforeMove) {
-        // TODO Auto-generated method stub
-        
+        enPassantVulnerableSquare = enPassantSquareBeforeMove;
+    }
+
+    public Point getEnPassantVulnerableSquare() {
+        return enPassantVulnerableSquare;
     }
 
     private void generateMatrix(Map<Point, ChessPiece> activePieces2) {
@@ -204,42 +261,54 @@ public class ChessGame {
      * simply holds a reference to its backend ChessPiece domain object.
      */
     private void initializeStandardBoard() {
+        activePieces.clear(); // Clear any existing residues
 
-        // Black Pieces (Top)
-        ArrayList<ChessPiece> black = new ArrayList<>();
-        black.add(new ChessPiece(Type.ROOK, false, new Point(0, 7)));
-        black.add(new ChessPiece(Type.KNIGHT, false, new Point(1, 7)));
-        black.add(new ChessPiece(Type.BISHOP, false, new Point(2, 7)));
-        black.add(new ChessPiece(Type.QUEEN, false, new Point(3, 7)));
-        black.add(new ChessPiece(Type.KING, false, new Point(4, 7)));
-        black.add(new ChessPiece(Type.BISHOP, false, new Point(5, 7)));
-        black.add(new ChessPiece(Type.KNIGHT, false, new Point(6, 7)));
-        black.add(new ChessPiece(Type.ROOK, false, new Point(7, 7)));
-        for (int file=0; file<8; file++) {
-            black.add(new ChessPiece(Type.PAWN, false, new Point(file, 6)));
-        }
-        for (ChessPiece apiece : black) {
-            activePieces.put(apiece.getPosition(), apiece);
-        }
+        // 1. The Back Rank Blueprint (Left-to-Right layout mapping)
+        Type[] backRankBlueprint = {
+            Type.ROOK, Type.KNIGHT, Type.BISHOP, Type.QUEEN, 
+            Type.KING, Type.BISHOP, Type.KNIGHT, Type.ROOK
+        };
 
-        // White Pieces (Bottom)
-        ArrayList<ChessPiece> white = new ArrayList<>();
-        white.add(new ChessPiece(Type.ROOK, true, new Point(0, 0)));
-        white.add(new ChessPiece(Type.KNIGHT, true, new Point(1, 0)));
-        white.add(new ChessPiece(Type.BISHOP, true, new Point(2, 0)));
-        white.add(new ChessPiece(Type.QUEEN, true, new Point(3, 0)));
-        white.add(new ChessPiece(Type.KING, true, new Point(4, 0)));
-        white.add(new ChessPiece(Type.BISHOP, true, new Point(5, 0)));
-        white.add(new ChessPiece(Type.KNIGHT, true, new Point(6, 0)));
-        white.add(new ChessPiece(Type.ROOK, true, new Point(7, 0)));
-        for (int file=0; file<8; file++) {
-            white.add(new ChessPiece(Type.PAWN, true, new Point(file, 1)));
-        }
-        for (ChessPiece apiece : white) {
-            activePieces.put(apiece.getPosition(), apiece);
-        }
+        // 2. Loop cleanly through both armies
+        boolean[] teams = { true, false }; // true = White, false = Black
+        
+        for (boolean isWhite : teams) {
+            int backRank = isWhite ? 0 : 7;
+            int pawnRank = isWhite ? 1 : 6;
 
+            // Populate the Back Rank using the Blueprint array indices
+            for (int file = 0; file < 8; file++) {
+                Point pos = new Point(file, backRank);
+                Type type = backRankBlueprint[file];
+                
+                ChessPiece piece = new ChessPiece(type, isWhite, pos);
+                activePieces.put(pos, piece);
 
+                // =========================================================
+                // CAPTURE GAME-LEVEL POINTERS AUTONOMOUSLY VIA COORDINATES
+                // =========================================================
+                if (type == Type.KING) {
+                    if (isWhite) this.whiteKing = piece;
+                    else this.blackKing = piece;
+                } 
+                else if (type == Type.ROOK) {
+                    if (file == 0) { // Queenside (File A)
+                        if (isWhite) this.whiteQueensideRook = piece;
+                        else this.blackQueensideRook = piece;
+                    } else if (file == 7) { // Kingside (File H)
+                        if (isWhite) this.whiteKingsideRook = piece;
+                        else this.blackKingsideRook = piece;
+                    }
+                }
+            }
+
+            // Populate the Pawn Rank sequentially
+            for (int file = 0; file < 8; file++) {
+                Point pos = new Point(file, pawnRank);
+                ChessPiece pawn = new ChessPiece(Type.PAWN, isWhite, pos);
+                activePieces.put(pos, pawn);
+            }
+        }
     }
 
     /**
@@ -331,6 +400,10 @@ public class ChessGame {
         // restore whose turn it is
         isWhiteTurn = event.getMovedPiece().isWhite();
 
+    }
+
+    public void advanceTurn() {
+        this.isWhiteTurn = !this.isWhiteTurn;
     }
 
     public void restoreCapturedPiece(MoveEvent event) {

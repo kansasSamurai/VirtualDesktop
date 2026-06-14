@@ -43,10 +43,15 @@ public class ChessPiece {
         return !hasMoved();
     }
 
+    // got tired of writing this all over the place for pawns
+    public boolean isPawn() {
+        return this.getType() == Type.PAWN;
+    }
+
     public Point getPosition() { 
         // 2. Format the starting coordinate before overwriting it
         String originNotation = toAlgebraic(this.position);
-        System.out.printf("Piece is at %s (%s,%s)%n", originNotation, this.position.x, this.position.y );
+        System.out.printf("%s is at %s (%s,%s)%n", this.getGlyph(), originNotation, this.position.x, this.position.y );
 
         return position; 
     }

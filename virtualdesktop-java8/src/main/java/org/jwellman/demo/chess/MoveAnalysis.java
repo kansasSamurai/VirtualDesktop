@@ -17,6 +17,7 @@ public final class MoveAnalysis {
      * Categorizes the precise structural outcome of a submitted move.
      */
     public enum ResultType {
+        REJECTED_NULL_PIECE,       // Piece submitted was null
         REJECTED_ILLEGAL_GEOMETRY, // Piece cannot physically move that way
         REJECTED_OUT_OF_TURN,      // White moved on Black's clock
         REJECTED_SELF_CHECK,       // Move leaves or puts own King in check

@@ -3,9 +3,6 @@ package org.jwellman.demo.chess;
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-
-import org.jwellman.demo.chess.ChessMoveValidator.EvaluationContext;
 
 /**
  * 
@@ -28,22 +25,17 @@ public class ChessMoveValidator {
         return ! moveIsLegal(collisionMap, piece, to);
     }
 
-    public List<Point> getValidMoves(ChessGame game, ChessPiece piece, EvaluationContext context, RaycastObserver observer) {
+    public boolean exposesKingToCheck(ChessGame chessGame, Point from, Point to) {
+        // TODO Auto-generated method stub
+        return false;
+    }
 
-// This was old original code... commenting out on 6/10; remove eventually
-//        // 1. Create a lightweight, high-speed virtual matrix projection
-//        // An empty square is represented by null.
-//        ChessPiece[][] virtualMatrix = new ChessPiece[8][8];
-//
-//        // Project the current game state into the matrix bounds
-//        for (Map.Entry<Point, ChessPiece> entry : game.getActivePieces().entrySet()) {
-//            Point p = entry.getKey();
-//            virtualMatrix[p.x][p.y] = entry.getValue();
-//        }
-//        
-//        // 2. Locate the current coordinates of our target component
-//        Point start = selectedPiece.getPosition();
-//        if (start == null) return new ArrayList<>();
+    public boolean isKingInCheck(CollisionMap collisionMap, boolean b) {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    public List<Point> getValidMoves(ChessGame game, ChessPiece piece, EvaluationContext context, RaycastObserver observer) {
 
         final List<Point> validSquares = new ArrayList<>();
 
@@ -79,17 +71,52 @@ public class ChessMoveValidator {
                     observer.onSquareVisited(piece, targetSquare, isCollisionObstacle);
                 }
                 // ----------------------------------
+                if (context == EvaluationContext.MOVEMENT) {
+                    
+                }
 
-                // 2. Collision Matrix Check (Remains identical for movement paths)
+                // 2. Collision Matrix Check (Now sensitive to piece biology and context)
                 if (occupant == null) {
+                    // Pawns cannot move diagonally into empty space unless it's a valid En Passant strike
+                    if (piece.isPawn() && context == EvaluationContext.MOVEMENT) {
+                        // If this specific vector step has a non-zero X component, it's a diagonal sweep.
+                        // In a pure MOVEMENT sweep, empty diagonals are illegal.
+                        if (vector.x != 0) {
+                            // Skip adding, but pawns don't "break" rays because their rays are only 1-2 steps anyway
+                            continue; 
+                        }
+                    }
+                    
+                    // Standard pathing for all other pieces/vectors: empty square is a green light
                     validSquares.add(targetSquare);
                 } 
                 else if (occupant.isWhite() != piece.isWhite()) {
-                    validSquares.add(targetSquare);
-                    break; // Enemy blocks the move ray
+                    // ENEMY COLLISION
+                    if (piece.isPawn()) {
+                        if (context == EvaluationContext.MOVEMENT) {
+                            // A pawn CANNOT march forward into an enemy piece. It is a blockade.
+                            if (vector.x == 0) {
+                                break; // Ray is blocked, square is NOT valid
+                            }
+                        } else if (context == EvaluationContext.CONTROL) {
+                            // In a control/attack assessment, the enemy on the diagonal is a valid strike target.
+                            validSquares.add(targetSquare);
+                            break; 
+                        }
+                    } else {
+                        // Standard sliding piece behavior: capture the enemy and terminate the raycast
+                        validSquares.add(targetSquare);
+                        break; 
+                    }
                 } 
                 else {
-                    break; // Friend blocks the move ray
+                    // FRIENDLY COLLISION
+                    if (piece.isPawn() && context == EvaluationContext.CONTROL) {
+                        // Crucial Telemetry Nuance: Even if a friendly piece sits on the diagonal, 
+                        // the pawn STILL projects protective control onto that square for defense tracking.
+                        validSquares.add(targetSquare);
+                    }
+                    break; // Friends always structurally block the physical raycast pass
                 }
 
                 stepsTaken++;
@@ -97,16 +124,6 @@ public class ChessMoveValidator {
         }
 
         return validSquares;
-    }
-
-    public boolean exposesKingToCheck(ChessGame chessGame, Point from, Point to) {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    public boolean isKingInCheck(CollisionMap collisionMap, boolean b) {
-        // TODO Auto-generated method stub
-        return false;
     }
 
 }

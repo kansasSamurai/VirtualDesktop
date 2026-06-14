@@ -26,13 +26,16 @@ public class MovesScoresheetPanel extends JPanel {
         this.table = new JTable(tableModel);
         this.table.getTableHeader().setReorderingAllowed(false);
         this.table.getColumnModel().getColumn(0).setMaxWidth(40); // Move number column stays tight
-        this.table.getColumnModel().getColumn(1).setMaxWidth(120); // Move number column stays tight
-        this.table.getColumnModel().getColumn(2).setMaxWidth(120); // Move number column stays tight
+//        this.table.getColumnModel().getColumn(1).setMaxWidth(120); // Move number column stays tight
+//        this.table.getColumnModel().getColumn(2).setMaxWidth(120); // Move number column stays tight
+        // Define the exact width and height the table viewport should occupy
+        // e.g., 180 pixels wide, 400 pixels tall
+        this.table.setPreferredScrollableViewportSize(new Dimension(200, 400));
         this.table.setBorder(null);
 
         JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.getViewport().setPreferredSize(new Dimension(400, 400));
         scrollPane.getViewport().setBorder(null);
+        scrollPane.setBorder(null);
         this.add(scrollPane, BorderLayout.CENTER);
     }
 

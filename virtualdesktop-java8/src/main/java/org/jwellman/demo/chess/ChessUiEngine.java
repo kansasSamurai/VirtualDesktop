@@ -19,7 +19,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
+import javax.swing.Box;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
@@ -37,15 +39,11 @@ import javax.swing.border.TitledBorder;
  */
 public class ChessUiEngine {
 
-    private static final int BOARD_BORDER_SIZE = 40;
-    public static final Integer LAYER_BOARD_SQUARES = Integer.valueOf(0);
-    public static final Integer LAYER_CHESS_PIECES  = Integer.valueOf(20);
-    // (And remember, your dragging piece temporarily jumps up to JLayeredPane.DRAG_LAYER)
-    
     private ChessGame game; // model
     private JLayeredPane chessBoard; // board view
     private MovesScoresheetPanel scoresheetPanel; // game view / interactions
     private PieceFlightController mouseController; // controller
+    private Options options;
 
     // Support undo/redo
     private final Stack<MoveEvent> undoStack = new Stack<>();
@@ -57,9 +55,15 @@ public class ChessUiEngine {
     // Inside your BoardView / BoardController layer, NOT the domain
     private static final Map<ChessPiece, ChessPieceToken> viewTokens = new HashMap<>();
 
+    private static final int BOARD_BORDER_SIZE = 40;
+    public static final Integer LAYER_BOARD_SQUARES = Integer.valueOf(0);
+    public static final Integer LAYER_CHESS_PIECES  = Integer.valueOf(20);
+    // (And remember, your dragging piece temporarily jumps up to JLayeredPane.DRAG_LAYER)
+
     @SuppressWarnings("serial")
     public ChessUiEngine() {
         game = new ChessGame();
+        options = new Options();
         mouseController = new PieceFlightController(this);
         scoresheetPanel = new MovesScoresheetPanel();
         chessBoard = new JLayeredPane() {
@@ -143,8 +147,12 @@ public class ChessUiEngine {
 
             boardWrapper.add(chessBoard);
 
+            JPanel east = new JPanel(new BorderLayout());
+            east.add(engine.createControlPanel(), BorderLayout.CENTER);
+            east.add(engine.createSettings(), BorderLayout.SOUTH);
+            
             frame.add(boardWrapper, BorderLayout.CENTER);
-            frame.add(engine.createControlPanel(), BorderLayout.EAST);
+            frame.add(east, BorderLayout.EAST);
             frame.pack();
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
@@ -505,6 +513,31 @@ public class ChessUiEngine {
         controlPanel.add(scoresheetPanel, BorderLayout.CENTER);
 
         return controlPanel;
+    }
+    
+    public JPanel createSettings() {
+        Border b = new CompoundBorder(
+            new EmptyBorder(0, 4, 4, 4),
+            new TitledBorder("Settings")
+        );
+
+        JPanel settings = new JPanel(new BorderLayout());
+        settings.setBorder(b);
+
+        JPanel container = new JPanel(new BorderLayout());
+        settings.add(container, BorderLayout.CENTER);
+
+        Box options = Box.createVerticalBox();
+        options.add(this.options.Chooser.SHOW_SQUARE_STRENGTH);
+        options.add(new JCheckBox("another option"));
+        container.add(options, BorderLayout.WEST);
+
+        this.options.Chooser.SHOW_SQUARE_STRENGTH.addActionListener(e -> {
+            BoardSquare.drawControlBadges = this.options.showSquareStrength();
+            chessBoard.repaint();
+        });
+
+        return settings;
     }
 
 }

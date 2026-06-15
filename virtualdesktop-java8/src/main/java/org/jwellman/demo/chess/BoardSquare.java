@@ -21,6 +21,9 @@ public class BoardSquare extends JPanel {
     private int rank;
     private int file;
 
+    // Options
+    public static boolean drawControlBadges = true;
+
     private static final Color HIGHLIGHT = new Color(59, 130, 246, 60);
     private static final Stroke STROKE_TARGETTED = new BasicStroke(4.0f);
 
@@ -89,7 +92,6 @@ public class BoardSquare extends JPanel {
                 g2.fillRect(0, 0, getWidth(), getHeight());
             }
 
-            boolean drawControlBadges = true;
             if (drawControlBadges) {
                 // Reach into the fast, pre-calculated engine cache
                 final SquareControlMatrix matrix = game.getControlMatrix();

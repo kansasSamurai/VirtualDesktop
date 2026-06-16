@@ -376,6 +376,10 @@ public class ChessGame {
         System.out.println("   0  1  2  3  4  5  6  7\n");
     }
 
+    public void advanceTurn() {
+        this.isWhiteTurn = !this.isWhiteTurn;
+    }
+
     /**
      * Restore all game state based on the MoveEvent.
      * 
@@ -400,10 +404,6 @@ public class ChessGame {
         // restore whose turn it is
         isWhiteTurn = event.getMovedPiece().isWhite();
 
-    }
-
-    public void advanceTurn() {
-        this.isWhiteTurn = !this.isWhiteTurn;
     }
 
     public void restoreCapturedPiece(MoveEvent event) {

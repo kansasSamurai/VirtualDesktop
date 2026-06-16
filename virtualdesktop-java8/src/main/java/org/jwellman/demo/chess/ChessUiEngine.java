@@ -41,8 +41,9 @@ public class ChessUiEngine {
 
     private ChessGame game; // model
     private JLayeredPane chessBoard; // board view
-    private MovesScoresheetPanel scoresheetPanel; // game view / interactions
+    // private ChessBoardLayout layout; // TODO use this instead of all the local lookups/casting
     private PieceFlightController mouseController; // controller
+    private MovesScoresheetPanel scoresheetPanel; // game view / interactions
     private Options options;
 
     // Support undo/redo
@@ -242,7 +243,11 @@ public class ChessUiEngine {
 
         @Override
         public void mousePressed(MouseEvent e) {
-            if (!(e.getSource() instanceof JComponent)) return;
+            
+            // For now, enforce that only the pieces can be drag/dropped
+            if (!(e.getSource() instanceof ChessPieceToken)) 
+                return;
+
             final JComponent piece = (JComponent) e.getSource();
             final JLayeredPane board = (JLayeredPane) piece.getParent();
             final ChessBoardLayout layout = (ChessBoardLayout) board.getLayout();
@@ -455,19 +460,57 @@ public class ChessUiEngine {
         redoStack.clear(); // A fresh player move ALWAYS wipes out the redo timeline
     }
 
+    /**
+     * Encapsulate adding a piece to the board for ALL scenarios:
+     * 1) undo/redo
+     * 2) drop piece (standard drag/drop)
+     * 3) ...
+     */
+    public void addPieceToBoard(ChessPiece piece, boolean actuallyNeedsAdded) {
+        // TODO use instance object for layout
+        ChessBoardLayout layout = (ChessBoardLayout) chessBoard.getLayout();
+        ChessPieceToken token = viewTokens.get(piece);
+
+        // 1. Permanently anchor it into the dedicated piece stratosphere
+        chessBoard.setLayer(token, LAYER_CHESS_PIECES);
+
+        // 2. Map it straight back into your custom layout coordinates
+        layout.updateCoordinate(token, piece.getPosition());
+
+        // 3. 
+        if (actuallyNeedsAdded)
+         chessBoard.add(token);
+
+    }
+
+    /**
+     * Encapsulate removing a piece from the board for ALL scenarios:
+     * 1) undo/redo
+     * 2) drop piece (standard drag/drop)
+     * 3) ...
+     */
+    public void removePieceFromBoard(ChessPiece piece) {
+        
+    }
+
     public void undoLastMove() {
         if (undoStack.isEmpty()) return;
 
         final MoveEvent event = undoStack.pop();
-        ChessBoardLayout layout = (ChessBoardLayout) chessBoard.getLayout();
+        // TODO use instance object for layout
+//        ChessBoardLayout layout = (ChessBoardLayout) chessBoard.getLayout();
 
         // 1. Teleport the primary piece straight back to its home coordinate
         game.restoreMovedPiece(event);
-        ChessPieceToken movedToken = viewTokens.get(event.getMovedPiece());
-        layout.updateCoordinate(movedToken, event.getOrigin());
+        this.addPieceToBoard(event.getMovedPiece(), false);
+//        ChessPieceToken movedToken = viewTokens.get(event.getMovedPiece());
+//        layout.updateCoordinate(movedToken, event.getOrigin());
 
         // 2. Resurrection: If a piece was captured, pop it back into existence!
-        game.restoreCapturedPiece(event);
+        if (event.getCapturedPiece() != null) {
+            game.restoreCapturedPiece(event);
+            this.addPieceToBoard(event.getCapturedPiece(), true);
+        }
 
         // 3. Restore the temporal En Passant target window
         game.setEnPassantVulnerableSquare(event.getEnPassantSquareBeforeMove());

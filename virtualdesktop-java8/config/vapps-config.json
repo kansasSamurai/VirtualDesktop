@@ -228,6 +228,18 @@
           "icon": "server",
           "enabled": true,
           "desktopOnly": false
+        },
+        {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecDragDropCredential",
+          "title": "Credentials",
+          "icon": "lock",
+          "enabled": true,
+          "desktopOnly": false,
+          "attrs": {
+            "salt": "$$saltForTest",
+            "description": "Example Entry 1|Example Entry 2",
+            "value": "QxTJuNHgGB9dTuR91jdHIw==|Uy6Xb0g0UuaRRrVTyAR8FA=="
+          }
         }
       ]
     }

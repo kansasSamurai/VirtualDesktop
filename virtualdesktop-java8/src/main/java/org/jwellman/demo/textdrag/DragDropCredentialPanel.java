@@ -16,6 +16,8 @@ import java.awt.event.MouseEvent;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -47,25 +49,42 @@ import javax.swing.border.EmptyBorder;
 @SuppressWarnings("serial")
 public class DragDropCredentialPanel extends JPanel {
 
-    private final JPanel listContainer;
+    private JPanel listContainer;
     private JTextField saltInputField;
     private JPasswordField rawTextInputField;
     private JTextField hashOutputField;
 
+    private String configuredSalt = null;
+    private List<String> configuredDescriptions = null;
+    private List<String> configuredValues = null;
+
     public DragDropCredentialPanel() {
         super(new BorderLayout(0, 10));
+        initUI();
+    }
 
+    public DragDropCredentialPanel(String salt, List<String> descriptions, List<String> values) {
+        super(new BorderLayout(0, 10));
+        this.configuredSalt = salt;
+        this.configuredDescriptions = descriptions;
+        this.configuredValues = values;
+
+        initUI();
+
+    }
+
+    private void initUI() {
         setBorder(new EmptyBorder(10, 10, 10, 10));
 
         // 1. Upper Half: Draggable Components inside a JScrollPane
         this.listContainer = new JPanel();
         this.listContainer.setLayout(new BoxLayout(listContainer, BoxLayout.Y_AXIS));
-        
+
         JScrollPane scrollPane = new JScrollPane(listContainer);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.getVerticalScrollBar().setUnitIncrement(12);
-        
+
         add(scrollPane, BorderLayout.CENTER);
 
         // 2. Bottom Half: Generator Utility Panel
@@ -141,7 +160,7 @@ public class DragDropCredentialPanel extends JPanel {
      */
     private JPanel createGeneratorPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("Hash Generator Utility"));
+        panel.setBorder(BorderFactory.createTitledBorder("Encryption Utility"));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(4, 6, 4, 6);
@@ -172,7 +191,7 @@ public class DragDropCredentialPanel extends JPanel {
         // Row 3: Output Display
         gbc.gridx = 0; gbc.gridy = 3; gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 0.0;
-        panel.add(new JLabel("Generated Hash:"), gbc);
+        panel.add(new JLabel("Encrypted Value:"), gbc);
 
         hashOutputField = new JTextField();
         hashOutputField.setEditable(false);
@@ -199,7 +218,7 @@ public class DragDropCredentialPanel extends JPanel {
             return;
         }
 
-        String generatedHash = calculateCryptoHash(plainText, salt);
+        String generatedHash = encryptValue(plainText, salt);
         hashOutputField.setText(generatedHash);
 
         // Instantly move to system clipboard
@@ -211,41 +230,46 @@ public class DragDropCredentialPanel extends JPanel {
         rawTextInputField.setText("");
     }
 
-    /**
-     * Deterministic hashing algorithm (SHA-256) acting as the underlying security mechanism.
-     * Change or swap out depending on requirements.
-     */
-    private String calculateCryptoHash(String input, String salt) {
+    private String encryptValue(String plainText, String salt) {
         try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            // Combine token and salt via explicit UTF-8 byte boundaries
-            String combined = input + salt;
-            byte[] encodedHash = digest.digest(combined.getBytes(StandardCharsets.UTF_8));
-            
-            // Return clean alphanumeric string representation
-            return Base64.getEncoder().encodeToString(encodedHash);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Critical Failure: SHA-256 Algorithm implementation missing from JVM.", e);
+            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, deriveKey(salt));
+            byte[] encrypted = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(encrypted);
+        } catch (Exception e) {
+            throw new RuntimeException("Encryption failed", e);
         }
     }
 
-    /**
-     * Resolves the real drag-and-drop payload at drop execution time.
-     * In your architecture, if the hash *is* the actual password, this simply returns the hash.
-     * If the hash must be cracked or looked up via a local vault, adapt this method.
-     */
-    private String resolvePayload(String salt, String hash) {
-        // As specified, the app stores/utilizes the hash to avoid plain text on disk.
-        // Returning the raw hash to be dropped directly into the password field.
-        return hash;
+    private String resolvePayload(String salt, String encryptedValue) {
+        try {
+            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+            cipher.init(Cipher.DECRYPT_MODE, deriveKey(salt));
+            byte[] decrypted = cipher.doFinal(Base64.getDecoder().decode(encryptedValue));
+            return new String(decrypted, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            throw new RuntimeException("Decryption failed", e);
+        }
     }
 
-    /**
-     * Stubs out data persistence. Replace with your structural framework database/file reads.
-     */
+    // SHA-256 of the salt gives a 256-bit AES key
+    private SecretKeySpec deriveKey(String salt) throws NoSuchAlgorithmException {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] keyBytes = digest.digest(salt.getBytes(StandardCharsets.UTF_8));
+        return new SecretKeySpec(keyBytes, "AES");
+    }
+
     private List<CredentialStub> fetchExternalCredentials() {
+        if (configuredDescriptions != null && configuredValues != null) {
+            List<CredentialStub> list = new ArrayList<>();
+            String salt = configuredSalt != null ? configuredSalt : "";
+            int count = Math.min(configuredDescriptions.size(), configuredValues.size());
+            for (int i = 0; i < count; i++) {
+                list.add(new CredentialStub(configuredDescriptions.get(i), salt, configuredValues.get(i)));
+            }
+            return list;
+        }
         List<CredentialStub> list = new ArrayList<>();
-        // Mocked Examples:
         list.add(new CredentialStub("Internal App Database Admin", "salt_alpha_99", "k8FmX/qW0P9oLkR1vA5zNn8M..."));
         list.add(new CredentialStub("Staging Environment API Key", "salt_beta_local", "mQ4vP9LzT7xW1bC2vR9sKz0X..."));
         return list;

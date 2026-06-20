@@ -539,25 +539,63 @@ public class ChessUiEngine {
         JPanel controlPanel = new JPanel(new BorderLayout());
         controlPanel.setBorder(b);
 
-        JPanel south = new JPanel();
-        controlPanel.add(south, BorderLayout.SOUTH);
+        Box south = Box.createVerticalBox();
 
-        JButton btn = new JButton("Undo");
-        south.add(btn);
-        btn.addActionListener(e -> {
-            this.undoLastMove();
-        });
-        btn = new JButton("Redo");
-        south.add(btn);
+        JPanel undo = createUndoRedoPanel();
+        south.add(undo);
+        JPanel castling = createCastlingPanel();
+        south.add(castling);
 
-        btn = new JButton("Resign");
-        south.add(btn);
 
         controlPanel.add(scoresheetPanel, BorderLayout.CENTER);
+        controlPanel.add(south, BorderLayout.SOUTH);
 
         return controlPanel;
     }
     
+    private JPanel createCastlingPanel() {
+        JPanel p = new JPanel();
+
+        JButton btn = new JButton("K");
+        btn.setBackground(Color.white);
+        btn.setForeground(Color.black);
+        p.add(btn);
+
+        btn = new JButton("Q");
+        btn.setBackground(Color.white);
+        btn.setForeground(Color.black);
+        p.add(btn);
+
+        btn = new JButton("K");
+        btn.setBackground(Color.black);
+        btn.setForeground(Color.white);
+        p.add(btn);
+
+        btn = new JButton("Q");
+        btn.setBackground(Color.black);
+        btn.setForeground(Color.white);
+        p.add(btn);
+
+        return p;
+    }
+
+    public JPanel createUndoRedoPanel() {
+        JPanel p = new JPanel();
+
+        JButton btn = new JButton("Undo");
+        p.add(btn);
+        btn.addActionListener(e -> {
+            this.undoLastMove();
+        });
+        btn = new JButton("Redo");
+        p.add(btn);
+
+        btn = new JButton("Resign");
+        p.add(btn);
+
+        return p;
+    }
+
     public JPanel createSettings() {
         Border b = new CompoundBorder(
             new EmptyBorder(0, 4, 4, 4),

@@ -230,13 +230,13 @@
           "desktopOnly": false
         },
         {
-          "class": "org.jwellman.virtualdesktop.vapps.SpecDragDropCredential",
+          "class": "org.jwellman.virtualdesktop.vapps.SpecDragDropSnippet",
           "title": "Text Helper",
-          "icon": "lock",
+          "icon": "copy",
           "enabled": true,
           "desktopOnly": false,
           "attrs": {
-            "salt": "$$saltForTest",
+            "seed": "$$saltForTest",
             "description": "Example Entry 1|Example Entry 2",
             "value": "QxTJuNHgGB9dTuR91jdHIw==|Uy6Xb0g0UuaRRrVTyAR8FA=="
           }

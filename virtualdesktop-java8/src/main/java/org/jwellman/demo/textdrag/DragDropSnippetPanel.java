@@ -40,43 +40,41 @@ import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 
 /**
- * A robust Swing utility panel allowing users to drag masked credentials/text 
- * directly into native desktop applications (e.g., browser password fields).
- * * Architecture:
- * - CENTER: Scrollable list of draggable targets.
- * - SOUTH: Utility panel for generating and copying new salted hashes.
+ * A Swing utility panel for dragging labeled text snippets into other
+ * applications. Each snippet's value is stored encoded and decoded at drop time.
+ *
+ * Architecture:
+ * - CENTER: Scrollable list of draggable snippet targets.
+ * - SOUTH: Utility panel for generating and copying encoded values.
  */
 @SuppressWarnings("serial")
-public class DragDropCredentialPanel extends JPanel {
+public class DragDropSnippetPanel extends JPanel {
 
     private JPanel listContainer;
-    private JTextField saltInputField;
+    private JTextField seedInputField;
     private JPasswordField rawTextInputField;
-    private JTextField hashOutputField;
+    private JTextField encodedOutputField;
 
-    private String configuredSalt = null;
+    private String configuredSeed = null;
     private List<String> configuredDescriptions = null;
     private List<String> configuredValues = null;
 
-    public DragDropCredentialPanel() {
+    public DragDropSnippetPanel() {
         super(new BorderLayout(0, 10));
         initUI();
     }
 
-    public DragDropCredentialPanel(String salt, List<String> descriptions, List<String> values) {
+    public DragDropSnippetPanel(String seed, List<String> descriptions, List<String> values) {
         super(new BorderLayout(0, 10));
-        this.configuredSalt = salt;
+        this.configuredSeed = seed;
         this.configuredDescriptions = descriptions;
         this.configuredValues = values;
-
         initUI();
-
     }
 
     private void initUI() {
         setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        // 1. Upper Half: Draggable Components inside a JScrollPane
         this.listContainer = new JPanel();
         this.listContainer.setLayout(new BoxLayout(listContainer, BoxLayout.Y_AXIS));
 
@@ -86,35 +84,31 @@ public class DragDropCredentialPanel extends JPanel {
         scrollPane.getVerticalScrollBar().setUnitIncrement(12);
 
         add(scrollPane, BorderLayout.CENTER);
+        add(createTransformPanel(), BorderLayout.SOUTH);
 
-        // 2. Bottom Half: Generator Utility Panel
-        add(createGeneratorPanel(), BorderLayout.SOUTH);
-
-        // 3. Initialize/Load Data
-        loadDraggableItems();
+        loadSnippets();
     }
 
     /**
-     * Stubs out data retrieval. In production, this wires into your 
-     * external framework utilities to fetch stored salt/hash pairs.
+     * Stubs out data retrieval. In production, this wires into your
+     * external framework utilities to fetch stored snippet records.
      */
-    private void loadDraggableItems() {
-        // Framework integration point: Fetch external records here
-        List<CredentialStub> externalRecords = fetchExternalCredentials();
+    private void loadSnippets() {
+        List<SnippetRecord> records = fetchSnippets();
 
-        for (CredentialStub record : externalRecords) {
-            listContainer.add(createDragComponent(record.getDescription(), record.getSalt(), record.getStoredHash()));
-            listContainer.add(Box.createVerticalStrut(6)); // Predictable spacing
+        for (SnippetRecord record : records) {
+            listContainer.add(createDragComponent(record.getDescription(), record.getSeed(), record.getEncodedValue()));
+            listContainer.add(Box.createVerticalStrut(6));
         }
         listContainer.revalidate();
         listContainer.repaint();
     }
 
     /**
-     * Creates an individual UI component representing a draggable item.
+     * Creates an individual UI component representing a draggable snippet.
      * Uses an explicit DragMouseAdapter to govern the drag threshold.
      */
-    private JComponent createDragComponent(String description, String salt, String hash) {
+    private JComponent createDragComponent(String description, String seed, String encodedValue) {
         JPanel itemPanel = new JPanel(new BorderLayout(10, 0));
         itemPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1),
@@ -126,13 +120,11 @@ public class DragDropCredentialPanel extends JPanel {
         descLabel.setFont(descLabel.getFont().deriveFont(Font.BOLD));
         itemPanel.add(descLabel, BorderLayout.CENTER);
 
-        // Visual handle indicating drag capability
         JLabel dragHandle = new JLabel("⋮⋮ Drag");
         dragHandle.setForeground(Color.GRAY);
         dragHandle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         itemPanel.add(dragHandle, BorderLayout.WEST);
 
-        // Configure Drag and Drop TransferHandler
         itemPanel.setTransferHandler(new TransferHandler() {
             @Override
             public int getSourceActions(JComponent c) {
@@ -141,13 +133,10 @@ public class DragDropCredentialPanel extends JPanel {
 
             @Override
             protected Transferable createTransferable(JComponent c) {
-                // Resolution happens dynamically at the moment of the drop operation
-                String resolvedValue = resolvePayload(salt, hash);
-                return new StringSelection(resolvedValue);
+                return new StringSelection(decodeValue(encodedValue, seed));
             }
         });
 
-        // Attach mouse listener to initiate drag safely based on standard gestures
         DragMouseAdapter mouseAdapter = new DragMouseAdapter(itemPanel);
         itemPanel.addMouseListener(mouseAdapter);
         itemPanel.addMouseMotionListener(mouseAdapter);
@@ -156,23 +145,23 @@ public class DragDropCredentialPanel extends JPanel {
     }
 
     /**
-     * Creates the bottom generation utility area using GridBagLayout for alignment durability.
+     * Creates the bottom transform utility area using GridBagLayout for alignment durability.
      */
-    private JPanel createGeneratorPanel() {
+    private JPanel createTransformPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("Encryption Utility"));
+        panel.setBorder(BorderFactory.createTitledBorder("Transform Utility"));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(4, 6, 4, 6);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        // Row 0: Salt Input
+        // Row 0: Seed Input
         gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.0;
-        panel.add(new JLabel("Salt:"), gbc);
-        
-        saltInputField = new JTextField(15);
+        panel.add(new JLabel("Seed:"), gbc);
+
+        seedInputField = new JTextField(15);
         gbc.gridx = 1; gbc.weightx = 1.0;
-        panel.add(saltInputField, gbc);
+        panel.add(seedInputField, gbc);
 
         // Row 1: Plaintext Input
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.0;
@@ -183,100 +172,96 @@ public class DragDropCredentialPanel extends JPanel {
         panel.add(rawTextInputField, gbc);
 
         // Row 2: Actions
-        JButton generateBtn = new JButton("Generate & Copy");
+        JButton encodeBtn = new JButton("Encode & Copy");
         gbc.gridx = 1; gbc.gridy = 2; gbc.fill = GridBagConstraints.NONE;
         gbc.anchor = GridBagConstraints.EAST;
-        panel.add(generateBtn, gbc);
+        panel.add(encodeBtn, gbc);
 
         // Row 3: Output Display
         gbc.gridx = 0; gbc.gridy = 3; gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 0.0;
-        panel.add(new JLabel("Encrypted Value:"), gbc);
+        panel.add(new JLabel("Encoded Value:"), gbc);
 
-        hashOutputField = new JTextField();
-        hashOutputField.setEditable(false);
-        hashOutputField.setBackground(UIManager.getColor("Panel.background"));
+        encodedOutputField = new JTextField();
+        encodedOutputField.setEditable(false);
+        encodedOutputField.setBackground(UIManager.getColor("Panel.background"));
         gbc.gridx = 1; gbc.weightx = 1.0;
-        panel.add(hashOutputField, gbc);
+        panel.add(encodedOutputField, gbc);
 
-        // Event Handling
-        generateBtn.addActionListener(e -> executeGenerationPipeline());
+        encodeBtn.addActionListener(e -> executeTransformPipeline());
 
         return panel;
     }
 
     /**
-     * Orchestrates the generation, UI display, and clipboard injection of a new hash.
+     * Orchestrates the encoding, UI display, and clipboard injection of a new value.
      */
-    private void executeGenerationPipeline() {
-        String salt = saltInputField.getText().trim();
-        char[] passwordChars = rawTextInputField.getPassword();
-        String plainText = new String(passwordChars);
+    private void executeTransformPipeline() {
+        String seed = seedInputField.getText().trim();
+        char[] textChars = rawTextInputField.getPassword();
+        String plainText = new String(textChars);
 
-        if (salt.isEmpty() || plainText.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Both Salt and Plain Text fields are required.", "Input Error", JOptionPane.WARNING_MESSAGE);
+        if (seed.isEmpty() || plainText.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Both Seed and Plain Text fields are required.", "Input Error", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        String generatedHash = encryptValue(plainText, salt);
-        hashOutputField.setText(generatedHash);
+        String encoded = encodeValue(plainText, seed);
+        encodedOutputField.setText(encoded);
 
-        // Instantly move to system clipboard
-        StringSelection selection = new StringSelection(generatedHash);
+        StringSelection selection = new StringSelection(encoded);
         Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
 
-        // Clear out raw memory reference quickly
-        java.util.Arrays.fill(passwordChars, ' ');
+        java.util.Arrays.fill(textChars, ' ');
         rawTextInputField.setText("");
     }
 
-    private String encryptValue(String plainText, String salt) {
+    private String encodeValue(String plainText, String seed) {
         try {
             Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-            cipher.init(Cipher.ENCRYPT_MODE, deriveKey(salt));
+            cipher.init(Cipher.ENCRYPT_MODE, deriveKey(seed));
             byte[] encrypted = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(encrypted);
         } catch (Exception e) {
-            throw new RuntimeException("Encryption failed", e);
+            throw new RuntimeException("Encoding failed", e);
         }
     }
 
-    private String resolvePayload(String salt, String encryptedValue) {
+    private String decodeValue(String encodedValue, String seed) {
         try {
             Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-            cipher.init(Cipher.DECRYPT_MODE, deriveKey(salt));
-            byte[] decrypted = cipher.doFinal(Base64.getDecoder().decode(encryptedValue));
+            cipher.init(Cipher.DECRYPT_MODE, deriveKey(seed));
+            byte[] decrypted = cipher.doFinal(Base64.getDecoder().decode(encodedValue));
             return new String(decrypted, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            throw new RuntimeException("Decryption failed", e);
+            throw new RuntimeException("Decoding failed", e);
         }
     }
 
-    // SHA-256 of the salt gives a 256-bit AES key
-    private SecretKeySpec deriveKey(String salt) throws NoSuchAlgorithmException {
+    private SecretKeySpec deriveKey(String seed) throws NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        byte[] keyBytes = digest.digest(salt.getBytes(StandardCharsets.UTF_8));
+        byte[] keyBytes = digest.digest(seed.getBytes(StandardCharsets.UTF_8));
         return new SecretKeySpec(keyBytes, "AES");
     }
 
-    private List<CredentialStub> fetchExternalCredentials() {
+    private List<SnippetRecord> fetchSnippets() {
         if (configuredDescriptions != null && configuredValues != null) {
-            List<CredentialStub> list = new ArrayList<>();
-            String salt = configuredSalt != null ? configuredSalt : "";
+            List<SnippetRecord> list = new ArrayList<>();
+            String seed = configuredSeed != null ? configuredSeed : "";
             int count = Math.min(configuredDescriptions.size(), configuredValues.size());
             for (int i = 0; i < count; i++) {
-                list.add(new CredentialStub(configuredDescriptions.get(i), salt, configuredValues.get(i)));
+                list.add(new SnippetRecord(configuredDescriptions.get(i), seed, configuredValues.get(i)));
             }
             return list;
         }
-        List<CredentialStub> list = new ArrayList<>();
-        list.add(new CredentialStub("Internal App Database Admin", "salt_alpha_99", "k8FmX/qW0P9oLkR1vA5zNn8M..."));
-        list.add(new CredentialStub("Staging Environment API Key", "salt_beta_local", "mQ4vP9LzT7xW1bC2vR9sKz0X..."));
+        List<SnippetRecord> list = new ArrayList<>();
+        list.add(new SnippetRecord("Internal App Database Admin", "seed_alpha_99", "k8FmX/qW0P9oLkR1vA5zNn8M..."));
+        list.add(new SnippetRecord("Staging Environment API Key", "seed_beta_local", "mQ4vP9LzT7xW1bC2vR9sKz0X..."));
         return list;
     }
 
     /**
-     * Explicit mouse adapter that monitors drag thresholds before triggering 
+     * Explicit mouse adapter that monitors drag thresholds before triggering
      * the TransferHandler, preventing jerky accidental drags during basic clicks.
      */
     private static class DragMouseAdapter extends MouseAdapter {
@@ -302,41 +287,38 @@ public class DragDropCredentialPanel extends JPanel {
             if (firstMouseEvent != null) {
                 long dx = Math.abs(e.getX() - firstMouseEvent.getX());
                 long dy = Math.abs(e.getY() - firstMouseEvent.getY());
-                
-                // Verify movement extends beyond the native platform's drag threshold
                 if (dx > 5 || dy > 5) {
                     TransferHandler handler = component.getTransferHandler();
                     handler.exportAsDrag(component, firstMouseEvent, TransferHandler.COPY);
-                    firstMouseEvent = null; // Clear to prevent multiple concurrent triggers
+                    firstMouseEvent = null;
                 }
             }
         }
     }
 
     /**
-     * Simple domain object stub for managing local references.
+     * Simple domain object for managing snippet records.
      */
-    private static class CredentialStub {
+    private static class SnippetRecord {
         private final String description;
-        private final String salt;
-        private final String storedHash;
+        private final String seed;
+        private final String encodedValue;
 
-        public CredentialStub(String description, String salt, String storedHash) {
+        public SnippetRecord(String description, String seed, String encodedValue) {
             this.description = description;
-            this.salt = salt;
-            this.storedHash = storedHash;
+            this.seed = seed;
+            this.encodedValue = encodedValue;
         }
 
         public String getDescription() { return description; }
-        public String getSalt() { return salt; }
-        public String getStoredHash() { return storedHash; }
+        public String getSeed() { return seed; }
+        public String getEncodedValue() { return encodedValue; }
     }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Drag Drop Text");
-            frame.add(new DragDropCredentialPanel(), BorderLayout.CENTER);
-
+            JFrame frame = new JFrame("Drag Drop Snippets");
+            frame.add(new DragDropSnippetPanel(), BorderLayout.CENTER);
             frame.setSize(350, 450);
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setVisible(true);

@@ -4,6 +4,8 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.Dialog;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -27,6 +29,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComponent;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -45,15 +48,13 @@ import javax.swing.border.EmptyBorder;
  *
  * Architecture:
  * - CENTER: Scrollable list of draggable snippet targets.
- * - SOUTH: Utility panel for generating and copying encoded values.
+ * - SOUTH:  Add-snippet bar (description field + button that opens encoder dialog).
  */
 @SuppressWarnings("serial")
 public class DragDropSnippetPanel extends JPanel {
 
     private JPanel listContainer;
-    private JTextField seedInputField;
-    private JPasswordField rawTextInputField;
-    private JTextField encodedOutputField;
+    private JTextField descriptionInputField;
 
     private String configuredSeed = null;
     private List<String> configuredDescriptions = null;
@@ -84,7 +85,7 @@ public class DragDropSnippetPanel extends JPanel {
         scrollPane.getVerticalScrollBar().setUnitIncrement(12);
 
         add(scrollPane, BorderLayout.CENTER);
-        add(createTransformPanel(), BorderLayout.SOUTH);
+        add(createAddSnippetBar(), BorderLayout.SOUTH);
 
         loadSnippets();
     }
@@ -102,6 +103,51 @@ public class DragDropSnippetPanel extends JPanel {
         }
         listContainer.revalidate();
         listContainer.repaint();
+    }
+
+    /**
+     * Slim bar at the bottom of the panel. If a description is entered before
+     * clicking the button, a new drag item is appended to the list on completion.
+     */
+    private JPanel createAddSnippetBar() {
+        JPanel bar = new JPanel(new BorderLayout(6, 0));
+        bar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, Color.LIGHT_GRAY),
+                new EmptyBorder(6, 0, 0, 0)));
+
+        bar.add(new JLabel("Description:"), BorderLayout.WEST);
+
+        descriptionInputField = new JTextField();
+        bar.add(descriptionInputField, BorderLayout.CENTER);
+
+        JButton addBtn = new JButton("Add Snippet...");
+        addBtn.addActionListener(e -> onAddSnippet());
+        bar.add(addBtn, BorderLayout.EAST);
+
+        return bar;
+    }
+
+    /**
+     * Opens the encoder dialog. If the user completes encoding and a description
+     * is present, appends a new drag component to the live list.
+     */
+    private void onAddSnippet() {
+        SnippetEncoderDialog dialog = new SnippetEncoderDialog();
+        dialog.setVisible(true); // blocks — modal
+
+        String encodedValue = dialog.getEncodedValue();
+        if (encodedValue == null) {
+            return; // cancelled or nothing encoded
+        }
+
+        String description = descriptionInputField.getText().trim();
+        if (!description.isEmpty()) {
+            listContainer.add(createDragComponent(description, dialog.getSeed(), encodedValue));
+            listContainer.add(Box.createVerticalStrut(6));
+            listContainer.revalidate();
+            listContainer.repaint();
+            descriptionInputField.setText("");
+        }
     }
 
     /**
@@ -144,77 +190,9 @@ public class DragDropSnippetPanel extends JPanel {
         return itemPanel;
     }
 
-    /**
-     * Creates the bottom transform utility area using GridBagLayout for alignment durability.
-     */
-    private JPanel createTransformPanel() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("Transform Utility"));
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(4, 6, 4, 6);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-
-        // Row 0: Seed Input
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.0;
-        panel.add(new JLabel("Seed:"), gbc);
-
-        seedInputField = new JTextField(15);
-        gbc.gridx = 1; gbc.weightx = 1.0;
-        panel.add(seedInputField, gbc);
-
-        // Row 1: Plaintext Input
-        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.0;
-        panel.add(new JLabel("Plain Text:"), gbc);
-
-        rawTextInputField = new JPasswordField(15);
-        gbc.gridx = 1; gbc.weightx = 1.0;
-        panel.add(rawTextInputField, gbc);
-
-        // Row 2: Actions
-        JButton encodeBtn = new JButton("Encode & Copy");
-        gbc.gridx = 1; gbc.gridy = 2; gbc.fill = GridBagConstraints.NONE;
-        gbc.anchor = GridBagConstraints.EAST;
-        panel.add(encodeBtn, gbc);
-
-        // Row 3: Output Display
-        gbc.gridx = 0; gbc.gridy = 3; gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 0.0;
-        panel.add(new JLabel("Encoded Value:"), gbc);
-
-        encodedOutputField = new JTextField();
-        encodedOutputField.setEditable(false);
-        encodedOutputField.setBackground(UIManager.getColor("Panel.background"));
-        gbc.gridx = 1; gbc.weightx = 1.0;
-        panel.add(encodedOutputField, gbc);
-
-        encodeBtn.addActionListener(e -> executeTransformPipeline());
-
-        return panel;
-    }
-
-    /**
-     * Orchestrates the encoding, UI display, and clipboard injection of a new value.
-     */
-    private void executeTransformPipeline() {
-        String seed = seedInputField.getText().trim();
-        char[] textChars = rawTextInputField.getPassword();
-        String plainText = new String(textChars);
-
-        if (seed.isEmpty() || plainText.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Both Seed and Plain Text fields are required.", "Input Error", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        String encoded = encodeValue(plainText, seed);
-        encodedOutputField.setText(encoded);
-
-        StringSelection selection = new StringSelection(encoded);
-        Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
-
-        java.util.Arrays.fill(textChars, ' ');
-        rawTextInputField.setText("");
-    }
+    // -------------------------------------------------------------------------
+    // Crypto helpers — shared by drag resolution and the encoder dialog
+    // -------------------------------------------------------------------------
 
     private String encodeValue(String plainText, String seed) {
         try {
@@ -244,6 +222,10 @@ public class DragDropSnippetPanel extends JPanel {
         return new SecretKeySpec(keyBytes, "AES");
     }
 
+    // -------------------------------------------------------------------------
+    // Data loading
+    // -------------------------------------------------------------------------
+
     private List<SnippetRecord> fetchSnippets() {
         if (configuredDescriptions != null && configuredValues != null) {
             List<SnippetRecord> list = new ArrayList<>();
@@ -259,6 +241,141 @@ public class DragDropSnippetPanel extends JPanel {
         list.add(new SnippetRecord("Staging Environment API Key", "seed_beta_local", "mQ4vP9LzT7xW1bC2vR9sKz0X..."));
         return list;
     }
+
+    // -------------------------------------------------------------------------
+    // Inner class: encoder dialog
+    // -------------------------------------------------------------------------
+
+    /**
+     * Modal dialog containing the transform utility. Seed is pre-filled from
+     * the panel's configuredSeed. Call getEncodedValue() after dispose() — a
+     * null return means the user cancelled or closed without encoding.
+     */
+    private class SnippetEncoderDialog extends JDialog {
+
+        private JTextField seedField;
+        private JPasswordField plainTextField;
+        private JTextField encodedOutputField;
+
+        private String resultEncodedValue = null;
+        private String resultSeed = null;
+
+        SnippetEncoderDialog() {
+            super(SwingUtilities.getWindowAncestor(DragDropSnippetPanel.this),
+                    "Add Snippet", Dialog.ModalityType.APPLICATION_MODAL);
+            initDialogUI();
+            pack();
+            setResizable(false);
+            setLocationRelativeTo(DragDropSnippetPanel.this);
+        }
+
+        private void initDialogUI() {
+            JPanel content = new JPanel(new GridBagLayout());
+            content.setBorder(new EmptyBorder(10, 10, 6, 10));
+
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.insets = new Insets(4, 6, 4, 6);
+            gbc.fill = GridBagConstraints.HORIZONTAL;
+
+            // Row 0: Seed
+            gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.0;
+            content.add(new JLabel("Seed:"), gbc);
+
+            seedField = new JTextField(20);
+            if (configuredSeed != null) {
+                seedField.setText(configuredSeed);
+            }
+            gbc.gridx = 1; gbc.weightx = 1.0;
+            content.add(seedField, gbc);
+
+            // Row 1: Plain text
+            gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.0;
+            content.add(new JLabel("Plain Text:"), gbc);
+
+            plainTextField = new JPasswordField(20);
+            gbc.gridx = 1; gbc.weightx = 1.0;
+            content.add(plainTextField, gbc);
+
+            // Row 2: Encode button
+            JButton encodeBtn = new JButton("Encode & Copy");
+            gbc.gridx = 1; gbc.gridy = 2; gbc.fill = GridBagConstraints.NONE;
+            gbc.anchor = GridBagConstraints.EAST;
+            content.add(encodeBtn, gbc);
+
+            // Row 3: Encoded output
+            gbc.gridx = 0; gbc.gridy = 3; gbc.fill = GridBagConstraints.HORIZONTAL;
+            gbc.weightx = 0.0; gbc.anchor = GridBagConstraints.WEST;
+            content.add(new JLabel("Encoded Value:"), gbc);
+
+            encodedOutputField = new JTextField(20);
+            encodedOutputField.setEditable(false);
+            encodedOutputField.setBackground(UIManager.getColor("Panel.background"));
+            gbc.gridx = 1; gbc.weightx = 1.0;
+            content.add(encodedOutputField, gbc);
+
+            // Button row
+            JButton okBtn = new JButton("OK");
+            JButton cancelBtn = new JButton("Cancel");
+            JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 6));
+            buttons.add(cancelBtn);
+            buttons.add(okBtn);
+
+            encodeBtn.addActionListener(e -> onEncode());
+            okBtn.addActionListener(e -> onOk());
+            cancelBtn.addActionListener(e -> dispose());
+
+            getRootPane().setDefaultButton(okBtn);
+
+            setLayout(new BorderLayout());
+            add(content, BorderLayout.CENTER);
+            add(buttons, BorderLayout.SOUTH);
+        }
+
+        private void onEncode() {
+            String seed = seedField.getText().trim();
+            char[] chars = plainTextField.getPassword();
+            String plainText = new String(chars);
+
+            if (seed.isEmpty() || plainText.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Both Seed and Plain Text are required.", "Input Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            String encoded = encodeValue(plainText, seed); // outer class method
+            encodedOutputField.setText(encoded);
+
+            StringSelection selection = new StringSelection(encoded);
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
+
+            java.util.Arrays.fill(chars, ' ');
+            plainTextField.setText("");
+        }
+
+        private void onOk() {
+            String encoded = encodedOutputField.getText().trim();
+            if (encoded.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Encode a value first.", "Nothing Encoded", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            resultEncodedValue = encoded;
+            resultSeed = seedField.getText().trim();
+            dispose();
+        }
+
+        /** Returns the encoded value, or null if the dialog was cancelled. */
+        String getEncodedValue() {
+            return resultEncodedValue;
+        }
+
+        /** Returns the seed that was used to produce the encoded value. */
+        String getSeed() {
+            return resultSeed;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Inner class: drag threshold adapter
+    // -------------------------------------------------------------------------
 
     /**
      * Explicit mouse adapter that monitors drag thresholds before triggering
@@ -295,6 +412,10 @@ public class DragDropSnippetPanel extends JPanel {
             }
         }
     }
+
+    // -------------------------------------------------------------------------
+    // Inner class: snippet data record
+    // -------------------------------------------------------------------------
 
     /**
      * Simple domain object for managing snippet records.

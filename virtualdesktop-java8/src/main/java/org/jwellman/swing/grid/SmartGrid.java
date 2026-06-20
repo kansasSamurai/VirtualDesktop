@@ -525,26 +525,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
         columnFiltersVisible = visible;
 
         if (visible) {
-            List<ColumnDef> cols = model.getColumns();
-            columnFilterFields = new JTextField[cols.size()];
-            for (int i = 0; i < cols.size(); i++) {
-                JTextField field = new JTextField();
-                field.getDocument().addDocumentListener(new DocumentListener() {
-                    @Override
-                    public void insertUpdate(DocumentEvent e) {
-                        reapplyColumnFilter();
-                    }
-                    @Override
-                    public void removeUpdate(DocumentEvent e) {
-                        reapplyColumnFilter();
-                    }
-                    @Override
-                    public void changedUpdate(DocumentEvent e) {
-                        reapplyColumnFilter();
-                    }
-                });
-                columnFilterFields[i] = field;
-            }
+            allocateColumnFilterFields(model.getColumns());
         } else {
             columnFilterFields = null;
             columnFilter = null;
@@ -552,6 +533,29 @@ public class SmartGrid extends JPanel implements GridModelListener {
         }
 
         scrollPane.setColumnHeaderView(buildHeader(model.getColumns()));
+    }
+
+    /** Creates a fresh set of per-column filter fields sized to the given columns. */
+    private void allocateColumnFilterFields(List<ColumnDef> cols) {
+        columnFilterFields = new JTextField[cols.size()];
+        for (int i = 0; i < cols.size(); i++) {
+            JTextField field = new JTextField();
+            field.getDocument().addDocumentListener(new DocumentListener() {
+                @Override
+                public void insertUpdate(DocumentEvent e) {
+                    reapplyColumnFilter();
+                }
+                @Override
+                public void removeUpdate(DocumentEvent e) {
+                    reapplyColumnFilter();
+                }
+                @Override
+                public void changedUpdate(DocumentEvent e) {
+                    reapplyColumnFilter();
+                }
+            });
+            columnFilterFields[i] = field;
+        }
     }
 
     /**
@@ -837,6 +841,12 @@ public class SmartGrid extends JPanel implements GridModelListener {
                 }
             },
             sm, capturedWidths, rend, dark));
+
+        if (columnFiltersVisible) {
+            allocateColumnFilterFields(newCols);
+            columnFilter = null;
+            applyComposedFilter();
+        }
 
         scrollPane.setColumnHeaderView(buildHeader(newCols));
     }

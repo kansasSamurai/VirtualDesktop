@@ -231,7 +231,7 @@
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecDragDropCredential",
-          "title": "Credentials",
+          "title": "Text Helper",
           "icon": "lock",
           "enabled": true,
           "desktopOnly": false,

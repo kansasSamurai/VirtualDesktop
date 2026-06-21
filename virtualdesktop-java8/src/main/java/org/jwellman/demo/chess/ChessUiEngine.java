@@ -614,7 +614,7 @@ public class ChessUiEngine {
         container.add(options, BorderLayout.WEST);
 
         this.options.Chooser.SHOW_SQUARE_STRENGTH.addActionListener(e -> {
-            BoardSquare.drawControlBadges = this.options.showSquareStrength();
+            BoardSquare.drawControlIndicators = this.options.showSquareStrength();
             chessBoard.repaint();
         });
 

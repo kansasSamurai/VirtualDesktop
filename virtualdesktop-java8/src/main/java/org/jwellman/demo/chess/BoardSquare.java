@@ -21,8 +21,13 @@ public class BoardSquare extends JPanel {
     private int rank;
     private int file;
 
+    // Modern tactical tones TODO make themeable
+    private static Color lightSquare = new Color(235, 236, 208); 
+    private static Color darkSquare  = new Color(119, 149, 86);
+
     // Options
-    public static boolean drawControlBadges = true;
+    public static boolean drawControlBadges = false;
+    public static boolean drawControlIndicators = true;
 
     private static final Color HIGHLIGHT = new Color(59, 130, 246, 60);
     private static final Stroke STROKE_TARGETTED = new BasicStroke(4.0f);
@@ -36,6 +41,15 @@ public class BoardSquare extends JPanel {
         this.game = g;
     }
 
+    /**
+     * Returns true if this square represents a light (white) tile,
+     * or false if it represents a dark (black) tile.
+     */
+    public boolean isLightSquare() {
+        // If the sum of file and rank is odd, it's a light square
+        return (this.file + this.rank) % 2 != 0;
+    }
+    
     // --- Reactive Setters ---
 
     public void setTargeted(boolean targeted) {
@@ -60,8 +74,8 @@ public class BoardSquare extends JPanel {
 
         final Graphics2D g2 = (Graphics2D) g.create();
         try {
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 10));
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
             // 2. Render web-style target overlays based on active state properties
             if (targeted) {
@@ -92,46 +106,101 @@ public class BoardSquare extends JPanel {
                 g2.fillRect(0, 0, getWidth(), getHeight());
             }
 
-            if (drawControlBadges) {
+            if (drawControlIndicators) {
                 // Reach into the fast, pre-calculated engine cache
                 final SquareControlMatrix matrix = game.getControlMatrix();
                 final int whiteAttackers = matrix.getWhiteAttackerCount(this.file, this.rank);
                 final int blackAttackers = matrix.getBlackAttackerCount(this.file, this.rank);
 
-                final int badgeRadius = 14; // Diameter of the control pill
-                final int margin = 4;       // Inset distance from the square's edges
+                // --- Control Indicator ---
+                int barHeight = 12;
+                int yOffset = getHeight() - barHeight;
 
-                // Upper positions become lower positions:
-                final int lowerY = getHeight() - badgeRadius - margin; 
+                // Determine semantic color based on majority rules
+                if (whiteAttackers > 0 || blackAttackers > 0) {
 
-                // White lower left: (margin, lowerY)
-                // Black lower right: (getWidth() - badgeRadius - margin, lowerY)
+                    // "normalize" the background between light and dark for visual consistency
+//                    if (isLightSquare()) {
+//                    }
+                      g2.setColor(darkSquare);
+//                    if (whiteAttackers > blackAttackers) {
+//                        g2.setColor(lightSquare);
+//                    } else if (blackAttackers > whiteAttackers) {
+//                        g2.setColor(darkSquare);
+//                    } else {
+//                        g2.setColor(Color.white);  // Blue for contested ties
+//                    }
+                    // Paint the clean control anchor strip across the bottom floorboard
+                    g2.fillRect(0, yOffset, getWidth(), barHeight);
 
-                // 1. Draw White Control Badge (Upper Left)
-                if (whiteAttackers > 0) {
-                    final int x = margin;
-                    final int y = lowerY; // margin;
+                    // paint the translucent color - old
+//                    if (whiteAttackers > blackAttackers) {
+//                        if (isLightSquare()) {
+//                            g2.setColor(new Color(240, 255, 240, 200)); // Clean, luminous white-blue
+////                            g2.setColor(new Color(240, 240, 245, 128)); // Clean, luminous white-blue
+//                        } else {
+//                            g2.setColor(new Color(240, 240, 245, 128)); // Clean, luminous white-blue
+//                        }
+//                    } else if (blackAttackers > whiteAttackers) {
+//                        if (isLightSquare()) {
+//                            g2.setColor(new Color(30, 35, 30, 80));   // Deep, tactical dark charcoal
+//                        } else {
+//                            g2.setColor(new Color(30, 30, 30, 16));   // Deep, tactical dark charcoal
+//                        }
+//                    } else {
+//                        g2.setColor(new Color(0, 0, 128, 128));  // Mid-tone slate grey for contested ties
+//                    }
+//                    // Paint the clean control anchor strip across the bottom floorboard
+//                    g2.fillRect(0, yOffset, getWidth(), barHeight);
+
                     
-                    g2.setColor(Color.WHITE);
-                    g2.fillOval(x, y, badgeRadius, badgeRadius);
-                    
-                    g2.setColor(Color.BLACK);
-                    drawCenteredString(g2, String.valueOf(whiteAttackers), x, y, badgeRadius, badgeRadius);
+                    // paint the translucent color - new
+                    if (whiteAttackers > blackAttackers) {
+                        g2.setColor(new Color(240, 240, 245, 128)); // Clean, luminous white-blue
+                    } else if (blackAttackers > whiteAttackers) {
+                        g2.setColor(new Color(30, 30, 30, 64));   // Deep, tactical dark charcoal
+                    } else {
+                        g2.setColor(new Color(0, 0, 128, 128));  // Blue for contested ties
+                    }
+                    // Paint the clean control anchor strip across the bottom floorboard
+                    g2.fillRect(0, yOffset, getWidth(), barHeight);
                 }
 
-                // 2. Draw Black Control Badge (Upper Right)
-                if (blackAttackers > 0) {
-                    final int x = getWidth() - badgeRadius - margin;
-                    final int y = lowerY; // margin;
+                if (drawControlBadges) {
+                    final int badgeRadius = 14; // Diameter of the control pill
+                    final int margin = 4;       // Inset distance from the square's edges
 
-                    g2.setColor(Color.BLACK);
-                    g2.fillOval(x, y, badgeRadius, badgeRadius);
-                    
-                    g2.setColor(Color.WHITE);
-                    drawCenteredString(g2, String.valueOf(blackAttackers), x, y, badgeRadius, badgeRadius);
+                    // Upper positions become lower positions:
+                    final int lowerY = getHeight() - badgeRadius - margin; 
+
+                    // White lower left: (margin, lowerY)
+                    // Black lower right: (getWidth() - badgeRadius - margin, lowerY)
+
+                    // 1. Draw White Control Badge (Upper Left)
+                    if (whiteAttackers > 0) {
+                        final int x = margin;
+                        final int y = lowerY; // margin;
+                        
+                        g2.setColor(Color.WHITE);
+                        g2.fillOval(x, y, badgeRadius, badgeRadius);
+                        
+                        g2.setColor(Color.BLACK);
+                        drawCenteredString(g2, String.valueOf(whiteAttackers), x, y, badgeRadius, badgeRadius);
+                    }
+
+                    // 2. Draw Black Control Badge (Upper Right)
+                    if (blackAttackers > 0) {
+                        final int x = getWidth() - badgeRadius - margin;
+                        final int y = lowerY; // margin;
+
+                        g2.setColor(Color.BLACK);
+                        g2.fillOval(x, y, badgeRadius, badgeRadius);
+                        
+                        g2.setColor(Color.WHITE);
+                        drawCenteredString(g2, String.valueOf(blackAttackers), x, y, badgeRadius, badgeRadius);
+                    }
                 }
 
-                // --- Option 1 Target Rings & Piece Overlays go here ---
             }
 
         } finally {

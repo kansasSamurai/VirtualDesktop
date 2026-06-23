@@ -12,8 +12,10 @@ import java.awt.event.KeyEvent;
 import java.util.Properties;
 
 import javax.swing.Action;
+import javax.swing.DefaultDesktopManager;
 import javax.swing.Icon;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JDesktopPane;
 import javax.swing.JFrame;
 import javax.swing.JList;
@@ -249,6 +251,7 @@ public class App extends JFrame implements ActionListener {
 
         //Make dragging a little faster but perhaps uglier.
         desktop.setDragMode(JDesktopPane.OUTLINE_DRAG_MODE);
+        desktop.setDesktopManager(new SnappingDesktopManager(50));
 
         DesktopAction.setDesktop(this);
         ActionFactory.initDesktop();
@@ -659,6 +662,28 @@ public class App extends JFrame implements ActionListener {
                 createAndShowGUI();
             } }
         );
+    }
+
+    public class SnappingDesktopManager extends DefaultDesktopManager {
+
+        private final int gridSize;
+
+        public SnappingDesktopManager(int gridSize) {
+            this.gridSize = gridSize;
+        }
+
+        @Override
+        public void setBoundsForFrame(JComponent f, int newX, int newY, int newWidth, int newHeight) {
+            // Snap to grid
+            int snappedX = (newX / gridSize) * gridSize;
+            int snappedY = (newY / gridSize) * gridSize;
+            
+            // Optionally snap the width/height too if you want perfect squares
+            int snappedWidth = ((newWidth + gridSize / 2) / gridSize) * gridSize;
+            int snappedHeight = ((newHeight + gridSize / 2) / gridSize) * gridSize;
+
+            super.setBoundsForFrame(f, snappedX, snappedY, snappedWidth, snappedHeight);
+        }
     }
 
 }

@@ -33,6 +33,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.JToggleButton;
 import javax.swing.JViewport;
 import javax.swing.ListSelectionModel;
 import javax.swing.Scrollable;
@@ -112,8 +113,10 @@ public class SmartGrid extends JPanel implements GridModelListener {
     private GridModelFilter columnFilter = null; // built by reapplyColumnFilter()
 
     // Per-column filter row (opt-in)
-    private boolean      columnFiltersVisible = false;
-    private JTextField[] columnFilterFields   = null;
+    private boolean        columnFiltersVisible     = false;
+    private JTextField[]   columnFilterFields       = null;
+    private JToggleButton[] columnExcludeButtons    = null;
+    private final Set<String> globalFilterExcludedKeys = new HashSet<>();
 
     // Multi-column sort state; index 0 = primary sort
     private final List<SortSpec> currentSortSpecs = new ArrayList<>();
@@ -527,7 +530,9 @@ public class SmartGrid extends JPanel implements GridModelListener {
         if (visible) {
             allocateColumnFilterFields(model.getColumns());
         } else {
-            columnFilterFields = null;
+            columnFilterFields   = null;
+            columnExcludeButtons = null;
+            globalFilterExcludedKeys.clear();
             columnFilter = null;
             applyComposedFilter();
         }
@@ -535,9 +540,10 @@ public class SmartGrid extends JPanel implements GridModelListener {
         scrollPane.setColumnHeaderView(buildHeader(model.getColumns()));
     }
 
-    /** Creates a fresh set of per-column filter fields sized to the given columns. */
+    /** Creates a fresh set of per-column filter fields and exclude-toggle buttons sized to the given columns. */
     private void allocateColumnFilterFields(List<ColumnDef> cols) {
-        columnFilterFields = new JTextField[cols.size()];
+        columnFilterFields   = new JTextField[cols.size()];
+        columnExcludeButtons = new JToggleButton[cols.size()];
         for (int i = 0; i < cols.size(); i++) {
             JTextField field = new JTextField();
             field.getDocument().addDocumentListener(new DocumentListener() {
@@ -555,6 +561,19 @@ public class SmartGrid extends JPanel implements GridModelListener {
                 }
             });
             columnFilterFields[i] = field;
+
+            final String colKey = cols.get(i).getKey();
+            JToggleButton btn = new JToggleButton("X");
+            btn.setToolTipText("Exclude this column from the global filter");
+            btn.addActionListener(e -> {
+                if (btn.isSelected()) {
+                    globalFilterExcludedKeys.add(colKey);
+                } else {
+                    globalFilterExcludedKeys.remove(colKey);
+                }
+                applyComposedFilter();
+            });
+            columnExcludeButtons[i] = btn;
         }
     }
 
@@ -723,11 +742,15 @@ public class SmartGrid extends JPanel implements GridModelListener {
             }
             return;
         }
-        final GridModelFilter g = globalFilter;
-        final GridModelFilter c = columnFilter;
+        final GridModelFilter g        = globalFilter;
+        final GridModelFilter c        = columnFilter;
+        final Set<String>     excluded = globalFilterExcludedKeys;
         GridModelFilter composed = row -> {
-            if (g != null && !g.accept(row)) {
-                return false;
+            if (g != null) {
+                GridRow tested = excluded.isEmpty() ? row : new MaskedGridRow(row, excluded);
+                if (!g.accept(tested)) {
+                    return false;
+                }
             }
             if (c != null && !c.accept(row)) {
                 return false;
@@ -843,6 +866,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
             sm, capturedWidths, rend, dark));
 
         if (columnFiltersVisible) {
+            globalFilterExcludedKeys.clear();
             allocateColumnFilterFields(newCols);
             columnFilter = null;
             applyComposedFilter();
@@ -1267,10 +1291,14 @@ public class SmartGrid extends JPanel implements GridModelListener {
                 x += sw;
             }
         }
+        int btnW = filterHeight - 4;
         for (int i = 0; i < cols.size() && i < columnFilterFields.length; i++) {
             int w = columnWidths[i];
+            JToggleButton btn = columnExcludeButtons[i];
+            btn.setBounds(x + 2, 2, btnW, filterHeight - 4);
+            filterRow.add(btn);
             JTextField field = columnFilterFields[i];
-            field.setBounds(x + 2, 2, w - 4, filterHeight - 4);
+            field.setBounds(x + btnW + 4, 2, Math.max(0, w - btnW - 6), filterHeight - 4);
             filterRow.add(field);
             x += w;
         }
@@ -1447,6 +1475,87 @@ public class SmartGrid extends JPanel implements GridModelListener {
         southPanel.add(footerPanel, 0);
         southPanel.revalidate();
         southPanel.repaint();
+    }
+
+    // -------------------------------------------------------------------------
+    // Inner class: MaskedGridRow
+    // -------------------------------------------------------------------------
+
+    /**
+     * Wraps a GridRow and returns null for any key in the excluded set, allowing
+     * the global filter lambda to skip those columns without knowing about the
+     * exclusion mechanism. Used by applyComposedFilter() when globalFilterExcludedKeys
+     * is non-empty.
+     */
+    private static class MaskedGridRow extends GridRow {
+
+        private final GridRow     delegate;
+        private final Set<String> excludedKeys;
+
+        MaskedGridRow(GridRow delegate, Set<String> excludedKeys) {
+            this.delegate     = delegate;
+            this.excludedKeys = excludedKeys;
+        }
+
+        @Override
+        public Object get(String key) {
+            return excludedKeys.contains(key) ? null : delegate.get(key);
+        }
+
+        @Override
+        public String getTag(String key) {
+            return delegate.getTag(key);
+        }
+
+        @Override
+        public Map<String, Object> getData() {
+            return delegate.getData();
+        }
+
+        @Override
+        public Map<String, String> getTags() {
+            return delegate.getTags();
+        }
+
+        @Override
+        public int getDepth() {
+            return delegate.getDepth();
+        }
+
+        @Override
+        public boolean isExpanded() {
+            return delegate.isExpanded();
+        }
+
+        @Override
+        public boolean isHasChildren() {
+            return delegate.isHasChildren();
+        }
+
+        @Override
+        public String getParentId() {
+            return delegate.getParentId();
+        }
+
+        @Override
+        public boolean isSelected() {
+            return delegate.isSelected();
+        }
+
+        @Override
+        public boolean isProcessing() {
+            return delegate.isProcessing();
+        }
+
+        @Override
+        public Object getSourceObject() {
+            return delegate.getSourceObject();
+        }
+
+        @Override
+        public boolean isGroupHeader() {
+            return delegate.isGroupHeader();
+        }
     }
 
     // -------------------------------------------------------------------------

@@ -25,7 +25,11 @@ public class TweenComparisonDemo {
                 VRadialIndicator linearIndicator = new VRadialIndicator();
                 frame.add(linearIndicator);
 
-                Engine.getInstance().register(animationDuration, Engine.Easing.LINEAR, context -> {
+                Engine.getInstance().register(
+                        animationDuration, 
+                        Engine.Easing.LINEAR,
+                        Engine.LoopMode.ONCE,
+                        context -> {
                     if (!linearIndicator.isDisplayable()) return false;
                     
                     // context.value yields the raw linear progress (0.0 to 1.0)
@@ -37,7 +41,10 @@ public class TweenComparisonDemo {
                 VRadialIndicator sineIndicator = new VRadialIndicator();
                 frame.add(sineIndicator);
 
-                Engine.getInstance().register(animationDuration, Engine.Easing.SINE_WAVE, context -> {
+                Engine.getInstance().register(animationDuration, 
+                        Engine.Easing.SINE_WAVE, 
+                        Engine.LoopMode.ONCE,
+                        context -> {
                     if (!sineIndicator.isDisplayable()) return false;
                     
                     // context.value yields the sine-curved progress (accel/decel feeling)

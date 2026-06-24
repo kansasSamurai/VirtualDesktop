@@ -24,6 +24,11 @@ public class ColumnDef {
         this(key, header, 100, false, true, null);
     }
 
+    /** Convenience constructor for when sortability needs to be specified explicitly. */
+    public ColumnDef(String key, String header, boolean sortable) {
+        this(key, header, 100, sortable, true, null);
+    }
+
     public String getKey() { return key; }
     public String getHeader() { return header; }
     public int getPreferredWidth() { return preferredWidth; }

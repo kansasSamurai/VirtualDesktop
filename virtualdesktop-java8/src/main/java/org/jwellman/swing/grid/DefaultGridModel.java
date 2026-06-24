@@ -91,14 +91,14 @@ public class DefaultGridModel implements GridModel {
             String[] headers = lines[0].split("\\t", -1);
             for (String h : headers) {
                 String label = h.trim().isEmpty() ? "col" + columns.size() : h.trim();
-                columns.add(new ColumnDef(label, label));
+                columns.add(new ColumnDef(label, label, true));
             }
             startLine = 1;
         } else {
             String[] firstFields = lines[0].split("\\t", -1);
             for (int i = 0; i < firstFields.length; i++) {
                 String label = columnLabel(i);
-                columns.add(new ColumnDef(label, label));
+                columns.add(new ColumnDef(label, label, true));
             }
             startLine = 0;
         }

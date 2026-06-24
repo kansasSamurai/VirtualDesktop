@@ -944,6 +944,7 @@ public class SmartGrid extends JPanel implements GridModelListener {
      * the old filter-row panel to the newly built one) Swing drops focus to the next
      * focusable sibling; this method restores it via invokeLater.
      */
+    @SuppressWarnings("null")
     private void rebuildHeaderView(List<ColumnDef> cols) {
         // Preserve focus across header rebuild.  The header panel is replaced
         // entirely on viewport width changes (scroll bar appearing/disappearing),
@@ -1484,8 +1485,9 @@ public class SmartGrid extends JPanel implements GridModelListener {
     /**
      * Wraps a GridRow and returns null for any key in the excluded set, allowing
      * the global filter lambda to skip those columns without knowing about the
-     * exclusion mechanism. Used by applyComposedFilter() when globalFilterExcludedKeys
-     * is non-empty.
+     * exclusion mechanism. 
+     * 
+     * Used by applyComposedFilter() when globalFilterExcludedKeys is non-empty.
      */
     private static class MaskedGridRow extends GridRow {
 

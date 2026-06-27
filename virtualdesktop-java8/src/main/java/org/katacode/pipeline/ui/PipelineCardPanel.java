@@ -17,6 +17,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
+import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 
 import org.katacode.pipeline.engine.PipelineStep;
@@ -35,9 +36,57 @@ public class PipelineCardPanel extends JToggleButton {
     private Color bgLightColor;
     private Color bgDarkColor;
     private Color borderColor;
-    private final Color textColor = new Color(0x22, 0x22, 0x22);
-    private final Color subTextColor = new Color(0x55, 0x55, 0x55);
 
+    public interface Resources {
+        Color textColor();
+        Color subTextColor();
+        Font iconFont();
+        Font outputBadgeFont();
+        Border outputBadgeBorder();
+        Font stepTitleFont();
+        Font stepMetaFont();
+        Dimension closeButtonPreferredSize();
+    }
+
+    public static class Customizer implements Resources {
+
+        private Font outputBadgeFont = new Font("Monospaced", Font.BOLD, 12);
+        private Border outputBadgeBorder = BorderFactory.createLineBorder(new Color(0,0,0,30), 1, true);
+        private Dimension closeButtonPreferredSize = new Dimension(20, 20);
+        private Color textColor = new Color(0x22, 0x22, 0x22);
+        private Color subTextColor = new Color(0x55, 0x55, 0x55);
+        private Font stepTitleFont = new Font("SansSerif", Font.BOLD, 16);
+        private Font stepMetaFont = new Font("SansSerif", Font.PLAIN, 14);
+                // new Font("SansSerif", Font.ITALIC, 11);
+        private Font iconFont = new Font("SansSerif", Font.BOLD, 44);
+        
+        @Override
+        public Dimension closeButtonPreferredSize() { return closeButtonPreferredSize; }
+
+        @Override
+        public Border outputBadgeBorder() { return outputBadgeBorder; }
+
+        @Override
+        public Font outputBadgeFont() { return outputBadgeFont; }
+
+        @Override
+        public Color textColor() { return textColor; }
+
+        @Override
+        public Color subTextColor() { return subTextColor; }
+
+        @Override
+        public Font stepTitleFont() { return stepTitleFont; }
+
+        @Override
+        public Font stepMetaFont() { return stepMetaFont; }
+
+        @Override
+        public Font iconFont() { return iconFont; }
+
+    }
+
+    public static Customizer CUSTOMIZER = new Customizer();    
     public PipelineCardPanel(PipelineStep step, int stepIndex) {
         this.step = step;
         this.stepIndex = stepIndex;
@@ -79,13 +128,13 @@ public class PipelineCardPanel extends JToggleButton {
         
         JLabel lblStep = new JLabel(String.format("Step %02d", stepIndex));
         lblStep.setFont(new Font("SansSerif", Font.PLAIN, 10));
-        lblStep.setForeground(subTextColor);
+        lblStep.setForeground(CUSTOMIZER.subTextColor());
         
         JLabel lblIcon = new JLabel("⚙", SwingConstants.CENTER);
-        lblIcon.setFont(new Font("SansSerif", Font.BOLD, 22));
-        lblIcon.setForeground(subTextColor);
+        lblIcon.setFont(new Font("SansSerif", Font.BOLD, 44));
+        lblIcon.setForeground(CUSTOMIZER.subTextColor());
         
-        iconPanel.add(lblStep);
+        // iconPanel.add(lblStep);
         iconPanel.add(lblIcon);
         add(iconPanel, BorderLayout.WEST);
 
@@ -94,15 +143,16 @@ public class PipelineCardPanel extends JToggleButton {
         textPanel.setOpaque(false);
         
         JLabel lblTitle = new JLabel(step.getComponentName());
-        lblTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
-        lblTitle.setForeground(textColor);
+        lblTitle.setFont(CUSTOMIZER.stepTitleFont());
+        lblTitle.setForeground(CUSTOMIZER.textColor());
         
-        JLabel lblMeta = new JLabel("ID: " + step.getId());
-        lblMeta.setFont(new Font("SansSerif", Font.ITALIC, 11));
-        lblMeta.setForeground(subTextColor);
+        JLabel lblMeta = new JLabel(String.format("Step %02d", stepIndex));
+                // new JLabel("ID: " + step.getId());
+        lblMeta.setFont(CUSTOMIZER.stepMetaFont());
+        lblMeta.setForeground(CUSTOMIZER.subTextColor());
         
-        textPanel.add(lblTitle);
         textPanel.add(lblMeta);
+        textPanel.add(lblTitle);
         add(textPanel, BorderLayout.CENTER);
 
         // Right Side: Contract Badges
@@ -111,11 +161,11 @@ public class PipelineCardPanel extends JToggleButton {
         
         if (!"None".equalsIgnoreCase(step.getOutputContract())) {
             JLabel lblBadge = new JLabel(" <" + step.getOutputContract() + "> ");
-            lblBadge.setOpaque(true);
-            lblBadge.setBackground(new Color(0xFF, 0xFF, 0xFF, 180));
-            lblBadge.setForeground(textColor);
-            lblBadge.setFont(new Font("Monospaced", Font.BOLD, 10));
-            lblBadge.setBorder(BorderFactory.createLineBorder(new Color(0,0,0,30), 1, true));
+            lblBadge.setOpaque(false);
+            // lblBadge.setBackground(new Color(0xFF, 0xFF, 0xFF, 180));
+            lblBadge.setForeground(CUSTOMIZER.subTextColor());
+            lblBadge.setFont(CUSTOMIZER.outputBadgeFont());
+            lblBadge.setBorder(CUSTOMIZER.outputBadgeBorder());
             badgePanel.add(lblBadge);
         }
         add(badgePanel, BorderLayout.EAST);
@@ -139,8 +189,8 @@ public class PipelineCardPanel extends JToggleButton {
         g2.fillRoundRect(3, 5, w - 6, h - 7, arc, arc);
 
         // Render Background Gradient
-        GradientPaint gradient = new GradientPaint(0, 0, bgLightColor, 0, h, bgDarkColor);
-        g2.setPaint(gradient);
+        // GradientPaint gradient = new GradientPaint(0, 0, bgLightColor, 0, h, bgDarkColor);
+        g2.setPaint(bgLightColor); // gradient
         g2.fillRoundRect(2, 2, w - 5, h - 6, arc, arc);
 
         // Render Dynamic Border Stroke
@@ -154,7 +204,7 @@ public class PipelineCardPanel extends JToggleButton {
 
     @Override
     public Dimension getPreferredSize() {
-        return new Dimension(450, 72);
+        return new Dimension(450, 103);
     }
 
     public PipelineStep getStep() {

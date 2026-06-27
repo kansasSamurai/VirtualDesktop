@@ -15,35 +15,39 @@ import java.awt.RenderingHints;
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
 import org.katacode.pipeline.engine.PipelineStep;
 
 /**
- * A custom-rendered Java Swing component that displays a PipelineStep card
- * matching our soft-palette, rounded, visual mockup style.
+ * A custom-rendered JToggleButton that natively manages its selection state
+ * while rendering our soft-palette, high-craft layout style.
  */
 @SuppressWarnings("serial")
-public class PipelineCardPanel extends JPanel {
+public class PipelineCardPanel extends JToggleButton {
 
     private final PipelineStep step;
     private final int stepIndex;
-    private final boolean isSelected;
     
-    // Theme Colors based on our soft-palette mockup specs
+    // Soft-palette specs
     private Color bgLightColor;
     private Color bgDarkColor;
     private Color borderColor;
     private final Color textColor = new Color(0x22, 0x22, 0x22);
     private final Color subTextColor = new Color(0x55, 0x55, 0x55);
 
-    public PipelineCardPanel(PipelineStep step, int stepIndex, boolean isSelected) {
+    public PipelineCardPanel(PipelineStep step, int stepIndex) {
         this.step = step;
         this.stepIndex = stepIndex;
-        this.isSelected = isSelected;
 
-        setOpaque(false); // Allows us to render our own rounded corners beautifully
+        // 1. Strip the default OS Button decorations to make it an "undecorated canvas"
+        setOpaque(false);
+        setContentAreaFilled(false);
+        setBorderPainted(false);
+        setFocusPainted(false);
+        
         setBorder(new EmptyBorder(12, 16, 12, 16));
         setLayout(new BorderLayout(14, 0));
         
@@ -51,33 +55,25 @@ public class PipelineCardPanel extends JPanel {
         initUI();
     }
 
-    /**
-     * Maps component type strings directly to our soft-palette color states.
-     */
     private void assignPaletteColors() {
         String type = step.getComponentName().toLowerCase();
-        
         if (type.contains("reader") || type.contains("source")) {
-            bgLightColor = new Color(0xD6, 0xE4, 0xF0); // Soft Blue
+            bgLightColor = new Color(0xD6, 0xE4, 0xF0);
             bgDarkColor = new Color(0xEB, 0xF4, 0xFA);
-            borderColor = isSelected ? Color.ORANGE : new Color(0xA3, 0xC1, 0xAD);
         } else if (type.contains("filter") || type.contains("router") || type.contains("evaluator")) {
-            bgLightColor = new Color(0xD2, 0xE9, 0xD2); // Soft Green
+            bgLightColor = new Color(0xD2, 0xE9, 0xD2);
             bgDarkColor = new Color(0xE8, 0xF5, 0xE8);
-            borderColor = isSelected ? Color.ORANGE : new Color(0xB2, 0xC4, 0xB2);
         } else if (type.contains("transformer") || type.contains("converter")) {
-            bgLightColor = new Color(0xFD, 0xE2, 0xC4); // Soft Amber/Orange
+            bgLightColor = new Color(0xFD, 0xE2, 0xC4);
             bgDarkColor = new Color(0xFF, 0xF3, 0xE3);
-            borderColor = isSelected ? Color.ORANGE : new Color(0xE3, 0xC5, 0xA1);
-        } else { // Sinks / Dispatchers / Default
-            bgLightColor = new Color(0xE2, 0xD4, 0xEB); // Soft Purple
+        } else {
+            bgLightColor = new Color(0xE2, 0xD4, 0xEB);
             bgDarkColor = new Color(0xF3, 0xEE, 0xF7);
-            borderColor = isSelected ? Color.ORANGE : new Color(0xC6, 0xB4, 0xD4);
         }
     }
 
     private void initUI() {
-        // Left Column: Step Indicator & Placeholder Icon Area
+        // Left Side: Step Marker & Icon
         JPanel iconPanel = new JPanel(new GridLayout(2, 1, 0, 2));
         iconPanel.setOpaque(false);
         
@@ -85,8 +81,7 @@ public class PipelineCardPanel extends JPanel {
         lblStep.setFont(new Font("SansSerif", Font.PLAIN, 10));
         lblStep.setForeground(subTextColor);
         
-        // Simulating the rich text layout headings
-        JLabel lblIcon = new JLabel("⚙", SwingConstants.CENTER); // Fallback glyph icon
+        JLabel lblIcon = new JLabel("⚙", SwingConstants.CENTER);
         lblIcon.setFont(new Font("SansSerif", Font.BOLD, 22));
         lblIcon.setForeground(subTextColor);
         
@@ -94,7 +89,7 @@ public class PipelineCardPanel extends JPanel {
         iconPanel.add(lblIcon);
         add(iconPanel, BorderLayout.WEST);
 
-        // Center Column: Core Descriptive Text Fields
+        // Center Side: Labels
         JPanel textPanel = new JPanel(new GridLayout(2, 1, 0, 2));
         textPanel.setOpaque(false);
         
@@ -110,7 +105,7 @@ public class PipelineCardPanel extends JPanel {
         textPanel.add(lblMeta);
         add(textPanel, BorderLayout.CENTER);
 
-        // Right Column: Type Contract Badges
+        // Right Side: Contract Badges
         JPanel badgePanel = new JPanel(new GridBagLayout());
         badgePanel.setOpaque(false);
         
@@ -123,42 +118,47 @@ public class PipelineCardPanel extends JPanel {
             lblBadge.setBorder(BorderFactory.createLineBorder(new Color(0,0,0,30), 1, true));
             badgePanel.add(lblBadge);
         }
-        
         add(badgePanel, BorderLayout.EAST);
     }
 
     @Override
     protected void paintComponent(Graphics g) {
-        // Native Java2D anti-aliasing initialization for ultra-crisp edges
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         int w = getWidth();
         int h = getHeight();
-        int arc = 16; // Edge roundness match from visual prototype
+        int arc = 16;
 
-        // 1. Render the Subtle Drop Shadow
+        // Query the native button state model directly for selection!
+        boolean selected = isSelected();
+        borderColor = selected ? Color.ORANGE : new Color(0xBD, 0xC3, 0xC7);
+
+        // Render Shadow
         g2.setColor(new Color(0, 0, 0, 15));
-        g2.fillRoundRect(3, 5, w - 6, h - 7, arc, arc); // Offset shadow layer
-        g2.fillRoundRect(4, 6, w - 8, h - 8, arc, arc);
+        g2.fillRoundRect(3, 5, w - 6, h - 7, arc, arc);
 
-        // 2. Render Gradient Card Background Body
+        // Render Background Gradient
         GradientPaint gradient = new GradientPaint(0, 0, bgLightColor, 0, h, bgDarkColor);
         g2.setPaint(gradient);
         g2.fillRoundRect(2, 2, w - 5, h - 6, arc, arc);
 
-        // 3. Render Card Frame Border (Changes color if item is selected)
+        // Render Dynamic Border Stroke
         g2.setColor(borderColor);
-        g2.setStroke(new BasicStroke(isSelected ? 2.0f : 1.2f));
+        g2.setStroke(new BasicStroke(selected ? 2.2f : 1.2f));
         g2.drawRoundRect(2, 2, w - 5, h - 6, arc, arc);
 
         g2.dispose();
-        super.paintComponent(g);
+        super.paintComponent(g); // Ensures child text components display safely
     }
 
     @Override
     public Dimension getPreferredSize() {
-        return new Dimension(450, 72); // Fixed canvas card bounding boxes
+        return new Dimension(450, 72);
+    }
+
+    public PipelineStep getStep() {
+        return step;
     }
 
 }

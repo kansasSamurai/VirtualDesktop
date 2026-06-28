@@ -1,16 +1,38 @@
 package org.katacode.pipeline.engine;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
+
+import org.katacode.pipeline.engine.meta.PropertyDescriptor;
 
 /**
  * A declarative building block wrapping atomic functional logic.
  * Enforces standardized signatures allowing complex pipelines to string together.
  */
 public class PipelineStep {
+
     private final String id;
     private final String componentName;
     private final String inputContract;  // e.g., "ResultSet", "JSON"
     private final String outputContract; // e.g., "JSON", "None"
+
+    private final Map<String, String> propertyValues = new HashMap<>();
+    private final List<PropertyDescriptor> propertyDescriptors = new ArrayList<>();
+
+    public List<PropertyDescriptor> getPropertyDescriptors() {
+        return propertyDescriptors;
+    }
+
+    public Map<String, String> getPropertyValues() {
+        return propertyValues;
+    }
+
+    public void setPropertyValue(String key, String value) {
+        propertyValues.put(key, value);
+    }
     
     // Internal generic type erasure allowing uniform composition
     private final Function<Message<Object>, Message<Object>> executionLogic;

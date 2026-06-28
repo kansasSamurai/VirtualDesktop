@@ -81,17 +81,33 @@ public class PipelineCanvasPanel extends JPanel {
 
             // Standard action listener fires automatically for clicks, taps, or hotkeys
             card.addActionListener(e -> {
-                // Instantly query parent container context to sync our inspector panel form fields
+                // 1. Locate the master coordinating panel by walking up the component tree
                 Container parent = getParent();
                 while (parent != null && !(parent instanceof PipelineDesignerPanel)) {
                     parent = parent.getParent();
                 }
+
+                // 2. Pass the selected step down to the coordinator
                 if (parent != null) {
-                    ((PipelineDesignerPanel) parent).updateInspector(card.getStep());
+                    PipelineDesignerPanel designer = (PipelineDesignerPanel) parent;
+                    designer.handleCardSelection(card.getStep());
                 }
-                // Trigger canvas redraw to swap border lines cleanly
+
+                // 3. Request a repaint to update our custom selection border lines instantly
                 cardStackPanel.repaint();
             });
+//            card.addActionListener(e -> {
+//                // Instantly query parent container context to sync our inspector panel form fields
+//                Container parent = getParent();
+//                while (parent != null && !(parent instanceof PipelineDesignerPanel)) {
+//                    parent = parent.getParent();
+//                }
+//                if (parent != null) {
+//                    ((PipelineDesignerPanel) parent).updateInspector(card.getStep());
+//                }
+//                // Trigger canvas redraw to swap border lines cleanly
+//                cardStackPanel.repaint();
+//            });
 
             if (i < steps.size() - 1) {
                 cardStackPanel.add(Box.createRigidArea(new Dimension(0, 24)));

@@ -38,8 +38,8 @@ public class PipelineDesignerPanel extends JPanel {
 
     private JList<String> paletteList;
     private PipelineCanvasPanel executionCanvasPanel;
-    private JPanel inspectorPanel;
-    
+    private PropertiesInspectorPanel inspectorPanel;
+
     // Core Engine Context instead of flat string models
     private PipelineContext pipelineContext;
 
@@ -96,11 +96,18 @@ public class PipelineDesignerPanel extends JPanel {
         canvasWrapper.setMinimumSize(new Dimension(500, 0));
 
         // 4. Properties Inspector (Right Column)
-        inspectorPanel = new JPanel(new BorderLayout());
+        this.inspectorPanel = new PropertiesInspectorPanel();
         JPanel inspectorWrapper = createSectionPanel("Properties Inspector", inspectorPanel);
         inspectorWrapper.setMinimumSize(new Dimension(280, 0));
         updateInspector(null);
 
+        // Right Column Inspector Panel wrapped in a standard JScrollPane 
+        // to handle massive parameter lists safely without truncation
+        JScrollPane inspectorScroll = new JScrollPane(inspectorPanel);
+        inspectorScroll.setBorder(null);
+        inspectorScroll.getVerticalScrollBar().setUnitIncrement(16);
+        inspectorScroll.setPreferredSize(new Dimension(320, 0));
+        
         // Wire up Split Panes for flexible user scaling
         JSplitPane rightSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, canvasWrapper, inspectorWrapper);
         rightSplit.setResizeWeight(0.65); // Canvas gets majority of right side scaling
@@ -174,6 +181,19 @@ public class PipelineDesignerPanel extends JPanel {
         });
 
         return new JScrollPane(paletteList);
+    }
+
+    /**
+     * Centralized coordination endpoint invoked whenever a native 
+     * JToggleButton card selection model event is triggered.
+     */
+    public void handleCardSelection(PipelineStep selectedStep) {
+        if (selectedStep != null) {
+            // Re-hydrate the property forms instantly based on the card's data dictionary
+            inspectorPanel.inspect(selectedStep);
+        } else {
+            inspectorPanel.inspect(null);
+        }
     }
 
     /**

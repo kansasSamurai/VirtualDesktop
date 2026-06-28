@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 import org.katacode.pipeline.engine.meta.PropertyDescriptor;
+import org.katacode.pipeline.engine.meta.PropertyDescriptor.PropertyType;
 
 /**
  * A declarative building block wrapping atomic functional logic.
@@ -45,8 +46,12 @@ public class PipelineStep {
         this.inputContract = inputContract;
         this.outputContract = outputContract;
         
+        // Automatically populate property fields based on component type signatures
+        configureDefaultMetadata();
+
         // Erase types safely to Object levels for storage inside our workflow array
         this.executionLogic = (Function<Message<Object>, Message<Object>>) (Function<?, ?>) logic;
+
     }
 
     /**
@@ -59,6 +64,56 @@ public class PipelineStep {
         return executionLogic.apply(input);
     }
 
+    /**
+     * High-Craft Metadata Population. Bakes specific fields into the component
+     * data dictionary based on its functional role.
+     */
+    private void configureDefaultMetadata() {
+        String name = componentName.toLowerCase();
+        System.out.println("name: " + name);
+
+        if (name.contains("reader") || name.contains("source")) {
+            // DB Reader Specific Specs
+            propertyDescriptors.add(new PropertyDescriptor("jdbc.url", "JDBC Connection URL", PropertyType.TEXT));
+            propertyDescriptors.add(new PropertyDescriptor("fetch.size", "Statement Fetch Size", PropertyType.TEXT));
+            propertyDescriptors.add(new PropertyDescriptor("sql.query", "Extraction SQL Query", PropertyType.TEXT));
+            
+            // Sensible Defaults
+            propertyValues.put("jdbc.url", "jdbc:postgresql://localhost:5432/analytics_db");
+            propertyValues.put("fetch.size", "1000");
+            propertyValues.put("sql.query", "SELECT * FROM transactions WHERE status = 'NEW'");
+
+        } else if (name.contains("transformer") || name.contains("converter")) {
+            // JSON Transformer Specific Specs
+            propertyDescriptors.add(new PropertyDescriptor("json.minify", "Minify Output Payload", PropertyType.BOOLEAN));
+            propertyDescriptors.add(new PropertyDescriptor("json.charset", "Target Character Encoding", 
+                PropertyType.COMPONENT_CHOICE, new String[]{"UTF-8", "ISO-8859-1", "US-ASCII"}));
+            
+            // Sensible Defaults
+            propertyValues.put("json.minify", "true");
+            propertyValues.put("json.charset", "UTF-8");
+
+        } else if (name.contains("filter") || name.contains("router")) {
+            // Filter Specific Specs
+            propertyDescriptors.add(new PropertyDescriptor("filter.regex", "Exclusion Regular Expression", PropertyType.TEXT));
+            propertyDescriptors.add(new PropertyDescriptor("filter.halt", "Halt On Failure Condition", PropertyType.BOOLEAN));
+            
+            // Sensible Defaults
+            propertyValues.put("filter.regex", "^[0-9]+");
+            propertyValues.put("filter.halt", "false");
+
+        } else if (name.contains("dispatcher") || name.contains("sink")) {
+            // REST Dispatcher / Sink Specific Specs
+            propertyDescriptors.add(new PropertyDescriptor("http.endpoint", "Target REST Endpoint URI", PropertyType.TEXT));
+            propertyDescriptors.add(new PropertyDescriptor("http.method", "HTTP Method Verb", 
+                PropertyType.COMPONENT_CHOICE, new String[]{"POST", "PUT", "GET"}));
+            
+            // Sensible Defaults
+            propertyValues.put("http.endpoint", "https://api.katacode.org/v2/upload");
+            propertyValues.put("http.method", "POST");
+        }
+    }
+    
     // --- UI/Metadata Binding Accessors ---
     public String getId() { return id; }
     public String getComponentName() { return componentName; }

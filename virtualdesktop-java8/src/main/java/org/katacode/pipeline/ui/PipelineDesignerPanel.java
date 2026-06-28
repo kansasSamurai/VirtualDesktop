@@ -97,16 +97,16 @@ public class PipelineDesignerPanel extends JPanel {
 
         // 4. Properties Inspector (Right Column)
         this.inspectorPanel = new PropertiesInspectorPanel();
-        JPanel inspectorWrapper = createSectionPanel("Properties Inspector", inspectorPanel);
+        JScrollPane inspectorScroll = new JScrollPane(inspectorPanel);
+        inspectorScroll.setBorder(null);
+        inspectorScroll.getVerticalScrollBar().setUnitIncrement(16);
+        inspectorScroll.setPreferredSize(new Dimension(320, 0));
+        JPanel inspectorWrapper = createSectionPanel("Properties Inspector", inspectorScroll);
         inspectorWrapper.setMinimumSize(new Dimension(280, 0));
         updateInspector(null);
 
         // Right Column Inspector Panel wrapped in a standard JScrollPane 
         // to handle massive parameter lists safely without truncation
-        JScrollPane inspectorScroll = new JScrollPane(inspectorPanel);
-        inspectorScroll.setBorder(null);
-        inspectorScroll.getVerticalScrollBar().setUnitIncrement(16);
-        inspectorScroll.setPreferredSize(new Dimension(320, 0));
         
         // Wire up Split Panes for flexible user scaling
         JSplitPane rightSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, canvasWrapper, inspectorWrapper);
@@ -188,7 +188,9 @@ public class PipelineDesignerPanel extends JPanel {
      * JToggleButton card selection model event is triggered.
      */
     public void handleCardSelection(PipelineStep selectedStep) {
+        System.out.println("handleCardSelection() ...");
         if (selectedStep != null) {
+            System.out.println("handleCardSelection() : " + selectedStep.getComponentName());
             // Re-hydrate the property forms instantly based on the card's data dictionary
             inspectorPanel.inspect(selectedStep);
         } else {
@@ -202,32 +204,33 @@ public class PipelineDesignerPanel extends JPanel {
      */
     public void updateInspector(PipelineStep targetStep) {
         inspectorPanel.removeAll();
+        System.out.println("updateInspector");
         
         JPanel fieldsPanel = new JPanel(new GridBagLayout());
         fieldsPanel.setBorder(new EmptyBorder(12, 12, 12, 12));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0; gbc.gridy = 0; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
         
-        JLabel nameLabel = new JLabel("Component ID:");
-        nameLabel.setFont(nameLabel.getFont().deriveFont(Font.BOLD));
-        fieldsPanel.add(nameLabel, gbc);
-        
-        gbc.gridy++;
-        gbc.insets = new java.awt.Insets(2, 0, 12, 0);
-        
-        String idText = (targetStep != null) ? targetStep.getId() : "No block selected.";
-        String configLabelText = (targetStep != null) ? "Configuration Param (" + targetStep.getInputContract() + " -> " + targetStep.getOutputContract() + "):" : "Configuration Param:";
-        
-        fieldsPanel.add(new JTextField(idText), gbc);
-        
-        gbc.gridy++;
-        gbc.insets = new java.awt.Insets(0, 0, 2, 0);
-        fieldsPanel.add(new JLabel(configLabelText), gbc);
-        
-        gbc.gridy++;
-        fieldsPanel.add(new JTextField((targetStep != null) ? targetStep.getComponentName() : ""), gbc);
-        
-        inspectorPanel.add(fieldsPanel, BorderLayout.NORTH);
+////        JLabel nameLabel = new JLabel("Component ID:");
+////        nameLabel.setFont(nameLabel.getFont().deriveFont(Font.BOLD));
+////        fieldsPanel.add(nameLabel, gbc);
+////        
+////        gbc.gridy++;
+////        gbc.insets = new java.awt.Insets(2, 0, 12, 0);
+////        
+////        String idText = (targetStep != null) ? targetStep.getId() : "No block selected.";
+////        String configLabelText = (targetStep != null) ? "Configuration Param (" + targetStep.getInputContract() + " -> " + targetStep.getOutputContract() + "):" : "Configuration Param:";
+////        
+////        fieldsPanel.add(new JTextField(idText), gbc);
+//        
+//        gbc.gridy++;
+//        gbc.insets = new java.awt.Insets(0, 0, 2, 0);
+//        fieldsPanel.add(new JLabel(configLabelText), gbc);
+//        
+//        gbc.gridy++;
+//        fieldsPanel.add(new JTextField((targetStep != null) ? targetStep.getComponentName() : ""), gbc);
+//        
+//        inspectorPanel.add(fieldsPanel, BorderLayout.NORTH);
         inspectorPanel.revalidate();
         inspectorPanel.repaint();
     }

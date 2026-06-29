@@ -67,7 +67,7 @@ public class PropertiesInspectorPanel extends JPanel {
         gbc.gridy = 0;
 
         // Render Fixed Header Meta Info
-        //renderHeaderBlock(step, gbc);
+        renderHeaderBlock(step, gbc);
 
         // 2. Loop over metadata fields and inject dynamic form fields
         List<PropertyDescriptor> descriptors = step.getPropertyDescriptors();
@@ -78,7 +78,7 @@ public class PropertiesInspectorPanel extends JPanel {
             fieldLabel.setFont(new Font("SansSerif", Font.BOLD, 11));
             fieldLabel.setForeground(new Color(0x4A, 0x55, 0x68));
             gbc.weightx = 1.0;
-            gbc.insets = new Insets(0, 0, 4, 0); // Spacing gap below elements
+            gbc.insets = new Insets(0, 0, 4, 0); // Spacing gap below labels
             formContainer.add(fieldLabel, gbc);
             gbc.gridy++;
 

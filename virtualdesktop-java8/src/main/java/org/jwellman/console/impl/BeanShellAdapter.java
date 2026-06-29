@@ -2,7 +2,6 @@ package org.jwellman.console.impl;
 
 import bsh.EvalError;
 import bsh.Interpreter;
-import bsh.util.NameCompletion;
 
 import org.jwellman.console.CompletionProvider;
 import org.jwellman.console.InterpreterAdapter;
@@ -188,18 +187,6 @@ public class BeanShellAdapter implements InterpreterAdapter {
      */
     public Interpreter getInterpreter() {
         return interpreter;
-    }
-
-    /**
-     * Set the NameCompletion implementation for tab completion.
-     *
-     * <p>This allows using BeanShell's built-in completion
-     * when connected to a console.</p>
-     *
-     * @param nameCompletion the name completion provider
-     */
-    public void setNameCompletion(NameCompletion nameCompletion) {
-        completionProvider.setNameCompletion(nameCompletion);
     }
 
 }

@@ -4,20 +4,21 @@
 
 | Phase | Feature | Status | Notes |
 |-------|---------|--------|-------|
-| Baseline | v1 prototype (JFrame, basic layers) | ✅ Complete | `layereddiagramtoolv1` |
-| Baseline | v2 prototype (JFrame + layer control panels) | ✅ Complete | `layereddiagramtoolv2` |
+| Baseline | v1 prototype (JFrame, basic layers) | ✅ Complete | `layereddiagramtoolv1` — deleted |
+| Baseline | v2 prototype (JFrame + layer control panels) | ✅ Complete | `layereddiagramtoolv2` — deleted |
 | Baseline | Current tool (JPanel, JSON persistence, resize, snap-to-grid, property editor) | ✅ Complete | `layereddiagramtool` — 15 source files |
-| 1 | VApp integration + package move + legacy cleanup | ⬜ Next | Move out of `demo`; wire into menu; delete v1/v2 |
-| 2 | Inner class extraction | ⬜ Next | Promote 6 inner classes to top-level files |
-| 3 | Graph model layer | ⬜ Planned | API interfaces + NodeHostPanel + EdgeRenderPanel + CanvasOverlayPanel + class diagram demo; supersedes old Phase 3 |
-| 4 | Multi-select and group operations | ⬜ Planned | Rubber-band select; group move/align |
-| 5 | Undo / Redo | ⬜ Planned | `javax.swing.undo` stack; all mutating operations |
-| 6 | Cut / Copy / Paste components | ⬜ Planned | Within and across diagram sessions |
-| 7 | Layer management enhancements | ⬜ Planned | Rename layers; reorder layers; lock layers |
-| 8 | Export (PNG / SVG / Print) | ⬜ Future | `Graphics2D` image export; Apache Batik for SVG |
-| 9 | Shape library expansion | ⬜ Future | Diamonds, parallelograms, callouts, custom paths |
-| 10 | Multi-line / rich text | ⬜ Future | Wrap text within shape bounds; bold/italic inline |
-| 11 | BeanShell integration | ⬜ Future | Programmatic diagram construction from scripts |
+| 1 | VApp integration + package move + legacy cleanup | ✅ Complete | `org.jwellman.diagram`; SpecDiagramTool; vapps-config.json; demo packages deleted |
+| 2 | Inner class extraction | ✅ Complete | 5 classes extracted to top-level files; GridPanel kept as private static inner of DiagramLayeredPane |
+| 3 | Graph model layer | ✅ Complete | `api` / `core` / `domain.cls` packages; NodeHostPanel, EdgeRenderPanel, CanvasOverlayPanel, OrthogonalRouter; class diagram demo; two-part JSON persistence |
+| 4 | Overlay-painted selection handles | ⬜ Next | Move ResizeBorder + ResizeHandler rendering into CanvasOverlayPanel; eliminate jitter on NodeHostPanel |
+| 5 | Multi-select and group operations | ⬜ Planned | Rubber-band select; group move/align |
+| 6 | Undo / Redo | ⬜ Planned | `javax.swing.undo` stack; all mutating operations |
+| 7 | Cut / Copy / Paste components | ⬜ Planned | Within and across diagram sessions |
+| 8 | Layer management enhancements | ⬜ Planned | Rename layers; reorder layers; lock layers |
+| 9 | Export (PNG / SVG / Print) | ⬜ Future | `Graphics2D` image export; Apache Batik for SVG |
+| 10 | Shape library expansion | ⬜ Future | Diamonds, parallelograms, callouts, custom paths |
+| 11 | Multi-line / rich text | ⬜ Future | Wrap text within shape bounds; bold/italic inline |
+| 12 | BeanShell integration | ⬜ Future | Programmatic diagram construction from scripts |
 
 ---
 
@@ -50,124 +51,103 @@ a bare `JFrame` — it has never been wired into the VirtualDesktop menu system.
 
 ---
 
-## Phase 1 — VApp Integration + Package Move + Legacy Cleanup
+## Phase 1 — VApp Integration + Package Move + Legacy Cleanup ✅
 
-**Why first**: The tool's core functionality is complete enough to be useful as a real vapp.
-Moving it out of `demo` is the prerequisite for everything else — it sets the permanent
-home for all future work and removes the misleading prototype framing.
-
-### Steps
-
-**Package rename:** `org.jwellman.demo.layereddiagramtool` → `org.jwellman.diagram`
-
-All 15 source files move together. No functional changes.
-
-**New class `SpecDiagramTool.java`** in `org.jwellman.virtualdesktop.vapps`:
-- Extends `VirtualAppFrame`
-- Constructor: instantiates `LayeredDiagramTool` and adds it to the vapp panel
-- Supplies a reasonable default window size (1200×800 is already validated by the existing `main()`)
-
-**`ActionFactory.java`** — register `SpecDiagramTool` in the vapp registry so it appears in the Tools menu.
-
-**Remove `main()` from `LayeredDiagramTool.java`** — the bare-JFrame entry point is replaced
-by the vapp integration. The class remains a standalone `JPanel` and is still runnable
-independently if needed (add a separate `DiagramToolRunner` class for development use).
-
-**Delete legacy versions:**
-- `org.jwellman.demo.layereddiagramtoolv1` (entire package)
-- `org.jwellman.demo.layereddiagramtoolv2` (entire package)
-
-Both are superseded by the current version. No functionality present in v1/v2 is absent
-from the current tool.
-
-### Verification
-
-- Launch VirtualDesktop; "Diagram Tool" (or similar label) appears in the Tools menu
-- Open as an internal frame; all existing features work identically to the standalone run
-- Save and load a `.json` diagram file from within the vapp
-- No references to the old `demo.layereddiagramtool*` packages remain
+All 15 source files moved from `org.jwellman.demo.layereddiagramtool` to `org.jwellman.diagram`.
+`SpecDiagramTool.java` created (extends `VirtualAppSpec`, 1200×800). Registered in
+`vapps-config.json`. `main()` removed from `LayeredDiagramTool`. Legacy packages
+`layereddiagramtoolv1`, `layereddiagramtoolv2`, and the original `layereddiagramtool`
+demo package all deleted.
 
 ---
 
-## Phase 2 — Inner Class Extraction
+## Phase 2 — Inner Class Extraction ✅
 
-**Why**: `LayeredDiagramTool.java` is 1,322 lines because it contains 6 inner classes.
-Extracting them to top-level files makes each class independently readable and testable,
-and brings the package structure in line with the rest of the codebase.
-
-### Classes to extract
-
-| Inner class | New top-level file | Notes |
-|-------------|-------------------|-------|
-| `DiagramLayeredPane` | `DiagramLayeredPane.java` | Largest chunk (~520 lines); owns save/load, popup menu, layer ops |
-| `GridPanel` | `GridPanel.java` | Static inner; paints 20px grid lines |
-| `DragHandler` | `DragHandler.java` | `MouseAdapter`; drag + snap-to-grid |
-| `ResizeHandler` | `ResizeHandler.java` | `MouseAdapter`; 8-direction resize + snap |
-| `LayerControlPanel` | Already top-level `LayerControlPanel.java` | No action needed — confirm it is actually separate |
-| `DiagramConnection` | `DiagramConnection.java` | Placeholder today; top-level home for Phase 3 work |
-
-`LayeredDiagramTool.java` should shrink to its construction logic (~200 lines): toolbar
-creation, panel assembly, listener wiring.
-
-### Notes
-
-- Access modifiers will need adjustment — inner classes can access private members of the
-  enclosing class; top-level classes cannot. Prefer package-private over adding getters
-  unless a getter is genuinely useful.
-- No behavioral change is expected. Run the full interactive workflow before and after to confirm.
+Five classes extracted from `LayeredDiagramTool.java` into separate top-level files:
+`DiagramLayeredPane`, `DragHandler`, `DiagramConnection`, `LayerControlPanel`,
+`ResizeHandler`. `GridPanel` was kept as a private static inner class of
+`DiagramLayeredPane` (only used there). `DiagramLayeredPane` made `public` to allow
+access from domain packages. `LayeredDiagramTool.java` reduced to ~220 lines of
+construction logic.
 
 ---
 
-## Phase 3 — DiagramConnection: Real Routing with Arrowheads
+## Phase 3 — Graph Model Layer ✅
 
-**Why**: `DiagramConnection` is the only component type that is currently a placeholder.
-Connections are essential for diagrams — without them the tool can only produce disconnected
-shapes.
+Three new packages added alongside `org.jwellman.diagram`:
 
-### Current state
+**`org.jwellman.diagram.api`** — pure interfaces with no domain knowledge:
+`GraphNode`, `GraphEdge`, `EdgeAttributes`, `EdgeRouter`, `CanvasComponentFactory`.
 
-`DiagramConnection.java` draws a straight line between a hardcoded start and end point.
-No routing logic, no arrowhead, no user interaction to create connections. The layer slot
-exists (CONNECTION_LAYER = 400) but is unused in practice.
+**`org.jwellman.diagram.core`** — framework implementations:
+- `NodeHostPanel` — public `JPanel` + `GraphNode`; wraps domain content in `BorderLayout.CENTER`; port locations computed lazily from current bounds
+- `EdgeRenderPanel` — transparent `JPanel` at `CONNECTION_LAYER`; paints all edges via `EdgeRouter`; passes all mouse events through
+- `CanvasOverlayPanel` — transparent `JPanel` at `OVERLAY_LAYER`; `IDLE / EDGE_CREATION / EDGE_DRAGGING` state machine; port anchor circles + rubber-band line
+- `OrthogonalRouter` — port-direction-aware: V-H-V for N/S ports, H-V-H for E/W ports, single-bend L for mixed pairs; `getApproachPoint()` for correct arrowhead angle
+- `StraightLineRouter`, `DefaultGraphEdge`
+
+**`org.jwellman.diagram.domain.cls`** — illustrative class diagram domain:
+`ClassNodeContent` (pure Swing JPanel), `ClassDiagramFactory` (implements `CanvasComponentFactory`),
+`ClassDiagramDemo` (static builder: 4 nodes, 3 typed edges).
+
+**`DiagramLayeredPane` changes:** `addGraphNode()`, `addGraphEdge()`, `enterEdgeCreationMode()`,
+`exitEdgeCreationMode()`, `notifyNodeMoved()`; `SELECTION_LAYER` renamed to `OVERLAY_LAYER`;
+`add(comp, layer, 0)` used throughout so new components appear in front; two-part JSON
+persistence (`layers` + `semanticGraph`).
+
+**`LayeredDiagramTool` changes:** "Connect" `JToggleButton` in toolbar; `setComponentFactory()`;
+`getDiagramPane()`.
+
+**Known gap carried forward:** `ResizeBorder` on `NodeHostPanel` causes brief layout jitter
+because `setBorder()` triggers `revalidate()` on a JPanel with children. Logged as Phase 4.
+
+---
+
+## Phase 4 — Overlay-Painted Selection Handles
+
+**Why**: `ResizeBorder` calls `setBorder()` on the selected component, triggering
+`revalidate()`. For `DiagramShape` / `DiagramText` (no child components) this is
+invisible. For `NodeHostPanel` (real JPanel hierarchy) this produces a brief layout
+jitter. The fix is to move all selection-handle rendering into `CanvasOverlayPanel`,
+which already paints at canvas coordinates for port anchors — eliminating `setBorder()`
+and the dynamic `ResizeHandler` install/remove cycle entirely.
 
 ### Implementation
 
-**Connection creation UX:**
+**`CanvasOverlayPanel`** — add a `SELECTED` component reference and a new paint branch:
+- When a component is selected, store its reference in the overlay
+- `paintComponent()` reads `selectedComponent.getBounds()` and paints 8 filled squares
+  at the corners and edge midpoints (same positions as `ResizeBorder` currently draws)
+- The overlay remains in `IDLE` state for event pass-through when not in edge-creation
+  mode, but still paints the selection handles
 
-- Hover over a `DiagramShape`; connection handles appear at the 4 cardinal edge midpoints
-- Drag from a handle; a rubber-band line follows the cursor
-- Release over another shape's handle to commit the connection
-- Escape cancels
+**Selection hit-testing in the overlay** — add resize direction detection to
+`CanvasOverlayPanel.mousePressed/mouseDragged/mouseReleased` (same 8px zone logic as
+`ResizeHandler`). The overlay's `contains()` must return `true` when the mouse is near
+a handle, even in `IDLE` state. When resize drag completes, fire `notifyModified()` via
+a callback to `DiagramLayeredPane`.
 
-**`DiagramConnection.java`** (promoted from inner class in Phase 2):
+**Remove `ResizeBorder` from `selectComponent()`** — `jcomp.setBorder(null)` is always
+called; no new border is set. The overlay owns the visual.
 
-- Fields: `sourceShape`, `targetShape`, `sourceAnchor` (N/S/E/W), `targetAnchor`
-- `paintComponent()`: draws orthogonal (L-shaped) or straight path depending on anchor pair
-- Arrowhead: filled triangle at the target end, painted via `Graphics2D.fillPolygon()`
-- Recomputes path endpoints on `componentMoved` event from either shape
+**Remove `ResizeHandler` install/remove cycle** — `ResizeHandler` class can be deprecated
+once the overlay handles resize for all component types. Keep it for a transition period
+if needed.
 
-**Orthogonal routing (first pass):** two-segment L-shaped path (horizontal then vertical,
-or vertical then horizontal) determined by which anchor pair is used. This covers the
-overwhelming majority of diagram layouts without requiring a general routing algorithm.
-
-**`DiagramLayeredPane`** — add connection creation state machine:
-- `connectionDragState`: `IDLE | DRAGGING | COMMITTED`
-- `MouseAdapter` on `DiagramLayeredPane` handles the anchor hover detection and rubber-band paint
-- On commit: create `DiagramConnection`, add to CONNECTION_LAYER
-
-**Persistence:** `ConnectionData extends ComponentData` — store source/target component IDs,
-anchor pair, arrowhead style. Add `@JsonSubTypes` entry alongside `ShapeData`/`TextData`.
+**`DiagramLayeredPane`** — add `setSelectedForOverlay(Component c)` that the selection
+path calls instead of `setBorder()`. The overlay repaints itself.
 
 ### Verification
 
-- Draw two shapes; hover one to see anchor handles
-- Drag from an anchor and release on a second shape; a connected line with arrowhead appears
-- Move either shape; the connection line redraws correctly
-- Save and reload; connection survives the round-trip
+- Select a `DiagramShape`; 8 handles appear (painted by overlay); no jitter
+- Select a `NodeHostPanel`; 8 handles appear; zero layout disturbance in node content
+- Drag a handle; component resizes correctly
+- Click empty space; handles disappear
+- Enter Connect mode while a node is selected; both port anchors and handles are visible
 
 ---
 
-## Phase 4 — Multi-Select and Group Operations
+## Phase 5 — Multi-Select and Group Operations
 
 **Why**: Single-selection dragging is the baseline; multi-select is the first feature that
 moves the tool from "toy" to "useful" for real diagrams with many components.

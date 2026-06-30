@@ -113,7 +113,7 @@ public class DiagramLayeredPane extends JLayeredPane {
     public void addGraphNode(NodeHostPanel node, Integer layer) {
         installInteractionHandlers(node);
         graphNodes.put(node.getNodeId(), node);
-        add(node, layer);
+        add(node, layer, 0);  // position 0 = top of layer
         node.setVisible(isLayerVisible(layer));
         revalidate();
         repaint();
@@ -378,7 +378,7 @@ public class DiagramLayeredPane extends JLayeredPane {
 
     public void addDiagramComponent(JComponent component, Integer layer) {
         installInteractionHandlers(component);
-        add(component, layer);
+        add(component, layer, 0);  // position 0 = top of layer, so new shapes appear in front
         component.setVisible(isLayerVisible(layer));
         revalidate();
         repaint();

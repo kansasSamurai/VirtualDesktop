@@ -20,7 +20,7 @@ VirtualDesktop menu system; that is Phase 1 of the roadmap.
 
 ## Component Hierarchy
 
-```
+```plain
 LayeredDiagramTool (JPanel)
 ├── JToolBar (NORTH)
 │     add rectangle / triangle / circle / text
@@ -49,7 +49,7 @@ LayeredDiagramTool (JPanel)
 ## Key Classes
 
 | Class | File | Role |
-|-------|------|------|
+| --- | --- | --- |
 | `LayeredDiagramTool` | `LayeredDiagramTool.java` | Top-level `JPanel`; builds toolbar, pane, and sidebar; owns the `modified` flag and save/load dialogs |
 | `DiagramLayeredPane` | (inner class) | `JLayeredPane` subclass; owns all diagram components, layer state, selection model, drag wiring, popup menu, save/load serialization |
 | `GridPanel` | (inner class) | Static inner `JPanel`; paints 20px light-gray grid lines; sits at GRID_LAYER, `setOpaque(false)` |
@@ -67,14 +67,14 @@ LayeredDiagramTool (JPanel)
 ### Interfaces
 
 | Interface | Methods | Purpose |
-|-----------|---------|---------|
+| --- | --- | --- |
 | `DiagramColorable` | `getFillColor / setFillColor / getBorderColor / setBorderColor` | Common color contract for shapes and text |
 | `DiagramTextAware` | `getFontName/set, getFontSize/set, getFontStyle/set, getTextColor/setTextColor` | Font and text color contract; implemented by `DiagramText` |
 
 ### Persistence classes (Jackson)
 
 | Class | Role |
-|-------|------|
+| --- | --- |
 | `DiagramData` | Root object: `gridSize`, `snapToGrid`, `activeLayer`, `List<LayerData>` |
 | `LayerData` | One layer: `layerDepth`, `visible`, `List<ComponentData>` |
 | `ComponentData` | Abstract base with `@JsonTypeInfo` / `@JsonSubTypes` for polymorphic dispatch |
@@ -88,7 +88,7 @@ LayeredDiagramTool (JPanel)
 Six named layers with fixed integer depth constants on `DiagramLayeredPane`:
 
 | Constant | Depth | Default use |
-|----------|-------|-------------|
+| --- | --- | --- |
 | `GRID_LAYER` | 0 | `GridPanel` — always at the bottom, never user-accessible |
 | `BACKGROUND_LAYER` | 100 | Decorative shapes (watermarks, region fills) |
 | `SHAPE_LAYER` | 200 | Default layer for new shapes |
@@ -116,6 +116,7 @@ is excluded from this logic.
 ### Selection
 
 Single-click on a component calls `selectComponent()`:
+
 - Removes `ResizeBorder` and `ResizeHandler` from the previously selected component
 - Sets a new `ResizeBorder` on the clicked component (paints 8 handles)
 - Installs a fresh `ResizeHandler` on the clicked component
@@ -146,6 +147,7 @@ On `mouseMoved`, it hit-tests an 8px zone at each of the 8 handle positions and 
 the cursor accordingly (`NW_RESIZE_CURSOR`, `N_RESIZE_CURSOR`, etc.).
 
 On `mouseDragged` while a resize is active:
+
 - Computes new bounds from the drag delta, respecting which handle direction is being dragged
 - Enforces a 20×20 minimum size
 - If snap-to-grid is on, snaps the moving edge(s) to the grid
@@ -153,6 +155,7 @@ On `mouseDragged` while a resize is active:
 ### Right-click popup
 
 Available on any diagram component:
+
 - **Move to Layer** — submenu listing all 5 user layers; current layer shown with a ✓ and disabled
 - **Bring Forward / Send Back** — nudges the raw layer depth by ±1
 - **Change Fill Color… / Change Border Color…** — shown for `DiagramColorable` components; opens `JColorChooser`

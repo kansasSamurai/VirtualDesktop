@@ -10,7 +10,7 @@
 | 1 | VApp integration + package move + legacy cleanup | ✅ Complete | `org.jwellman.diagram`; SpecDiagramTool; vapps-config.json; demo packages deleted |
 | 2 | Inner class extraction | ✅ Complete | 5 classes extracted to top-level files; GridPanel kept as private static inner of DiagramLayeredPane |
 | 3 | Graph model layer | ✅ Complete | `api` / `core` / `domain.cls` packages; NodeHostPanel, EdgeRenderPanel, CanvasOverlayPanel, OrthogonalRouter; class diagram demo; two-part JSON persistence |
-| 4 | Overlay-painted selection handles | ⬜ Next | Move ResizeBorder + ResizeHandler rendering into CanvasOverlayPanel; eliminate jitter on NodeHostPanel |
+| 4 | Overlay-painted selection handles | ✅ Complete | Selection handles and resize moved into CanvasOverlayPanel; setBorder() and ResizeHandler cycle eliminated |
 | 5 | Multi-select and group operations | ⬜ Planned | Rubber-band select; group move/align |
 | 6 | Undo / Redo | ⬜ Planned | `javax.swing.undo` stack; all mutating operations |
 | 7 | Cut / Copy / Paste components | ⬜ Planned | Within and across diagram sessions |
@@ -103,47 +103,37 @@ because `setBorder()` triggers `revalidate()` on a JPanel with children. Logged 
 
 ---
 
-## Phase 4 — Overlay-Painted Selection Handles
+## Phase 4 — Overlay-Painted Selection Handles ✅
 
-**Why**: `ResizeBorder` calls `setBorder()` on the selected component, triggering
-`revalidate()`. For `DiagramShape` / `DiagramText` (no child components) this is
-invisible. For `NodeHostPanel` (real JPanel hierarchy) this produces a brief layout
-jitter. The fix is to move all selection-handle rendering into `CanvasOverlayPanel`,
-which already paints at canvas coordinates for port anchors — eliminating `setBorder()`
-and the dynamic `ResizeHandler` install/remove cycle entirely.
+`ResizeBorder` was calling `setBorder()` on the selected component, triggering
+`revalidate()`. For `NodeHostPanel` (real JPanel hierarchy) this produced brief layout
+jitter. Selection handle rendering and resize drag were moved entirely into
+`CanvasOverlayPanel`, eliminating `setBorder()` and the `ResizeHandler` install/remove
+cycle for all component types.
 
-### Implementation
+**`CanvasOverlayPanel` changes:**
+- New `ResizeDirection` enum (NONE, NW, N, NE, E, SE, S, SW, W)
+- New `setSelectedComponent(Component comp)` method
+- `paintComponent()` always paints selection border + 8 handle squares from
+  `selectedComponent.getBounds()` in canvas coordinates, even in IDLE state
+- `contains()` in IDLE returns `true` only near handle zones (8px tolerance), so resize
+  drag events are captured while all other clicks pass through to components below
+- `handlePressed/handleDragged/handleReleased` extended to perform resize in IDLE state;
+  GraphNode resize also notifies `edgePanel.nodeUpdated()` so edges track live
+- `handleMoved` updates the cursor to the appropriate resize cursor near each handle
+- Constructor gains two new parameters: `UnaryOperator<Integer> snapFn` (applied per
+  coordinate during resize) and `Runnable onResizeComplete` (calls `notifyModified()`)
 
-**`CanvasOverlayPanel`** — add a `SELECTED` component reference and a new paint branch:
-- When a component is selected, store its reference in the overlay
-- `paintComponent()` reads `selectedComponent.getBounds()` and paints 8 filled squares
-  at the corners and edge midpoints (same positions as `ResizeBorder` currently draws)
-- The overlay remains in `IDLE` state for event pass-through when not in edge-creation
-  mode, but still paints the selection handles
+**`DiagramLayeredPane` changes:**
+- `selectComponent()` now calls `overlayPanel.setSelectedComponent(comp)` instead of
+  `setBorder()` + `ResizeHandler` install
+- `deselectAll()` simplified to just null out `selectedComponent` and call
+  `overlayPanel.setSelectedComponent(null)`
+- `overlayPanel` constructor call updated with snap lambda and notify lambda
+- Unused `MouseListener` / `MouseMotionListener` imports removed
 
-**Selection hit-testing in the overlay** — add resize direction detection to
-`CanvasOverlayPanel.mousePressed/mouseDragged/mouseReleased` (same 8px zone logic as
-`ResizeHandler`). The overlay's `contains()` must return `true` when the mouse is near
-a handle, even in `IDLE` state. When resize drag completes, fire `notifyModified()` via
-a callback to `DiagramLayeredPane`.
-
-**Remove `ResizeBorder` from `selectComponent()`** — `jcomp.setBorder(null)` is always
-called; no new border is set. The overlay owns the visual.
-
-**Remove `ResizeHandler` install/remove cycle** — `ResizeHandler` class can be deprecated
-once the overlay handles resize for all component types. Keep it for a transition period
-if needed.
-
-**`DiagramLayeredPane`** — add `setSelectedForOverlay(Component c)` that the selection
-path calls instead of `setBorder()`. The overlay repaints itself.
-
-### Verification
-
-- Select a `DiagramShape`; 8 handles appear (painted by overlay); no jitter
-- Select a `NodeHostPanel`; 8 handles appear; zero layout disturbance in node content
-- Drag a handle; component resizes correctly
-- Click empty space; handles disappear
-- Enter Connect mode while a node is selected; both port anchors and handles are visible
+`ResizeBorder` and `ResizeHandler` are retained as source files but are no longer
+referenced by the framework.
 
 ---
 

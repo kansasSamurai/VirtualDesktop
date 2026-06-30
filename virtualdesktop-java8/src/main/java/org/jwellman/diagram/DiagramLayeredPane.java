@@ -10,8 +10,6 @@ import java.awt.Point;
 import java.awt.Window;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -94,9 +92,13 @@ public class DiagramLayeredPane extends JLayeredPane {
         edgePanel.setBounds(0, 0, 2000, 1500);
         add(edgePanel, CONNECTION_LAYER);
 
-        // Canvas overlay — handles port anchors and edge-creation drag
-        overlayPanel = new CanvasOverlayPanel(graphNodes, edgePanel,
-            edge -> addGraphEdge(edge));
+        // Canvas overlay — handles port anchors, edge-creation drag, and selection handles
+        overlayPanel = new CanvasOverlayPanel(
+            graphNodes, edgePanel,
+            edge -> addGraphEdge(edge),
+            coord -> isSnapToGrid() ? snapToGrid(coord) : coord,
+            () -> notifyModified()
+        );
         overlayPanel.setBounds(0, 0, 2000, 1500);
         add(overlayPanel, OVERLAY_LAYER);
 
@@ -528,39 +530,13 @@ public class DiagramLayeredPane extends JLayeredPane {
         }
         deselectAll();
         selectedComponent = comp;
-
-        if (comp instanceof JComponent) {
-            JComponent jcomp = (JComponent) comp;
-            jcomp.setBorder(new ResizeBorder(jcomp));
-
-            ResizeHandler resizeHandler = new ResizeHandler(jcomp, this);
-            jcomp.addMouseListener(resizeHandler);
-            jcomp.addMouseMotionListener(resizeHandler);
-        }
+        overlayPanel.setSelectedComponent(comp);
         notifySelectionChanged();
     }
 
     private void deselectAll() {
-        if (selectedComponent instanceof JComponent) {
-            JComponent jcomp = (JComponent) selectedComponent;
-
-            MouseListener[] mouseListeners = jcomp.getMouseListeners();
-            for (MouseListener ml : mouseListeners) {
-                if (ml instanceof ResizeHandler) {
-                    jcomp.removeMouseListener(ml);
-                }
-            }
-
-            MouseMotionListener[] motionListeners = jcomp.getMouseMotionListeners();
-            for (MouseMotionListener mml : motionListeners) {
-                if (mml instanceof ResizeHandler) {
-                    jcomp.removeMouseMotionListener(mml);
-                }
-            }
-
-            jcomp.setBorder(null);
-        }
         selectedComponent = null;
+        overlayPanel.setSelectedComponent(null);
         repaint();
         notifySelectionChanged();
     }

@@ -203,7 +203,7 @@ public class LayeredDiagramTool extends JPanel {
         JScrollPane layerScrollPane = new JScrollPane(layerListPanel);
         layerScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         layerScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        layerScrollPane.setPreferredSize(new Dimension(250, 200));
+        layerScrollPane.setPreferredSize(new Dimension(250, 350));
 
         layersSection.add(layerScrollPane, BorderLayout.CENTER);
 

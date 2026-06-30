@@ -119,11 +119,13 @@ public class CanvasOverlayPanel extends JPanel {
 
     public void enterEdgeCreationMode() {
         state = State.EDGE_CREATION;
+        setCursor(Cursor.getDefaultCursor());
         repaint();
     }
 
     public void exitEdgeCreationMode() {
         state = State.IDLE;
+        setCursor(Cursor.getDefaultCursor());
         clearDragState();
         repaint();
     }
@@ -173,12 +175,19 @@ public class CanvasOverlayPanel extends JPanel {
             newBounds.width = Math.max(newBounds.width, 30);
             newBounds.height = Math.max(newBounds.height, 30);
             selectedComponent.setBounds(newBounds);
+            // revalidate() re-runs the layout manager (e.g. BorderLayout in NodeHostPanel)
+            // so inner content fills the new size immediately during drag
+            selectedComponent.revalidate();
             if (selectedComponent instanceof GraphNode) {
                 GraphNode gn = (GraphNode) selectedComponent;
                 gn.invalidatePortCache();
                 edgePanel.nodeUpdated(gn.getNodeId());
             }
-            repaint();
+            // repaint the parent (JLayeredPane) so the component visually updates;
+            // this also repaints the overlay (a sibling child) via the normal Swing pass
+            if (selectedComponent.getParent() != null) {
+                selectedComponent.getParent().repaint();
+            }
             e.consume();
             return;
         }
@@ -215,6 +224,13 @@ public class CanvasOverlayPanel extends JPanel {
         if (state == State.IDLE && selectedComponent != null) {
             ResizeDirection dir = getHandleAt(e.getX(), e.getY());
             setCursor(getCursorForDirection(dir));
+        } else if (state == State.EDGE_CREATION) {
+            PortHit hit = findNearestPort(e.getPoint());
+            if (hit != null) {
+                setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+            } else {
+                setCursor(Cursor.getDefaultCursor());
+            }
         }
     }
 

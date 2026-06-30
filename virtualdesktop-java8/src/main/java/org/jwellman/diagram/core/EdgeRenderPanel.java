@@ -105,11 +105,14 @@ public class EdgeRenderPanel extends JPanel {
             g2d.setStroke(new BasicStroke(attrs.getStrokeWidth()));
         }
 
-        Path2D path = router.calculatePath(startPt, endPt);
+        String srcPort = edge.getSourcePortId();
+        String tgtPort = edge.getTargetPortId();
+
+        Path2D path = router.calculatePath(startPt, srcPort, endPt, tgtPort);
         g2d.draw(path);
 
         if (attrs.getArrowType() != EdgeAttributes.ArrowType.NONE) {
-            Point approachPt = router.getApproachPoint(startPt, endPt);
+            Point approachPt = router.getApproachPoint(startPt, srcPort, endPt, tgtPort);
             drawArrowhead(g2d, approachPt, endPt, attrs);
         }
     }

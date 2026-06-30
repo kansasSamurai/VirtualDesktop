@@ -16,8 +16,8 @@ public class SpecDiagramTool extends VirtualAppSpec {
     public SpecDiagramTool() {
         super();
         this.setTitle("Diagram Tool");
-        this.setWidth(1200);
-        this.setHeight(800);
+        this.setWidth(900);
+        this.setHeight(500);
 
         ClassDiagramFactory f = new ClassDiagramFactory();
 

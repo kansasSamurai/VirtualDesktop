@@ -11,7 +11,8 @@ import org.jwellman.diagram.api.EdgeRouter;
 public class StraightLineRouter implements EdgeRouter {
 
     @Override
-    public Path2D calculatePath(Point start, Point end) {
+    public Path2D calculatePath(Point start, String startPortId,
+                                Point end, String endPortId) {
         Path2D.Double path = new Path2D.Double();
         path.moveTo(start.x, start.y);
         path.lineTo(end.x, end.y);
@@ -19,7 +20,8 @@ public class StraightLineRouter implements EdgeRouter {
     }
 
     @Override
-    public Point getApproachPoint(Point start, Point end) {
+    public Point getApproachPoint(Point start, String startPortId,
+                                  Point end, String endPortId) {
         return start;
     }
 }

@@ -111,6 +111,13 @@
           "desktopOnly": false
         },
         {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecDiagramTool",
+          "title": "Diagram Tool",
+          "icon": "landscape12",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
           "class": "org.jwellman.virtualdesktop.vapps.SpecUberDragAndDrop",
           "title": "Drag & Drop Demo",
           "icon": "landscape12",

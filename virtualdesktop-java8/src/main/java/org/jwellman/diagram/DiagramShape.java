@@ -1,4 +1,4 @@
-package org.jwellman.demo.layereddiagramtool;
+package org.jwellman.diagram;
 
 import java.awt.BasicStroke;
 import java.awt.Color;

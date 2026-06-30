@@ -1,4 +1,4 @@
-package org.jwellman.demo.layereddiagramtool;
+package org.jwellman.diagram;
 
 import java.util.List;
 
@@ -10,6 +10,7 @@ public class DiagramData {
     private boolean snapToGrid;
     private int activeLayer;
     private List<LayerData> layers;
+    private SemanticGraphData semanticGraph;
 
     public int getGridSize() {
         return gridSize;
@@ -41,5 +42,13 @@ public class DiagramData {
 
     public void setLayers(List<LayerData> layers) {
         this.layers = layers;
+    }
+
+    public SemanticGraphData getSemanticGraph() {
+        return semanticGraph;
+    }
+
+    public void setSemanticGraph(SemanticGraphData semanticGraph) {
+        this.semanticGraph = semanticGraph;
     }
 }

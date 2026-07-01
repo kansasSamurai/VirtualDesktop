@@ -11,11 +11,12 @@ import javax.swing.JComponent;
 /**
  * Custom shape component for diagram
  */
-public class DiagramShape extends JComponent implements DiagramColorable {
+public class DiagramShape extends JComponent implements DiagramColorable, DiagramRoundable {
 
     private ShapeType type;
     private Color fillColor;
     private Color borderColor;
+    private int cornerRadius = 10;
 
     private static final long serialVersionUID = 1L;
 
@@ -40,7 +41,7 @@ public class DiagramShape extends JComponent implements DiagramColorable {
         g2d.setColor(fillColor);
         switch (type) {
             case RECTANGLE:
-                g2d.fillRoundRect(5, 5, width - 10, height - 10, 10, 10);
+                g2d.fillRoundRect(5, 5, width - 10, height - 10, cornerRadius, cornerRadius);
                 break;
             case CIRCLE:
                 g2d.fillOval(5, 5, width - 10, height - 10);
@@ -57,7 +58,7 @@ public class DiagramShape extends JComponent implements DiagramColorable {
         g2d.setStroke(new BasicStroke(2));
         switch (type) {
             case RECTANGLE:
-                g2d.drawRoundRect(5, 5, width - 10, height - 10, 10, 10);
+                g2d.drawRoundRect(5, 5, width - 10, height - 10, cornerRadius, cornerRadius);
                 break;
             case CIRCLE:
                 g2d.drawOval(5, 5, width - 10, height - 10);
@@ -93,6 +94,17 @@ public class DiagramShape extends JComponent implements DiagramColorable {
     @Override
     public void setBorderColor(Color color) {
         this.borderColor = color;
+        repaint();
+    }
+
+    @Override
+    public int getCornerRadius() {
+        return cornerRadius;
+    }
+
+    @Override
+    public void setCornerRadius(int radius) {
+        this.cornerRadius = radius;
         repaint();
     }
 

@@ -10,6 +10,7 @@ public class ShapeData extends ComponentData {
     private String shapeType;
     private String fillColor;
     private String borderColor;
+    private int cornerRadius = 10;
 
     // Default constructor required for Jackson
     public ShapeData() {
@@ -20,6 +21,7 @@ public class ShapeData extends ComponentData {
         this.shapeType = shape.getShapeType().name();
         this.fillColor = colorToHex(shape.getFillColor());
         this.borderColor = colorToHex(shape.getBorderColor());
+        this.cornerRadius = shape.getCornerRadius();
     }
 
     public String getShapeType() {
@@ -46,12 +48,21 @@ public class ShapeData extends ComponentData {
         this.borderColor = borderColor;
     }
 
+    public int getCornerRadius() {
+        return cornerRadius;
+    }
+
+    public void setCornerRadius(int cornerRadius) {
+        this.cornerRadius = cornerRadius;
+    }
+
     @Override
     public JComponent createComponent() {
         DiagramShape shape = new DiagramShape(ShapeType.valueOf(shapeType));
         shape.setBounds(getBounds());
         shape.setFillColor(hexToColor(fillColor));
         shape.setBorderColor(hexToColor(borderColor));
+        shape.setCornerRadius(cornerRadius);
         return shape;
     }
 

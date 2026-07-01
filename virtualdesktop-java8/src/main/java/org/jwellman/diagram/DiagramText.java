@@ -20,11 +20,12 @@ import javax.swing.border.Border;
 /**
  * Text component for diagram (now draggable and resizable)
  */
-public class DiagramText extends JPanel implements DiagramColorable, DiagramTextAware {
+public class DiagramText extends JPanel implements DiagramColorable, DiagramTextAware, DiagramRoundable {
 
     private Color textColor;
     private Color fillColor;
     private Color borderColor;
+    private int cornerRadius = 5;
 
     private int fontSize;
     private int fontStyle;
@@ -101,12 +102,12 @@ public class DiagramText extends JPanel implements DiagramColorable, DiagramText
 
         // Draw fill color
         g2d.setColor(fillColor);
-        g2d.fillRoundRect(0, 0, width, height, 5, 5);
+        g2d.fillRoundRect(0, 0, width, height, cornerRadius, cornerRadius);
 
         // Draw border
         g2d.setColor(borderColor);
         g2d.setStroke(new BasicStroke(2));
-        g2d.drawRoundRect(0, 0, width - 1, height - 1, 5, 5);
+        g2d.drawRoundRect(0, 0, width - 1, height - 1, cornerRadius, cornerRadius);
 
         // Draw selection overlay when selected
         if (getBorder() instanceof ResizeBorder) {
@@ -188,6 +189,17 @@ public class DiagramText extends JPanel implements DiagramColorable, DiagramText
         this.textColor = color;
         textField.setForeground(color);
         // repaint(); AI added this but it is probably not necessary; keeping via comment
+    }
+
+    @Override
+    public int getCornerRadius() {
+        return cornerRadius;
+    }
+
+    @Override
+    public void setCornerRadius(int radius) {
+        this.cornerRadius = radius;
+        repaint();
     }
 
     private void updateTextFieldFont() {

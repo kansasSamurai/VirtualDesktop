@@ -45,6 +45,7 @@ public class DiagramLayeredPane extends JLayeredPane {
     // Define layer constants
     public static final Integer GRID_LAYER       = new Integer(0);
     public static final Integer BACKGROUND_LAYER = new Integer(100);
+    public static final Integer SHADOW_LAYER     = new Integer(150);
     public static final Integer SHAPE_LAYER      = new Integer(200);
     public static final Integer TEXT_LAYER       = new Integer(300);
     public static final Integer CONNECTION_LAYER = new Integer(400);
@@ -60,6 +61,10 @@ public class DiagramLayeredPane extends JLayeredPane {
     private Map<Integer, Boolean> layerVisibility = new HashMap<>();
     private Runnable modificationListener;
     private java.util.function.Consumer<Component> selectionListener;
+
+    // Infrastructure panels
+    private ShadowLayerPanel shadowPanel;
+    private boolean shadowsEnabled = true;
 
     // Graph model
     private EdgeRenderPanel edgePanel;
@@ -86,6 +91,11 @@ public class DiagramLayeredPane extends JLayeredPane {
         gridPanel = new GridPanel(gridSize);
         gridPanel.setBounds(0, 0, 2000, 1500);
         add(gridPanel, GRID_LAYER);
+
+        // Shadow layer — paints drop shadows behind graph nodes; suspended during drag
+        shadowPanel = new ShadowLayerPanel();
+        shadowPanel.setBounds(0, 0, 2000, 1500);
+        add(shadowPanel, SHADOW_LAYER);
 
         // Edge render panel — transparent, passes mouse events through
         edgePanel = new EdgeRenderPanel(edgeRouter, graphNodes);
@@ -157,6 +167,22 @@ public class DiagramLayeredPane extends JLayeredPane {
     /** Called by DragHandler after a GraphNode's bounds change. */
     void notifyNodeMoved(String nodeId) {
         edgePanel.nodeUpdated(nodeId);
+        shadowPanel.repaint();
+    }
+
+    public void setShadowsEnabled(boolean enabled) {
+        shadowsEnabled = enabled;
+        shadowPanel.setVisible(enabled);
+    }
+
+    /** Hides shadows for the duration of a drag; preserves the user's enabled preference. */
+    void suspendShadows() {
+        shadowPanel.setVisible(false);
+    }
+
+    /** Restores shadow visibility to the user's current preference after drag ends. */
+    void resumeShadows() {
+        shadowPanel.setVisible(shadowsEnabled);
     }
 
     // ---------------------------------------------------------------
@@ -173,7 +199,7 @@ public class DiagramLayeredPane extends JLayeredPane {
         Map<Integer, java.util.List<ComponentData>> layerMap = new HashMap<>();
 
         for (Component comp : getComponents()) {
-            if (comp == gridPanel || comp == edgePanel || comp == overlayPanel) {
+            if (comp == gridPanel || comp == shadowPanel || comp == edgePanel || comp == overlayPanel) {
                 continue;
             }
             if (comp instanceof GraphNode) {
@@ -247,7 +273,7 @@ public class DiagramLayeredPane extends JLayeredPane {
         // Clear existing diagram
         Component[] components = getComponents();
         for (Component comp : components) {
-            if (comp != gridPanel && comp != edgePanel && comp != overlayPanel) {
+            if (comp != gridPanel && comp != shadowPanel && comp != edgePanel && comp != overlayPanel) {
                 remove(comp);
             }
         }
@@ -602,7 +628,7 @@ public class DiagramLayeredPane extends JLayeredPane {
     public Map<Integer, Integer> getLayerCounts() {
         Map<Integer, Integer> counts = new HashMap<>();
         for (Component comp : getComponents()) {
-            if (comp != gridPanel && comp != edgePanel && comp != overlayPanel) {
+            if (comp != gridPanel && comp != shadowPanel && comp != edgePanel && comp != overlayPanel) {
                 Integer layer = getLayer(comp);
                 counts.put(layer, counts.getOrDefault(layer, 0) + 1);
             }

@@ -88,6 +88,10 @@ public class LayeredDiagramTool extends JPanel {
         snapCheck.addActionListener(e -> diagramPane.setSnapToGrid(snapCheck.isSelected()));
         toolBar.add(snapCheck);
 
+        JCheckBox shadowCheck = new JCheckBox("Shadows", true);
+        shadowCheck.addActionListener(e -> diagramPane.setShadowsEnabled(shadowCheck.isSelected()));
+        toolBar.add(shadowCheck);
+
         JButton bringForwardBtn = new JButton("Bring Forward");
         bringForwardBtn.addActionListener(e -> diagramPane.bringSelectedForward());
         toolBar.add(bringForwardBtn);

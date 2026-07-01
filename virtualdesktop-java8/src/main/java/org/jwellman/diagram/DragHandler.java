@@ -28,6 +28,7 @@ class DragHandler extends MouseAdapter {
         pressPoint = e.getPoint();
         Component comp = e.getComponent();
         comp.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+        layeredPane.suspendShadows();
     }
 
     @Override
@@ -76,6 +77,7 @@ class DragHandler extends MouseAdapter {
         Component comp = e.getComponent();
         comp.setCursor(Cursor.getDefaultCursor());
 
+        layeredPane.resumeShadows();
         layeredPane.repaint();
         layeredPane.notifyModified();
     }

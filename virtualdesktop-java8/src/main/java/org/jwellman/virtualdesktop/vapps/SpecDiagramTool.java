@@ -1,9 +1,5 @@
 package org.jwellman.virtualdesktop.vapps;
 
-import java.awt.BorderLayout;
-
-import javax.swing.JPanel;
-
 import org.jwellman.diagram.LayeredDiagramTool;
 import org.jwellman.diagram.domain.cls.ClassDiagramDemo;
 import org.jwellman.diagram.domain.cls.ClassDiagramFactory;
@@ -25,9 +21,7 @@ public class SpecDiagramTool extends VirtualAppSpec {
         tool.setComponentFactory(f);
         ClassDiagramDemo.buildDemo(tool.getDiagramPane(), f);
 
-        JPanel content = new JPanel(new BorderLayout());
-        content.add(tool, BorderLayout.CENTER);
-        this.setContent(content);
+        this.setContent(this.createDefaultContent(tool));
     }
 
 }

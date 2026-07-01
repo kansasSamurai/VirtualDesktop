@@ -34,6 +34,11 @@ public class PropertyEditorPanel extends JPanel {
     // Color property panel
     private ColorPropertyPanel colorPropertyPanel;
 
+    // Corner radius controls
+    private JSlider cornerRadiusSlider;
+    private JLabel cornerRadiusLabel;
+    private JPanel cornerRadiusPanel;
+
     private static final long serialVersionUID = 1L;
 
     public PropertyEditorPanel(DiagramLayeredPane diagramPane) {
@@ -45,6 +50,7 @@ public class PropertyEditorPanel extends JPanel {
         // Create property panels
         createFontPropertiesPanel();
         createColorPropertyPanel();
+        createCornerRadiusPanel();
 
         // Initially show "No selection" message
         showNoSelectionMessage();
@@ -131,6 +137,44 @@ public class PropertyEditorPanel extends JPanel {
         colorPropertyPanel.setModificationListener(v -> diagramPane.notifyModified());
     }
 
+    private void createCornerRadiusPanel() {
+        cornerRadiusPanel = new JPanel(new BorderLayout(5, 5));
+        cornerRadiusLabel = new JLabel("Corners: 0");
+        cornerRadiusPanel.add(cornerRadiusLabel, BorderLayout.WEST);
+
+        cornerRadiusSlider = new JSlider(0, 40, 0);
+        cornerRadiusSlider.addChangeListener(e -> {
+            cornerRadiusLabel.setText("Corners: " + cornerRadiusSlider.getValue());
+            if (!cornerRadiusSlider.getValueIsAdjusting()) {
+                updateCornerRadius();
+            }
+        });
+        cornerRadiusPanel.add(cornerRadiusSlider, BorderLayout.CENTER);
+    }
+
+    private void loadCornerRadius() {
+        if (!(selectedComponent instanceof DiagramRoundable)) {
+            return;
+        }
+        javax.swing.event.ChangeListener[] listeners = cornerRadiusSlider.getChangeListeners();
+        for (javax.swing.event.ChangeListener l : listeners) {
+            cornerRadiusSlider.removeChangeListener(l);
+        }
+        int radius = ((DiagramRoundable) selectedComponent).getCornerRadius();
+        cornerRadiusSlider.setValue(radius);
+        cornerRadiusLabel.setText("Corners: " + radius);
+        for (javax.swing.event.ChangeListener l : listeners) {
+            cornerRadiusSlider.addChangeListener(l);
+        }
+    }
+
+    private void updateCornerRadius() {
+        if (selectedComponent instanceof DiagramRoundable) {
+            ((DiagramRoundable) selectedComponent).setCornerRadius(cornerRadiusSlider.getValue());
+            diagramPane.notifyModified();
+        }
+    }
+
     private void showNoSelectionMessage() {
         removeAll();
         JLabel messageLabel = new JLabel("No component selected");
@@ -150,7 +194,14 @@ public class PropertyEditorPanel extends JPanel {
 
     private void showColorProperties() {
         removeAll();
-        add(colorPropertyPanel, BorderLayout.NORTH);
+        JPanel combinedPanel = new JPanel();
+        combinedPanel.setLayout(new BoxLayout(combinedPanel, BoxLayout.Y_AXIS));
+        combinedPanel.add(colorPropertyPanel);
+        if (selectedComponent instanceof DiagramRoundable) {
+            combinedPanel.add(Box.createVerticalStrut(5));
+            combinedPanel.add(cornerRadiusPanel);
+        }
+        add(combinedPanel, BorderLayout.NORTH);
         revalidate();
         repaint();
     }
@@ -162,6 +213,10 @@ public class PropertyEditorPanel extends JPanel {
         combinedPanel.add(fontPropertiesPanel);
         combinedPanel.add(Box.createVerticalStrut(10));
         combinedPanel.add(colorPropertyPanel);
+        if (selectedComponent instanceof DiagramRoundable) {
+            combinedPanel.add(Box.createVerticalStrut(5));
+            combinedPanel.add(cornerRadiusPanel);
+        }
         add(combinedPanel, BorderLayout.NORTH);
         revalidate();
         repaint();
@@ -178,8 +233,10 @@ public class PropertyEditorPanel extends JPanel {
         } else if (component instanceof DiagramText) {
             DiagramText textComponent = (DiagramText) component;
             loadFontProperties(textComponent);
+            loadCornerRadius();
             showFontAndColorProperties();
         } else if (component instanceof DiagramColorable) {
+            loadCornerRadius();
             showColorProperties();
         } else {
             showNoSelectionMessage();

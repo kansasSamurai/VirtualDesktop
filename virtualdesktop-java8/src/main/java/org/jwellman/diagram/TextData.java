@@ -19,6 +19,7 @@ public class TextData extends ComponentData {
 
     private String text;
     private String textColor;
+    private int cornerRadius = 5;
 
     // Default constructor required for Jackson
     public TextData() {
@@ -33,6 +34,7 @@ public class TextData extends ComponentData {
         this.fontSize = textComp.getFontSize();
         this.fontStyle = textComp.getFontStyle();
         this.textColor = colorToHex(textComp.getTextColor());
+        this.cornerRadius = textComp.getCornerRadius();
     }
 
     public String getText() {
@@ -91,6 +93,14 @@ public class TextData extends ComponentData {
         this.textColor = textColor;
     }
 
+    public int getCornerRadius() {
+        return cornerRadius;
+    }
+
+    public void setCornerRadius(int cornerRadius) {
+        this.cornerRadius = cornerRadius;
+    }
+
     @Override
     public JComponent createComponent() {
         DiagramText textComp = new DiagramText(text);
@@ -101,6 +111,7 @@ public class TextData extends ComponentData {
         textComp.setFontSize(fontSize);
         textComp.setFontStyle(fontStyle);
         textComp.setTextColor(Color.black); // (hexToColor(textColor));
+        textComp.setCornerRadius(cornerRadius);
         return textComp;
     }
 

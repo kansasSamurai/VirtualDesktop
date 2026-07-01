@@ -15,9 +15,11 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JColorChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSlider;
 import javax.swing.JToggleButton;
 import javax.swing.SwingUtilities;
 
@@ -38,6 +40,11 @@ public class ColorPropertyPanel extends JPanel {
     private ButtonGroup colorTargetGroup;
     private JPanel colorSwatchPanel;
     private List<Color> userColors;
+
+    // Opacity controls
+    private JLabel opacityLabel;
+    private JCheckBox opacityCheck;
+    private JSlider opacitySlider;
 
     private static final int SWATCH_SIZE = 24;
 
@@ -153,6 +160,36 @@ public class ColorPropertyPanel extends JPanel {
         JButton moreColorsButton = new JButton("More Colors...");
         moreColorsButton.addActionListener(e -> chooseCustomColor());
         add(moreColorsButton);
+        add(Box.createVerticalStrut(5));
+
+        // Opacity row: "Opacity: N%" label | checkbox (no text) | slider
+        JPanel opacityRow = new JPanel();
+        opacityRow.setLayout(new BoxLayout(opacityRow, BoxLayout.X_AXIS));
+
+        opacityLabel = new JLabel("Opacity: 100%");
+        opacityCheck = new JCheckBox();
+        opacityCheck.setSelected(false);
+        opacitySlider = new JSlider(0, 100, 100);
+        opacitySlider.setEnabled(false);
+
+        opacityCheck.addActionListener(e -> {
+            opacitySlider.setEnabled(opacityCheck.isSelected());
+            applyCurrentOpacity();
+        });
+
+        opacitySlider.addChangeListener(e -> {
+            opacityLabel.setText("Opacity: " + opacitySlider.getValue() + "%");
+            if (opacityCheck.isSelected()) {
+                applyCurrentOpacity();
+            }
+        });
+
+        opacityRow.add(opacityLabel);
+        opacityRow.add(Box.createHorizontalStrut(4));
+        opacityRow.add(opacityCheck);
+        opacityRow.add(Box.createHorizontalStrut(4));
+        opacityRow.add(opacitySlider);
+        add(opacityRow);
     }
 
     private void updateColorSwatches() {
@@ -261,21 +298,57 @@ public class ColorPropertyPanel extends JPanel {
     }
 
     private void applyColor(Color color) {
-        if (selectedComponent instanceof DiagramColorable) {
-            DiagramColorable colorable = (DiagramColorable) selectedComponent;
-
-            if (fillColorButton.isSelected()) {
-                colorable.setFillColor(color);
-            } else if (borderColorButton.isSelected()) {
-                colorable.setBorderColor(color);
-            } else if (textColorButton.isSelected() && selectedComponent instanceof DiagramText) {
-                ((DiagramText) selectedComponent).setTextColor(color);
-            }
-
-            // Notify listener of modification
-            if (modificationListener != null) {
-                modificationListener.accept(null);
-            }
+        if (!(selectedComponent instanceof DiagramColorable)) {
+            return;
         }
+        DiagramColorable colorable = (DiagramColorable) selectedComponent;
+
+        Color colorToApply = opacityCheck.isSelected()
+            ? withAlpha(color, opacitySlider.getValue())
+            : color;
+
+        if (fillColorButton.isSelected()) {
+            colorable.setFillColor(colorToApply);
+        } else if (borderColorButton.isSelected()) {
+            colorable.setBorderColor(colorToApply);
+        } else if (textColorButton.isSelected() && selectedComponent instanceof DiagramText) {
+            ((DiagramText) selectedComponent).setTextColor(colorToApply);
+        }
+
+        if (modificationListener != null) {
+            modificationListener.accept(null);
+        }
+    }
+
+    /**
+     * Re-applies the current slider alpha to whatever color the selected component
+     * already has on the active target. Called when the slider moves or the
+     * checkbox is toggled.
+     */
+    private void applyCurrentOpacity() {
+        if (!(selectedComponent instanceof DiagramColorable)) {
+            return;
+        }
+        DiagramColorable colorable = (DiagramColorable) selectedComponent;
+        int pct = opacityCheck.isSelected() ? opacitySlider.getValue() : 100;
+
+        if (fillColorButton.isSelected()) {
+            colorable.setFillColor(withAlpha(colorable.getFillColor(), pct));
+        } else if (borderColorButton.isSelected()) {
+            colorable.setBorderColor(withAlpha(colorable.getBorderColor(), pct));
+        } else if (textColorButton.isSelected() && selectedComponent instanceof DiagramText) {
+            DiagramText dt = (DiagramText) selectedComponent;
+            dt.setTextColor(withAlpha(dt.getTextColor(), pct));
+        }
+
+        if (modificationListener != null) {
+            modificationListener.accept(null);
+        }
+    }
+
+    /** Returns a copy of {@code c} with its alpha set from a 0-100 percentage. */
+    private Color withAlpha(Color c, int pct) {
+        int alpha = (int) Math.round(pct / 100.0 * 255);
+        return new Color(c.getRed(), c.getGreen(), c.getBlue(), alpha);
     }
 }

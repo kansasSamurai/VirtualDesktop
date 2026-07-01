@@ -11,6 +11,7 @@
 | 2 | Inner class extraction | ✅ Complete | 5 classes extracted to top-level files; GridPanel kept as private static inner of DiagramLayeredPane |
 | 3 | Graph model layer | ✅ Complete | `api` / `core` / `domain.cls` packages; NodeHostPanel, EdgeRenderPanel, CanvasOverlayPanel, OrthogonalRouter; class diagram demo; two-part JSON persistence |
 | 4 | Overlay-painted selection handles | ✅ Complete | Selection handles and resize moved into CanvasOverlayPanel; setBorder() and ResizeHandler cycle eliminated |
+| 4.5 | Drop shadows | ✅ Complete | ShadowLayerPanel at SHADOW_LAYER=150; multi-pass procedural shadow on graph nodes; suspended during drag; toolbar toggle |
 | 5 | Multi-select and group operations | ⬜ Planned | Rubber-band select; group move/align |
 | 6 | Undo / Redo | ⬜ Planned | `javax.swing.undo` stack; all mutating operations |
 | 7 | Cut / Copy / Paste components | ⬜ Planned | Within and across diagram sessions |
@@ -134,6 +135,25 @@ cycle for all component types.
 
 `ResizeBorder` and `ResizeHandler` are retained as source files but are no longer
 referenced by the framework.
+
+---
+
+## Phase 4.5 — Drop Shadows ✅
+
+New `ShadowLayerPanel` (in `org.jwellman.diagram`) placed at the new `SHADOW_LAYER = 150`
+constant, between `BACKGROUND_LAYER (100)` and `SHAPE_LAYER (200)`. The panel iterates
+the JLayeredPane's components in `paintComponent()`, identifies visible `GraphNode`
+instances, and paints a soft multi-pass procedural drop shadow behind each using 13 passes
+of `fillRoundRect` with exponential opacity falloff — zero `BufferedImage` overhead.
+
+Shadows are deliberately **node-only** (always rectangular); other shape types deferred.
+
+**Drag suspension**: `DragHandler.mousePressed()` calls `DiagramLayeredPane.suspendShadows()`
+(hides the panel); `mouseReleased()` calls `resumeShadows()` (restores to user preference).
+This avoids recomputing 13 `fillRoundRect` passes per visible node on every drag event.
+
+**Toolbar**: "Shadows" `JCheckBox` (default ON) calls `DiagramLayeredPane.setShadowsEnabled()`,
+which stores the preference in `boolean shadowsEnabled` so suspend/resume respects it.
 
 ---
 

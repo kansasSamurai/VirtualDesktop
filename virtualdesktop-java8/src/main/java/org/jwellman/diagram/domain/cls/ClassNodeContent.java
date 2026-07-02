@@ -3,10 +3,11 @@ package org.jwellman.diagram.domain.cls;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.util.List;
 
 import javax.swing.BorderFactory;
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -29,18 +30,13 @@ public class ClassNodeContent extends JPanel {
     @SuppressWarnings("unchecked")
     public ClassNodeContent(String name, String stereotype,
                              Object fields, Object methods) {
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        setLayout(new GridBagLayout());
         setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
         setBackground(CONTENT_BG);
 
         // Header
         boolean isInterface = "INTERFACE".equalsIgnoreCase(stereotype);
-        JPanel header = new JPanel(new BorderLayout()) {
-            @Override
-            public java.awt.Dimension getMaximumSize() {
-                return new java.awt.Dimension(Integer.MAX_VALUE, getPreferredSize().height);
-            }
-        };
+        JPanel header = new JPanel(new BorderLayout());
         header.setBackground(isInterface ? INTERFACE_HEADER_BG : CLASS_HEADER_BG);
         header.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
 
@@ -55,8 +51,8 @@ public class ClassNodeContent extends JPanel {
         nameLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
         header.add(nameLabel, BorderLayout.CENTER);
 
-        add(header);
-        // add(makeSeparator());
+        add(header, itemConstraints());
+        add(new JSeparator(SwingConstants.HORIZONTAL), itemConstraints());
 
         // Fields
         JPanel fieldsPanel = makeSection();
@@ -70,8 +66,8 @@ public class ClassNodeContent extends JPanel {
                 fieldsPanel.add(makeEntryLabel(f.trim()));
             }
         }
-        add(fieldsPanel);
-        add(makeSeparator());
+        add(fieldsPanel, itemConstraints());
+        add(new JSeparator(SwingConstants.HORIZONTAL), itemConstraints());
 
         // Methods
         JPanel methodsPanel = makeSection();
@@ -85,30 +81,32 @@ public class ClassNodeContent extends JPanel {
                 methodsPanel.add(makeEntryLabel(m.trim()));
             }
         }
-        add(methodsPanel);
-        add(makeSeparator());
-        
-        // vertical spacer (i.e. empty space goes at the bottom
-        add(Box.createVerticalGlue());
-    }
+        add(methodsPanel, itemConstraints());
+        add(new JSeparator(SwingConstants.HORIZONTAL), itemConstraints());
 
-    private JSeparator makeSeparator() {
-        return new JSeparator(SwingConstants.HORIZONTAL) {
-            @Override
-            public java.awt.Dimension getMaximumSize() {
-                return new java.awt.Dimension(Integer.MAX_VALUE, getPreferredSize().height);
-            }
-        };
+        // Filler: absorbs all remaining vertical space
+        JPanel filler = new JPanel();
+        filler.setBackground(CONTENT_BG);
+        GridBagConstraints fillerGbc = itemConstraints();
+        fillerGbc.weighty = 1.0;
+        fillerGbc.fill = GridBagConstraints.BOTH;
+        add(filler, fillerGbc);
     }
 
     // TODO: replace with equivalent utility from org.jwellman:swing-utils
+    private GridBagConstraints itemConstraints() {
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = GridBagConstraints.RELATIVE;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        gbc.weighty = 0.0;
+        gbc.anchor = GridBagConstraints.NORTH;
+        return gbc;
+    }
+
     private JPanel makeSection() {
-        JPanel panel = new JPanel() {
-            @Override
-            public java.awt.Dimension getMaximumSize() {
-                return new java.awt.Dimension(Integer.MAX_VALUE, getPreferredSize().height);
-            }
-        };
+        JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(CONTENT_BG);
         panel.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));

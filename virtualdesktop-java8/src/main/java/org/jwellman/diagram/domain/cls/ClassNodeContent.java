@@ -6,6 +6,7 @@ import java.awt.Font;
 import java.util.List;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -34,7 +35,12 @@ public class ClassNodeContent extends JPanel {
 
         // Header
         boolean isInterface = "INTERFACE".equalsIgnoreCase(stereotype);
-        JPanel header = new JPanel(new BorderLayout());
+        JPanel header = new JPanel(new BorderLayout()) {
+            @Override
+            public java.awt.Dimension getMaximumSize() {
+                return new java.awt.Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+            }
+        };
         header.setBackground(isInterface ? INTERFACE_HEADER_BG : CLASS_HEADER_BG);
         header.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
 
@@ -50,13 +56,10 @@ public class ClassNodeContent extends JPanel {
         header.add(nameLabel, BorderLayout.CENTER);
 
         add(header);
-        add(new JSeparator(SwingConstants.HORIZONTAL));
+        // add(makeSeparator());
 
         // Fields
-        JPanel fieldsPanel = new JPanel();
-        fieldsPanel.setLayout(new BoxLayout(fieldsPanel, BoxLayout.Y_AXIS));
-        fieldsPanel.setBackground(CONTENT_BG);
-        fieldsPanel.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
+        JPanel fieldsPanel = makeSection();
 
         if (fields instanceof List) {
             for (Object f : (List<Object>) fields) {
@@ -68,13 +71,10 @@ public class ClassNodeContent extends JPanel {
             }
         }
         add(fieldsPanel);
-        add(new JSeparator(SwingConstants.HORIZONTAL));
+        add(makeSeparator());
 
         // Methods
-        JPanel methodsPanel = new JPanel();
-        methodsPanel.setLayout(new BoxLayout(methodsPanel, BoxLayout.Y_AXIS));
-        methodsPanel.setBackground(CONTENT_BG);
-        methodsPanel.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
+        JPanel methodsPanel = makeSection();
 
         if (methods instanceof List) {
             for (Object m : (List<Object>) methods) {
@@ -86,6 +86,33 @@ public class ClassNodeContent extends JPanel {
             }
         }
         add(methodsPanel);
+        add(makeSeparator());
+        
+        // vertical spacer (i.e. empty space goes at the bottom
+        add(Box.createVerticalGlue());
+    }
+
+    private JSeparator makeSeparator() {
+        return new JSeparator(SwingConstants.HORIZONTAL) {
+            @Override
+            public java.awt.Dimension getMaximumSize() {
+                return new java.awt.Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+            }
+        };
+    }
+
+    // TODO: replace with equivalent utility from org.jwellman:swing-utils
+    private JPanel makeSection() {
+        JPanel panel = new JPanel() {
+            @Override
+            public java.awt.Dimension getMaximumSize() {
+                return new java.awt.Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+            }
+        };
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(CONTENT_BG);
+        panel.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
+        return panel;
     }
 
     private JLabel makeEntryLabel(String text) {
@@ -93,4 +120,5 @@ public class ClassNodeContent extends JPanel {
         label.setFont(new Font("Monospaced", Font.PLAIN, 11));
         return label;
     }
+
 }

@@ -29,6 +29,7 @@ import org.jwellman.diagram.api.EdgeRouter;
 import org.jwellman.diagram.api.GraphEdge;
 import org.jwellman.diagram.api.GraphNode;
 import org.jwellman.diagram.core.BlueprintCanvasTheme;
+import org.jwellman.diagram.core.WhiteprintCanvasTheme;
 import org.jwellman.diagram.core.CanvasOverlayPanel;
 import org.jwellman.diagram.core.DefaultGraphEdge;
 import org.jwellman.diagram.core.EdgeRenderPanel;
@@ -68,7 +69,7 @@ public class DiagramLayeredPane extends JLayeredPane {
     private boolean shadowsEnabled = true;
 
     // Canvas theme — controls all colors on the canvas surface and its nodes
-    private CanvasTheme theme = new BlueprintCanvasTheme();
+    private CanvasTheme theme = new WhiteprintCanvasTheme();
 
     // Graph model
     private EdgeRenderPanel edgePanel;

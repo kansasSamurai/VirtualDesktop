@@ -1,8 +1,8 @@
 package org.jwellman.virtualdesktop.vapps;
 
 import org.jwellman.diagram.LayeredDiagramTool;
-import org.jwellman.diagram.domain.cls.ClassDiagramDemo;
 import org.jwellman.diagram.domain.cls.ClassDiagramFactory;
+import org.jwellman.diagram.domain.cls.ToolDiagramDemo;
 
 /**
  * VApp that hosts the LayeredDiagramTool inside a VirtualDesktop internal frame.
@@ -18,7 +18,7 @@ public class SpecDiagramTool extends VirtualAppSpec {
         LayeredDiagramTool tool = new LayeredDiagramTool();
         ClassDiagramFactory f = new ClassDiagramFactory(tool.getDiagramPane().getTheme());
         tool.setComponentFactory(f);
-        ClassDiagramDemo.buildDemo(tool.getDiagramPane(), f);
+        ToolDiagramDemo.buildDemo(tool.getDiagramPane(), f);
 
         this.setContent(this.createDefaultContent(tool));
     }

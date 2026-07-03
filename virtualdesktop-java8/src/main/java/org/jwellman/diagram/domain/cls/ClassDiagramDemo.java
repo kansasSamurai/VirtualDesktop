@@ -24,22 +24,22 @@ public class ClassDiagramDemo {
         // --- nodes ---
         NodeHostPanel iRepo     = makeNode("n-irepo",     "INTERFACE", "IRepository",
             null,
-            Arrays.asList("findById(id): T", "save(entity: T): void"),
+            Arrays.asList("+ findById(id): T", "+ save(entity: T): void"),
             factory, pane, 80, 80, 200, 130);
 
         NodeHostPanel user      = makeNode("n-user",      "CLASS", "User",
-            Arrays.asList("id: Long", "name: String", "email: String"),
-            Arrays.asList("getId(): Long", "getName(): String"),
+            Arrays.asList("- id: Long", "- name: String", "- email: String"),
+            Arrays.asList("+ getId(): Long", "+ getName(): String"),
             factory, pane, 380, 80, 210, 160);
 
         NodeHostPanel userRepo  = makeNode("n-userrepo",  "CLASS", "UserRepository",
-            Arrays.asList("dataSource: DataSource"),
-            Arrays.asList("findById(id): User", "save(u: User): void"),
+            Arrays.asList("- dataSource: DataSource"),
+            Arrays.asList("+ findById(id): User", "+ save(u: User): void"),
             factory, pane, 80, 320, 220, 160);
 
         NodeHostPanel userSvc   = makeNode("n-usersvc",   "CLASS", "UserService",
-            Arrays.asList("repo: UserRepository"),
-            Arrays.asList("findUser(id): User", "saveUser(u: User): void"),
+            Arrays.asList("- repo: UserRepository"),
+            Arrays.asList("+ findUser(id): User", "+ saveUser(u: User): void"),
             factory, pane, 380, 320, 210, 160);
 
         // --- edges ---

@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
 import org.jwellman.diagram.api.CanvasComponentFactory;
+import org.jwellman.diagram.api.CanvasTheme;
 import org.jwellman.diagram.api.EdgeAttributes;
 import org.jwellman.diagram.api.EdgeRouter;
 import org.jwellman.diagram.api.GraphEdge;
@@ -34,6 +35,7 @@ import org.jwellman.diagram.api.GraphNode;
 import org.jwellman.diagram.core.CanvasOverlayPanel;
 import org.jwellman.diagram.core.DefaultGraphEdge;
 import org.jwellman.diagram.core.EdgeRenderPanel;
+import org.jwellman.diagram.core.LightCanvasTheme;
 import org.jwellman.diagram.core.NodeHostPanel;
 import org.jwellman.diagram.core.OrthogonalRouter;
 
@@ -66,6 +68,9 @@ public class DiagramLayeredPane extends JLayeredPane {
     private ShadowLayerPanel shadowPanel;
     private boolean shadowsEnabled = true;
 
+    // Canvas theme — controls all colors on the canvas surface and its nodes
+    private CanvasTheme theme = new LightCanvasTheme();
+
     // Graph model
     private EdgeRenderPanel edgePanel;
     private CanvasOverlayPanel overlayPanel;
@@ -87,8 +92,8 @@ public class DiagramLayeredPane extends JLayeredPane {
         layerVisibility.put(CONNECTION_LAYER, true);
         layerVisibility.put(OVERLAY_LAYER, true);
 
-        // Add grid panel at the bottom layer
-        gridPanel = new GridPanel(gridSize);
+        // Add grid panel at the bottom layer — also paints the canvas background
+        gridPanel = new GridPanel(gridSize, theme.getCanvasBackground(), theme.getGridLineColor());
         gridPanel.setBounds(0, 0, 2000, 1500);
         add(gridPanel, GRID_LAYER);
 
@@ -601,6 +606,10 @@ public class DiagramLayeredPane extends JLayeredPane {
         }
     }
 
+    public CanvasTheme getTheme() {
+        return theme;
+    }
+
     public void setShowGrid(boolean show) {
         this.showGrid = show;
         gridPanel.setVisible(show);
@@ -643,20 +652,23 @@ public class DiagramLayeredPane extends JLayeredPane {
     private static class GridPanel extends JPanel {
 
         private int gridSize;
+        private Color gridLineColor;
 
         private static final long serialVersionUID = 1L;
 
-        public GridPanel(int gridSize) {
+        public GridPanel(int gridSize, Color background, Color gridLineColor) {
             this.gridSize = gridSize;
-            setOpaque(false);
+            this.gridLineColor = gridLineColor;
+            setOpaque(true);
+            setBackground(background);
         }
 
         @Override
         protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
+            super.paintComponent(g); // paints the canvas background via setBackground()
             Graphics2D g2d = (Graphics2D) g;
 
-            g2d.setColor(new Color(220, 220, 220));
+            g2d.setColor(gridLineColor);
             g2d.setStroke(new BasicStroke(1));
 
             int width = getWidth();

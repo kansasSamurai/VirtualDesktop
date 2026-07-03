@@ -103,6 +103,7 @@ LayeredDiagramTool (JPanel)
 | `EdgeAttributes` | Value class: `LineStyle` (SOLID/DASHED), `ArrowType` (OPEN/FILLED/NONE), color, stroke width |
 | `EdgeRouter` | Strategy: `calculatePath(start, startPortId, end, endPortId)` and `getApproachPoint(...)` for arrowhead orientation |
 | `CanvasComponentFactory` | Domain plugin: `createContentFor(nodeType, properties)` → `JPanel`; `getPortIds(nodeType)` |
+| `CanvasTheme` | Color palette for the canvas surface and all nodes; consumed by `DiagramLayeredPane` (canvas bg + grid) and `CanvasComponentFactory` implementations (node colors) |
 
 ---
 
@@ -116,6 +117,7 @@ LayeredDiagramTool (JPanel)
 | `OrthogonalRouter` | Port-direction-aware L/Z router: V-H-V for N/S ports, H-V-H for E/W ports, single-bend L for mixed pairs |
 | `StraightLineRouter` | Straight line from start to end |
 | `DefaultGraphEdge` | Simple immutable `GraphEdge` implementation used for both interactive and persisted edges |
+| `LightCanvasTheme` | Default `CanvasTheme`: white canvas, light grey grid, blue class headers, green interface headers |
 
 ---
 
@@ -123,8 +125,8 @@ LayeredDiagramTool (JPanel)
 
 | Class | Role |
 | --- | --- |
-| `ClassNodeContent` | Pure-Swing `JPanel` (no framework dependency); BoxLayout Y-axis; header with stereotype tint, field list, method list |
-| `ClassDiagramFactory` | Implements `CanvasComponentFactory`; supports node types `"CLASS"` and `"INTERFACE"` |
+| `ClassNodeContent` | Pure-Swing `JPanel`; `GridBagLayout` vertical stack; header with stereotype tint, field list, method list; colors sourced from `CanvasTheme` |
+| `ClassDiagramFactory` | Implements `CanvasComponentFactory`; takes a `CanvasTheme` at construction and passes it to each `ClassNodeContent` |
 | `ClassDiagramDemo` | Static `buildDemo(DiagramLayeredPane, CanvasComponentFactory)` method; populates 4 nodes and 3 edges illustrating class relationships |
 
 ---
@@ -278,6 +280,68 @@ the format is considered stable.
 
 ---
 
+## Canvas Theming
+
+The canvas is intentionally always rendered with a **light/white background** regardless
+of the host application's Look and Feel. This preserves diagram legibility when the
+surrounding VirtualDesktop switches to a dark LAF.
+
+### `CanvasTheme` interface (`org.jwellman.diagram.api`)
+
+Defines the full color palette for one rendering context:
+
+| Method | Used by |
+| --- | --- |
+| `getCanvasBackground()` | `GridPanel` — fills the entire canvas surface |
+| `getGridLineColor()` | `GridPanel` — grid line stroke color |
+| `getNodeHeaderBackground(String stereotype)` | `ClassNodeContent` — header tint per node type |
+| `getNodeBodyBackground()` | `ClassNodeContent` — body background and filler background |
+| `getNodeBorderColor()` | `ClassNodeContent` — outer border of the node card |
+| `getTextColor()` | `ClassNodeContent` — node name label and entry labels |
+| `getEdgeColor()` | `EdgeRenderPanel` — edge stroke color (wiring pending) |
+
+`stereotype` values passed to `getNodeHeaderBackground()` match the node type string
+from `CanvasComponentFactory` (e.g. `"CLASS"`, `"INTERFACE"`).
+
+### `LightCanvasTheme` (`org.jwellman.diagram.core`)
+
+The default implementation. Matches the original hardcoded colors so existing diagrams
+are visually unchanged. Swap with a custom implementation to change the palette
+without touching any canvas or domain code.
+
+### How themes flow through the system
+
+```
+DiagramLayeredPane (owns the theme, defaults to LightCanvasTheme)
+  │  getTheme()
+  └──► SpecDiagramTool / caller
+         │
+         ├──► GridPanel (canvas background + grid lines)
+         │
+         └──► ClassDiagramFactory(theme)
+                └──► ClassNodeContent(…, theme)   ← all node colors from theme
+```
+
+`DiagramLayeredPane` is the single source of truth. Callers retrieve the theme via
+`getDiagramPane().getTheme()` and pass it to any `CanvasComponentFactory` constructor.
+This ensures the factory, the canvas background, and the grid lines all use the same
+palette without any static state.
+
+**Domain class import rule:** `ClassNodeContent` is permitted to import `CanvasTheme`
+from `org.jwellman.diagram.api`. It is a pure color-palette interface with no Swing
+dependency, making it safe for domain use. The existing allowlist now includes
+`CanvasTheme` alongside `CanvasComponentFactory`, `EdgeAttributes`, `DefaultGraphEdge`,
+and `NodeHostPanel`.
+
+### Adding a new theme
+
+1. Implement `CanvasTheme` (anywhere — the framework imposes no restriction on location)
+2. Pass the instance to `DiagramLayeredPane` — a `setTheme()` method can be added when
+   needed; for now, the default is `LightCanvasTheme`
+3. Pass the same instance to any `CanvasComponentFactory` constructor
+
+---
+
 ## Canvas Size
 
 The `JLayeredPane` preferred size is hardcoded to `2000 × 1500` px, wrapped in a
@@ -352,6 +416,16 @@ Installing `ResizeHandler` permanently on every component would make every compo
 always respond to resize cursor changes, which is confusing when hovering over unselected
 components. Tying it to selection means only the selected component shows resize
 behavior, matching the standard desktop selection model.
+
+### Why the canvas is always light-colored even when a dark LAF is active
+
+Diagram readability depends on high contrast between content and background. Dark LAFs
+vary widely in their exact background tones, making it unpredictable whether node colors
+and edge strokes will remain legible. A fixed white canvas is a deliberate override: the
+`GridPanel` (which covers the entire canvas area) is made opaque with
+`setBackground(theme.getCanvasBackground())`, painting over whatever the LAF would
+otherwise show. The LAF still controls the toolbar, sidebar, property editor, and scroll
+bar chrome — only the drawing surface is pinned to the theme.
 
 ### Why `DiagramText` wraps a `JTextField` rather than extending it
 

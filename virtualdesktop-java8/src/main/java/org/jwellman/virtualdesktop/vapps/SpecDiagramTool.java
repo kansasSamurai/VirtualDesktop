@@ -15,9 +15,8 @@ public class SpecDiagramTool extends VirtualAppSpec {
         this.setWidth(900);
         this.setHeight(500);
 
-        ClassDiagramFactory f = new ClassDiagramFactory();
-
         LayeredDiagramTool tool = new LayeredDiagramTool();
+        ClassDiagramFactory f = new ClassDiagramFactory(tool.getDiagramPane().getTheme());
         tool.setComponentFactory(f);
         ClassDiagramDemo.buildDemo(tool.getDiagramPane(), f);
 

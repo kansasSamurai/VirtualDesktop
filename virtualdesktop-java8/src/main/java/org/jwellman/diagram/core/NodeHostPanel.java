@@ -90,4 +90,16 @@ public class NodeHostPanel extends JPanel implements GraphNode {
     public JComponent getVisualComponent() {
         return this;
     }
+
+    /**
+     * Replaces the current content panel with a freshly-built one.
+     * Called by the framework after the domain editor mutates properties
+     * and triggers the onChanged rebuild callback.
+     */
+    public void swapContent(JPanel newContent) {
+        removeAll();
+        add(newContent, BorderLayout.CENTER);
+        revalidate();
+        repaint();
+    }
 }

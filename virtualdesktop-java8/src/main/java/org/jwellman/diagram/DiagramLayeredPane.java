@@ -28,7 +28,6 @@ import org.jwellman.diagram.api.EdgeAttributes;
 import org.jwellman.diagram.api.EdgeRouter;
 import org.jwellman.diagram.api.GraphEdge;
 import org.jwellman.diagram.api.GraphNode;
-import org.jwellman.diagram.core.BlueprintCanvasTheme;
 import org.jwellman.diagram.core.WhiteprintCanvasTheme;
 import org.jwellman.diagram.core.CanvasOverlayPanel;
 import org.jwellman.diagram.core.DefaultGraphEdge;

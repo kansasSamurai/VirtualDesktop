@@ -18,7 +18,12 @@ in the VirtualDesktop menu via `vapps-config.json`.
 
 **Current state (as of this writing):** Phases 1, 2, and 3 are complete. The canvas
 supports both decorative elements (shapes, text) and a semantic graph layer (typed nodes
-and edges with port-based routing). A class-diagram demo domain is included.
+and edges with port-based routing). A class-diagram demo domain is included, with
+self-describing startup diagrams (`ToolDiagramDemo`, `ToolFrameworkDiagram`). The domain
+property editor callback seam is proven: selecting a graph node invokes
+`CanvasComponentFactory.createPropertyEditorFor()`, which `ClassDiagramFactory` uses to
+expose a name-editor field in the sidebar. File persistence uses the `.dgx` extension and
+embeds a semantic version block.
 
 ---
 
@@ -59,7 +64,7 @@ LayeredDiagramTool (JPanel)
 
 | Class | Role |
 | --- | --- |
-| `LayeredDiagramTool` | Top-level `JPanel`; builds toolbar, pane, and sidebar; owns `modified` flag and save/load dialogs; exposes `setComponentFactory()` and `getDiagramPane()` |
+| `LayeredDiagramTool` | Top-level `JPanel`; builds toolbar, pane, and sidebar; owns `modified` flag, save/load dialogs, and a local `CanvasComponentFactory` reference; exposes `setComponentFactory()` and `getDiagramPane()`; routes node selection to the domain property editor |
 | `DiagramLayeredPane` | `public JLayeredPane` subclass; owns all diagram components, layer state, selection model, drag wiring, popup menu, graph node/edge registry, and save/load serialization |
 | `DragHandler` | `MouseAdapter`; handles drag-to-move with snap-to-grid; notifies `DiagramLayeredPane.notifyNodeMoved()` when a `GraphNode` is dragged so edges redraw |
 | `ResizeHandler` | `MouseAdapter`; installed/removed per selection cycle; 8-direction resize; snap-to-grid on each drag event |
@@ -68,7 +73,7 @@ LayeredDiagramTool (JPanel)
 | `DiagramText` | `JPanel` wrapping a `JTextField`; implements `DiagramColorable` + `DiagramTextAware`; dispatches mouse events to parent for drag |
 | `DiagramConnection` | `JComponent` placeholder; draws a straight line with an arrowhead between hardcoded endpoints; superseded by the graph model layer |
 | `ResizeBorder` | Custom `Border`; paints 8 square handle indicators at corners and edge midpoints when a component is selected |
-| `PropertyEditorPanel` | Right-panel editor for the selected component's font and color properties |
+| `PropertyEditorPanel` | Right-panel editor for the selected component's font and color properties; also exposes `showNodeEditor(JPanel)` to display a domain-provided panel without importing any domain types |
 | `ColorPropertyPanel` | Sub-panel of `PropertyEditorPanel`; manages fill/border/text color target, swatch grid, and `JColorChooser` integration |
 | `ColorSwatch` | 24×24 px colored square with hover effect |
 
@@ -76,7 +81,9 @@ LayeredDiagramTool (JPanel)
 
 | Class | Role |
 | --- | --- |
-| `DiagramData` | Root object: `gridSize`, `snapToGrid`, `activeLayer`, `List<LayerData>`, optional `SemanticGraphData` |
+| `DiagramData` | Root object: `FileVersion version`, `gridSize`, `snapToGrid`, `activeLayer`, `List<LayerData>`, optional `SemanticGraphData` |
+| `FileVersion` | Value object: `major`, `minor`, `patch` ints + `CURRENT_*` constants + `current()` factory; `toString()` → `"0.1.0"` |
+| `UnsupportedFormatException` | Thrown by `DiagramLayeredPane.validateFormat()` when the file's major version exceeds the supported maximum |
 | `LayerData` | One layer: `layerDepth`, `visible`, `List<ComponentData>` |
 | `ComponentData` | Abstract base with `@JsonTypeInfo` / `@JsonSubTypes` for polymorphic dispatch |
 | `ShapeData` | Extends `ComponentData`; captures bounds, `ShapeType`, fill/border colors |
@@ -102,7 +109,7 @@ LayeredDiagramTool (JPanel)
 | `GraphEdge` | Directed edge: source/target node + port IDs, `EdgeAttributes` |
 | `EdgeAttributes` | Value class: `LineStyle` (SOLID/DASHED), `ArrowType` (OPEN/FILLED/NONE), color, stroke width |
 | `EdgeRouter` | Strategy: `calculatePath(start, startPortId, end, endPortId)` and `getApproachPoint(...)` for arrowhead orientation |
-| `CanvasComponentFactory` | Domain plugin: `createContentFor(nodeType, properties)` → `JPanel`; `getPortIds(nodeType)` |
+| `CanvasComponentFactory` | Domain plugin: `createContentFor(nodeType, properties)` → `JPanel`; `getPortIds(nodeType)`; `default createPropertyEditorFor(nodeType, properties, onChanged)` → `JPanel` (returns `null` by default — no editor) |
 | `CanvasTheme` | Color palette for the canvas surface and all nodes; consumed by `DiagramLayeredPane` (canvas bg + grid) and `CanvasComponentFactory` implementations (node colors) |
 
 ---
@@ -111,7 +118,7 @@ LayeredDiagramTool (JPanel)
 
 | Class | Role |
 | --- | --- |
-| `NodeHostPanel` | `public JPanel` implementing `GraphNode`; wraps domain-provided content in `BorderLayout.CENTER`; computes port locations lazily from current bounds (no cache) |
+| `NodeHostPanel` | `public JPanel` implementing `GraphNode`; wraps domain-provided content in `BorderLayout.CENTER`; computes port locations lazily from current bounds (no cache); `swapContent(JPanel)` replaces the content panel in-place after a property-editor rebuild |
 | `EdgeRenderPanel` | Transparent `JPanel` at `CONNECTION_LAYER`; paints all edges using the configured `EdgeRouter`; always returns `false` from `contains()` to pass mouse events through |
 | `CanvasOverlayPanel` | Transparent `JPanel` at `OVERLAY_LAYER`; state machine (`IDLE / EDGE_CREATION / EDGE_DRAGGING`); renders port anchor circles and rubber-band line; transparent to mouse events in `IDLE` state |
 | `OrthogonalRouter` | Port-direction-aware L/Z router: V-H-V for N/S ports, H-V-H for E/W ports, single-bend L for mixed pairs |
@@ -127,8 +134,10 @@ LayeredDiagramTool (JPanel)
 | Class | Role |
 | --- | --- |
 | `ClassNodeContent` | Pure-Swing `JPanel`; `GridBagLayout` vertical stack; header with stereotype tint, field list, method list; colors sourced from `CanvasTheme` |
-| `ClassDiagramFactory` | Implements `CanvasComponentFactory`; takes a `CanvasTheme` at construction and passes it to each `ClassNodeContent` |
+| `ClassDiagramFactory` | Implements `CanvasComponentFactory`; takes a `CanvasTheme` at construction; overrides `createPropertyEditorFor()` to provide a name-editor field that mutates the properties map and calls `onChanged` on commit |
 | `ClassDiagramDemo` | Static `buildDemo(DiagramLayeredPane, CanvasComponentFactory)` method; populates 4 nodes and 3 edges illustrating class relationships |
+| `ToolDiagramDemo` | Self-describing startup diagram of the tool's UI layer (9 nodes, 8 edges); wired as the default at startup in `SpecDiagramTool` |
+| `ToolFrameworkDiagram` | Self-describing diagram of the framework's api interfaces and core implementations (11 nodes, 4 implements edges); call `buildDemo()` to display on demand |
 
 ---
 
@@ -224,12 +233,19 @@ Graph nodes (`NodeHostPanel`) do not currently show a context menu.
 
 ## Persistence Format
 
-JSON via Jackson. Default filename: `diagram.json`. Two top-level sections:
-`layers` (decorative canvas elements) and `semanticGraph` (graph nodes and edges).
-`semanticGraph` is omitted entirely when no graph nodes exist.
+JSON via Jackson. Default extension: `.dgx`; legacy `.json` files are also accepted on
+load. Two top-level content sections: `layers` (decorative canvas elements) and
+`semanticGraph` (graph nodes and edges). `semanticGraph` is omitted entirely when no
+graph nodes exist.
+
+A `version` block is written at the top of every file. Files without a version block
+(pre-versioning `.json` files) are treated as `0.0.0` and loaded leniently. Files with a
+`major` version greater than `FileVersion.CURRENT_MAJOR` (currently `0`) are rejected
+with `UnsupportedFormatException` before any canvas state is touched.
 
 ```json
 {
+  "version": { "major": 0, "minor": 1, "patch": 0 },
   "gridSize": 20,
   "snapToGrid": true,
   "activeLayer": 200,
@@ -275,10 +291,6 @@ Graph nodes are only restored on load if a `CanvasComponentFactory` is configure
 `ComponentData` uses `@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")`
 with `@JsonSubTypes` entries for `"shape"` → `ShapeData` and `"text"` → `TextData`.
 
-**Known gap:** the format has no `version` field. Renaming any persisted field will
-silently drop data on load. A `version` field should be added to `DiagramData` before
-the format is considered stable.
-
 ---
 
 ## Canvas Theming
@@ -304,23 +316,29 @@ Defines the full color palette for one rendering context:
 `stereotype` values passed to `getNodeHeaderBackground()` match the node type string
 from `CanvasComponentFactory` (e.g. `"CLASS"`, `"INTERFACE"`).
 
-### `BlueprintCanvasTheme` (`org.jwellman.diagram.core`) — **current default**
+### `WhiteprintCanvasTheme` (`org.jwellman.diagram.core`) — **current default**
 
-Prussian blue canvas with white borders, white text, and a subtle brighter-blue grid.
-Evokes classic 19th-century cyanotype blueprints — signals "structural draft in progress"
-to stakeholders rather than a finished commitment. The stereotype label uses ice blue
-(`#E6F2FF`) to distinguish it from the primary node name without departing from the
-monochrome palette.
+Inverted blueprint aesthetic — technical drawing on drafting paper. A slightly cool
+off-white surface (`#F0F4FA`) with blue ink: medium ink-blue borders and edges
+(`#3A6BA5`), dark navy text (`#1A3E70`), steel-blue stereotype labels (`#4A7ABF`), and
+a pale blue-grey grid (`#D8E5F5`). Drop shadows are especially effective on this theme
+because the light background amplifies the shadow contrast.
+
+### `BlueprintCanvasTheme` (`org.jwellman.diagram.core`)
+
+Prussian blue canvas (`#003366`) with pale blue borders, text, and edges (`#C8DCFF`),
+and a subtle brighter-blue grid (`#004080`). Evokes classic 19th-century cyanotype
+blueprints. Swap this in as the default for the "draft in progress" aesthetic.
 
 ### `LightCanvasTheme` (`org.jwellman.diagram.core`)
 
 White canvas, light grey grid, blue class headers, green interface headers.
-Swap this in as the default to restore the original light-mode appearance.
+Original light-mode appearance; predates the theming system.
 
 ### How themes flow through the system
 
 ```
-DiagramLayeredPane (owns the theme, defaults to LightCanvasTheme)
+DiagramLayeredPane (owns the theme, defaults to WhiteprintCanvasTheme)
   │  getTheme()
   └──► SpecDiagramTool / caller
          │
@@ -347,6 +365,44 @@ and `NodeHostPanel`.
 2. Pass the instance to `DiagramLayeredPane` — a `setTheme()` method can be added when
    needed; for now, the default is `LightCanvasTheme`
 3. Pass the same instance to any `CanvasComponentFactory` constructor
+
+---
+
+## Domain Property Editor
+
+When a `NodeHostPanel` is selected, the framework invokes the domain factory's
+`createPropertyEditorFor()` method and places the returned `JPanel` in the sidebar.
+`PropertyEditorPanel` never imports domain types — it is given an opaque `JPanel` via
+`showNodeEditor(JPanel)`. The callback chain:
+
+```
+User clicks NodeHostPanel
+  → LayeredDiagramTool selection listener detects NodeHostPanel + factory != null
+  → builds Runnable onChanged (closure over node + factory + diagramPane)
+  → calls factory.createPropertyEditorFor(type, props, onChanged)
+  → if panel != null: propertyEditor.showNodeEditor(panel)
+  → else: propertyEditor.setSelectedComponent(comp)  // "No component selected"
+
+User commits edit (focus-lost or Enter)
+  → domain editor mutates props map (e.g. props.put("name", newValue))
+  → calls onChanged.run()
+      → factory.createContentFor(type, props)    // fresh content panel
+      → node.swapContent(newContent)             // replaces BorderLayout.CENTER child
+      → diagramPane.notifyModified()
+```
+
+**`CanvasComponentFactory.createPropertyEditorFor()` contract:**
+- Default implementation returns `null` — existing factories need no changes
+- The `properties` map is the node's live mutable map; the editor should mutate it
+  directly before calling `onChanged`
+- `onChanged` should only be called when the value actually changed (guard against
+  spurious focus-lost events with an equality check before calling)
+- `onChanged` always runs on the Swing EDT (fired from `FocusAdapter` or
+  `ActionListener`); no threading concern
+
+**Current implementation (`ClassDiagramFactory`):** Exposes a "Name:" text field.
+Commits on focus-lost (covering both Tab and click-away) and on Enter (via
+`transferFocus()` → single commit path). Guards against empty strings and no-op commits.
 
 ---
 
@@ -434,6 +490,16 @@ and edge strokes will remain legible. A fixed white canvas is a deliberate overr
 `setBackground(theme.getCanvasBackground())`, painting over whatever the LAF would
 otherwise show. The LAF still controls the toolbar, sidebar, property editor, and scroll
 bar chrome — only the drawing surface is pinned to the theme.
+
+### Why `createPropertyEditorFor()` is a default method on `CanvasComponentFactory` rather than a separate interface
+
+A separate `NodePropertyEditorFactory` interface would split the plugin seam in two:
+callers would need to cast to check for editor support, and implementors would need to
+implement two interfaces for what is a single domain concern. A Java 8 `default` method
+returning `null` gives a safe no-op for all existing implementors while keeping all
+domain knowledge (content creation, port declaration, property editing) on one interface.
+The `null` return is an explicit "no editor" signal — the framework falls back to
+"No component selected" cleanly.
 
 ### Why `DiagramText` wraps a `JTextField` rather than extending it
 

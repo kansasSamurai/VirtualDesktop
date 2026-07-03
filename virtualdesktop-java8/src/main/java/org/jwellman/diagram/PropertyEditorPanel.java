@@ -222,6 +222,18 @@ public class PropertyEditorPanel extends JPanel {
         repaint();
     }
 
+    /**
+     * Displays a domain-provided property editor for a selected graph node.
+     * The framework never constructs this panel; it is entirely domain-owned.
+     * No domain imports are required here — the panel is treated as an opaque JPanel.
+     */
+    public void showNodeEditor(JPanel domainEditorPanel) {
+        removeAll();
+        add(domainEditorPanel, BorderLayout.CENTER);
+        revalidate();
+        repaint();
+    }
+
     public void setSelectedComponent(Component component) {
         this.selectedComponent = component;
 

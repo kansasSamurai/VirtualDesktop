@@ -17,6 +17,7 @@ import javax.swing.JToolBar;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.jwellman.diagram.api.CanvasComponentFactory;
+import org.jwellman.diagram.core.NodeHostPanel;
 
 /**
  * Complete diagram tool using JLayeredPane with grid, layers, and drag-and-drop
@@ -27,6 +28,7 @@ public class LayeredDiagramTool extends JPanel {
     private JToolBar toolBar;
     private DiagramLayeredPane diagramPane;
     private PropertyEditorPanel propertyEditor;
+    private CanvasComponentFactory componentFactory;
     private boolean modified = false;
 
     private static final long serialVersionUID = 1L;
@@ -47,6 +49,21 @@ public class LayeredDiagramTool extends JPanel {
 
         // Set up selection listener to update property editor
         diagramPane.setSelectionListener(component -> {
+            if (component instanceof NodeHostPanel && componentFactory != null) {
+                NodeHostPanel node = (NodeHostPanel) component;
+                Runnable onChanged = () -> {
+                    JPanel newContent = componentFactory.createContentFor(
+                        node.getNodeType(), node.getProperties());
+                    node.swapContent(newContent);
+                    diagramPane.notifyModified();
+                };
+                JPanel editorPanel = componentFactory.createPropertyEditorFor(
+                    node.getNodeType(), node.getProperties(), onChanged);
+                if (editorPanel != null) {
+                    propertyEditor.showNodeEditor(editorPanel);
+                    return;
+                }
+            }
             propertyEditor.setSelectedComponent(component);
         });
     }
@@ -131,6 +148,7 @@ public class LayeredDiagramTool extends JPanel {
     }
 
     public void setComponentFactory(CanvasComponentFactory factory) {
+        this.componentFactory = factory;
         diagramPane.setComponentFactory(factory);
     }
 

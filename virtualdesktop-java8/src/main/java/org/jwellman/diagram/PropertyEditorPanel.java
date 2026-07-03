@@ -222,6 +222,11 @@ public class PropertyEditorPanel extends JPanel {
         repaint();
     }
 
+    public void setDiagramPane(DiagramLayeredPane pane) {
+        this.diagramPane = pane;
+        colorPropertyPanel.setModificationListener(v -> pane.notifyModified());
+    }
+
     /**
      * Displays a domain-provided property editor for a selected graph node.
      * The framework never constructs this panel; it is entirely domain-owned.

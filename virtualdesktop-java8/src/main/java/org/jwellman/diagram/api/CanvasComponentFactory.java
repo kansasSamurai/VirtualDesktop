@@ -1,6 +1,7 @@
 package org.jwellman.diagram.api;
 
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 import javax.swing.JPanel;
 
@@ -35,6 +36,22 @@ public interface CanvasComponentFactory {
     default JPanel createPropertyEditorFor(String nodeType,
                                            Map<String, Object> properties,
                                            Runnable onChanged) {
+        return null;
+    }
+
+    /** Label for the right-panel "Nodes" toggle tab. */
+    default String getNodePaletteTitle() {
+        return "Nodes";
+    }
+
+    /**
+     * Returns a palette panel for adding new nodes to the canvas, or {@code null} if
+     * this factory has no node palette.
+     *
+     * @param addNode callback: {@code (nodeType, properties)} — the framework creates and
+     *                places the node; domain code must not import framework canvas classes.
+     */
+    default JPanel createNodePalettePanel(BiConsumer<String, Map<String, Object>> addNode) {
         return null;
     }
 }

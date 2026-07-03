@@ -1,14 +1,18 @@
 package org.jwellman.diagram.domain.cls;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Font;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
@@ -38,6 +42,39 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
     @Override
     public String[] getPortIds(String nodeType) {
         return new String[]{"N", "S", "E", "W"};
+    }
+
+    @Override
+    public String getNodePaletteTitle() {
+        return "Class Nodes";
+    }
+
+    @Override
+    public JPanel createNodePalettePanel(BiConsumer<String, Map<String, Object>> addNode) {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+
+        JButton addClassBtn = new JButton("Add Class");
+        addClassBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        addClassBtn.addActionListener(e -> {
+            Map<String, Object> props = new HashMap<>();
+            props.put("name", "NewClass");
+            addNode.accept("CLASS", props);
+        });
+
+        JButton addIfaceBtn = new JButton("Add Interface");
+        addIfaceBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        addIfaceBtn.addActionListener(e -> {
+            Map<String, Object> props = new HashMap<>();
+            props.put("name", "NewInterface");
+            addNode.accept("INTERFACE", props);
+        });
+
+        panel.add(addClassBtn);
+        panel.add(Box.createVerticalStrut(4));
+        panel.add(addIfaceBtn);
+        return panel;
     }
 
     @Override

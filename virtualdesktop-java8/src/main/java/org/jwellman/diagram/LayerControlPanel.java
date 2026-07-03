@@ -15,6 +15,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JToggleButton;
 import javax.swing.Timer;
+import javax.swing.UIManager;
 
 /**
  * Visual control panel for each layer
@@ -72,7 +73,7 @@ class LayerControlPanel extends JPanel {
 
         countLabel = new JLabel("0 items");
         countLabel.setFont(new Font("Arial", Font.PLAIN, 10));
-        countLabel.setForeground(Color.GRAY);
+        countLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
         infoPanel.add(countLabel, BorderLayout.SOUTH);
 
         add(infoPanel, BorderLayout.CENTER);
@@ -80,7 +81,7 @@ class LayerControlPanel extends JPanel {
         // Layer depth indicator
         JLabel depthLabel = new JLabel("" + layerDepth);
         depthLabel.setFont(new Font("Arial", Font.PLAIN, 10));
-        depthLabel.setForeground(Color.GRAY);
+        depthLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
         add(depthLabel, BorderLayout.EAST);
 
         // Click handler to set active layer
@@ -96,7 +97,7 @@ class LayerControlPanel extends JPanel {
             @Override
             public void mouseEntered(MouseEvent e) {
                 if (!isActive) {
-                    setBackground(new Color(240, 240, 255));
+                    setBackground(hoverBackground());
                 }
             }
 
@@ -129,15 +130,26 @@ class LayerControlPanel extends JPanel {
     private void setActive(boolean active) {
         this.isActive = active;
         updateBackground();
-        nameLabel.setForeground(active ? new Color(0, 100, 200) : Color.BLACK);
+        nameLabel.setForeground(active
+            ? UIManager.getColor("List.selectionForeground")
+            : UIManager.getColor("Label.foreground"));
     }
 
     private void updateBackground() {
         if (isActive) {
-            setBackground(new Color(200, 220, 255));
+            setBackground(UIManager.getColor("List.selectionBackground"));
         } else {
-            setBackground(Color.WHITE);
+            setBackground(UIManager.getColor("Panel.background"));
         }
+    }
+
+    private Color hoverBackground() {
+        Color sel = UIManager.getColor("List.selectionBackground");
+        Color bg  = UIManager.getColor("Panel.background");
+        int r = (sel.getRed()   * 30 + bg.getRed()   * 70) / 100;
+        int g = (sel.getGreen() * 30 + bg.getGreen() * 70) / 100;
+        int b = (sel.getBlue()  * 30 + bg.getBlue()  * 70) / 100;
+        return new Color(r, g, b);
     }
 
     private void updateVisibilityIcon() {

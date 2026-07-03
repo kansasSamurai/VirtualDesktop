@@ -12,10 +12,16 @@ public class SpecDiagramTool extends VirtualAppSpec {
     public SpecDiagramTool() {
         super();
         this.setTitle("Diagram Tool");
-        this.setWidth(900);
-        this.setHeight(500);
+        this.setWidth(1100);
+        this.setHeight(620);
 
         LayeredDiagramTool tool = new LayeredDiagramTool();
+
+        // Register available diagram types shown in the "+" new-diagram dialog
+        tool.registerDiagramType("Plain Diagram", pane -> null);
+        tool.registerDiagramType("Class Diagram", pane -> new ClassDiagramFactory(pane.getTheme()));
+
+        // Prime the initial tab with a class diagram factory and demo content
         ClassDiagramFactory f = new ClassDiagramFactory(tool.getDiagramPane().getTheme());
         tool.setComponentFactory(f);
         ToolDiagramDemo.buildDemo(tool.getDiagramPane(), f);

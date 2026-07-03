@@ -5,11 +5,13 @@ import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -18,141 +20,261 @@ import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
+import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.jwellman.diagram.api.CanvasComponentFactory;
 import org.jwellman.diagram.core.NodeHostPanel;
 
 /**
- * Complete diagram tool using JLayeredPane with grid, layers, and drag-and-drop.
- * Supports multiple independent diagram tabs, each with its own canvas and toolbar.
+ * Complete diagram tool with multiple independent tabs and a collapsible project panel.
+ * Each tab owns its toolbar, canvas, and right panel — switching tabs is a single CardLayout call.
+ * The diagram tab bar and left project panel are the only truly global components.
  */
 public class LayeredDiagramTool extends JPanel {
 
-    // Multi-tab state
+    private static final int LEFT_HANDLE_WIDTH  = 22;
+    private static final int LEFT_CONTENT_WIDTH = 200;
+    private static final int FIXED_TAB_WIDTH    = 160;   // ~20 chars at 12pt
+
+    // ---------------------------------------------------------------
+    // Diagram type registry
+    // ---------------------------------------------------------------
+
+    private static final class DiagramTypeEntry {
+        final String name;
+        final Function<DiagramLayeredPane, CanvasComponentFactory> factoryFn;
+
+        DiagramTypeEntry(String name, Function<DiagramLayeredPane, CanvasComponentFactory> fn) {
+            this.name = name;
+            this.factoryFn = fn;
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
+    private final List<DiagramTypeEntry> diagramTypes = new ArrayList<>();
+
+    public void registerDiagramType(String name,
+                                    Function<DiagramLayeredPane, CanvasComponentFactory> factoryFn) {
+        diagramTypes.add(new DiagramTypeEntry(name, factoryFn));
+    }
+
+    // ---------------------------------------------------------------
+    // State
+    // ---------------------------------------------------------------
+
     private final List<DiagramTabContent> tabs = new ArrayList<>();
     private DiagramTabContent activeTab;
 
-    // Center area
-    private JPanel centerPanel;
     private JPanel diagramTabBar;
     private JPanel diagramCardPanel;
     private CardLayout diagramCardLayout;
     private ButtonGroup diagramTabGroup;
 
-    // Right panel
-    private JPanel rightPanel;
-    private JPanel rightCardPanel;
-    private CardLayout rightCardLayout;
-    private JPanel layerListPanel;
-    private JPanel nodesPanel;
-    private JToggleButton nodesTabButton;
+    private JSplitPane outerSplitPane;
+    private JButton leftToggleBtn;
+    private int savedLeftWidth = LEFT_CONTENT_WIDTH + LEFT_HANDLE_WIDTH;
+    private boolean leftExpanded = true;
 
-    // Shared components
-    private PropertyEditorPanel propertyEditor;
     private boolean modified = false;
 
     private static final long serialVersionUID = 1L;
 
+    // ---------------------------------------------------------------
+    // Construction
+    // ---------------------------------------------------------------
+
     public LayeredDiagramTool() {
         createFirstTab();
-        createPropertyEditor();
-        createCenterPanel();
-        createRightPanel();
 
-        setLayout(new BorderLayout());
-        add(centerPanel, BorderLayout.CENTER);
-        add(rightPanel, BorderLayout.EAST);
-    }
-
-    // ---------------------------------------------------------------
-    // Initialization
-    // ---------------------------------------------------------------
-
-    private void createFirstTab() {
-        DiagramLayeredPane pane = new DiagramLayeredPane();
-        JToolBar tb = buildToolBar(pane);
-        JPanel card = new JPanel(new BorderLayout());
-        card.add(tb, BorderLayout.NORTH);
-        card.add(new JScrollPane(pane), BorderLayout.CENTER);
-
-        DiagramTabContent tab = new DiagramTabContent("Diagram 1", pane, card);
-        tabs.add(tab);
-        activeTab = tab;
-        wireTabListeners(tab);
-    }
-
-    private void createPropertyEditor() {
-        propertyEditor = new PropertyEditorPanel(activeTab.diagramPane);
-    }
-
-    private void createCenterPanel() {
         diagramTabGroup = new ButtonGroup();
-        diagramTabBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 2));
-
+        diagramTabBar = buildGlobalTabBar();
         diagramCardLayout = new CardLayout();
         diagramCardPanel = new JPanel(diagramCardLayout);
 
         addTabCard(tabs.get(0));
-
-        JButton addTabBtn = new JButton("+");
-        addTabBtn.setToolTipText("Add new diagram");
-        addTabBtn.addActionListener(e -> createNewTab());
-        diagramTabBar.add(addTabBtn);
-
-        centerPanel = new JPanel(new BorderLayout());
-        centerPanel.add(diagramTabBar, BorderLayout.NORTH);
-        centerPanel.add(diagramCardPanel, BorderLayout.CENTER);
-
+        diagramTabBar.add(buildAddTabButton());
         diagramCardLayout.show(diagramCardPanel, tabs.get(0).name);
+
+        JPanel leftPanel = buildLeftPanel();
+        outerSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, diagramCardPanel);
+        outerSplitPane.setDividerSize(4);
+        outerSplitPane.setOneTouchExpandable(false);
+        leftPanel.setPreferredSize(new Dimension(savedLeftWidth, 0));
+        leftPanel.setMinimumSize(new Dimension(LEFT_HANDLE_WIDTH, 0));
+
+        setLayout(new BorderLayout());
+        add(diagramTabBar, BorderLayout.NORTH);
+        add(outerSplitPane, BorderLayout.CENTER);
     }
 
-    private void createRightPanel() {
-        ButtonGroup rightTabGroup = new ButtonGroup();
-        JToggleButton layersTabBtn = new JToggleButton("Layers");
-        nodesTabButton = new JToggleButton("Nodes");
+    // ---------------------------------------------------------------
+    // Left panel (project navigator stub)
+    // ---------------------------------------------------------------
 
-        rightCardLayout = new CardLayout();
-        rightCardPanel = new JPanel(rightCardLayout);
+    private JPanel buildLeftPanel() {
+        JPanel content = new JPanel(new BorderLayout());
+        content.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 0));
 
-        layerListPanel = new JPanel();
+        JLabel title = new JLabel("Project");
+        title.setFont(title.getFont().deriveFont(Font.BOLD));
+        title.setBorder(BorderFactory.createEmptyBorder(2, 2, 8, 2));
+        content.add(title, BorderLayout.NORTH);
+
+        JLabel placeholder = new JLabel(
+            "<html><center><font color='#888888'>(no project loaded)</font></center></html>");
+        placeholder.setHorizontalAlignment(JLabel.CENTER);
+        content.add(placeholder, BorderLayout.CENTER);
+
+        // Always-visible collapse handle strip on the right edge
+        JPanel handle = new JPanel(new BorderLayout());
+        handle.setPreferredSize(new Dimension(LEFT_HANDLE_WIDTH, 0));
+        handle.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, separatorColor()));
+
+        leftToggleBtn = new JButton("«");  // «
+        leftToggleBtn.setFont(leftToggleBtn.getFont().deriveFont(Font.BOLD, 11f));
+        leftToggleBtn.setToolTipText("Collapse project panel");
+        leftToggleBtn.setFocusPainted(false);
+        leftToggleBtn.setBorderPainted(false);
+        leftToggleBtn.setContentAreaFilled(false);
+        leftToggleBtn.setForeground(new Color(60, 100, 150));
+        leftToggleBtn.addActionListener(e -> toggleLeftPanel());
+        handle.add(leftToggleBtn, BorderLayout.NORTH);
+
+        JPanel leftPanel = new JPanel(new BorderLayout());
+        leftPanel.add(content, BorderLayout.CENTER);
+        leftPanel.add(handle, BorderLayout.EAST);
+        return leftPanel;
+    }
+
+    private void toggleLeftPanel() {
+        if (leftExpanded) {
+            savedLeftWidth = outerSplitPane.getDividerLocation();
+            outerSplitPane.setDividerLocation(LEFT_HANDLE_WIDTH);
+            leftToggleBtn.setText("»");   // »
+            leftToggleBtn.setToolTipText("Expand project panel");
+            leftExpanded = false;
+        } else {
+            outerSplitPane.setDividerLocation(savedLeftWidth);
+            leftToggleBtn.setText("«");   // «
+            leftToggleBtn.setToolTipText("Collapse project panel");
+            leftExpanded = true;
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Global tab bar helpers
+    // ---------------------------------------------------------------
+
+    private static Color separatorColor() {
+        Color c = UIManager.getColor("Separator.foreground");
+        if (c == null) c = UIManager.getColor("controlShadow");
+        if (c == null) c = Color.GRAY;
+        return c;
+    }
+
+    private JPanel buildGlobalTabBar() {
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        bar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, separatorColor()));
+        return bar;
+    }
+
+    private JButton buildAddTabButton() {
+        JButton btn = new JButton("+");
+        btn.setFont(btn.getFont().deriveFont(Font.BOLD, 13f));
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setForeground(new Color(60, 100, 150));
+        btn.setToolTipText("Add new diagram");
+        btn.addActionListener(e -> promptNewTab());
+        return btn;
+    }
+
+    // ---------------------------------------------------------------
+    // Per-tab content factory
+    // ---------------------------------------------------------------
+
+    private DiagramTabContent createTabContent(String name) {
+        DiagramLayeredPane pane = new DiagramLayeredPane();
+        PropertyEditorPanel propEditor = new PropertyEditorPanel(pane);
+
+        // Layers card
+        JPanel layerListPanel = new JPanel();
         layerListPanel.setLayout(new BoxLayout(layerListPanel, BoxLayout.Y_AXIS));
+        addLayerRows(layerListPanel, pane);
         JScrollPane layerScroll = new JScrollPane(layerListPanel);
         layerScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         layerScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        rightCardPanel.add(layerScroll, "layers");
 
-        nodesPanel = new JPanel(new BorderLayout());
+        // Nodes card
+        JPanel nodesPanel = new JPanel(new BorderLayout());
+        DiagramTabButton nodesTabBtn = new DiagramTabButton("Nodes");
+
+        // Right card layout
+        CardLayout rightCardLayout = new CardLayout();
+        JPanel rightCardPanel = new JPanel(rightCardLayout);
+        rightCardPanel.add(layerScroll, "layers");
         rightCardPanel.add(nodesPanel, "nodes");
 
+        // Right toggle bar
+        ButtonGroup rightGroup = new ButtonGroup();
+        DiagramTabButton layersTabBtn = new DiagramTabButton("Layers");
         layersTabBtn.addActionListener(e -> rightCardLayout.show(rightCardPanel, "layers"));
-        nodesTabButton.addActionListener(e -> rightCardLayout.show(rightCardPanel, "nodes"));
-        rightTabGroup.add(layersTabBtn);
-        rightTabGroup.add(nodesTabButton);
+        nodesTabBtn.addActionListener(e -> rightCardLayout.show(rightCardPanel, "nodes"));
+        rightGroup.add(layersTabBtn);
+        rightGroup.add(nodesTabBtn);
         layersTabBtn.setSelected(true);
 
-        JPanel rightTabBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 2));
-        rightTabBar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.GRAY));
+        JPanel rightTabBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        rightTabBar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, separatorColor()));
         rightTabBar.add(layersTabBtn);
-        rightTabBar.add(nodesTabButton);
+        rightTabBar.add(nodesTabBtn);
 
-        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, rightCardPanel, propertyEditor);
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, rightCardPanel, propEditor);
         splitPane.setResizeWeight(0.55);
         splitPane.setDividerSize(5);
 
-        rightPanel = new JPanel(new BorderLayout());
+        JPanel rightPanel = new JPanel(new BorderLayout());
         rightPanel.setPreferredSize(new Dimension(280, 0));
         rightPanel.add(rightTabBar, BorderLayout.NORTH);
         rightPanel.add(splitPane, BorderLayout.CENTER);
 
-        rebuildLayersPanel(activeTab);
-        rebuildNodesPanel(activeTab);
+        JPanel card = new JPanel(new BorderLayout());
+        card.add(buildToolBar(pane), BorderLayout.NORTH);
+        card.add(new JScrollPane(pane), BorderLayout.CENTER);
+        card.add(rightPanel, BorderLayout.EAST);
+
+        DiagramTabContent tab = new DiagramTabContent(
+            name, pane, card, propEditor, nodesTabBtn, nodesPanel);
+        wireTabListeners(tab);
+        return tab;
+    }
+
+    private void addLayerRows(JPanel parent, DiagramLayeredPane pane) {
+        addLayerControl(parent, "Overlay Layer",    DiagramLayeredPane.OVERLAY_LAYER,    pane);
+        addLayerControl(parent, "Connection Layer", DiagramLayeredPane.CONNECTION_LAYER, pane);
+        addLayerControl(parent, "Text Layer",       DiagramLayeredPane.TEXT_LAYER,       pane);
+        addLayerControl(parent, "Shape Layer",      DiagramLayeredPane.SHAPE_LAYER,      pane);
+        addLayerControl(parent, "Background Layer", DiagramLayeredPane.BACKGROUND_LAYER, pane);
+        addLayerControl(parent, "Grid Layer",       DiagramLayeredPane.GRID_LAYER,       pane);
+    }
+
+    private void addLayerControl(JPanel parent, String layerName,
+                                  Integer layerDepth, DiagramLayeredPane pane) {
+        parent.add(new LayerControlPanel(layerName, layerDepth, pane));
+        parent.add(Box.createVerticalStrut(2));
     }
 
     // ---------------------------------------------------------------
@@ -173,24 +295,31 @@ public class LayeredDiagramTool extends JPanel {
                 JPanel editorPanel = tab.factory.createPropertyEditorFor(
                     node.getNodeType(), node.getProperties(), onChanged);
                 if (editorPanel != null) {
-                    propertyEditor.showNodeEditor(editorPanel);
+                    tab.propertyEditor.showNodeEditor(editorPanel);
                     return;
                 }
             }
-            propertyEditor.setSelectedComponent(component);
+            tab.propertyEditor.setSelectedComponent(component);
         });
+    }
+
+    private void createFirstTab() {
+        DiagramTabContent tab = createTabContent("Diagram 1");
+        tabs.add(tab);
+        activeTab = tab;
     }
 
     private void addTabCard(DiagramTabContent tab) {
         diagramCardPanel.add(tab.tabCard, tab.name);
 
-        JToggleButton btn = new JToggleButton(tab.name);
+        DiagramTabButton btn = new DiagramTabButton(tab.displayName, FIXED_TAB_WIDTH);
         btn.addActionListener(e -> selectTab(tab));
+        tab.tabBtn = btn;
         diagramTabGroup.add(btn);
 
         int insertIdx = diagramTabBar.getComponentCount();
-        if (insertIdx > 0 && diagramTabBar.getComponent(insertIdx - 1) instanceof JButton) {
-            insertIdx--;
+        if (insertIdx > 0 && !(diagramTabBar.getComponent(insertIdx - 1) instanceof DiagramTabButton)) {
+            insertIdx--;  // insert before the "+" button
         }
         diagramTabBar.add(btn, insertIdx);
         btn.setSelected(true);
@@ -198,59 +327,68 @@ public class LayeredDiagramTool extends JPanel {
         diagramTabBar.repaint();
     }
 
+    private void updateTabDisplayName(DiagramTabContent tab, String newName) {
+        tab.displayName = newName;
+        if (tab.tabBtn != null) {
+            tab.tabBtn.setText(newName);
+        }
+    }
+
+    private DiagramTabContent findTabForPane(DiagramLayeredPane pane) {
+        for (DiagramTabContent tab : tabs) {
+            if (tab.diagramPane == pane) {
+                return tab;
+            }
+        }
+        return null;
+    }
+
+    private static String fileBaseName(String fileName) {
+        int dot = fileName.lastIndexOf('.');
+        return (dot > 0) ? fileName.substring(0, dot) : fileName;
+    }
+
     private void selectTab(DiagramTabContent tab) {
         activeTab = tab;
         diagramCardLayout.show(diagramCardPanel, tab.name);
-        rebuildLayersPanel(tab);
-        rebuildNodesPanel(tab);
-        propertyEditor.setDiagramPane(tab.diagramPane);
-        propertyEditor.setSelectedComponent(null);
     }
 
-    private void createNewTab() {
-        String name = "Diagram " + (tabs.size() + 1);
-        DiagramLayeredPane pane = new DiagramLayeredPane();
-        JToolBar tb = buildToolBar(pane);
-        JPanel card = new JPanel(new BorderLayout());
-        card.add(tb, BorderLayout.NORTH);
-        card.add(new JScrollPane(pane), BorderLayout.CENTER);
+    private void promptNewTab() {
+        if (diagramTypes.isEmpty()) {
+            createNewTab(pane -> null);
+            return;
+        }
+        DiagramTypeEntry[] options = diagramTypes.toArray(new DiagramTypeEntry[0]);
+        Object chosen = JOptionPane.showInputDialog(
+            this, "Select diagram type:", "New Diagram",
+            JOptionPane.PLAIN_MESSAGE, null, options, options[0]);
+        if (chosen instanceof DiagramTypeEntry) {
+            createNewTab(((DiagramTypeEntry) chosen).factoryFn);
+        }
+    }
 
-        DiagramTabContent tab = new DiagramTabContent(name, pane, card);
-        if (activeTab.factory != null) {
-            tab.factory = activeTab.factory;
-            pane.setComponentFactory(activeTab.factory);
+    private void createNewTab(Function<DiagramLayeredPane, CanvasComponentFactory> factoryFn) {
+        String name = "Diagram " + (tabs.size() + 1);
+        DiagramTabContent tab = createTabContent(name);
+        CanvasComponentFactory factory = factoryFn.apply(tab.diagramPane);
+        if (factory != null) {
+            tab.factory = factory;
+            tab.diagramPane.setComponentFactory(factory);
+            updateNodesPanel(tab);
         }
         tabs.add(tab);
-        wireTabListeners(tab);
         addTabCard(tab);
         selectTab(tab);
     }
 
     // ---------------------------------------------------------------
-    // Right panel rebuilds (called on tab switch)
+    // Nodes panel (updated when factory is assigned)
     // ---------------------------------------------------------------
 
-    private void rebuildLayersPanel(DiagramTabContent tab) {
-        layerListPanel.removeAll();
-        addLayerControl("Overlay Layer",    DiagramLayeredPane.OVERLAY_LAYER,    tab.diagramPane);
-        addLayerControl("Connection Layer", DiagramLayeredPane.CONNECTION_LAYER, tab.diagramPane);
-        addLayerControl("Text Layer",       DiagramLayeredPane.TEXT_LAYER,       tab.diagramPane);
-        addLayerControl("Shape Layer",      DiagramLayeredPane.SHAPE_LAYER,      tab.diagramPane);
-        addLayerControl("Background Layer", DiagramLayeredPane.BACKGROUND_LAYER, tab.diagramPane);
-        addLayerControl("Grid Layer",       DiagramLayeredPane.GRID_LAYER,       tab.diagramPane);
-        layerListPanel.revalidate();
-        layerListPanel.repaint();
-    }
-
-    private void addLayerControl(String layerName, Integer layerDepth, DiagramLayeredPane pane) {
-        layerListPanel.add(new LayerControlPanel(layerName, layerDepth, pane));
-        layerListPanel.add(Box.createVerticalStrut(2));
-    }
-
-    private void rebuildNodesPanel(DiagramTabContent tab) {
-        nodesPanel.removeAll();
+    private void updateNodesPanel(DiagramTabContent tab) {
+        tab.nodesPanel.removeAll();
         if (tab.factory != null) {
-            nodesTabButton.setText(tab.factory.getNodePaletteTitle());
+            tab.nodesTabButton.setText(tab.factory.getNodePaletteTitle());
             BiConsumer<String, Map<String, Object>> addNode = (nodeType, props) -> {
                 String id = UUID.randomUUID().toString();
                 String[] portIds = tab.factory.getPortIds(nodeType);
@@ -262,13 +400,13 @@ public class LayeredDiagramTool extends JPanel {
             };
             JPanel palette = tab.factory.createNodePalettePanel(addNode);
             if (palette != null) {
-                nodesPanel.add(palette, BorderLayout.NORTH);
+                tab.nodesPanel.add(palette, BorderLayout.NORTH);
             }
         } else {
-            nodesTabButton.setText("Nodes");
+            tab.nodesTabButton.setText("Nodes");
         }
-        nodesPanel.revalidate();
-        nodesPanel.repaint();
+        tab.nodesPanel.revalidate();
+        tab.nodesPanel.repaint();
     }
 
     // ---------------------------------------------------------------
@@ -365,30 +503,33 @@ public class LayeredDiagramTool extends JPanel {
     }
 
     // ---------------------------------------------------------------
-    // Save / load (operate on a specific pane)
+    // Save / load (per-tab pane)
     // ---------------------------------------------------------------
 
     private void saveDiagram(DiagramLayeredPane pane) {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Save Diagram");
-        fileChooser.setFileFilter(new FileNameExtensionFilter("Diagram files (*.dgx)", "dgx"));
-        fileChooser.setSelectedFile(new java.io.File("diagram.dgx"));
+        JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle("Save Diagram");
+        fc.setFileFilter(new FileNameExtensionFilter("Diagram files (*.dgx)", "dgx"));
+        fc.setSelectedFile(new java.io.File("diagram.dgx"));
 
-        int result = fileChooser.showSaveDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            java.io.File file = fileChooser.getSelectedFile();
-            String name = file.getName();
-            if (!name.endsWith(".dgx") && !name.endsWith(".json")) {
-                file = new java.io.File(file.getParentFile(), name + ".dgx");
+        if (fc.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            java.io.File file = fc.getSelectedFile();
+            String n = file.getName();
+            if (!n.endsWith(".dgx") && !n.endsWith(".json")) {
+                file = new java.io.File(file.getParentFile(), n + ".dgx");
             }
             try {
                 pane.saveDiagram(file);
                 setModified(false);
-                JOptionPane.showMessageDialog(this, "Diagram saved successfully!", "Save Complete",
-                        JOptionPane.INFORMATION_MESSAGE);
+                DiagramTabContent tab = findTabForPane(pane);
+                if (tab != null) {
+                    updateTabDisplayName(tab, fileBaseName(file.getName()));
+                }
+                JOptionPane.showMessageDialog(this, "Diagram saved successfully!",
+                    "Save Complete", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error saving diagram: " + ex.getMessage(), "Save Error",
-                        JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Error saving diagram: " + ex.getMessage(),
+                    "Save Error", JOptionPane.ERROR_MESSAGE);
                 ex.printStackTrace();
             }
         }
@@ -398,22 +539,24 @@ public class LayeredDiagramTool extends JPanel {
         if (!checkUnsavedChanges()) {
             return;
         }
+        JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle("Load Diagram");
+        fc.setFileFilter(new FileNameExtensionFilter("Diagram files (*.dgx, *.json)", "dgx", "json"));
 
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Load Diagram");
-        fileChooser.setFileFilter(new FileNameExtensionFilter("Diagram files (*.dgx, *.json)", "dgx", "json"));
-
-        int result = fileChooser.showOpenDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            java.io.File file = fileChooser.getSelectedFile();
+        if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            java.io.File file = fc.getSelectedFile();
             try {
                 pane.loadDiagram(file);
                 setModified(false);
-                JOptionPane.showMessageDialog(this, "Diagram loaded successfully!", "Load Complete",
-                        JOptionPane.INFORMATION_MESSAGE);
+                DiagramTabContent tab = findTabForPane(pane);
+                if (tab != null) {
+                    updateTabDisplayName(tab, fileBaseName(file.getName()));
+                }
+                JOptionPane.showMessageDialog(this, "Diagram loaded successfully!",
+                    "Load Complete", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error loading diagram: " + ex.getMessage(), "Load Error",
-                        JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Error loading diagram: " + ex.getMessage(),
+                    "Load Error", JOptionPane.ERROR_MESSAGE);
                 ex.printStackTrace();
             }
         }
@@ -426,9 +569,7 @@ public class LayeredDiagramTool extends JPanel {
     public void setComponentFactory(CanvasComponentFactory factory) {
         activeTab.factory = factory;
         activeTab.diagramPane.setComponentFactory(factory);
-        if (nodesPanel != null) {
-            rebuildNodesPanel(activeTab);
-        }
+        updateNodesPanel(activeTab);
     }
 
     public DiagramLayeredPane getDiagramPane() {
@@ -444,24 +585,20 @@ public class LayeredDiagramTool extends JPanel {
     }
 
     public boolean checkUnsavedChanges() {
-        if (modified) {
-            int option = JOptionPane.showConfirmDialog(
-                this,
-                "You have unsaved changes. Do you want to save before closing?",
-                "Unsaved Changes",
-                JOptionPane.YES_NO_CANCEL_OPTION,
-                JOptionPane.WARNING_MESSAGE
-            );
-
-            if (option == JOptionPane.YES_OPTION) {
-                saveDiagram(activeTab.diagramPane);
-                return !modified;
-            } else if (option == JOptionPane.NO_OPTION) {
-                return true;
-            } else {
-                return false;
-            }
+        if (!modified) {
+            return true;
         }
-        return true;
+        int option = JOptionPane.showConfirmDialog(
+            this,
+            "You have unsaved changes. Do you want to save before closing?",
+            "Unsaved Changes",
+            JOptionPane.YES_NO_CANCEL_OPTION,
+            JOptionPane.WARNING_MESSAGE
+        );
+        if (option == JOptionPane.YES_OPTION) {
+            saveDiagram(activeTab.diagramPane);
+            return !modified;
+        }
+        return option == JOptionPane.NO_OPTION;
     }
 }

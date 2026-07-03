@@ -14,6 +14,7 @@ import java.util.Map;
 
 import javax.swing.JPanel;
 
+import org.jwellman.diagram.api.CanvasTheme;
 import org.jwellman.diagram.api.EdgeAttributes;
 import org.jwellman.diagram.api.EdgeRouter;
 import org.jwellman.diagram.api.GraphEdge;
@@ -29,13 +30,15 @@ public class EdgeRenderPanel extends JPanel {
     private final List<GraphEdge> edges = new ArrayList<>();
     private final Map<String, GraphNode> nodeIndex;
     private final EdgeRouter router;
+    private final CanvasTheme theme;
 
     private static final int ARROW_SIZE = 10;
     private static final long serialVersionUID = 1L;
 
-    public EdgeRenderPanel(EdgeRouter router, Map<String, GraphNode> nodeIndex) {
+    public EdgeRenderPanel(EdgeRouter router, Map<String, GraphNode> nodeIndex, CanvasTheme theme) {
         this.router = router;
         this.nodeIndex = nodeIndex;
+        this.theme = theme;
         setOpaque(false);
         setLayout(null);
     }
@@ -95,7 +98,8 @@ public class EdgeRenderPanel extends JPanel {
         }
 
         EdgeAttributes attrs = edge.getAttributes();
-        g2d.setColor(attrs.getColor());
+        Color edgeColor = attrs.getColor() != null ? attrs.getColor() : theme.getEdgeColor();
+        g2d.setColor(edgeColor);
 
         if (attrs.getLineStyle() == EdgeAttributes.LineStyle.DASHED) {
             g2d.setStroke(new BasicStroke(attrs.getStrokeWidth(),

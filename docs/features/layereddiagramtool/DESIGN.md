@@ -117,7 +117,8 @@ LayeredDiagramTool (JPanel)
 | `OrthogonalRouter` | Port-direction-aware L/Z router: V-H-V for N/S ports, H-V-H for E/W ports, single-bend L for mixed pairs |
 | `StraightLineRouter` | Straight line from start to end |
 | `DefaultGraphEdge` | Simple immutable `GraphEdge` implementation used for both interactive and persisted edges |
-| `LightCanvasTheme` | Default `CanvasTheme`: white canvas, light grey grid, blue class headers, green interface headers |
+| `LightCanvasTheme` | `CanvasTheme` implementation: white canvas, light grey grid, blue class headers, green interface headers |
+| `BlueprintCanvasTheme` | **Default** `CanvasTheme`: Prussian blue canvas (`#003366`), subtle grid (`#004080`), white borders and text — classic cyanotype blueprint aesthetic |
 
 ---
 
@@ -303,11 +304,18 @@ Defines the full color palette for one rendering context:
 `stereotype` values passed to `getNodeHeaderBackground()` match the node type string
 from `CanvasComponentFactory` (e.g. `"CLASS"`, `"INTERFACE"`).
 
+### `BlueprintCanvasTheme` (`org.jwellman.diagram.core`) — **current default**
+
+Prussian blue canvas with white borders, white text, and a subtle brighter-blue grid.
+Evokes classic 19th-century cyanotype blueprints — signals "structural draft in progress"
+to stakeholders rather than a finished commitment. The stereotype label uses ice blue
+(`#E6F2FF`) to distinguish it from the primary node name without departing from the
+monochrome palette.
+
 ### `LightCanvasTheme` (`org.jwellman.diagram.core`)
 
-The default implementation. Matches the original hardcoded colors so existing diagrams
-are visually unchanged. Swap with a custom implementation to change the palette
-without touching any canvas or domain code.
+White canvas, light grey grid, blue class headers, green interface headers.
+Swap this in as the default to restore the original light-mode appearance.
 
 ### How themes flow through the system
 

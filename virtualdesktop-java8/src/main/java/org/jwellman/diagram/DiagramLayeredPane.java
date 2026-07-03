@@ -6,7 +6,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Point;
 import java.awt.Window;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -23,21 +22,21 @@ import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.SwingUtilities;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-
 import org.jwellman.diagram.api.CanvasComponentFactory;
 import org.jwellman.diagram.api.CanvasTheme;
 import org.jwellman.diagram.api.EdgeAttributes;
 import org.jwellman.diagram.api.EdgeRouter;
 import org.jwellman.diagram.api.GraphEdge;
 import org.jwellman.diagram.api.GraphNode;
+import org.jwellman.diagram.core.BlueprintCanvasTheme;
 import org.jwellman.diagram.core.CanvasOverlayPanel;
 import org.jwellman.diagram.core.DefaultGraphEdge;
 import org.jwellman.diagram.core.EdgeRenderPanel;
-import org.jwellman.diagram.core.LightCanvasTheme;
 import org.jwellman.diagram.core.NodeHostPanel;
 import org.jwellman.diagram.core.OrthogonalRouter;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 /**
  * Custom JLayeredPane with grid, layer management, and graph model support.
@@ -69,7 +68,7 @@ public class DiagramLayeredPane extends JLayeredPane {
     private boolean shadowsEnabled = true;
 
     // Canvas theme — controls all colors on the canvas surface and its nodes
-    private CanvasTheme theme = new LightCanvasTheme();
+    private CanvasTheme theme = new BlueprintCanvasTheme();
 
     // Graph model
     private EdgeRenderPanel edgePanel;
@@ -84,6 +83,10 @@ public class DiagramLayeredPane extends JLayeredPane {
         setPreferredSize(new Dimension(2000, 1500));
         setLayout(null); // Required for JLayeredPane
 
+        // Canvas background is owned by the pane itself so it persists when the grid is hidden
+        setOpaque(true);
+        setBackground(theme.getCanvasBackground());
+
         // Initialize layer visibility (all visible by default)
         layerVisibility.put(GRID_LAYER, true);
         layerVisibility.put(BACKGROUND_LAYER, true);
@@ -92,8 +95,8 @@ public class DiagramLayeredPane extends JLayeredPane {
         layerVisibility.put(CONNECTION_LAYER, true);
         layerVisibility.put(OVERLAY_LAYER, true);
 
-        // Add grid panel at the bottom layer — also paints the canvas background
-        gridPanel = new GridPanel(gridSize, theme.getCanvasBackground(), theme.getGridLineColor());
+        // Add grid panel at the bottom layer — paints grid lines only; background is on the pane itself
+        gridPanel = new GridPanel(gridSize, theme.getGridLineColor());
         gridPanel.setBounds(0, 0, 2000, 1500);
         add(gridPanel, GRID_LAYER);
 
@@ -103,7 +106,7 @@ public class DiagramLayeredPane extends JLayeredPane {
         add(shadowPanel, SHADOW_LAYER);
 
         // Edge render panel — transparent, passes mouse events through
-        edgePanel = new EdgeRenderPanel(edgeRouter, graphNodes);
+        edgePanel = new EdgeRenderPanel(edgeRouter, graphNodes, theme);
         edgePanel.setBounds(0, 0, 2000, 1500);
         add(edgePanel, CONNECTION_LAYER);
 
@@ -656,16 +659,15 @@ public class DiagramLayeredPane extends JLayeredPane {
 
         private static final long serialVersionUID = 1L;
 
-        public GridPanel(int gridSize, Color background, Color gridLineColor) {
+        public GridPanel(int gridSize, Color gridLineColor) {
             this.gridSize = gridSize;
             this.gridLineColor = gridLineColor;
-            setOpaque(true);
-            setBackground(background);
+            setOpaque(false);
         }
 
         @Override
         protected void paintComponent(Graphics g) {
-            super.paintComponent(g); // paints the canvas background via setBackground()
+            super.paintComponent(g);
             Graphics2D g2d = (Graphics2D) g;
 
             g2d.setColor(gridLineColor);

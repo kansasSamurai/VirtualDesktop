@@ -44,6 +44,11 @@ public class LightCanvasTheme implements CanvasTheme {
     }
 
     @Override
+    public Color getStereotypeTextColor() {
+        return new Color(60, 100, 60);
+    }
+
+    @Override
     public Color getEdgeColor() {
         return new Color(60, 60, 60);
     }

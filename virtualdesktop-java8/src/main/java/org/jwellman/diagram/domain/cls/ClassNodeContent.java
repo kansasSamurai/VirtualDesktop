@@ -1,7 +1,6 @@
 package org.jwellman.diagram.domain.cls;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -41,7 +40,7 @@ public class ClassNodeContent extends JPanel {
         final String stereoString = isInterface ? "«interface»" : " ";
         JLabel stereoLabel = new JLabel(stereoString, SwingConstants.CENTER);
         stereoLabel.setFont(new Font("SansSerif", Font.PLAIN, 9));
-        stereoLabel.setForeground(new Color(60, 100, 60));
+        stereoLabel.setForeground(theme.getStereotypeTextColor());
         header.add(stereoLabel, BorderLayout.NORTH);
 
         JLabel nameLabel = new JLabel(name, SwingConstants.CENTER);

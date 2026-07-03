@@ -13,7 +13,7 @@ public class EdgeAttributes {
 
     private LineStyle lineStyle = LineStyle.SOLID;
     private ArrowType arrowType = ArrowType.FILLED;
-    private Color color = Color.DARK_GRAY;
+    private Color color = null; // null = use theme default; non-null overrides
     private float strokeWidth = 1.5f;
 
     public LineStyle getLineStyle() {

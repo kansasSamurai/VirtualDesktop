@@ -199,6 +199,7 @@ public class DiagramLayeredPane extends JLayeredPane {
 
     public void saveDiagram(java.io.File file) throws Exception {
         DiagramData diagram = new DiagramData();
+        diagram.setVersion(FileVersion.current());
         diagram.setGridSize(gridSize);
         diagram.setSnapToGrid(snapToGrid);
         diagram.setActiveLayer(activeLayer);
@@ -290,6 +291,8 @@ public class DiagramLayeredPane extends JLayeredPane {
         ObjectMapper mapper = new ObjectMapper();
         DiagramData diagram = mapper.readValue(file, DiagramData.class);
 
+        validateFormat(diagram.getVersion());
+
         gridSize = diagram.getGridSize();
         snapToGrid = diagram.isSnapToGrid();
         activeLayer = diagram.getActiveLayer();
@@ -345,6 +348,17 @@ public class DiagramLayeredPane extends JLayeredPane {
 
         revalidate();
         repaint();
+    }
+
+    private void validateFormat(FileVersion version) throws UnsupportedFormatException {
+        int major = (version != null) ? version.getMajor() : 0;
+        if (major > FileVersion.CURRENT_MAJOR) {
+            int minor = (version != null) ? version.getMinor() : 0;
+            throw new UnsupportedFormatException(
+                "File format version " + major + "." + minor
+                + " is too new for this build (supports up to "
+                + FileVersion.CURRENT_MAJOR + ".x).");
+        }
     }
 
     // ---------------------------------------------------------------

@@ -6,11 +6,20 @@ import java.util.List;
  * Root diagram data structure
  */
 public class DiagramData {
+    private FileVersion version;
     private int gridSize;
     private boolean snapToGrid;
     private int activeLayer;
     private List<LayerData> layers;
     private SemanticGraphData semanticGraph;
+
+    public FileVersion getVersion() {
+        return version;
+    }
+
+    public void setVersion(FileVersion version) {
+        this.version = version;
+    }
 
     public int getGridSize() {
         return gridSize;

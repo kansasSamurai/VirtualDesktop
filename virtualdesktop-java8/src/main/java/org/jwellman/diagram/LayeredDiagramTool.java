@@ -14,6 +14,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.jwellman.diagram.api.CanvasComponentFactory;
 
@@ -140,11 +141,16 @@ public class LayeredDiagramTool extends JPanel {
     private void saveDiagram() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Save Diagram");
-        fileChooser.setSelectedFile(new java.io.File("diagram.json"));
+        fileChooser.setFileFilter(new FileNameExtensionFilter("Diagram files (*.dgx)", "dgx"));
+        fileChooser.setSelectedFile(new java.io.File("diagram.dgx"));
 
         int result = fileChooser.showSaveDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             java.io.File file = fileChooser.getSelectedFile();
+            String name = file.getName();
+            if (!name.endsWith(".dgx") && !name.endsWith(".json")) {
+                file = new java.io.File(file.getParentFile(), name + ".dgx");
+            }
             try {
                 diagramPane.saveDiagram(file);
                 setModified(false);
@@ -166,6 +172,7 @@ public class LayeredDiagramTool extends JPanel {
 
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Load Diagram");
+        fileChooser.setFileFilter(new FileNameExtensionFilter("Diagram files (*.dgx, *.json)", "dgx", "json"));
 
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {

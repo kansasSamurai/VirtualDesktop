@@ -28,8 +28,7 @@ public class ClassNodeContent extends JPanel {
     private static final long serialVersionUID = 1L;
 
     @SuppressWarnings("unchecked")
-    public ClassNodeContent(String name, String stereotype,
-                             Object fields, Object methods) {
+    public ClassNodeContent(String name, String stereotype, Object fields, Object methods) {
         setLayout(new GridBagLayout());
         setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
         setBackground(CONTENT_BG);
@@ -40,12 +39,12 @@ public class ClassNodeContent extends JPanel {
         header.setBackground(isInterface ? INTERFACE_HEADER_BG : CLASS_HEADER_BG);
         header.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
 
-        if (isInterface) {
-            JLabel stereoLabel = new JLabel("«interface»", SwingConstants.CENTER);
-            stereoLabel.setFont(new Font("SansSerif", Font.PLAIN, 9));
-            stereoLabel.setForeground(new Color(60, 100, 60));
-            header.add(stereoLabel, BorderLayout.NORTH);
-        }
+
+        final String stereoString = isInterface ? "«interface»" : " ";
+        JLabel stereoLabel = new JLabel(stereoString, SwingConstants.CENTER);
+        stereoLabel.setFont(new Font("SansSerif", Font.PLAIN, 9));
+        stereoLabel.setForeground(new Color(60, 100, 60));
+        header.add(stereoLabel, BorderLayout.NORTH);
 
         JLabel nameLabel = new JLabel(name, SwingConstants.CENTER);
         nameLabel.setFont(new Font("SansSerif", Font.BOLD, 12));

@@ -50,6 +50,7 @@ public class ClassNodeContent extends JPanel {
 
     private List<Map<String, String>> fieldsList;
     private List<Map<String, String>> methodsList;
+    @SuppressWarnings("unused")
     private final String nodeType;
     private final CanvasTheme theme;
     private final Runnable onModified;
@@ -61,6 +62,7 @@ public class ClassNodeContent extends JPanel {
     private JPanel methodsRowsPanel;
 
     public ClassNodeContent(String name, String nodeType, String stereotype,
+                            java.awt.Color headerBackground,
                             Object fields, Object methods,
                             CanvasTheme theme, Runnable onModified) {
         this.nodeType   = nodeType;
@@ -74,7 +76,7 @@ public class ClassNodeContent extends JPanel {
         setBackground(theme.getNodeBodyBackground());
 
         // Header — always visible above the card panel
-        JPanel header = buildHeader(name, nodeType, stereotype);
+        JPanel header = buildHeader(name, nodeType, stereotype, headerBackground);
         add(header, itemConstraints(false));
 
         // Card panel fills remaining space
@@ -90,9 +92,13 @@ public class ClassNodeContent extends JPanel {
     // Header
     // ---------------------------------------------------------------
 
-    private JPanel buildHeader(String name, String nodeType, String stereotype) {
+    private JPanel buildHeader(String name, String nodeType, String stereotype,
+                               java.awt.Color headerBackground) {
         JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(theme.getNodeHeaderBackground(nodeType));
+        java.awt.Color bg = (headerBackground != null)
+                ? headerBackground
+                : theme.getNodeHeaderBackground(nodeType);
+        header.setBackground(bg);
         header.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 4));
 
         JPanel labels = new JPanel();
@@ -101,7 +107,7 @@ public class ClassNodeContent extends JPanel {
 
         String stereoString;
         if (stereotype != null && !stereotype.isEmpty()) {
-            stereoString = stereotype;
+            stereoString = "«" + stereotype + "»";
         } else if ("INTERFACE".equalsIgnoreCase(nodeType)) {
             stereoString = "«interface»";
         } else {
@@ -119,10 +125,9 @@ public class ClassNodeContent extends JPanel {
         nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         labels.add(nameLabel);
 
-        header.add(labels, BorderLayout.CENTER);
-
         JToggleButton editToggle = new JToggleButton("✎");
         editToggle.setFont(editToggle.getFont().deriveFont(10f));
+        editToggle.setForeground(theme.getTextColor());
         editToggle.setFocusPainted(false);
         editToggle.setContentAreaFilled(false);
         editToggle.setOpaque(false);
@@ -134,6 +139,10 @@ public class ClassNodeContent extends JPanel {
                 commitAndShowView();
             }
         });
+
+        // West spacer mirrors the toggle width so the center labels stay truly centered.
+        header.add(Box.createRigidArea(editToggle.getPreferredSize()), BorderLayout.WEST);
+        header.add(labels, BorderLayout.CENTER);
         header.add(editToggle, BorderLayout.EAST);
 
         return header;
@@ -418,7 +427,7 @@ public class ClassNodeContent extends JPanel {
         return result;
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings("rawtypes")
     private List<Map<String, String>> promoteToStructured(Object raw) {
         List<Map<String, String>> result = new ArrayList<>();
         if (raw == null) {

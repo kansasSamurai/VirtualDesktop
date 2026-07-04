@@ -243,7 +243,7 @@ public class LayeredDiagramTool extends JPanel {
         rightTabBar.add(nodesTabBtn);
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, rightCardPanel, propEditor);
-        splitPane.setResizeWeight(0.55);
+        splitPane.setResizeWeight(0.4);
         splitPane.setDividerSize(5);
 
         JPanel rightPanel = new JPanel(new BorderLayout());

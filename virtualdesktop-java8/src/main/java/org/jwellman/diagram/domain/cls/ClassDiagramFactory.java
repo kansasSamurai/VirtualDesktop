@@ -1,6 +1,7 @@
 package org.jwellman.diagram.domain.cls;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Font;
 import java.awt.event.FocusAdapter;
@@ -19,6 +20,7 @@ import javax.swing.JTextField;
 
 import org.jwellman.diagram.api.CanvasComponentFactory;
 import org.jwellman.diagram.api.CanvasTheme;
+import org.jwellman.swing.colorchooser.SwatchColorPicker;
 
 /**
  * Factory for class-diagram nodes. Supports node types "CLASS" and "INTERFACE".
@@ -41,9 +43,11 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
                                    Runnable onModified) {
         String name       = (String) properties.getOrDefault("name", "Unnamed");
         String stereotype = (String) properties.getOrDefault("stereotype", null);
+        Color  headerBg   = decodeColor(properties.get("headerBackground"));
         Object fields     = properties.get("fields");
         Object methods    = properties.get("methods");
-        return new ClassNodeContent(name, nodeType, stereotype, fields, methods, theme, onModified);
+        return new ClassNodeContent(name, nodeType, stereotype, headerBg,
+                                    fields, methods, theme, onModified);
     }
 
     @Override
@@ -104,9 +108,9 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         form.add(typeLabel);
         form.add(Box.createVerticalStrut(8));
 
+        // Stereotype
         JPanel stereoRow = new JPanel(new BorderLayout(4, 0));
         stereoRow.add(new JLabel("Stereotype:"), BorderLayout.WEST);
-
         JTextField stereoField = new JTextField((String) properties.getOrDefault("stereotype", ""));
         stereoField.addFocusListener(new FocusAdapter() {
             @Override
@@ -119,14 +123,15 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
             }
         });
         stereoField.addActionListener(e -> stereoField.transferFocus());
-
         stereoRow.add(stereoField, BorderLayout.CENTER);
+        stereoRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        stereoRow.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, stereoRow.getPreferredSize().height));
         form.add(stereoRow);
         form.add(Box.createVerticalStrut(4));
 
+        // Name
         JPanel nameRow = new JPanel(new BorderLayout(4, 0));
         nameRow.add(new JLabel("Name:"), BorderLayout.WEST);
-
         JTextField nameField = new JTextField((String) properties.getOrDefault("name", ""));
         nameField.addFocusListener(new FocusAdapter() {
             @Override
@@ -138,13 +143,47 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
                 }
             }
         });
-        // Enter key commits via focus-lost (single commit path)
         nameField.addActionListener(e -> nameField.transferFocus());
-
         nameRow.add(nameField, BorderLayout.CENTER);
+        nameRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        nameRow.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, nameRow.getPreferredSize().height));
         form.add(nameRow);
+        form.add(Box.createVerticalStrut(8));
+
+        // Header background color
+        JLabel colorLabel = new JLabel("Header color:");
+        colorLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(colorLabel);
+        form.add(Box.createVerticalStrut(2));
+
+        Color currentBg = decodeColor(properties.get("headerBackground"));
+        if (currentBg == null) {
+            currentBg = theme.getNodeHeaderBackground(nodeType);
+        }
+        SwatchColorPicker colorPicker = new SwatchColorPicker(currentBg, chosen -> {
+            properties.put("headerBackground", encodeColor(chosen));
+            onChanged.run();
+        });
+        colorPicker.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(colorPicker);
 
         panel.add(form, BorderLayout.NORTH);
         return panel;
+    }
+
+    // Color stored as "#RRGGBB" hex string for clean JSON round-trip.
+    private static String encodeColor(Color c) {
+        return String.format("#%06X", c.getRGB() & 0xFFFFFF);
+    }
+
+    private static Color decodeColor(Object value) {
+        if (value instanceof String) {
+            try {
+                return Color.decode((String) value);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
     }
 }

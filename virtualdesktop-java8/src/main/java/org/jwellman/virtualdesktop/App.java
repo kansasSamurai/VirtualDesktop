@@ -251,7 +251,7 @@ public class App extends JFrame implements ActionListener {
 
         //Make dragging a little faster but perhaps uglier.
         desktop.setDragMode(JDesktopPane.OUTLINE_DRAG_MODE);
-        desktop.setDesktopManager(new SnappingDesktopManager(50));
+        desktop.setDesktopManager(new SnappingDesktopManager(20));
 
         DesktopAction.setDesktop(this);
         ActionFactory.initDesktop();
@@ -610,7 +610,7 @@ public class App extends JFrame implements ActionListener {
                         case LAF_FLATLAF:
                         	logger.info("LAF := FlatLAF");
 
-                        	int flatTheme = 5;
+                        	int flatTheme = 6;
                         	switch (flatTheme) {
                         	case 1: UIManager.setLookAndFeel( new FlatLightLaf() ); break;
                         	case 2: UIManager.setLookAndFeel( new FlatDarkLaf() ); break;

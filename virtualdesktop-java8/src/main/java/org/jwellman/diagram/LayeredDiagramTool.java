@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.swing.BorderFactory;
@@ -42,6 +43,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import org.jwellman.diagram.api.CanvasComponentFactory;
 import org.jwellman.diagram.api.EdgeAttributes;
 import org.jwellman.diagram.api.GraphEdge;
+import org.jwellman.diagram.api.RelationshipType;
 import org.jwellman.diagram.core.NodeHostPanel;
 import org.jwellman.swing.layout.FluidConstraint;
 import org.jwellman.swing.layout.FluidLayout;
@@ -245,7 +247,34 @@ public class LayeredDiagramTool extends JPanel {
         DiagramLayeredPane pane = new DiagramLayeredPane();
         PropertyEditorPanel propEditor = new PropertyEditorPanel(pane);
 
-        // Layers card
+        // --- Top half: domain-specific tabs (Types + Relationships) ---
+        JPanel nodesPanel = new JPanel(new BorderLayout());
+        JPanel relationshipsPanel = buildRelationshipsPanel(pane);
+
+        CardLayout topCardLayout = new CardLayout();
+        JPanel topCardPanel = new JPanel(topCardLayout);
+        topCardPanel.add(nodesPanel,        "types");
+        topCardPanel.add(relationshipsPanel, "relationships");
+
+        DiagramTabButton typesTabBtn = new DiagramTabButton("Types");
+        DiagramTabButton relationsTabBtn = new DiagramTabButton("Relationships");
+        typesTabBtn.addActionListener(e -> topCardLayout.show(topCardPanel, "types"));
+        relationsTabBtn.addActionListener(e -> topCardLayout.show(topCardPanel, "relationships"));
+        ButtonGroup topGroup = new ButtonGroup();
+        topGroup.add(typesTabBtn);
+        topGroup.add(relationsTabBtn);
+        typesTabBtn.setSelected(true);
+
+        JPanel topTabBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        topTabBar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, separatorColor()));
+        topTabBar.add(typesTabBtn);
+        topTabBar.add(relationsTabBtn);
+
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.add(topTabBar,   BorderLayout.NORTH);
+        topPanel.add(topCardPanel, BorderLayout.CENTER);
+
+        // --- Bottom half: infrastructure tabs (Layers + Properties) ---
         JPanel layerListPanel = new JPanel();
         layerListPanel.setLayout(new BoxLayout(layerListPanel, BoxLayout.Y_AXIS));
         addLayerRows(layerListPanel, pane);
@@ -253,37 +282,37 @@ public class LayeredDiagramTool extends JPanel {
         layerScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         layerScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 
-        // Nodes card
-        JPanel nodesPanel = new JPanel(new BorderLayout());
-        DiagramTabButton nodesTabBtn = new DiagramTabButton("Nodes");
+        CardLayout bottomCardLayout = new CardLayout();
+        JPanel bottomCardPanel = new JPanel(bottomCardLayout);
+        bottomCardPanel.add(layerScroll, "layers");
+        bottomCardPanel.add(propEditor,  "properties");
 
-        // Right card layout
-        CardLayout rightCardLayout = new CardLayout();
-        JPanel rightCardPanel = new JPanel(rightCardLayout);
-        rightCardPanel.add(layerScroll, "layers");
-        rightCardPanel.add(nodesPanel, "nodes");
+        DiagramTabButton layersTabBtn     = new DiagramTabButton("Layers");
+        DiagramTabButton propertiesTabBtn = new DiagramTabButton("Properties");
+        layersTabBtn.addActionListener(e -> bottomCardLayout.show(bottomCardPanel, "layers"));
+        propertiesTabBtn.addActionListener(e -> bottomCardLayout.show(bottomCardPanel, "properties"));
+        ButtonGroup bottomGroup = new ButtonGroup();
+        bottomGroup.add(layersTabBtn);
+        bottomGroup.add(propertiesTabBtn);
+        propertiesTabBtn.setSelected(true);   // Properties is the default shown tab
+        bottomCardLayout.show(bottomCardPanel, "properties");
 
-        // Right toggle bar
-        ButtonGroup rightGroup = new ButtonGroup();
-        DiagramTabButton layersTabBtn = new DiagramTabButton("Layers");
-        layersTabBtn.addActionListener(e -> rightCardLayout.show(rightCardPanel, "layers"));
-        nodesTabBtn.addActionListener(e -> rightCardLayout.show(rightCardPanel, "nodes"));
-        rightGroup.add(layersTabBtn);
-        rightGroup.add(nodesTabBtn);
-        layersTabBtn.setSelected(true);
+        JPanel bottomTabBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        bottomTabBar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, separatorColor()));
+        bottomTabBar.add(layersTabBtn);
+        bottomTabBar.add(propertiesTabBtn);
 
-        JPanel rightTabBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        rightTabBar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, separatorColor()));
-        rightTabBar.add(layersTabBtn);
-        rightTabBar.add(nodesTabBtn);
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.add(bottomTabBar,   BorderLayout.NORTH);
+        bottomPanel.add(bottomCardPanel, BorderLayout.CENTER);
 
-        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, rightCardPanel, propEditor);
-        splitPane.setResizeWeight(0.4);
+        // --- Split pane: domain tools (top) over infrastructure (bottom) ---
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, topPanel, bottomPanel);
+        splitPane.setResizeWeight(0.5);
         splitPane.setDividerSize(5);
 
         JPanel rightPanel = new JPanel(new BorderLayout());
         rightPanel.setPreferredSize(new Dimension(280, 0));
-        rightPanel.add(rightTabBar, BorderLayout.NORTH);
         rightPanel.add(splitPane, BorderLayout.CENTER);
 
         JPanel card = new JPanel(new BorderLayout());
@@ -292,7 +321,7 @@ public class LayeredDiagramTool extends JPanel {
         card.add(rightPanel, BorderLayout.EAST);
 
         DiagramTabContent tab = new DiagramTabContent(
-            name, pane, card, propEditor, nodesTabBtn, nodesPanel);
+            name, pane, card, propEditor, typesTabBtn, nodesPanel);
         wireTabListeners(tab);
         return tab;
     }
@@ -531,10 +560,50 @@ public class LayeredDiagramTool extends JPanel {
                 tab.nodesPanel.add(palette, BorderLayout.NORTH);
             }
         } else {
-            tab.nodesTabButton.setText("Nodes");
+            tab.nodesTabButton.setText("Types");
         }
         tab.nodesPanel.revalidate();
         tab.nodesPanel.repaint();
+    }
+
+    // ---------------------------------------------------------------
+    // Relationships panel
+    // ---------------------------------------------------------------
+
+    private JPanel buildRelationshipsPanel(DiagramLayeredPane pane) {
+        final List<RelationshipControlPanel> tiles = new ArrayList<>();
+
+        JPanel listPanel = new JPanel();
+        listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
+
+        Consumer<RelationshipControlPanel> onSelected = selected -> {
+            for (RelationshipControlPanel tile : tiles) {
+                tile.setActive(tile == selected);
+            }
+            pane.applyRelationship(selected.getRelationshipType().attributes);
+        };
+
+        for (RelationshipType rt : RelationshipType.defaultUmlTypes()) {
+            RelationshipControlPanel tile = new RelationshipControlPanel(rt, onSelected);
+            tiles.add(tile);
+            listPanel.add(tile);
+            listPanel.add(Box.createVerticalStrut(1));
+        }
+
+        // Pre-select Association (first tile) as the default active relationship
+        if (!tiles.isEmpty()) {
+            tiles.get(0).setActive(true);
+            pane.applyRelationship(tiles.get(0).getRelationshipType().attributes);
+        }
+
+        JScrollPane scroll = new JScrollPane(listPanel);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
+
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(scroll, BorderLayout.CENTER);
+        return panel;
     }
 
     // ---------------------------------------------------------------

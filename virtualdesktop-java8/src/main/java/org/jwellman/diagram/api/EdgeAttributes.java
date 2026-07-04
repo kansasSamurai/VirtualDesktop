@@ -9,21 +9,23 @@ public class EdgeAttributes {
 
     public enum LineStyle { SOLID, DASHED }
 
-    public enum ArrowType { OPEN, FILLED, NONE }
+    public enum ArrowType { OPEN, FILLED, NONE, OPEN_DIAMOND, FILLED_DIAMOND }
 
-    private LineStyle lineStyle  = LineStyle.SOLID;
-    private ArrowType arrowType = ArrowType.FILLED;
-    private Color color         = null; // null = use theme default; non-null overrides
-    private float strokeWidth   = 1.5f;
+    private LineStyle lineStyle       = LineStyle.SOLID;
+    private ArrowType arrowType       = ArrowType.FILLED;
+    private ArrowType sourceArrowType = ArrowType.NONE;
+    private Color color               = null; // null = use theme default; non-null overrides
+    private float strokeWidth         = 1.5f;
 
     public EdgeAttributes() {}
 
     /** Copy constructor — produces an independent instance with the same values. */
     public EdgeAttributes(EdgeAttributes other) {
-        this.lineStyle   = other.lineStyle;
-        this.arrowType   = other.arrowType;
-        this.color       = other.color;       // Color is immutable; reference copy is safe
-        this.strokeWidth = other.strokeWidth;
+        this.lineStyle       = other.lineStyle;
+        this.arrowType       = other.arrowType;
+        this.sourceArrowType = other.sourceArrowType;
+        this.color           = other.color;       // Color is immutable; reference copy is safe
+        this.strokeWidth     = other.strokeWidth;
     }
 
     public LineStyle getLineStyle() {
@@ -48,6 +50,14 @@ public class EdgeAttributes {
 
     public void setColor(Color color) {
         this.color = color;
+    }
+
+    public ArrowType getSourceArrowType() {
+        return sourceArrowType;
+    }
+
+    public void setSourceArrowType(ArrowType sourceArrowType) {
+        this.sourceArrowType = sourceArrowType;
     }
 
     public float getStrokeWidth() {

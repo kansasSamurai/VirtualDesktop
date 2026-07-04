@@ -10,8 +10,9 @@ public class GraphEdgeData {
     private String sourcePortId;
     private String targetNodeId;
     private String targetPortId;
-    private String lineStyle;   // EdgeAttributes.LineStyle name
-    private String arrowType;   // EdgeAttributes.ArrowType name
+    private String lineStyle;       // EdgeAttributes.LineStyle name
+    private String arrowType;       // EdgeAttributes.ArrowType name
+    private String sourceArrowType; // EdgeAttributes.ArrowType name; absent = NONE (backward compat)
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -33,4 +34,7 @@ public class GraphEdgeData {
 
     public String getArrowType() { return arrowType; }
     public void setArrowType(String arrowType) { this.arrowType = arrowType; }
+
+    public String getSourceArrowType() { return sourceArrowType; }
+    public void setSourceArrowType(String sourceArrowType) { this.sourceArrowType = sourceArrowType; }
 }

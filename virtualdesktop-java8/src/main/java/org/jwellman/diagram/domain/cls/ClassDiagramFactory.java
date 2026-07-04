@@ -62,7 +62,7 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
 
     @Override
     public String getNodePaletteTitle() {
-        return "Class Nodes";
+        return "Types";
     }
 
     @Override

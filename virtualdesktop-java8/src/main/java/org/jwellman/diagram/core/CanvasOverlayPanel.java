@@ -13,6 +13,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
 import javax.swing.JPanel;
@@ -47,6 +48,7 @@ public class CanvasOverlayPanel extends JPanel {
     private final Consumer<GraphEdge> onEdgeCreated;
     private final UnaryOperator<Integer> snapFn;
     private final Runnable onResizeComplete;
+    private final Supplier<EdgeAttributes> edgeAttrsSupplier;
 
     // Selection / resize state
     private Component selectedComponent;
@@ -89,12 +91,14 @@ public class CanvasOverlayPanel extends JPanel {
                                EdgeRenderPanel edgePanel,
                                Consumer<GraphEdge> onEdgeCreated,
                                UnaryOperator<Integer> snapFn,
-                               Runnable onResizeComplete) {
+                               Runnable onResizeComplete,
+                               Supplier<EdgeAttributes> edgeAttrsSupplier) {
         this.nodeIndex = nodeIndex;
         this.edgePanel = edgePanel;
         this.onEdgeCreated = onEdgeCreated;
         this.snapFn = snapFn;
         this.onResizeComplete = onResizeComplete;
+        this.edgeAttrsSupplier = edgeAttrsSupplier;
 
         setOpaque(false);
         setLayout(null);
@@ -240,11 +244,14 @@ public class CanvasOverlayPanel extends JPanel {
 
     private void commitEdge(PortHit target) {
         String edgeId = "edge-" + System.currentTimeMillis();
+        EdgeAttributes attrs = (edgeAttrsSupplier != null)
+            ? new EdgeAttributes(edgeAttrsSupplier.get())
+            : new EdgeAttributes();
         GraphEdge edge = new DefaultGraphEdge(
             edgeId,
             sourceNode.getNodeId(), sourcePortId,
             target.node.getNodeId(), target.portId,
-            new EdgeAttributes()
+            attrs
         );
         onEdgeCreated.accept(edge);
     }

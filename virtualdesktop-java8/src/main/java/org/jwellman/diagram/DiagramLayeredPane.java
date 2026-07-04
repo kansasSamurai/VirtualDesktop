@@ -61,6 +61,7 @@ public class DiagramLayeredPane extends JLayeredPane {
     private Component selectedComponent = null;
     private GraphEdge selectedEdge = null;
     private Integer activeLayer = SHAPE_LAYER;
+    private EdgeAttributes activeEdgeAttributes = new EdgeAttributes();
     private Map<Integer, Boolean> layerVisibility = new HashMap<>();
     private Runnable modificationListener;
     private java.util.function.Consumer<Component> selectionListener;
@@ -119,7 +120,8 @@ public class DiagramLayeredPane extends JLayeredPane {
             graphNodes, edgePanel,
             edge -> addGraphEdge(edge),
             coord -> isSnapToGrid() ? snapToGrid(coord) : coord,
-            () -> notifyModified()
+            () -> notifyModified(),
+            () -> activeEdgeAttributes
         );
         overlayPanel.setBounds(0, 0, 2000, 1500);
         add(overlayPanel, OVERLAY_LAYER);
@@ -296,6 +298,9 @@ public class DiagramLayeredPane extends JLayeredPane {
                 EdgeAttributes attrs = edge.getAttributes();
                 ed.setLineStyle(attrs.getLineStyle().name());
                 ed.setArrowType(attrs.getArrowType().name());
+                if (attrs.getSourceArrowType() != EdgeAttributes.ArrowType.NONE) {
+                    ed.setSourceArrowType(attrs.getSourceArrowType().name());
+                }
                 graphData.getEdges().add(ed);
             }
 
@@ -368,6 +373,9 @@ public class DiagramLayeredPane extends JLayeredPane {
                 if (ed.getArrowType() != null) {
                     attrs.setArrowType(EdgeAttributes.ArrowType.valueOf(ed.getArrowType()));
                 }
+                if (ed.getSourceArrowType() != null) {
+                    attrs.setSourceArrowType(EdgeAttributes.ArrowType.valueOf(ed.getSourceArrowType()));
+                }
                 addGraphEdge(new DefaultGraphEdge(
                     ed.getId(),
                     ed.getSourceNodeId(), ed.getSourcePortId(),
@@ -430,6 +438,28 @@ public class DiagramLayeredPane extends JLayeredPane {
 
     public void setEdgeSelectionListener(java.util.function.Consumer<GraphEdge> listener) {
         this.edgeSelectionListener = listener;
+    }
+
+    public GraphEdge getSelectedEdge() {
+        return selectedEdge;
+    }
+
+    /**
+     * Sets the active relationship type used when drawing new edges, and applies
+     * those attributes to the currently selected edge (if any).
+     */
+    public void applyRelationship(EdgeAttributes attrs) {
+        activeEdgeAttributes = new EdgeAttributes(attrs);
+        if (selectedEdge != null) {
+            EdgeAttributes target = selectedEdge.getAttributes();
+            target.setLineStyle(attrs.getLineStyle());
+            target.setArrowType(attrs.getArrowType());
+            target.setSourceArrowType(attrs.getSourceArrowType());
+            target.setColor(attrs.getColor());
+            target.setStrokeWidth(attrs.getStrokeWidth());
+            edgePanel.repaint();
+            notifyModified();
+        }
     }
 
     public void notifyModified() {

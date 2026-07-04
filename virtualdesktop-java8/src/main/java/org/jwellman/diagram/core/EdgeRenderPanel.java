@@ -43,6 +43,7 @@ public class EdgeRenderPanel extends JPanel {
     private GraphEdge selectedEdge;
 
     private static final int   ARROW_SIZE      = 10;
+    private static final int   DIAMOND_SIZE    = 11;
     private static final float HIT_STROKE_WIDTH = 8f;  // 4px tolerance on each side
     private static final Color SELECTION_COLOR  = new Color(0, 160, 255, 130);
 
@@ -170,11 +171,19 @@ public class EdgeRenderPanel extends JPanel {
 
         if (attrs.getArrowType() != EdgeAttributes.ArrowType.NONE) {
             Point approachPt = router.getApproachPoint(startPt, srcPort, endPt, tgtPort);
-            drawArrowhead(g2d, approachPt, endPt, attrs);
+            drawArrowhead(g2d, approachPt, endPt, attrs, edgeColor);
+        }
+
+        if (attrs.getSourceArrowType() == EdgeAttributes.ArrowType.OPEN_DIAMOND ||
+                attrs.getSourceArrowType() == EdgeAttributes.ArrowType.FILLED_DIAMOND) {
+            Point sourceApproach = sourceApproachPoint(startPt, srcPort);
+            boolean filled = attrs.getSourceArrowType() == EdgeAttributes.ArrowType.FILLED_DIAMOND;
+            drawDiamond(g2d, sourceApproach, startPt, filled, edgeColor, attrs.getStrokeWidth());
         }
     }
 
-    private void drawArrowhead(Graphics2D g2d, Point start, Point end, EdgeAttributes attrs) {
+    private void drawArrowhead(Graphics2D g2d, Point start, Point end,
+                               EdgeAttributes attrs, Color color) {
         double angle = Math.atan2(end.y - start.y, end.x - start.x);
 
         int ax1 = (int) (end.x - ARROW_SIZE * Math.cos(angle - Math.PI / 6));
@@ -187,11 +196,74 @@ public class EdgeRenderPanel extends JPanel {
         arrowHead.addPoint(ax1, ay1);
         arrowHead.addPoint(ax2, ay2);
 
+        g2d.setColor(color);
         g2d.setStroke(new BasicStroke(attrs.getStrokeWidth()));
         if (attrs.getArrowType() == EdgeAttributes.ArrowType.FILLED) {
             g2d.fill(arrowHead);
         } else {
+            // OPEN: hollow closed triangle — fill with canvas background then stroke
+            g2d.setColor(theme.getCanvasBackground());
+            g2d.fill(arrowHead);
+            g2d.setColor(color);
             g2d.draw(arrowHead);
+        }
+    }
+
+    /** Returns a point DIAMOND_SIZE pixels from the port in the port's outward direction. */
+    private static Point sourceApproachPoint(Point portPt, String portId) {
+        int d = DIAMOND_SIZE;
+        if ("N".equals(portId)) {
+            return new Point(portPt.x, portPt.y - d);
+        }
+        if ("S".equals(portId)) {
+            return new Point(portPt.x, portPt.y + d);
+        }
+        if ("E".equals(portId)) {
+            return new Point(portPt.x + d, portPt.y);
+        }
+        if ("W".equals(portId)) {
+            return new Point(portPt.x - d, portPt.y);
+        }
+        return new Point(portPt.x, portPt.y - d);
+    }
+
+    /**
+     * Draws a diamond decoration at {@code tip} (the source port).
+     * {@code approach} is a point along the edge outward from the port, used to
+     * compute the diamond's orientation.
+     */
+    private void drawDiamond(Graphics2D g2d, Point approach, Point tip,
+                              boolean filled, Color color, float strokeWidth) {
+        double angle = Math.atan2(approach.y - tip.y, approach.x - tip.x);
+        double halfW = DIAMOND_SIZE * 0.55;
+
+        // Midpoint of the diamond (between front and back tips)
+        int midX = (tip.x + approach.x) / 2;
+        int midY = (tip.y + approach.y) / 2;
+        // Back tip is the reflection of the front tip through the midpoint
+        int backX = 2 * midX - tip.x;
+        int backY = 2 * midY - tip.y;
+
+        int leftX  = midX + (int) (halfW * Math.cos(angle + Math.PI / 2));
+        int leftY  = midY + (int) (halfW * Math.sin(angle + Math.PI / 2));
+        int rightX = midX + (int) (halfW * Math.cos(angle - Math.PI / 2));
+        int rightY = midY + (int) (halfW * Math.sin(angle - Math.PI / 2));
+
+        Polygon diamond = new Polygon();
+        diamond.addPoint(tip.x, tip.y);
+        diamond.addPoint(leftX,  leftY);
+        diamond.addPoint(backX,  backY);
+        diamond.addPoint(rightX, rightY);
+
+        g2d.setStroke(new BasicStroke(strokeWidth));
+        if (filled) {
+            g2d.setColor(color);
+            g2d.fill(diamond);
+        } else {
+            g2d.setColor(theme.getCanvasBackground());
+            g2d.fill(diamond);
+            g2d.setColor(color);
+            g2d.draw(diamond);
         }
     }
 

@@ -23,5 +23,6 @@
 
     <!-- Application packages -->
     <logger name="org.jwellman" level="DEBUG"/>
+    <logger name="org.jwellman.swing.layout.FluidLayout" level="INFO"/>
 
 </configuration>

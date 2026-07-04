@@ -20,6 +20,7 @@ class DiagramTabContent {
     final JPanel nodesPanel;
     CanvasComponentFactory factory;
     DiagramTabButton tabBtn;             // diagram tab bar button; set by LayeredDiagramTool.addTabCard()
+    java.io.File sourceFile;             // non-null when this tab was loaded from or saved to a file
 
     DiagramTabContent(String name, DiagramLayeredPane diagramPane, JPanel tabCard,
                       PropertyEditorPanel propertyEditor,

@@ -170,7 +170,8 @@ public class ClassNodeContent extends JPanel {
         gbc.weightx = 1.0;
         gbc.weighty = 0.0;
 
-        card.add(makeSeparator(), gbc);
+        // Commented out by developer; a.i. agents should not restore this
+        // card.add(makeSeparator(), gbc);
 
         JPanel fieldsSection = makeSection();
         if (fieldsList.isEmpty()) {

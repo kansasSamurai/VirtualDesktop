@@ -775,6 +775,7 @@ public class LayeredDiagramTool extends JPanel {
         selectTab(tab);
         try {
             tab.diagramPane.loadDiagram(file);
+            tab.sourceFile = file;
             setModified(false);
             updateTabDisplayName(tab, fileBaseName(file.getName()));
         } catch (Exception ex) {
@@ -790,10 +791,17 @@ public class LayeredDiagramTool extends JPanel {
     // ---------------------------------------------------------------
 
     private void saveDiagram(DiagramLayeredPane pane) {
+        DiagramTabContent tab = findTabForPane(pane);
+
         JFileChooser fc = new JFileChooser();
         fc.setDialogTitle("Save Diagram");
         fc.setFileFilter(new FileNameExtensionFilter("Diagram files (*.dgx)", "dgx"));
-        fc.setSelectedFile(new java.io.File("diagram.dgx"));
+        if (tab != null && tab.sourceFile != null) {
+            fc.setCurrentDirectory(tab.sourceFile.getParentFile());
+            fc.setSelectedFile(tab.sourceFile);
+        } else {
+            fc.setSelectedFile(new java.io.File("diagram.dgx"));
+        }
 
         if (fc.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             java.io.File file = fc.getSelectedFile();
@@ -801,13 +809,21 @@ public class LayeredDiagramTool extends JPanel {
             if (!n.endsWith(".dgx") && !n.endsWith(".json")) {
                 file = new java.io.File(file.getParentFile(), n + ".dgx");
             }
+            if (file.exists()) {
+                int confirm = JOptionPane.showConfirmDialog(this,
+                    "\"" + file.getName() + "\" already exists. Overwrite?",
+                    "Confirm Overwrite", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                if (confirm != JOptionPane.YES_OPTION) {
+                    return;
+                }
+            }
             try {
-                DiagramTabContent tab = findTabForPane(pane);
                 pane.setDomainType(tab != null && tab.factory != null
                     ? tab.factory.getDomainTypeId() : null);
                 pane.saveDiagram(file);
                 setModified(false);
                 if (tab != null) {
+                    tab.sourceFile = file;
                     updateTabDisplayName(tab, fileBaseName(file.getName()));
                 }
                 JOptionPane.showMessageDialog(this, "Diagram saved successfully!",
@@ -837,6 +853,7 @@ public class LayeredDiagramTool extends JPanel {
                 pane.loadDiagram(file);
                 setModified(false);
                 if (tab != null) {
+                    tab.sourceFile = file;
                     updateTabDisplayName(tab, fileBaseName(file.getName()));
                     updateNodesPanel(tab);
                 }

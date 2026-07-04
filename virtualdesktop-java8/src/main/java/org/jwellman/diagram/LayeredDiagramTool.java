@@ -645,7 +645,7 @@ public class LayeredDiagramTool extends JPanel {
 
         JDialog dialog = new JDialog(
             SwingUtilities.getWindowAncestor(this),
-            "Open Diagram", Dialog.ModalityType.APPLICATION_MODAL);
+            "Open Diagram  (*.dgx, *.json)", Dialog.ModalityType.APPLICATION_MODAL);
 
         JPanel tilesPanel = new JPanel(new FluidLayout(8, 8));
         tilesPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));

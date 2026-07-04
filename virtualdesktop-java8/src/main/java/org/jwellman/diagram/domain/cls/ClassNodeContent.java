@@ -170,21 +170,29 @@ public class ClassNodeContent extends JPanel {
         gbc.weightx = 1.0;
         gbc.weighty = 0.0;
 
-        card.add(new JSeparator(SwingConstants.HORIZONTAL), gbc);
+        card.add(makeSeparator(), gbc);
 
         JPanel fieldsSection = makeSection();
-        for (Map<String, String> entry : fieldsList) {
-            fieldsSection.add(makeEntryLabel(formatEntry(entry)));
+        if (fieldsList.isEmpty()) {
+            fieldsSection.add(makePlaceholderLabel("(no fields)"));
+        } else {
+            for (Map<String, String> entry : fieldsList) {
+                fieldsSection.add(makeEntryLabel(formatEntry(entry)));
+            }
         }
         card.add(fieldsSection, gbc);
-        card.add(new JSeparator(SwingConstants.HORIZONTAL), gbc);
+        card.add(makeSeparator(), gbc);
 
         JPanel methodsSection = makeSection();
-        for (Map<String, String> entry : methodsList) {
-            methodsSection.add(makeEntryLabel(formatEntry(entry)));
+        if (methodsList.isEmpty()) {
+            methodsSection.add(makePlaceholderLabel("(no methods)"));
+        } else {
+            for (Map<String, String> entry : methodsList) {
+                methodsSection.add(makeEntryLabel(formatEntry(entry)));
+            }
         }
         card.add(methodsSection, gbc);
-        card.add(new JSeparator(SwingConstants.HORIZONTAL), gbc);
+        card.add(makeSeparator(), gbc);
 
         // Filler row absorbs all remaining vertical space, anchoring content to the top.
         GridBagConstraints fillerGbc = new GridBagConstraints();
@@ -228,7 +236,7 @@ public class ClassNodeContent extends JPanel {
 
         card.add(buildNewEntryRow(fieldsRowsPanel));
         card.add(Box.createVerticalStrut(4));
-        card.add(new JSeparator(SwingConstants.HORIZONTAL));
+        card.add(makeSeparator());
         card.add(Box.createVerticalStrut(4));
 
         card.add(makeSectionLabel("Methods"));
@@ -519,12 +527,25 @@ public class ClassNodeContent extends JPanel {
         return gbc;
     }
 
+    private JSeparator makeSeparator() {
+        JSeparator sep = new JSeparator(SwingConstants.HORIZONTAL);
+        sep.setForeground(theme.getTextColor());
+        return sep;
+    }
+
     private JPanel makeSection() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(theme.getNodeBodyBackground());
         panel.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
         return panel;
+    }
+
+    private JLabel makePlaceholderLabel(String text) {
+        JLabel label = new JLabel("<html><i>" + text + "</i></html>");
+        label.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        label.setForeground(theme.getTextColor());
+        return label;
     }
 
     private JLabel makeEntryLabel(String text) {

@@ -59,10 +59,12 @@ public class DiagramLayeredPane extends JLayeredPane {
     private boolean snapToGrid = true;
     private int gridSize = 20;
     private Component selectedComponent = null;
+    private GraphEdge selectedEdge = null;
     private Integer activeLayer = SHAPE_LAYER;
     private Map<Integer, Boolean> layerVisibility = new HashMap<>();
     private Runnable modificationListener;
     private java.util.function.Consumer<Component> selectionListener;
+    private java.util.function.Consumer<GraphEdge> edgeSelectionListener;
 
     // Infrastructure panels
     private ShadowLayerPanel shadowPanel;
@@ -426,6 +428,10 @@ public class DiagramLayeredPane extends JLayeredPane {
         this.selectionListener = listener;
     }
 
+    public void setEdgeSelectionListener(java.util.function.Consumer<GraphEdge> listener) {
+        this.edgeSelectionListener = listener;
+    }
+
     public void notifyModified() {
         if (modificationListener != null) {
             modificationListener.run();
@@ -438,13 +444,34 @@ public class DiagramLayeredPane extends JLayeredPane {
         }
     }
 
+    private void notifyEdgeSelectionChanged() {
+        if (edgeSelectionListener != null) {
+            edgeSelectionListener.accept(selectedEdge);
+        }
+    }
+
     private void setupMouseListeners() {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
+                requestFocusInWindow();
                 Component comp = getComponentAt(e.getPoint());
                 if (comp == DiagramLayeredPane.this || comp == gridPanel) {
-                    deselectAll();
+                    GraphEdge hitEdge = edgePanel.findEdgeAt(e.getX(), e.getY());
+                    if (hitEdge != null) {
+                        selectEdge(hitEdge);
+                    } else {
+                        deselectAll();
+                    }
+                }
+            }
+        });
+        addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent e) {
+                if (e.getKeyCode() == java.awt.event.KeyEvent.VK_DELETE
+                        || e.getKeyCode() == java.awt.event.KeyEvent.VK_BACK_SPACE) {
+                    deleteSelected();
                 }
             }
         });
@@ -610,14 +637,36 @@ public class DiagramLayeredPane extends JLayeredPane {
         notifySelectionChanged();
     }
 
+    private void selectEdge(GraphEdge edge) {
+        if (edge == selectedEdge) {
+            return;
+        }
+        selectedComponent = null;
+        overlayPanel.setSelectedComponent(null);
+        selectedEdge = edge;
+        edgePanel.setSelectedEdge(edge);
+        repaint();
+        notifyEdgeSelectionChanged();
+    }
+
     private void deselectAll() {
         selectedComponent = null;
+        selectedEdge = null;
+        edgePanel.setSelectedEdge(null);
         overlayPanel.setSelectedComponent(null);
         repaint();
         notifySelectionChanged();
+        notifyEdgeSelectionChanged();
     }
 
     public void deleteSelected() {
+        if (selectedEdge != null) {
+            removeGraphEdge(selectedEdge.getEdgeId());
+            selectedEdge = null;
+            edgePanel.setSelectedEdge(null);
+            notifyEdgeSelectionChanged();
+            return;
+        }
         if (selectedComponent != null && selectedComponent != gridPanel) {
             if (selectedComponent instanceof GraphNode) {
                 removeGraphNode(((GraphNode) selectedComponent).getNodeId());

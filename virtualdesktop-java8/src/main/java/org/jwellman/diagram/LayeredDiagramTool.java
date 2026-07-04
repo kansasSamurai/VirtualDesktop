@@ -3,6 +3,7 @@ package org.jwellman.diagram;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -23,6 +24,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JToggleButton;
@@ -31,6 +33,8 @@ import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.jwellman.diagram.api.CanvasComponentFactory;
+import org.jwellman.diagram.api.EdgeAttributes;
+import org.jwellman.diagram.api.GraphEdge;
 import org.jwellman.diagram.core.NodeHostPanel;
 
 /**
@@ -302,6 +306,97 @@ public class LayeredDiagramTool extends JPanel {
             }
             tab.propertyEditor.setSelectedComponent(component);
         });
+        tab.diagramPane.setEdgeSelectionListener(edge -> {
+            if (edge != null) {
+                tab.propertyEditor.showNodeEditor(buildEdgePropertyEditor(edge, tab));
+            } else {
+                tab.propertyEditor.setSelectedComponent(null);
+            }
+        });
+    }
+
+    private JPanel buildEdgePropertyEditor(GraphEdge edge, DiagramTabContent tab) {
+        EdgeAttributes attrs = edge.getAttributes();
+
+        JPanel panel = new JPanel(new BorderLayout(5, 5));
+        panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+
+        JPanel form = new JPanel();
+        form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
+
+        JLabel title = new JLabel("Edge");
+        title.setFont(title.getFont().deriveFont(Font.BOLD));
+        form.add(title);
+        form.add(Box.createVerticalStrut(8));
+
+        // Line style
+        JLabel lineLabel = new JLabel("Line style:");
+        lineLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(lineLabel);
+
+        JPanel lineRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        lineRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        ButtonGroup lineGroup = new ButtonGroup();
+        JRadioButton solidBtn = new JRadioButton("Solid",
+                attrs.getLineStyle() == EdgeAttributes.LineStyle.SOLID);
+        JRadioButton dashedBtn = new JRadioButton("Dashed",
+                attrs.getLineStyle() == EdgeAttributes.LineStyle.DASHED);
+        lineGroup.add(solidBtn);
+        lineGroup.add(dashedBtn);
+        lineRow.add(solidBtn);
+        lineRow.add(dashedBtn);
+        solidBtn.addActionListener(e -> {
+            attrs.setLineStyle(EdgeAttributes.LineStyle.SOLID);
+            tab.diagramPane.repaint();
+            tab.diagramPane.notifyModified();
+        });
+        dashedBtn.addActionListener(e -> {
+            attrs.setLineStyle(EdgeAttributes.LineStyle.DASHED);
+            tab.diagramPane.repaint();
+            tab.diagramPane.notifyModified();
+        });
+        form.add(lineRow);
+        form.add(Box.createVerticalStrut(6));
+
+        // Arrow type
+        JLabel arrowLabel = new JLabel("Arrow:");
+        arrowLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(arrowLabel);
+
+        JPanel arrowRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        arrowRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        ButtonGroup arrowGroup = new ButtonGroup();
+        JRadioButton noneBtn   = new JRadioButton("None",
+                attrs.getArrowType() == EdgeAttributes.ArrowType.NONE);
+        JRadioButton openBtn   = new JRadioButton("Open",
+                attrs.getArrowType() == EdgeAttributes.ArrowType.OPEN);
+        JRadioButton filledBtn = new JRadioButton("Filled",
+                attrs.getArrowType() == EdgeAttributes.ArrowType.FILLED);
+        arrowGroup.add(noneBtn);
+        arrowGroup.add(openBtn);
+        arrowGroup.add(filledBtn);
+        arrowRow.add(noneBtn);
+        arrowRow.add(openBtn);
+        arrowRow.add(filledBtn);
+        noneBtn.addActionListener(e -> {
+            attrs.setArrowType(EdgeAttributes.ArrowType.NONE);
+            tab.diagramPane.repaint();
+            tab.diagramPane.notifyModified();
+        });
+        openBtn.addActionListener(e -> {
+            attrs.setArrowType(EdgeAttributes.ArrowType.OPEN);
+            tab.diagramPane.repaint();
+            tab.diagramPane.notifyModified();
+        });
+        filledBtn.addActionListener(e -> {
+            attrs.setArrowType(EdgeAttributes.ArrowType.FILLED);
+            tab.diagramPane.repaint();
+            tab.diagramPane.notifyModified();
+        });
+        form.add(arrowRow);
+
+        panel.add(form, BorderLayout.NORTH);
+        return panel;
     }
 
     private void createFirstTab() {

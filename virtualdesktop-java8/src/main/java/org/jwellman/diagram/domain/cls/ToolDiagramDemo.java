@@ -1,7 +1,7 @@
 package org.jwellman.diagram.domain.cls;
 
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.swing.JPanel;
@@ -28,93 +28,107 @@ public class ToolDiagramDemo {
 
     public static void buildDemo(DiagramLayeredPane pane, CanvasComponentFactory factory) {
         // --- Row 1: entry point and top-level UI ---
-        NodeHostPanel nSpec = makeNode("n-spec", "CLASS", "SpecDiagramTool",
+        makeNode("n-spec", "CLASS", "SpecDiagramTool",
             null,
-            Arrays.asList("+ SpecDiagramTool()"),
+            Arrays.asList(makeMethod("+", "", "SpecDiagramTool()")),
             factory, pane, 40, 40, 185, 115);
 
-        NodeHostPanel nTool = makeNode("n-tool", "CLASS", "LayeredDiagramTool",
-            Arrays.asList("- diagramPane: DiagramLayeredPane"),
-            Arrays.asList("+ getDiagramPane()", "+ setComponentFactory(f)"),
+        makeNode("n-tool", "CLASS", "LayeredDiagramTool",
+            Arrays.asList(makeField("-", "DiagramLayeredPane", "diagramPane")),
+            Arrays.asList(makeMethod("+", "DiagramLayeredPane", "getDiagramPane()"),
+                          makeMethod("+", "void", "setComponentFactory(f)")),
             factory, pane, 285, 40, 240, 145);
 
-        NodeHostPanel nPropEd = makeNode("n-proped", "CLASS", "PropertyEditorPanel",
-            Arrays.asList("- selectedComponent: JComponent"),
-            Arrays.asList("+ setSelectedComponent(c)", "+ clearSelection()"),
+        makeNode("n-proped", "CLASS", "PropertyEditorPanel",
+            Arrays.asList(makeField("-", "JComponent", "selectedComponent")),
+            Arrays.asList(makeMethod("+", "void", "setSelectedComponent(c)"),
+                          makeMethod("+", "void", "clearSelection()")),
             factory, pane, 570, 40, 225, 145);
 
         // --- Row 2: canvas + sub-panels ---
-        NodeHostPanel nCdf = makeNode("n-cdf", "CLASS", "ClassDiagramFactory",
-            Arrays.asList("- theme: CanvasTheme"),
-            Arrays.asList("+ createContentFor(type, props)", "+ getPortIds(type): String[]"),
+        makeNode("n-cdf", "CLASS", "ClassDiagramFactory",
+            Arrays.asList(makeField("-", "CanvasTheme", "theme")),
+            Arrays.asList(makeMethod("+", "JPanel", "createContentFor(type, props)"),
+                          makeMethod("+", "String[]", "getPortIds(type)")),
             factory, pane, 40, 235, 215, 150);
 
-        NodeHostPanel nPane = makeNode("n-pane", "CLASS", "DiagramLayeredPane",
-            Arrays.asList("- graphNodes: Map<String,GraphNode>",
-                          "- edgePanel: EdgeRenderPanel"),
-            Arrays.asList("+ addGraphNode(n, layer)", "+ addGraphEdge(e)"),
+        makeNode("n-pane", "CLASS", "DiagramLayeredPane",
+            Arrays.asList(makeField("-", "Map<String,GraphNode>", "graphNodes"),
+                          makeField("-", "EdgeRenderPanel", "edgePanel")),
+            Arrays.asList(makeMethod("+", "void", "addGraphNode(n, layer)"),
+                          makeMethod("+", "void", "addGraphEdge(e)")),
             factory, pane, 285, 235, 240, 155);
 
-        NodeHostPanel nColorProp = makeNode("n-colorprop", "CLASS", "ColorPropertyPanel",
-            Arrays.asList("- swatches: ColorSwatch[]"),
-            Arrays.asList("+ setColor(c: Color)"),
+        makeNode("n-colorprop", "CLASS", "ColorPropertyPanel",
+            Arrays.asList(makeField("-", "ColorSwatch[]", "swatches")),
+            Arrays.asList(makeMethod("+", "void", "setColor(c)")),
             factory, pane, 570, 235, 225, 130);
 
         // --- Row 3: domain and element types ---
-        NodeHostPanel nContent = makeNode("n-content", "CLASS", "ClassNodeContent",
-            Arrays.asList("- theme: CanvasTheme"),
-            Arrays.asList("+ ClassNodeContent(name, type, ...)"),
+        makeNode("n-content", "CLASS", "ClassNodeContent",
+            Arrays.asList(makeField("-", "CanvasTheme", "theme")),
+            Arrays.asList(makeMethod("+", "", "ClassNodeContent(name, type, ...)")),
             factory, pane, 40, 450, 215, 130);
 
-        NodeHostPanel nShape = makeNode("n-shape", "CLASS", "DiagramShape",
-            Arrays.asList("- shapeType: ShapeType", "- fillColor: Color"),
-            Arrays.asList("+ paintComponent(g)", "+ setShapeType(t)"),
+        makeNode("n-shape", "CLASS", "DiagramShape",
+            Arrays.asList(makeField("-", "ShapeType", "shapeType"),
+                          makeField("-", "Color", "fillColor")),
+            Arrays.asList(makeMethod("+", "void", "paintComponent(g)"),
+                          makeMethod("+", "void", "setShapeType(t)")),
             factory, pane, 285, 450, 215, 155);
 
-        NodeHostPanel nText = makeNode("n-text", "CLASS", "DiagramText",
-            Arrays.asList("- cornerRadius: int"),
-            Arrays.asList("+ setCornerRadius(r)", "+ getText(): String"),
+        makeNode("n-text", "CLASS", "DiagramText",
+            Arrays.asList(makeField("-", "int", "cornerRadius")),
+            Arrays.asList(makeMethod("+", "void", "setCornerRadius(r)"),
+                          makeMethod("+", "String", "getText()")),
             factory, pane, 570, 450, 215, 145);
 
         // --- edges ---
-        // "creates" / "injects" = dashed + open arrowhead
         EdgeAttributes createAttr = new EdgeAttributes();
         createAttr.setLineStyle(EdgeAttributes.LineStyle.DASHED);
         createAttr.setArrowType(EdgeAttributes.ArrowType.OPEN);
 
-        // "has-a" / "manages" = solid + filled arrowhead
         EdgeAttributes hasAttr = new EdgeAttributes();
 
-        // SpecDiagramTool creates LayeredDiagramTool
-        pane.addGraphEdge(new DefaultGraphEdge("et-spec-tool", "n-spec", "E", "n-tool", "W", createAttr));
-        // SpecDiagramTool creates ClassDiagramFactory
-        pane.addGraphEdge(new DefaultGraphEdge("et-spec-cdf", "n-spec", "S", "n-cdf", "N", createAttr));
-        // LayeredDiagramTool has PropertyEditorPanel
-        pane.addGraphEdge(new DefaultGraphEdge("et-tool-prop", "n-tool", "E", "n-proped", "W", hasAttr));
-        // LayeredDiagramTool has DiagramLayeredPane
-        pane.addGraphEdge(new DefaultGraphEdge("et-tool-pane", "n-tool", "S", "n-pane", "N", hasAttr));
-        // PropertyEditorPanel has ColorPropertyPanel
-        pane.addGraphEdge(new DefaultGraphEdge("et-prop-color", "n-proped", "S", "n-colorprop", "N", hasAttr));
-        // ClassDiagramFactory creates ClassNodeContent
-        pane.addGraphEdge(new DefaultGraphEdge("et-cdf-cnt", "n-cdf", "S", "n-content", "N", createAttr));
-        // DiagramLayeredPane hosts DiagramShape
-        pane.addGraphEdge(new DefaultGraphEdge("et-pane-shape", "n-pane", "S", "n-shape", "N", hasAttr));
-        // DiagramLayeredPane hosts DiagramText (E→N L-path: right then down)
-        pane.addGraphEdge(new DefaultGraphEdge("et-pane-text", "n-pane", "E", "n-text", "N", hasAttr));
+        pane.addGraphEdge(new DefaultGraphEdge("et-spec-tool",   "n-spec",     "E", "n-tool",     "W", createAttr));
+        pane.addGraphEdge(new DefaultGraphEdge("et-spec-cdf",    "n-spec",     "S", "n-cdf",      "N", createAttr));
+        pane.addGraphEdge(new DefaultGraphEdge("et-tool-prop",   "n-tool",     "E", "n-proped",   "W", hasAttr));
+        pane.addGraphEdge(new DefaultGraphEdge("et-tool-pane",   "n-tool",     "S", "n-pane",     "N", hasAttr));
+        pane.addGraphEdge(new DefaultGraphEdge("et-prop-color",  "n-proped",   "S", "n-colorprop","N", hasAttr));
+        pane.addGraphEdge(new DefaultGraphEdge("et-cdf-cnt",     "n-cdf",      "S", "n-content",  "N", createAttr));
+        pane.addGraphEdge(new DefaultGraphEdge("et-pane-shape",  "n-pane",     "S", "n-shape",    "N", hasAttr));
+        pane.addGraphEdge(new DefaultGraphEdge("et-pane-text",   "n-pane",     "E", "n-text",     "N", hasAttr));
+    }
+
+    private static Map<String, String> makeField(String vis, String type, String name) {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("visibility", vis);
+        m.put("type",       type);
+        m.put("name",       name);
+        return m;
+    }
+
+    private static Map<String, String> makeMethod(String vis, String type, String name) {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("visibility", vis);
+        m.put("type",       type);
+        m.put("name",       name);
+        return m;
     }
 
     private static NodeHostPanel makeNode(String id, String type, String name,
-                                          java.util.List<String> fields,
-                                          java.util.List<String> methods,
+                                          java.util.List<?> fields,
+                                          java.util.List<?> methods,
                                           CanvasComponentFactory factory,
                                           DiagramLayeredPane pane,
                                           int x, int y, int w, int h) {
-        Map<String, Object> props = new HashMap<>();
+        Map<String, Object> props = new java.util.HashMap<>();
         props.put("name", name);
         if (fields  != null) { props.put("fields",  fields); }
         if (methods != null) { props.put("methods", methods); }
 
-        JPanel content = factory.createContentFor(type, props);
+        Runnable onModified = () -> pane.notifyModified();
+        JPanel content = factory.createContentFor(type, props, onModified);
         NodeHostPanel node = new NodeHostPanel(id, type, props, content);
         node.setBounds(x, y, w, h);
         pane.addGraphNode(node, DiagramLayeredPane.SHAPE_LAYER);

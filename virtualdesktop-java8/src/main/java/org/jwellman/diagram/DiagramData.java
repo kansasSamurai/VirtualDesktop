@@ -7,6 +7,7 @@ import java.util.List;
  */
 public class DiagramData {
     private FileVersion version;
+    private String domainType;
     private int gridSize;
     private boolean snapToGrid;
     private int activeLayer;
@@ -19,6 +20,14 @@ public class DiagramData {
 
     public void setVersion(FileVersion version) {
         this.version = version;
+    }
+
+    public String getDomainType() {
+        return domainType;
+    }
+
+    public void setDomainType(String domainType) {
+        this.domainType = domainType;
     }
 
     public int getGridSize() {

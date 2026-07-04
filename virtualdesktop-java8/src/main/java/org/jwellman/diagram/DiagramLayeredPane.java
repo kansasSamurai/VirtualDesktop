@@ -35,6 +35,7 @@ import org.jwellman.diagram.core.EdgeRenderPanel;
 import org.jwellman.diagram.core.NodeHostPanel;
 import org.jwellman.diagram.core.OrthogonalRouter;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
@@ -76,6 +77,7 @@ public class DiagramLayeredPane extends JLayeredPane {
     private Map<String, GraphNode> graphNodes = new LinkedHashMap<>();
     private EdgeRouter edgeRouter = new OrthogonalRouter();
     private CanvasComponentFactory componentFactory;
+    private String domainType;
 
     private static final long serialVersionUID = 1L;
 
@@ -164,6 +166,14 @@ public class DiagramLayeredPane extends JLayeredPane {
         this.componentFactory = factory;
     }
 
+    public String getDomainType() {
+        return domainType;
+    }
+
+    public void setDomainType(String domainType) {
+        this.domainType = domainType;
+    }
+
     public void enterEdgeCreationMode() {
         overlayPanel.enterEdgeCreationMode();
     }
@@ -197,9 +207,26 @@ public class DiagramLayeredPane extends JLayeredPane {
     // Persistence
     // ---------------------------------------------------------------
 
+    /**
+     * Reads only the {@code domainType} field from a diagram file without fully loading it.
+     * Returns {@code null} if the field is absent, null in JSON, or the file cannot be read.
+     * Used by the caller to set the correct factory before a full load.
+     */
+    public static String peekDomainType(java.io.File file) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(file);
+            JsonNode dt = root.get("domainType");
+            return (dt != null && !dt.isNull()) ? dt.asText() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public void saveDiagram(java.io.File file) throws Exception {
         DiagramData diagram = new DiagramData();
         diagram.setVersion(FileVersion.current());
+        diagram.setDomainType(domainType);
         diagram.setGridSize(gridSize);
         diagram.setSnapToGrid(snapToGrid);
         diagram.setActiveLayer(activeLayer);
@@ -293,6 +320,7 @@ public class DiagramLayeredPane extends JLayeredPane {
 
         validateFormat(diagram.getVersion());
 
+        domainType = diagram.getDomainType();
         gridSize = diagram.getGridSize();
         snapToGrid = diagram.isSnapToGrid();
         activeLayer = diagram.getActiveLayer();

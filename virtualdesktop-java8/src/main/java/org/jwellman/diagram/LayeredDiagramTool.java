@@ -287,8 +287,9 @@ public class LayeredDiagramTool extends JPanel {
             if (component instanceof NodeHostPanel && tab.factory != null) {
                 NodeHostPanel node = (NodeHostPanel) component;
                 Runnable onChanged = () -> {
+                    Runnable onMod = () -> tab.diagramPane.notifyModified();
                     JPanel newContent = tab.factory.createContentFor(
-                        node.getNodeType(), node.getProperties());
+                        node.getNodeType(), node.getProperties(), onMod);
                     node.swapContent(newContent);
                     tab.diagramPane.notifyModified();
                 };
@@ -392,7 +393,8 @@ public class LayeredDiagramTool extends JPanel {
             BiConsumer<String, Map<String, Object>> addNode = (nodeType, props) -> {
                 String id = UUID.randomUUID().toString();
                 String[] portIds = tab.factory.getPortIds(nodeType);
-                JPanel content = tab.factory.createContentFor(nodeType, props);
+                Runnable onMod = () -> tab.diagramPane.notifyModified();
+                JPanel content = tab.factory.createContentFor(nodeType, props, onMod);
                 NodeHostPanel node = new NodeHostPanel(id, nodeType, props, content, portIds);
                 node.setBounds(60, 60, 200, 150);
                 tab.diagramPane.addGraphNode(node, DiagramLayeredPane.SHAPE_LAYER);
@@ -519,9 +521,11 @@ public class LayeredDiagramTool extends JPanel {
                 file = new java.io.File(file.getParentFile(), n + ".dgx");
             }
             try {
+                DiagramTabContent tab = findTabForPane(pane);
+                pane.setDomainType(tab != null && tab.factory != null
+                    ? tab.factory.getDomainTypeId() : null);
                 pane.saveDiagram(file);
                 setModified(false);
-                DiagramTabContent tab = findTabForPane(pane);
                 if (tab != null) {
                     updateTabDisplayName(tab, fileBaseName(file.getName()));
                 }
@@ -546,11 +550,14 @@ public class LayeredDiagramTool extends JPanel {
         if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             java.io.File file = fc.getSelectedFile();
             try {
+                DiagramTabContent tab = findTabForPane(pane);
+                // Factory must be set before loading so graph node restoration works.
+                preApplyFactory(file, pane, tab);
                 pane.loadDiagram(file);
                 setModified(false);
-                DiagramTabContent tab = findTabForPane(pane);
                 if (tab != null) {
                     updateTabDisplayName(tab, fileBaseName(file.getName()));
+                    updateNodesPanel(tab);
                 }
                 JOptionPane.showMessageDialog(this, "Diagram loaded successfully!",
                     "Load Complete", JOptionPane.INFORMATION_MESSAGE);
@@ -560,6 +567,26 @@ public class LayeredDiagramTool extends JPanel {
                 ex.printStackTrace();
             }
         }
+    }
+
+    private void preApplyFactory(java.io.File file, DiagramLayeredPane pane, DiagramTabContent tab) {
+        String id = DiagramLayeredPane.peekDomainType(file);
+        if (tab == null) {
+            return;
+        }
+        if (id != null) {
+            for (DiagramTypeEntry entry : diagramTypes) {
+                if (entry.name.equals(id)) {
+                    CanvasComponentFactory factory = entry.factoryFn.apply(pane);
+                    tab.factory = factory;
+                    pane.setComponentFactory(factory);
+                    return;
+                }
+            }
+        }
+        // Null or unrecognised domain type → plain diagram; clear any existing factory.
+        tab.factory = null;
+        pane.setComponentFactory(null);
     }
 
     // ---------------------------------------------------------------

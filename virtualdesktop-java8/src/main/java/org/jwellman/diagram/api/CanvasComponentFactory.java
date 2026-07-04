@@ -24,6 +24,18 @@ public interface CanvasComponentFactory {
     String[] getPortIds(String nodeType);
 
     /**
+     * Creates content for a node and supplies an {@code onModified} callback that the
+     * content panel should invoke after the user commits in-panel edits.
+     * Domain factories that support in-panel editing should override this method.
+     * The default delegates to the 2-arg form (callback is silently ignored).
+     */
+    default JPanel createContentFor(String nodeType,
+                                    Map<String, Object> properties,
+                                    Runnable onModified) {
+        return createContentFor(nodeType, properties);
+    }
+
+    /**
      * Returns a JPanel property editor for a selected node, or {@code null} if this
      * factory does not support in-panel editing for the given type.
      *
@@ -36,6 +48,15 @@ public interface CanvasComponentFactory {
     default JPanel createPropertyEditorFor(String nodeType,
                                            Map<String, Object> properties,
                                            Runnable onChanged) {
+        return null;
+    }
+
+    /**
+     * Stable identifier used to persist the diagram's domain type.
+     * Must match the name passed to {@code LayeredDiagramTool.registerDiagramType()}.
+     * Returns {@code null} for plain/untyped diagrams.
+     */
+    default String getDomainTypeId() {
         return null;
     }
 

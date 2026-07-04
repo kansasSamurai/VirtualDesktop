@@ -33,15 +33,27 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
 
     @Override
     public JPanel createContentFor(String nodeType, Map<String, Object> properties) {
+        return createContentFor(nodeType, properties, null);
+    }
+
+    @Override
+    public JPanel createContentFor(String nodeType, Map<String, Object> properties,
+                                   Runnable onModified) {
         String name       = (String) properties.getOrDefault("name", "Unnamed");
+        String stereotype = (String) properties.getOrDefault("stereotype", null);
         Object fields     = properties.get("fields");
         Object methods    = properties.get("methods");
-        return new ClassNodeContent(name, nodeType, fields, methods, theme);
+        return new ClassNodeContent(name, nodeType, stereotype, fields, methods, theme, onModified);
     }
 
     @Override
     public String[] getPortIds(String nodeType) {
         return new String[]{"N", "S", "E", "W"};
+    }
+
+    @Override
+    public String getDomainTypeId() {
+        return "Class Diagram";
     }
 
     @Override
@@ -91,6 +103,26 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         typeLabel.setFont(typeLabel.getFont().deriveFont(Font.BOLD));
         form.add(typeLabel);
         form.add(Box.createVerticalStrut(8));
+
+        JPanel stereoRow = new JPanel(new BorderLayout(4, 0));
+        stereoRow.add(new JLabel("Stereotype:"), BorderLayout.WEST);
+
+        JTextField stereoField = new JTextField((String) properties.getOrDefault("stereotype", ""));
+        stereoField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                String val = stereoField.getText().trim();
+                if (!val.equals(properties.getOrDefault("stereotype", ""))) {
+                    properties.put("stereotype", val);
+                    onChanged.run();
+                }
+            }
+        });
+        stereoField.addActionListener(e -> stereoField.transferFocus());
+
+        stereoRow.add(stereoField, BorderLayout.CENTER);
+        form.add(stereoRow);
+        form.add(Box.createVerticalStrut(4));
 
         JPanel nameRow = new JPanel(new BorderLayout(4, 0));
         nameRow.add(new JLabel("Name:"), BorderLayout.WEST);

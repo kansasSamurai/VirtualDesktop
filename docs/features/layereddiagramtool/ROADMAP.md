@@ -20,6 +20,7 @@
 | 10 | Shape library expansion | ⬜ Future | Diamonds, parallelograms, callouts, custom paths |
 | 11 | Multi-line / rich text | ⬜ Future | Wrap text within shape bounds; bold/italic inline |
 | 12 | BeanShell integration | ⬜ Future | Programmatic diagram construction from scripts |
+| — | **Cleanup: remove legacy string member format** | ⬜ Near-term | Remove deprecated `List<String>` field/method handling from `ClassNodeContent.promoteToStructured()` and `ClassDiagramFactory`; all saved files should be re-saved in structured `List<Map>` format first |
 
 ---
 

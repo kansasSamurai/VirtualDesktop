@@ -32,6 +32,8 @@ class DiagramTabButton extends JToggleButton {
         super(text);
         this.fixedWidth = fixedWidth;
         setFocusPainted(false);
+        setContentAreaFilled(false);
+        setOpaque(false);
         if (fixedWidth > 0) {
             setToolTipText(text);
         }

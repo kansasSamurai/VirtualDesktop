@@ -19,12 +19,14 @@ public class DefaultGraphEdge implements GraphEdge {
                              String sourceNodeId, String sourcePortId,
                              String targetNodeId, String targetPortId,
                              EdgeAttributes attributes) {
-        this.edgeId = edgeId;
+        this.edgeId       = edgeId;
         this.sourceNodeId = sourceNodeId;
         this.sourcePortId = sourcePortId;
         this.targetNodeId = targetNodeId;
         this.targetPortId = targetPortId;
-        this.attributes = attributes;
+        // Defensive copy — callers may share an EdgeAttributes instance across edges;
+        // each edge must own its attributes so mutations to one don't affect others.
+        this.attributes   = new EdgeAttributes(attributes);
     }
 
     @Override

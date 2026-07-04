@@ -11,10 +11,20 @@ public class EdgeAttributes {
 
     public enum ArrowType { OPEN, FILLED, NONE }
 
-    private LineStyle lineStyle = LineStyle.SOLID;
+    private LineStyle lineStyle  = LineStyle.SOLID;
     private ArrowType arrowType = ArrowType.FILLED;
-    private Color color = null; // null = use theme default; non-null overrides
-    private float strokeWidth = 1.5f;
+    private Color color         = null; // null = use theme default; non-null overrides
+    private float strokeWidth   = 1.5f;
+
+    public EdgeAttributes() {}
+
+    /** Copy constructor — produces an independent instance with the same values. */
+    public EdgeAttributes(EdgeAttributes other) {
+        this.lineStyle   = other.lineStyle;
+        this.arrowType   = other.arrowType;
+        this.color       = other.color;       // Color is immutable; reference copy is safe
+        this.strokeWidth = other.strokeWidth;
+    }
 
     public LineStyle getLineStyle() {
         return lineStyle;

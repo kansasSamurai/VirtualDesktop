@@ -54,6 +54,7 @@ public class ClassNodeContent extends JPanel {
     private final String nodeType;
     private final CanvasTheme theme;
     private final Runnable onModified;
+    private final Map<String, Object> properties;
 
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel cardPanel = new JPanel(cardLayout);
@@ -64,10 +65,12 @@ public class ClassNodeContent extends JPanel {
     public ClassNodeContent(String name, String nodeType, String stereotype,
                             java.awt.Color headerBackground,
                             Object fields, Object methods,
-                            CanvasTheme theme, Runnable onModified) {
+                            CanvasTheme theme, Runnable onModified,
+                            Map<String, Object> properties) {
         this.nodeType   = nodeType;
         this.theme      = theme;
         this.onModified = onModified;
+        this.properties = properties;
         this.fieldsList  = promoteToStructured(fields);
         this.methodsList = promoteToStructured(methods);
 
@@ -387,6 +390,10 @@ public class ClassNodeContent extends JPanel {
     private void commitAndShowView() {
         fieldsList  = collectRows(fieldsRowsPanel);
         methodsList = collectRows(methodsRowsPanel);
+        if (properties != null) {
+            properties.put("fields",  fieldsList);
+            properties.put("methods", methodsList);
+        }
         rebuildViewCard();
         cardLayout.show(cardPanel, CARD_VIEW);
         if (onModified != null) {

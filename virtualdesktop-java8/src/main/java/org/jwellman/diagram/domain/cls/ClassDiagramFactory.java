@@ -47,7 +47,7 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         Object fields     = properties.get("fields");
         Object methods    = properties.get("methods");
         return new ClassNodeContent(name, nodeType, stereotype, headerBg,
-                                    fields, methods, theme, onModified);
+                                    fields, methods, theme, onModified, properties);
     }
 
     @Override

@@ -4,10 +4,15 @@ import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -20,6 +25,7 @@ import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -29,6 +35,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
@@ -36,6 +43,8 @@ import org.jwellman.diagram.api.CanvasComponentFactory;
 import org.jwellman.diagram.api.EdgeAttributes;
 import org.jwellman.diagram.api.GraphEdge;
 import org.jwellman.diagram.core.NodeHostPanel;
+import org.jwellman.swing.layout.FluidConstraint;
+import org.jwellman.swing.layout.FluidLayout;
 
 /**
  * Complete diagram tool with multiple independent tabs and a collapsible project panel.
@@ -72,6 +81,20 @@ public class LayeredDiagramTool extends JPanel {
     public void registerDiagramType(String name,
                                     Function<DiagramLayeredPane, CanvasComponentFactory> factoryFn) {
         diagramTypes.add(new DiagramTypeEntry(name, factoryFn));
+        if (projectNewDiagramPanel != null) {
+            addDiagramTypeButton(name, factoryFn);
+        }
+    }
+
+    private void addDiagramTypeButton(String name,
+                                      Function<DiagramLayeredPane, CanvasComponentFactory> factoryFn) {
+        JButton btn = new JButton(name);
+        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, btn.getPreferredSize().height));
+        btn.addActionListener(e -> createNewTab(factoryFn));
+        projectNewDiagramPanel.add(btn);
+        projectNewDiagramPanel.add(Box.createVerticalStrut(2));
+        projectNewDiagramPanel.revalidate();
     }
 
     // ---------------------------------------------------------------
@@ -92,6 +115,7 @@ public class LayeredDiagramTool extends JPanel {
     private boolean leftExpanded = true;
 
     private boolean modified = false;
+    private JPanel projectNewDiagramPanel;
 
     private static final long serialVersionUID = 1L;
 
@@ -136,10 +160,17 @@ public class LayeredDiagramTool extends JPanel {
         title.setBorder(BorderFactory.createEmptyBorder(2, 2, 8, 2));
         content.add(title, BorderLayout.NORTH);
 
-        JLabel placeholder = new JLabel(
-            "<html><center><font color='#888888'>(no project loaded)</font></center></html>");
-        placeholder.setHorizontalAlignment(JLabel.CENTER);
-        content.add(placeholder, BorderLayout.CENTER);
+        projectNewDiagramPanel = new JPanel();
+        projectNewDiagramPanel.setLayout(new BoxLayout(projectNewDiagramPanel, BoxLayout.Y_AXIS));
+        projectNewDiagramPanel.setBorder(BorderFactory.createEmptyBorder(0, 2, 4, 2));
+
+        JLabel newDiagramLabel = new JLabel("New Diagram");
+        newDiagramLabel.setFont(newDiagramLabel.getFont().deriveFont(Font.BOLD, 11f));
+        newDiagramLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        newDiagramLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 4, 0));
+        projectNewDiagramPanel.add(newDiagramLabel);
+
+        content.add(projectNewDiagramPanel, BorderLayout.CENTER);
 
         // Always-visible collapse handle strip on the right edge
         JPanel handle = new JPanel(new BorderLayout());
@@ -195,14 +226,14 @@ public class LayeredDiagramTool extends JPanel {
     }
 
     private JButton buildAddTabButton() {
-        JButton btn = new JButton("+");
-        btn.setFont(btn.getFont().deriveFont(Font.BOLD, 13f));
+        JButton btn = new JButton("Open");
+        btn.setFont(btn.getFont().deriveFont(Font.BOLD, 11f));
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
         btn.setContentAreaFilled(false);
         btn.setForeground(new Color(60, 100, 150));
-        btn.setToolTipText("Add new diagram");
-        btn.addActionListener(e -> promptNewTab());
+        btn.setToolTipText("Open a diagram file from Documents");
+        btn.addActionListener(e -> openFileBrowser());
         return btn;
     }
 
@@ -597,6 +628,161 @@ public class LayeredDiagramTool extends JPanel {
         tb.add(connectBtn);
 
         return tb;
+    }
+
+    // ---------------------------------------------------------------
+    // File browser — opens a diagram file into a new tab
+    // ---------------------------------------------------------------
+
+    private void openFileBrowser() {
+        // Prefer OneDrive\Documents; fall back to plain Documents if absent.
+        java.io.File defaultDir = new java.io.File(
+            System.getProperty("user.home"),
+            "OneDrive" + java.io.File.separator + "Documents");
+        if (!defaultDir.exists()) {
+            defaultDir = new java.io.File(System.getProperty("user.home"), "Documents");
+        }
+
+        JDialog dialog = new JDialog(
+            SwingUtilities.getWindowAncestor(this),
+            "Open Diagram", Dialog.ModalityType.APPLICATION_MODAL);
+
+        JPanel tilesPanel = new JPanel(new FluidLayout(8, 8));
+        tilesPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+
+        JScrollPane scroll = new JScrollPane(tilesPanel);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scroll.setPreferredSize(new Dimension(640, 300));
+
+        javax.swing.JTextField dirField = new javax.swing.JTextField(
+            defaultDir.getAbsolutePath());
+        dirField.setFont(dirField.getFont().deriveFont(Font.BOLD));
+        dirField.addActionListener(e -> {
+            java.io.File chosen = new java.io.File(dirField.getText().trim());
+            populateTiles(tilesPanel, chosen, dialog);
+            tilesPanel.revalidate();
+            tilesPanel.repaint();
+            scroll.getVerticalScrollBar().setValue(0);
+        });
+
+        populateTiles(tilesPanel, defaultDir, dialog);
+
+        JPanel headerRow = new JPanel(new BorderLayout(6, 0));
+        headerRow.setBorder(BorderFactory.createEmptyBorder(0, 0, 6, 0));
+        headerRow.add(new JLabel("Directory:"), BorderLayout.WEST);
+        headerRow.add(dirField, BorderLayout.CENTER);
+
+        JPanel content = new JPanel(new BorderLayout(0, 0));
+        content.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        content.add(headerRow, BorderLayout.NORTH);
+        content.add(scroll, BorderLayout.CENTER);
+
+        dialog.add(content);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    private void populateTiles(JPanel tilesPanel, java.io.File dir, JDialog dialog) {
+        tilesPanel.removeAll();
+
+        // xs=12 (1/row), sm=6 (2/row), med=4 (3/row), lg=3 (4/row), xl=3 (4/row)
+        FluidConstraint tileConstraint = new FluidConstraint(12, 6, 4, 3, 3);
+
+        if (!dir.exists() || !dir.isDirectory()) {
+            JLabel msg = new JLabel(
+                "<html><i>Directory not found:<br>" + dir.getAbsolutePath() + "</i></html>");
+            msg.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+            tilesPanel.add(msg, FluidConstraint.FULLWIDTH);
+            return;
+        }
+
+        java.io.File[] found = dir.listFiles((d, n) ->
+            n.endsWith(".dgx") || n.endsWith(".json"));
+        java.io.File[] diagrams = (found != null) ? found : new java.io.File[0];
+        Arrays.sort(diagrams, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+
+        if (diagrams.length > 0) {
+            for (java.io.File f : diagrams) {
+                tilesPanel.add(buildFileTile(f, dialog), tileConstraint);
+            }
+        } else {
+            JLabel empty = new JLabel(
+                "<html><i>No diagram files (.dgx / .json) found.</i></html>");
+            empty.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+            tilesPanel.add(empty, FluidConstraint.FULLWIDTH);
+        }
+    }
+
+    private JPanel buildFileTile(java.io.File f, JDialog dialog) {
+        JPanel tile = new JPanel(new BorderLayout(4, 2));
+        tile.setPreferredSize(new Dimension(1, 64));
+        tile.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        tile.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(separatorColor()),
+            BorderFactory.createEmptyBorder(6, 8, 6, 8)));
+
+        String fullName  = f.getName();
+        int dot          = fullName.lastIndexOf('.');
+        String baseName  = dot > 0 ? fullName.substring(0, dot) : fullName;
+        String ext       = dot > 0 ? fullName.substring(dot + 1).toUpperCase() : "";
+        long   kb        = Math.max(1, f.length() / 1024);
+        String date      = new java.text.SimpleDateFormat("yyyy-MM-dd").format(
+            new java.util.Date(f.lastModified()));
+
+        JLabel nameLabel = new JLabel("<html><b>" + baseName + "</b></html>");
+        JLabel infoLabel = new JLabel(
+            "<html><small>" + ext + "  •  " + kb + " KB<br>" + date + "</small></html>");
+
+        tile.add(nameLabel, BorderLayout.NORTH);
+        tile.add(infoLabel, BorderLayout.CENTER);
+
+        Color defaultBg = tile.getBackground();
+        tile.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                dialog.dispose();
+                openDiagramFile(f);
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                Color sel = UIManager.getColor("List.selectionBackground");
+                if (sel != null) {
+                    tile.setBackground(sel);
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                tile.setBackground(defaultBg);
+            }
+        });
+
+        return tile;
+    }
+
+    private void openDiagramFile(java.io.File file) {
+        String name = "Diagram " + (tabs.size() + 1);
+        DiagramTabContent tab = createTabContent(name);
+        preApplyFactory(file, tab.diagramPane, tab);
+        if (tab.factory != null) {
+            updateNodesPanel(tab);
+        }
+        tabs.add(tab);
+        addTabCard(tab);
+        selectTab(tab);
+        try {
+            tab.diagramPane.loadDiagram(file);
+            setModified(false);
+            updateTabDisplayName(tab, fileBaseName(file.getName()));
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                "Error loading diagram: " + ex.getMessage(),
+                "Load Error", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
     }
 
     // ---------------------------------------------------------------

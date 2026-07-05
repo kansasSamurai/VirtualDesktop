@@ -3,6 +3,7 @@ package org.jwellman.diagram.domain.cls;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -154,10 +155,12 @@ public class ClassNodeContent extends JPanel {
         gbc.weightx = 1.0;
         gbc.weighty = 0.0;
 
-        // Commented out by developer; a.i. agents should not restore this
-        // card.add(makeSeparator(), gbc);
-
-        JPanel fieldsSection = makeSection();
+        // Separators are MatteBorder bottom lines on the section panels rather than
+        // standalone JSeparator components.  A JSeparator in a single-column
+        // GridBagLayout collapses to zero width when a sibling label is wider than
+        // the panel (negative extra-space mode); a border renders relative to its
+        // own component's bounds and is immune to that effect.
+        JPanel fieldsSection = makeSectionWithDivider();
         if (fieldsList.isEmpty()) {
             fieldsSection.add(makePlaceholderLabel("(no fields)"));
         } else {
@@ -166,9 +169,8 @@ public class ClassNodeContent extends JPanel {
             }
         }
         card.add(fieldsSection, gbc);
-        card.add(makeSeparator(), gbc);
 
-        JPanel methodsSection = makeSection();
+        JPanel methodsSection = makeSectionWithDivider();
         if (methodsList.isEmpty()) {
             methodsSection.add(makePlaceholderLabel("(no methods)"));
         } else {
@@ -177,7 +179,6 @@ public class ClassNodeContent extends JPanel {
             }
         }
         card.add(methodsSection, gbc);
-        card.add(makeSeparator(), gbc);
 
         // Filler row absorbs all remaining vertical space, anchoring content to the top.
         GridBagConstraints fillerGbc = new GridBagConstraints();
@@ -526,10 +527,19 @@ public class ClassNodeContent extends JPanel {
         return panel;
     }
 
+    private JPanel makeSectionWithDivider() {
+        JPanel panel = makeSection();
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, theme.getTextColor()),
+            BorderFactory.createEmptyBorder(3, 6, 3, 6)));
+        return panel;
+    }
+
     private JLabel makePlaceholderLabel(String text) {
         JLabel label = new JLabel("<html><i>" + text + "</i></html>");
         label.setFont(new Font("SansSerif", Font.ITALIC, 11));
         label.setForeground(theme.getTextColor());
+        label.setMinimumSize(new Dimension(0, label.getPreferredSize().height));
         return label;
     }
 
@@ -537,6 +547,7 @@ public class ClassNodeContent extends JPanel {
         JLabel label = new JLabel(text);
         label.setFont(new Font("Monospaced", Font.PLAIN, 11));
         label.setForeground(theme.getTextColor());
+        label.setMinimumSize(new Dimension(0, label.getPreferredSize().height));
         return label;
     }
 }

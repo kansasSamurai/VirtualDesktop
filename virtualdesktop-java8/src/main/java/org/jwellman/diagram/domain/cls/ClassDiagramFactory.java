@@ -27,14 +27,14 @@ import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JSeparator;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
-import javax.swing.SwingConstants;
 
 import org.jwellman.diagram.api.CanvasComponentFactory;
 import org.jwellman.diagram.api.CanvasTheme;
 import org.jwellman.swing.colorchooser.SwatchColorPicker;
+import org.jwellman.swing.layout.FluidConstraint;
+import org.jwellman.swing.layout.FluidLayout;
 
 /**
  * Factory for class-diagram nodes. Supports node types "CLASS" and "INTERFACE".
@@ -204,45 +204,48 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         List<Map<String, String>> fieldsList  = detailsPromote(properties.get("fields"));
         List<Map<String, String>> methodsList = detailsPromote(properties.get("methods"));
 
-        JPanel panel = new JPanel(new BorderLayout(0, 4));
-        panel.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
+        final List<JPanel> fieldRows  = new ArrayList<>();
+        final List<JPanel> methodRows = new ArrayList<>();
 
-        JPanel body = new JPanel();
-        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        final JPanel fieldsRowsPanel  = new JPanel(new GridBagLayout());
+        final JPanel methodsRowsPanel = new JPanel(new GridBagLayout());
 
-        body.add(detailsLabel("Fields"));
-        final JPanel fieldsRows = new JPanel();
-        fieldsRows.setLayout(new BoxLayout(fieldsRows, BoxLayout.Y_AXIS));
-        fieldsRows.setAlignmentX(Component.LEFT_ALIGNMENT);
         for (Map<String, String> entry : fieldsList) {
-            fieldsRows.add(detailsMemberRow(entry, fieldsRows));
+            JPanel row = buildDetailRow(entry, fieldsRowsPanel, fieldRows);
+            fieldRows.add(row);
         }
-        body.add(fieldsRows);
-        body.add(detailsAddRow(fieldsRows));
-        body.add(Box.createVerticalStrut(4));
-        body.add(detailsSeparator());
-        body.add(Box.createVerticalStrut(4));
+        detailsRebuild(fieldsRowsPanel, fieldRows);
 
-        body.add(detailsLabel("Methods"));
-        final JPanel methodsRows = new JPanel();
-        methodsRows.setLayout(new BoxLayout(methodsRows, BoxLayout.Y_AXIS));
-        methodsRows.setAlignmentX(Component.LEFT_ALIGNMENT);
         for (Map<String, String> entry : methodsList) {
-            methodsRows.add(detailsMemberRow(entry, methodsRows));
+            JPanel row = buildDetailRow(entry, methodsRowsPanel, methodRows);
+            methodRows.add(row);
         }
-        body.add(methodsRows);
-        body.add(detailsAddRow(methodsRows));
+        detailsRebuild(methodsRowsPanel, methodRows);
+
+        JPanel fieldsSection = new JPanel(new BorderLayout(0, 2));
+        fieldsSection.setBorder(BorderFactory.createTitledBorder("Fields"));
+        fieldsSection.add(fieldsRowsPanel, BorderLayout.CENTER);
+        fieldsSection.add(buildDetailsAddRow(fieldsRowsPanel, fieldRows), BorderLayout.SOUTH);
+
+        JPanel methodsSection = new JPanel(new BorderLayout(0, 2));
+        methodsSection.setBorder(BorderFactory.createTitledBorder("Methods"));
+        methodsSection.add(methodsRowsPanel, BorderLayout.CENTER);
+        methodsSection.add(buildDetailsAddRow(methodsRowsPanel, methodRows), BorderLayout.SOUTH);
+
+        FluidConstraint half = new FluidConstraint(12, 6, 6, 6, 6);
+        JPanel body = new JPanel(new FluidLayout(4, 4));
+        body.add(fieldsSection,  half);
+        body.add(methodsSection, half);
 
         JScrollPane scroll = new JScrollPane(body);
         scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scroll.setBorder(BorderFactory.createEmptyBorder());
-        panel.add(scroll, BorderLayout.CENTER);
 
         JButton applyBtn = new JButton("Apply Changes");
         applyBtn.addActionListener(e -> {
-            properties.put("fields",  detailsCollect(fieldsRows));
-            properties.put("methods", detailsCollect(methodsRows));
+            properties.put("fields",  detailsCollect(fieldRows));
+            properties.put("methods", detailsCollect(methodRows));
             if (onCommit != null) {
                 onCommit.run();
             }
@@ -250,24 +253,12 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         JPanel btnRow = new JPanel(new BorderLayout());
         btnRow.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
         btnRow.add(applyBtn, BorderLayout.EAST);
-        panel.add(btnRow, BorderLayout.SOUTH);
 
+        JPanel panel = new JPanel(new BorderLayout(0, 4));
+        panel.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
+        panel.add(scroll,  BorderLayout.CENTER);
+        panel.add(btnRow,  BorderLayout.SOUTH);
         return panel;
-    }
-
-    private static JLabel detailsLabel(String text) {
-        JLabel lbl = new JLabel(text);
-        lbl.setFont(lbl.getFont().deriveFont(Font.BOLD, 10f));
-        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-        lbl.setBorder(BorderFactory.createEmptyBorder(2, 0, 1, 0));
-        return lbl;
-    }
-
-    private static JSeparator detailsSeparator() {
-        JSeparator sep = new JSeparator(SwingConstants.HORIZONTAL);
-        sep.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 2));
-        return sep;
     }
 
     private static JPanel detailsVisPanel(String initial) {
@@ -296,9 +287,9 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         return "+";
     }
 
-    private static JPanel detailsMemberRow(Map<String, String> entry, JPanel rowsPanel) {
+    private static JPanel buildDetailRow(Map<String, String> entry,
+                                          JPanel rowsPanel, List<JPanel> rows) {
         JPanel row = new JPanel(new GridBagLayout());
-        row.setAlignmentX(Component.LEFT_ALIGNMENT);
         JPanel vis    = detailsVisPanel(entry.getOrDefault("visibility", "+"));
         JTextField tf = new JTextField(entry.getOrDefault("type", ""), 6);
         JTextField nf = new JTextField(entry.getOrDefault("name", ""), 10);
@@ -306,17 +297,15 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         del.setFont(del.getFont().deriveFont(10f));
         del.setFocusPainted(false);
         del.addActionListener(e -> {
-            rowsPanel.remove(row);
-            rowsPanel.revalidate();
-            rowsPanel.repaint();
+            rows.remove(row);
+            detailsRebuild(rowsPanel, rows);
         });
         detailsLayoutRow(row, vis, tf, nf, del);
         return row;
     }
 
-    private static JPanel detailsAddRow(JPanel targetRows) {
+    private static JPanel buildDetailsAddRow(JPanel rowsPanel, List<JPanel> rows) {
         JPanel row = new JPanel(new GridBagLayout());
-        row.setAlignmentX(Component.LEFT_ALIGNMENT);
         JPanel vis    = detailsVisPanel("+");
         JTextField tf = new JTextField(6);
         JTextField nf = new JTextField(10);
@@ -328,9 +317,9 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
             String t = tf.getText().trim();
             String n = nf.getText().trim();
             if (!n.isEmpty()) {
-                targetRows.add(detailsMemberRow(detailsEntry(v, t, n), targetRows));
-                targetRows.revalidate();
-                targetRows.repaint();
+                JPanel newRow = buildDetailRow(detailsEntry(v, t, n), rowsPanel, rows);
+                rows.add(newRow);
+                detailsRebuild(rowsPanel, rows);
                 ((JToggleButton) vis.getComponent(0)).setSelected(true);
                 tf.setText("");
                 nf.setText("");
@@ -338,6 +327,28 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         });
         detailsLayoutRow(row, vis, tf, nf, add);
         return row;
+    }
+
+    private static void detailsRebuild(JPanel rowsPanel, List<JPanel> rows) {
+        rowsPanel.removeAll();
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx   = 0;
+        gbc.weightx = 1.0;
+        gbc.fill    = GridBagConstraints.HORIZONTAL;
+        gbc.weighty = 0.0;
+        for (int i = 0; i < rows.size(); i++) {
+            gbc.gridy = i;
+            rowsPanel.add(rows.get(i), gbc);
+        }
+        GridBagConstraints fc = new GridBagConstraints();
+        fc.gridx   = 0;
+        fc.gridy   = rows.size();
+        fc.weightx = 1.0;
+        fc.weighty = 1.0;
+        fc.fill    = GridBagConstraints.BOTH;
+        rowsPanel.add(new JPanel(), fc);
+        rowsPanel.revalidate();
+        rowsPanel.repaint();
     }
 
     private static void detailsLayoutRow(JPanel row, JPanel vis,
@@ -364,13 +375,9 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         row.add(btn, c);
     }
 
-    private static List<Map<String, String>> detailsCollect(JPanel rowsPanel) {
+    private static List<Map<String, String>> detailsCollect(List<JPanel> rows) {
         List<Map<String, String>> list = new ArrayList<>();
-        for (Component comp : rowsPanel.getComponents()) {
-            if (!(comp instanceof JPanel)) {
-                continue;
-            }
-            JPanel row = (JPanel) comp;
+        for (JPanel row : rows) {
             Component[] ch = row.getComponents();
             if (ch.length < 3 || !(ch[0] instanceof JPanel) || !(ch[2] instanceof JTextField)) {
                 continue;

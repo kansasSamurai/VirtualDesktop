@@ -122,8 +122,10 @@ public class ClassNodeContent extends JPanel {
         stereoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         labels.add(stereoLabel);
 
+        boolean isAbstract = Boolean.TRUE.equals(properties != null ? properties.get("abstract") : null);
+        int nameStyle = isAbstract ? (Font.BOLD | Font.ITALIC) : Font.BOLD;
         JLabel nameLabel = new JLabel(name, SwingConstants.CENTER);
-        nameLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
+        nameLabel.setFont(new Font("SansSerif", nameStyle, 12));
         nameLabel.setForeground(theme.getTextColor());
         nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         labels.add(nameLabel);

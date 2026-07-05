@@ -14,6 +14,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
@@ -108,26 +109,16 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         form.add(typeLabel);
         form.add(Box.createVerticalStrut(8));
 
-        // Stereotype
-        JPanel stereoRow = new JPanel(new BorderLayout(4, 0));
-        stereoRow.add(new JLabel("Stereotype:"), BorderLayout.WEST);
-        JTextField stereoField = new JTextField((String) properties.getOrDefault("stereotype", ""));
-        stereoField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusLost(FocusEvent e) {
-                String val = stereoField.getText().trim();
-                if (!val.equals(properties.getOrDefault("stereotype", ""))) {
-                    properties.put("stereotype", val);
-                    onChanged.run();
-                }
-            }
+        // Abstract
+        JCheckBox abstractCheck = new JCheckBox("Abstract",
+            Boolean.TRUE.equals(properties.get("abstract")));
+        abstractCheck.setAlignmentX(Component.LEFT_ALIGNMENT);
+        abstractCheck.addActionListener(e -> {
+            properties.put("abstract", abstractCheck.isSelected());
+            onChanged.run();
         });
-        stereoField.addActionListener(e -> stereoField.transferFocus());
-        stereoRow.add(stereoField, BorderLayout.CENTER);
-        stereoRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        stereoRow.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, stereoRow.getPreferredSize().height));
-        form.add(stereoRow);
-        form.add(Box.createVerticalStrut(4));
+        form.add(abstractCheck);
+        form.add(Box.createVerticalStrut(6));
 
         // Name
         JPanel nameRow = new JPanel(new BorderLayout(4, 0));
@@ -148,6 +139,27 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         nameRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         nameRow.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, nameRow.getPreferredSize().height));
         form.add(nameRow);
+        form.add(Box.createVerticalStrut(4));
+
+        // Stereotype
+        JPanel stereoRow = new JPanel(new BorderLayout(4, 0));
+        stereoRow.add(new JLabel("Stereotype:"), BorderLayout.WEST);
+        JTextField stereoField = new JTextField((String) properties.getOrDefault("stereotype", ""));
+        stereoField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                String val = stereoField.getText().trim();
+                if (!val.equals(properties.getOrDefault("stereotype", ""))) {
+                    properties.put("stereotype", val);
+                    onChanged.run();
+                }
+            }
+        });
+        stereoField.addActionListener(e -> stereoField.transferFocus());
+        stereoRow.add(stereoField, BorderLayout.CENTER);
+        stereoRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        stereoRow.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, stereoRow.getPreferredSize().height));
+        form.add(stereoRow);
         form.add(Box.createVerticalStrut(8));
 
         // Header background color

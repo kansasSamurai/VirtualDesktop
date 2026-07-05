@@ -9,6 +9,8 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.LayoutManager;
+import java.awt.Rectangle;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.util.ArrayList;
@@ -29,6 +31,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
+import javax.swing.Scrollable;
 
 import org.jwellman.diagram.api.CanvasComponentFactory;
 import org.jwellman.diagram.api.CanvasTheme;
@@ -225,15 +228,15 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         JPanel fieldsSection = new JPanel(new BorderLayout(0, 2));
         fieldsSection.setBorder(BorderFactory.createTitledBorder("Fields"));
         fieldsSection.add(fieldsRowsPanel, BorderLayout.CENTER);
-        fieldsSection.add(buildDetailsAddRow(fieldsRowsPanel, fieldRows), BorderLayout.SOUTH);
+        fieldsSection.add(buildDetailsAddRow(fieldsRowsPanel, fieldRows, "-"), BorderLayout.SOUTH);
 
         JPanel methodsSection = new JPanel(new BorderLayout(0, 2));
         methodsSection.setBorder(BorderFactory.createTitledBorder("Methods"));
         methodsSection.add(methodsRowsPanel, BorderLayout.CENTER);
-        methodsSection.add(buildDetailsAddRow(methodsRowsPanel, methodRows), BorderLayout.SOUTH);
+        methodsSection.add(buildDetailsAddRow(methodsRowsPanel, methodRows, "+"), BorderLayout.SOUTH);
 
         FluidConstraint half = new FluidConstraint(12, 6, 6, 6, 6);
-        JPanel body = new JPanel(new FluidLayout(4, 4));
+        JPanel body = new ScrollablePanel(new FluidLayout(4, 4));
         body.add(fieldsSection,  half);
         body.add(methodsSection, half);
 
@@ -304,9 +307,10 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         return row;
     }
 
-    private static JPanel buildDetailsAddRow(JPanel rowsPanel, List<JPanel> rows) {
+    private static JPanel buildDetailsAddRow(JPanel rowsPanel, List<JPanel> rows,
+                                              String defaultVis) {
         JPanel row = new JPanel(new GridBagLayout());
-        JPanel vis    = detailsVisPanel("+");
+        JPanel vis    = detailsVisPanel(defaultVis);
         JTextField tf = new JTextField(6);
         JTextField nf = new JTextField(10);
         JButton add   = new JButton("+");
@@ -320,7 +324,11 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
                 JPanel newRow = buildDetailRow(detailsEntry(v, t, n), rowsPanel, rows);
                 rows.add(newRow);
                 detailsRebuild(rowsPanel, rows);
-                ((JToggleButton) vis.getComponent(0)).setSelected(true);
+                for (Component c : vis.getComponents()) {
+                    if (c instanceof JToggleButton) {
+                        ((JToggleButton) c).setSelected(defaultVis.equals(((JToggleButton) c).getText()));
+                    }
+                }
                 tf.setText("");
                 nf.setText("");
             }
@@ -434,6 +442,48 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
                                 rest.substring(0, colon).trim());
         }
         return detailsEntry(vis, "", rest);
+    }
+
+    /**
+     * JPanel that tracks the scroll pane viewport width, allowing FluidLayout to
+     * recalculate column breakpoints correctly when the enclosing window resizes.
+     * Without this, JViewport sizes the panel to its stale preferredSize rather than
+     * the current viewport width, causing content to be clipped on resize.
+     */
+    @SuppressWarnings("serial")
+    private static final class ScrollablePanel extends JPanel implements Scrollable {
+
+        ScrollablePanel(LayoutManager layout) {
+            super(layout);
+        }
+
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return 20;
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return 80;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            // Tells JViewport to resize this panel to viewport width on every layout pass
+            // instead of using the stale preferredSize from the initial render.
+            // This is what lets FluidLayout see the correct width and reflow columns.
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
+        }
     }
 
     // Color stored as "#RRGGBB" hex string for clean JSON round-trip.

@@ -130,25 +130,7 @@ public class ClassNodeContent extends JPanel {
         nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         labels.add(nameLabel);
 
-        JToggleButton editToggle = new JToggleButton("✎");
-        editToggle.setFont(editToggle.getFont().deriveFont(10f));
-        editToggle.setForeground(theme.getTextColor());
-        editToggle.setFocusPainted(false);
-        editToggle.setContentAreaFilled(false);
-        editToggle.setOpaque(false);
-        editToggle.setToolTipText("Edit fields and methods");
-        editToggle.addActionListener(e -> {
-            if (editToggle.isSelected()) {
-                enterEditMode();
-            } else {
-                commitAndShowView();
-            }
-        });
-
-        // West spacer mirrors the toggle width so the center labels stay truly centered.
-        header.add(Box.createRigidArea(editToggle.getPreferredSize()), BorderLayout.WEST);
         header.add(labels, BorderLayout.CENTER);
-        header.add(editToggle, BorderLayout.EAST);
 
         return header;
     }

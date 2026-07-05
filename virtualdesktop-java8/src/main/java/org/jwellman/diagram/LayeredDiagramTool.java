@@ -322,7 +322,8 @@ public class LayeredDiagramTool extends JPanel {
 
         CardLayout detailsCardLayout = new CardLayout();
         JPanel detailsCardPanel = new JPanel(detailsCardLayout);
-        detailsCardPanel.add(new JPanel(), "details");
+        JPanel detailsContentPane = new JPanel(new BorderLayout());
+        detailsCardPanel.add(detailsContentPane, "details");
         detailsCardPanel.add(new JPanel(), "documentation");
         detailsCardPanel.add(new JPanel(), "presentation");
 
@@ -391,7 +392,7 @@ public class LayeredDiagramTool extends JPanel {
         card.add(rightPanel,         BorderLayout.EAST);
 
         DiagramTabContent tab = new DiagramTabContent(
-            name, pane, card, propEditor, typesTabBtn, nodesPanel);
+            name, pane, card, propEditor, typesTabBtn, nodesPanel, detailsContentPane);
         wireTabListeners(tab);
         return tab;
     }
@@ -420,6 +421,8 @@ public class LayeredDiagramTool extends JPanel {
         tab.diagramPane.setSelectionListener(component -> {
             if (component instanceof NodeHostPanel && tab.factory != null) {
                 NodeHostPanel node = (NodeHostPanel) component;
+
+                // Property editor (right panel)
                 Runnable onChanged = () -> {
                     Runnable onMod = () -> tab.diagramPane.notifyModified();
                     JPanel newContent = tab.factory.createContentFor(
@@ -431,10 +434,32 @@ public class LayeredDiagramTool extends JPanel {
                     node.getNodeType(), node.getProperties(), onChanged);
                 if (editorPanel != null) {
                     tab.propertyEditor.showNodeEditor(editorPanel);
-                    return;
+                } else {
+                    tab.propertyEditor.setSelectedComponent(component);
                 }
+
+                // Details tab (bottom panel)
+                Runnable onCommit = () -> {
+                    Runnable onMod = () -> tab.diagramPane.notifyModified();
+                    JPanel newContent = tab.factory.createContentFor(
+                        node.getNodeType(), node.getProperties(), onMod);
+                    node.swapContent(newContent);
+                    tab.diagramPane.notifyModified();
+                };
+                JPanel detailsPanel = tab.factory.createDetailsPanelFor(
+                    node.getNodeType(), node.getProperties(), onCommit);
+                tab.detailsPane.removeAll();
+                if (detailsPanel != null) {
+                    tab.detailsPane.add(detailsPanel, BorderLayout.CENTER);
+                }
+                tab.detailsPane.revalidate();
+                tab.detailsPane.repaint();
+                return;
             }
             tab.propertyEditor.setSelectedComponent(component);
+            tab.detailsPane.removeAll();
+            tab.detailsPane.revalidate();
+            tab.detailsPane.repaint();
         });
         tab.diagramPane.setEdgeSelectionListener(edge -> {
             if (edge != null) {
@@ -442,6 +467,9 @@ public class LayeredDiagramTool extends JPanel {
             } else {
                 tab.propertyEditor.setSelectedComponent(null);
             }
+            tab.detailsPane.removeAll();
+            tab.detailsPane.revalidate();
+            tab.detailsPane.repaint();
         });
     }
 

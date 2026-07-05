@@ -18,13 +18,15 @@ class DiagramTabContent {
     final PropertyEditorPanel propertyEditor;
     final JToggleButton nodesTabButton;
     final JPanel nodesPanel;
+    final JPanel detailsPane;            // content area of the Details tab; populated on node selection
     CanvasComponentFactory factory;
     DiagramTabButton tabBtn;             // diagram tab bar button; set by LayeredDiagramTool.addTabCard()
     java.io.File sourceFile;             // non-null when this tab was loaded from or saved to a file
 
     DiagramTabContent(String name, DiagramLayeredPane diagramPane, JPanel tabCard,
                       PropertyEditorPanel propertyEditor,
-                      JToggleButton nodesTabButton, JPanel nodesPanel) {
+                      JToggleButton nodesTabButton, JPanel nodesPanel,
+                      JPanel detailsPane) {
         this.name = name;
         this.displayName = name;
         this.diagramPane = diagramPane;
@@ -32,5 +34,6 @@ class DiagramTabContent {
         this.propertyEditor = propertyEditor;
         this.nodesTabButton = nodesTabButton;
         this.nodesPanel = nodesPanel;
+        this.detailsPane = detailsPane;
     }
 }

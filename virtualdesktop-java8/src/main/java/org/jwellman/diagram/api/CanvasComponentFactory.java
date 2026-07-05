@@ -52,6 +52,22 @@ public interface CanvasComponentFactory {
     }
 
     /**
+     * Returns a JPanel details editor for a selected node, or {@code null} if this
+     * factory does not provide a details panel for the given type.
+     * Shown in the Details tab of the tool when a node is selected and cleared on deselection.
+     *
+     * @param nodeType   the node type string (e.g. "CLASS", "INTERFACE")
+     * @param properties the live mutable properties map of the selected node
+     * @param onCommit   callback to invoke after changes are committed; the framework
+     *                   will rebuild and swap the node's visual content in response
+     */
+    default JPanel createDetailsPanelFor(String nodeType,
+                                          Map<String, Object> properties,
+                                          Runnable onCommit) {
+        return null;
+    }
+
+    /**
      * Stable identifier used to persist the diagram's domain type.
      * Must match the name passed to {@code LayeredDiagramTool.registerDiagramType()}.
      * Returns {@code null} for plain/untyped diagrams.

@@ -113,6 +113,7 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         JCheckBox abstractCheck = new JCheckBox("Abstract",
             Boolean.TRUE.equals(properties.get("abstract")));
         abstractCheck.setAlignmentX(Component.LEFT_ALIGNMENT);
+        abstractCheck.setEnabled(!"INTERFACE".equalsIgnoreCase(nodeType));
         abstractCheck.addActionListener(e -> {
             properties.put("abstract", abstractCheck.isSelected());
             onChanged.run();

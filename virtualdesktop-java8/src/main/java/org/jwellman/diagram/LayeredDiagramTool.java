@@ -315,10 +315,80 @@ public class LayeredDiagramTool extends JPanel {
         rightPanel.setPreferredSize(new Dimension(280, 0));
         rightPanel.add(splitPane, BorderLayout.CENTER);
 
+        // --- Bottom details panel (Details / Documentation / Presentation) ---
+        final int COLLAPSED_BOTTOM_H = 30;
+        final int[] savedBottomH    = {160};
+        final boolean[] bottomOpen  = {true};
+
+        CardLayout detailsCardLayout = new CardLayout();
+        JPanel detailsCardPanel = new JPanel(detailsCardLayout);
+        detailsCardPanel.add(new JPanel(), "details");
+        detailsCardPanel.add(new JPanel(), "documentation");
+        detailsCardPanel.add(new JPanel(), "presentation");
+
+        DiagramTabButton detailsBtn = new DiagramTabButton("Details");
+        DiagramTabButton docsBtn    = new DiagramTabButton("Documentation");
+        DiagramTabButton presentBtn = new DiagramTabButton("Presentation");
+        detailsBtn.addActionListener(e -> detailsCardLayout.show(detailsCardPanel, "details"));
+        docsBtn.addActionListener(e    -> detailsCardLayout.show(detailsCardPanel, "documentation"));
+        presentBtn.addActionListener(e -> detailsCardLayout.show(detailsCardPanel, "presentation"));
+        ButtonGroup detailsGroup = new ButtonGroup();
+        detailsGroup.add(detailsBtn);
+        detailsGroup.add(docsBtn);
+        detailsGroup.add(presentBtn);
+        detailsBtn.setSelected(true);
+
+        JButton detailsCollapseBtn = new JButton("▼");
+        detailsCollapseBtn.setFont(detailsCollapseBtn.getFont().deriveFont(Font.BOLD, 10f));
+        detailsCollapseBtn.setFocusPainted(false);
+        detailsCollapseBtn.setBorderPainted(false);
+        detailsCollapseBtn.setContentAreaFilled(false);
+        detailsCollapseBtn.setForeground(new Color(60, 100, 150));
+        detailsCollapseBtn.setToolTipText("Collapse details panel");
+
+        JPanel detailsBtnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        detailsBtnRow.add(detailsBtn);
+        detailsBtnRow.add(docsBtn);
+        detailsBtnRow.add(presentBtn);
+
+        JPanel detailsTabBar = new JPanel(new BorderLayout());
+        detailsTabBar.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, separatorColor()));
+        detailsTabBar.add(detailsBtnRow, BorderLayout.CENTER);
+        detailsTabBar.add(detailsCollapseBtn, BorderLayout.EAST);
+
+        JPanel detailsPanel = new JPanel(new BorderLayout());
+        detailsPanel.setPreferredSize(new Dimension(0, 160));
+        detailsPanel.setMinimumSize(new Dimension(0, COLLAPSED_BOTTOM_H));
+        detailsPanel.add(detailsTabBar,   BorderLayout.NORTH);
+        detailsPanel.add(detailsCardPanel, BorderLayout.CENTER);
+
+        JSplitPane canvasSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT,
+            new JScrollPane(pane), detailsPanel);
+        canvasSplit.setResizeWeight(0.75);
+        canvasSplit.setDividerSize(5);
+
+        detailsCollapseBtn.addActionListener(e -> {
+            if (bottomOpen[0]) {
+                savedBottomH[0] = canvasSplit.getHeight()
+                    - canvasSplit.getDividerLocation() - canvasSplit.getDividerSize();
+                canvasSplit.setDividerLocation(
+                    canvasSplit.getHeight() - COLLAPSED_BOTTOM_H - canvasSplit.getDividerSize());
+                detailsCollapseBtn.setText("▲");
+                detailsCollapseBtn.setToolTipText("Expand details panel");
+                bottomOpen[0] = false;
+            } else {
+                canvasSplit.setDividerLocation(Math.max(0,
+                    canvasSplit.getHeight() - savedBottomH[0] - canvasSplit.getDividerSize()));
+                detailsCollapseBtn.setText("▼");
+                detailsCollapseBtn.setToolTipText("Collapse details panel");
+                bottomOpen[0] = true;
+            }
+        });
+
         JPanel card = new JPanel(new BorderLayout());
         card.add(buildToolBar(pane), BorderLayout.NORTH);
-        card.add(new JScrollPane(pane), BorderLayout.CENTER);
-        card.add(rightPanel, BorderLayout.EAST);
+        card.add(canvasSplit,        BorderLayout.CENTER);
+        card.add(rightPanel,         BorderLayout.EAST);
 
         DiagramTabContent tab = new DiagramTabContent(
             name, pane, card, propEditor, typesTabBtn, nodesPanel);

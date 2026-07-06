@@ -58,13 +58,13 @@ public class LayeredDiagramTool extends JPanel {
     private static final int LEFT_HANDLE_WIDTH  = 22;
     private static final int LEFT_CONTENT_WIDTH = 200;
     private static final int FIXED_TAB_WIDTH    = 160;   // ~20 chars at 12pt
-    private static final int COLLAPSED_BOTTOM_HEIGHTEIGHT = 30;
+    private static final int COLLAPSED_BOTTOM_HEIGHT = 30;
 
     private static final Color     ACCENT_COLOR          = new Color(60, 100, 150);
     private static final Dimension HANDLE_PANEL_SIZE     = new Dimension(LEFT_HANDLE_WIDTH, 0);
     private static final Dimension RIGHT_PANEL_SIZE      = new Dimension(280, 0);
     private static final Dimension DETAILS_PANEL_SIZE    = new Dimension(0, 160);
-    private static final Dimension COLLAPSED_PANEL_SIZE  = new Dimension(0, COLLAPSED_BOTTOM_HEIGHTEIGHT);
+    private static final Dimension COLLAPSED_PANEL_SIZE  = new Dimension(0, COLLAPSED_BOTTOM_HEIGHT);
     private static final Dimension FILE_BROWSER_SIZE     = new Dimension(640, 300);
     private static final Dimension FILE_TILE_SIZE        = new Dimension(1, 64);
 

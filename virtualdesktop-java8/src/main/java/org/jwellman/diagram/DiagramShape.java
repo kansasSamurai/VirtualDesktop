@@ -20,10 +20,13 @@ public class DiagramShape extends JComponent implements DiagramColorable, Diagra
 
     private static final long serialVersionUID = 1L;
 
+    private static final Color DEFAULT_FILL_COLOR   = new Color(173, 216, 230, 200);
+    private static final Color DEFAULT_BORDER_COLOR = new Color(70, 130, 180);
+
     public DiagramShape(ShapeType type) {
         this.type = type;
-        this.fillColor = new Color(173, 216, 230, 200);
-        this.borderColor = new Color(70, 130, 180);
+        this.fillColor = DEFAULT_FILL_COLOR;
+        this.borderColor = DEFAULT_BORDER_COLOR;
         setOpaque(false);
     }
 

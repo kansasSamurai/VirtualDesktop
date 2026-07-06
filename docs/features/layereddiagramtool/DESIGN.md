@@ -337,6 +337,8 @@ Original light-mode appearance; predates the theming system.
 
 ### How themes flow through the system
 
+**At construction time:**
+
 ```
 DiagramLayeredPane (owns the theme, defaults to WhiteprintCanvasTheme)
   │  getTheme()
@@ -353,6 +355,24 @@ DiagramLayeredPane (owns the theme, defaults to WhiteprintCanvasTheme)
 This ensures the factory, the canvas background, and the grid lines all use the same
 palette without any static state.
 
+**At runtime (Phase 4.6 — planned):**
+
+`DiagramLayeredPane.setTheme(CanvasTheme newTheme)` swaps the reference and drives a
+direct refresh cascade:
+
+```
+DiagramLayeredPane.setTheme(newTheme)
+  ├── setBackground(newTheme.getCanvasBackground())
+  ├── gridPanel.updateTheme(newTheme)
+  ├── edgePanel.setTheme(newTheme)
+  └── for each NodeHostPanel in nodeRegistry:
+        nodeHostPanel.refreshTheme(newTheme)
+          └── ClassNodeContent.refreshTheme(newTheme)   ← re-applies colors to child components
+```
+
+No listener or observer infrastructure is used. The cascade is a direct method-call loop;
+`DiagramLayeredPane` already owns the node registry and is the natural driver.
+
 **Domain class import rule:** `ClassNodeContent` is permitted to import `CanvasTheme`
 from `org.jwellman.diagram.api`. It is a pure color-palette interface with no Swing
 dependency, making it safe for domain use. The existing allowlist now includes
@@ -362,9 +382,13 @@ and `NodeHostPanel`.
 ### Adding a new theme
 
 1. Implement `CanvasTheme` (anywhere — the framework imposes no restriction on location)
-2. Pass the instance to `DiagramLayeredPane` — a `setTheme()` method can be added when
-   needed; for now, the default is `LightCanvasTheme`
-3. Pass the same instance to any `CanvasComponentFactory` constructor
+2. Call `DiagramLayeredPane.setTheme(newTheme)` — this method propagates the new palette
+   to the canvas background, grid, edges, and all live nodes via direct refresh calls
+3. The same instance is automatically available via `getDiagramPane().getTheme()` for
+   any `CanvasComponentFactory` that needs to re-query it
+
+Until Phase 4.6 ships, pass the theme at construction time:
+`new ClassDiagramFactory(diagramPane.getTheme())`.
 
 ---
 
@@ -506,3 +530,25 @@ The `null` return is an explicit "no editor" signal — the framework falls back
 `JTextField` does not forward unconsumed mouse events to its parent, which breaks drag.
 By wrapping in a `JPanel` and dispatching from the field's `MouseAdapter` up to the
 parent, the `DragHandler` on the `JPanel` receives the events it needs.
+
+### Why runtime theme switching uses a direct method-call loop rather than a listener/observer pattern
+
+Two alternatives were considered: (1) a mutable global theme singleton — mutate its
+fields, call `repaint()`; (2) an observer pattern — components register a
+`ThemeChangeListener` on the theme, which fires on change.
+
+The singleton approach fails because `ClassNodeContent` applies colors to child Swing
+components (via `setBackground()` / `setForeground()`) at construction time. Those child
+components cache the color themselves, so mutating the theme object has no effect on
+already-constructed nodes. A refresh signal is unavoidable regardless of approach.
+
+The observer pattern works but adds registration infrastructure (`addListener()` /
+`removeListener()`, a listener interface, the theme object becoming observable) for what
+is ultimately a single call site: `DiagramLayeredPane.setTheme()`. Since
+`DiagramLayeredPane` already owns the node registry, it can iterate the list and call
+`refreshTheme()` directly — no registration needed.
+
+A second reason to avoid the singleton: a mutable global theme prevents two
+`DiagramLayeredPane` instances from having independent themes simultaneously. Keeping the
+theme as an immutable reference scoped to each pane instance preserves per-window
+independence at zero extra cost.

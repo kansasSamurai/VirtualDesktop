@@ -35,18 +35,18 @@ public class DiagramText extends JPanel implements DiagramColorable, DiagramText
 
     private static final long serialVersionUID = 1L;
 
-    @SuppressWarnings("unused")
-    private static final Font DEFAULT_FONT = new Font("Segoe UI", Font.BOLD, 16);
-
-    @SuppressWarnings("unused")
-    private static final Border DEFAULT_BORDER = BorderFactory.createEmptyBorder(5, 5, 5, 5);
+    private static final Font   DEFAULT_FONT         = new Font("Segoe UI", Font.BOLD, 16);
+    private static final Border DEFAULT_BORDER       = BorderFactory.createEmptyBorder(5, 5, 5, 5);
+    private static final Color  DEFAULT_FILL_COLOR   = new Color(255, 255, 255, 200);
+    private static final Color  DEFAULT_BORDER_COLOR = new Color(70, 130, 180);
+    private static final Color  SELECTION_TINT       = new Color(100, 150, 255, 30);
 
     public DiagramText(String initialText) {
         setLayout(new BorderLayout());
 
         // Initialize colors
-        this.fillColor = new Color(255, 255, 255, 200);
-        this.borderColor = new Color(70, 130, 180);
+        this.fillColor = DEFAULT_FILL_COLOR;
+        this.borderColor = DEFAULT_BORDER_COLOR;
         this.textColor = Color.BLACK;
 
         // Initialize font properties
@@ -111,7 +111,7 @@ public class DiagramText extends JPanel implements DiagramColorable, DiagramText
 
         // Draw selection overlay when selected
         if (getBorder() instanceof ResizeBorder) {
-            g2d.setColor(new Color(100, 150, 255, 30));
+            g2d.setColor(SELECTION_TINT);
             g2d.fillRect(0, 0, width, height);
         }
     }

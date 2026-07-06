@@ -58,6 +58,27 @@ public class LayeredDiagramTool extends JPanel {
     private static final int LEFT_HANDLE_WIDTH  = 22;
     private static final int LEFT_CONTENT_WIDTH = 200;
     private static final int FIXED_TAB_WIDTH    = 160;   // ~20 chars at 12pt
+    private static final int COLLAPSED_BOTTOM_HEIGHTEIGHT = 30;
+
+    private static final Color     ACCENT_COLOR          = new Color(60, 100, 150);
+    private static final Dimension HANDLE_PANEL_SIZE     = new Dimension(LEFT_HANDLE_WIDTH, 0);
+    private static final Dimension RIGHT_PANEL_SIZE      = new Dimension(280, 0);
+    private static final Dimension DETAILS_PANEL_SIZE    = new Dimension(0, 160);
+    private static final Dimension COLLAPSED_PANEL_SIZE  = new Dimension(0, COLLAPSED_BOTTOM_HEIGHTEIGHT);
+    private static final Dimension FILE_BROWSER_SIZE     = new Dimension(640, 300);
+    private static final Dimension FILE_TILE_SIZE        = new Dimension(1, 64);
+
+    private static final javax.swing.border.Border LEFT_CONTENT_BORDER    = BorderFactory.createEmptyBorder(4, 6, 4, 0);
+    private static final javax.swing.border.Border PROJECT_TITLE_BORDER   = BorderFactory.createEmptyBorder(2, 2, 8, 2);
+    private static final javax.swing.border.Border NEW_DIAGRAM_PANEL_BORDER = BorderFactory.createEmptyBorder(0, 2, 4, 2);
+    private static final javax.swing.border.Border NEW_DIAGRAM_LABEL_BORDER = BorderFactory.createEmptyBorder(0, 0, 4, 0);
+    private static final javax.swing.border.Border EDGE_EDITOR_BORDER     = BorderFactory.createEmptyBorder(8, 8, 8, 8);
+    private static final javax.swing.border.Border RELATIONSHIPS_BORDER   = BorderFactory.createEmptyBorder();
+    private static final javax.swing.border.Border TILES_PANEL_BORDER     = BorderFactory.createEmptyBorder(4, 4, 4, 4);
+    private static final javax.swing.border.Border HEADER_ROW_BORDER      = BorderFactory.createEmptyBorder(0, 0, 6, 0);
+    private static final javax.swing.border.Border DIALOG_CONTENT_BORDER  = BorderFactory.createEmptyBorder(12, 12, 12, 12);
+    private static final javax.swing.border.Border FILE_PLACEHOLDER_BORDER = BorderFactory.createEmptyBorder(16, 16, 16, 16);
+    private static final javax.swing.border.Border FILE_TILE_INNER_BORDER  = BorderFactory.createEmptyBorder(6, 8, 6, 8);
 
     // ---------------------------------------------------------------
     // Diagram type registry
@@ -142,7 +163,7 @@ public class LayeredDiagramTool extends JPanel {
         outerSplitPane.setDividerSize(4);
         outerSplitPane.setOneTouchExpandable(false);
         leftPanel.setPreferredSize(new Dimension(savedLeftWidth, 0));
-        leftPanel.setMinimumSize(new Dimension(LEFT_HANDLE_WIDTH, 0));
+        leftPanel.setMinimumSize(HANDLE_PANEL_SIZE);
 
         setLayout(new BorderLayout());
         add(diagramTabBar, BorderLayout.NORTH);
@@ -155,28 +176,28 @@ public class LayeredDiagramTool extends JPanel {
 
     private JPanel buildLeftPanel() {
         JPanel content = new JPanel(new BorderLayout());
-        content.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 0));
+        content.setBorder(LEFT_CONTENT_BORDER);
 
         JLabel title = new JLabel("Project");
         title.setFont(title.getFont().deriveFont(Font.BOLD));
-        title.setBorder(BorderFactory.createEmptyBorder(2, 2, 8, 2));
+        title.setBorder(PROJECT_TITLE_BORDER);
         content.add(title, BorderLayout.NORTH);
 
         projectNewDiagramPanel = new JPanel();
         projectNewDiagramPanel.setLayout(new BoxLayout(projectNewDiagramPanel, BoxLayout.Y_AXIS));
-        projectNewDiagramPanel.setBorder(BorderFactory.createEmptyBorder(0, 2, 4, 2));
+        projectNewDiagramPanel.setBorder(NEW_DIAGRAM_PANEL_BORDER);
 
         JLabel newDiagramLabel = new JLabel("New Diagram");
         newDiagramLabel.setFont(newDiagramLabel.getFont().deriveFont(Font.BOLD, 11f));
         newDiagramLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        newDiagramLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 4, 0));
+        newDiagramLabel.setBorder(NEW_DIAGRAM_LABEL_BORDER);
         projectNewDiagramPanel.add(newDiagramLabel);
 
         content.add(projectNewDiagramPanel, BorderLayout.CENTER);
 
         // Always-visible collapse handle strip on the right edge
         JPanel handle = new JPanel(new BorderLayout());
-        handle.setPreferredSize(new Dimension(LEFT_HANDLE_WIDTH, 0));
+        handle.setPreferredSize(HANDLE_PANEL_SIZE);
         handle.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, separatorColor()));
 
         leftToggleBtn = new JButton("«");  // «
@@ -185,7 +206,7 @@ public class LayeredDiagramTool extends JPanel {
         leftToggleBtn.setFocusPainted(false);
         leftToggleBtn.setBorderPainted(false);
         leftToggleBtn.setContentAreaFilled(false);
-        leftToggleBtn.setForeground(new Color(60, 100, 150));
+        leftToggleBtn.setForeground(ACCENT_COLOR);
         leftToggleBtn.addActionListener(e -> toggleLeftPanel());
         handle.add(leftToggleBtn, BorderLayout.NORTH);
 
@@ -233,7 +254,7 @@ public class LayeredDiagramTool extends JPanel {
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
         btn.setContentAreaFilled(false);
-        btn.setForeground(new Color(60, 100, 150));
+        btn.setForeground(ACCENT_COLOR);
         btn.setToolTipText("Open a diagram file from Documents");
         btn.addActionListener(e -> openFileBrowser());
         return btn;
@@ -312,12 +333,11 @@ public class LayeredDiagramTool extends JPanel {
         splitPane.setDividerSize(5);
 
         JPanel rightPanel = new JPanel(new BorderLayout());
-        rightPanel.setPreferredSize(new Dimension(280, 0));
+        rightPanel.setPreferredSize(RIGHT_PANEL_SIZE);
         rightPanel.add(splitPane, BorderLayout.CENTER);
 
         // --- Bottom details panel (Details / Documentation / Presentation) ---
-        final int COLLAPSED_BOTTOM_H = 30;
-        final int[] savedBottomH    = {160};
+        final int[] savedBottomH = {160};
         final boolean[] bottomOpen  = {true};
 
         CardLayout detailsCardLayout = new CardLayout();
@@ -344,7 +364,7 @@ public class LayeredDiagramTool extends JPanel {
         detailsCollapseBtn.setFocusPainted(false);
         detailsCollapseBtn.setBorderPainted(false);
         detailsCollapseBtn.setContentAreaFilled(false);
-        detailsCollapseBtn.setForeground(new Color(60, 100, 150));
+        detailsCollapseBtn.setForeground(ACCENT_COLOR);
         detailsCollapseBtn.setToolTipText("Collapse details panel");
 
         JPanel detailsBtnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -358,8 +378,8 @@ public class LayeredDiagramTool extends JPanel {
         detailsTabBar.add(detailsCollapseBtn, BorderLayout.EAST);
 
         JPanel detailsPanel = new JPanel(new BorderLayout());
-        detailsPanel.setPreferredSize(new Dimension(0, 160));
-        detailsPanel.setMinimumSize(new Dimension(0, COLLAPSED_BOTTOM_H));
+        detailsPanel.setPreferredSize(DETAILS_PANEL_SIZE);
+        detailsPanel.setMinimumSize(COLLAPSED_PANEL_SIZE);
         detailsPanel.add(detailsTabBar,   BorderLayout.NORTH);
         detailsPanel.add(detailsCardPanel, BorderLayout.CENTER);
 
@@ -373,7 +393,7 @@ public class LayeredDiagramTool extends JPanel {
                 savedBottomH[0] = canvasSplit.getHeight()
                     - canvasSplit.getDividerLocation() - canvasSplit.getDividerSize();
                 canvasSplit.setDividerLocation(
-                    canvasSplit.getHeight() - COLLAPSED_BOTTOM_H - canvasSplit.getDividerSize());
+                    canvasSplit.getHeight() - COLLAPSED_BOTTOM_HEIGHT - canvasSplit.getDividerSize());
                 detailsCollapseBtn.setText("▲");
                 detailsCollapseBtn.setToolTipText("Expand details panel");
                 bottomOpen[0] = false;
@@ -477,7 +497,7 @@ public class LayeredDiagramTool extends JPanel {
         EdgeAttributes attrs = edge.getAttributes();
 
         JPanel panel = new JPanel(new BorderLayout(5, 5));
-        panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        panel.setBorder(EDGE_EDITOR_BORDER);
 
         JPanel form = new JPanel();
         form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
@@ -697,7 +717,7 @@ public class LayeredDiagramTool extends JPanel {
         JScrollPane scroll = new JScrollPane(listPanel);
         scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.setBorder(RELATIONSHIPS_BORDER);
 
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(scroll, BorderLayout.CENTER);
@@ -815,12 +835,12 @@ public class LayeredDiagramTool extends JPanel {
             "Open Diagram  (*.dgx, *.json)", Dialog.ModalityType.APPLICATION_MODAL);
 
         JPanel tilesPanel = new JPanel(new FluidLayout(8, 8));
-        tilesPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        tilesPanel.setBorder(TILES_PANEL_BORDER);
 
         JScrollPane scroll = new JScrollPane(tilesPanel);
         scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scroll.setPreferredSize(new Dimension(640, 300));
+        scroll.setPreferredSize(FILE_BROWSER_SIZE);
 
         javax.swing.JTextField dirField = new javax.swing.JTextField(
             defaultDir.getAbsolutePath());
@@ -836,12 +856,12 @@ public class LayeredDiagramTool extends JPanel {
         populateTiles(tilesPanel, defaultDir, dialog);
 
         JPanel headerRow = new JPanel(new BorderLayout(6, 0));
-        headerRow.setBorder(BorderFactory.createEmptyBorder(0, 0, 6, 0));
+        headerRow.setBorder(HEADER_ROW_BORDER);
         headerRow.add(new JLabel("Directory:"), BorderLayout.WEST);
         headerRow.add(dirField, BorderLayout.CENTER);
 
         JPanel content = new JPanel(new BorderLayout(0, 0));
-        content.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        content.setBorder(DIALOG_CONTENT_BORDER);
         content.add(headerRow, BorderLayout.NORTH);
         content.add(scroll, BorderLayout.CENTER);
 
@@ -860,7 +880,7 @@ public class LayeredDiagramTool extends JPanel {
         if (!dir.exists() || !dir.isDirectory()) {
             JLabel msg = new JLabel(
                 "<html><i>Directory not found:<br>" + dir.getAbsolutePath() + "</i></html>");
-            msg.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+            msg.setBorder(FILE_PLACEHOLDER_BORDER);
             tilesPanel.add(msg, FluidConstraint.FULLWIDTH);
             return;
         }
@@ -877,18 +897,18 @@ public class LayeredDiagramTool extends JPanel {
         } else {
             JLabel empty = new JLabel(
                 "<html><i>No diagram files (.dgx / .json) found.</i></html>");
-            empty.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+            empty.setBorder(FILE_PLACEHOLDER_BORDER);
             tilesPanel.add(empty, FluidConstraint.FULLWIDTH);
         }
     }
 
     private JPanel buildFileTile(java.io.File f, JDialog dialog) {
         JPanel tile = new JPanel(new BorderLayout(4, 2));
-        tile.setPreferredSize(new Dimension(1, 64));
+        tile.setPreferredSize(FILE_TILE_SIZE);
         tile.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         tile.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(separatorColor()),
-            BorderFactory.createEmptyBorder(6, 8, 6, 8)));
+            FILE_TILE_INNER_BORDER));
 
         String fullName  = f.getName();
         int dot          = fullName.lastIndexOf('.');

@@ -26,6 +26,7 @@ import javax.swing.JSeparator;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
+import javax.swing.border.Border;
 
 import org.jwellman.diagram.api.CanvasTheme;
 
@@ -48,6 +49,19 @@ public class ClassNodeContent extends JPanel {
     private static final String[] VISIBILITY_OPTIONS = {"+", "-", "#", "~"};
     private static final String CARD_VIEW = "view";
     private static final String CARD_EDIT = "edit";
+
+    private static final Font   STEREOTYPE_FONT      = new Font("SansSerif", Font.PLAIN, 9);
+    private static final Font   NAME_FONT            = new Font("SansSerif", Font.BOLD, 12);
+    private static final Font   ABSTRACT_NAME_FONT   = new Font("SansSerif", Font.BOLD | Font.ITALIC, 12);
+    private static final Font   VISIBILITY_FONT      = new Font("Monospaced", Font.BOLD, 11);
+    private static final Font   PLACEHOLDER_FONT     = new Font("SansSerif", Font.ITALIC, 11);
+    private static final Font   ENTRY_FONT           = new Font("Monospaced", Font.PLAIN, 11);
+    private static final Insets VISIBILITY_INSETS    = new Insets(1, 3, 1, 3);
+    private static final Border HEADER_BORDER        = BorderFactory.createEmptyBorder(4, 6, 4, 4);
+    private static final Border EDIT_CARD_BORDER     = BorderFactory.createEmptyBorder(2, 4, 2, 4);
+    private static final Border SECTION_LABEL_BORDER = BorderFactory.createEmptyBorder(2, 0, 1, 0);
+    private static final Border SECTION_PADDING      = BorderFactory.createEmptyBorder(3, 6, 3, 6);
+    private static final Insets ROW_INSETS           = new Insets(1, 1, 1, 1);
 
     private List<Map<String, String>> fieldsList;
     private List<Map<String, String>> methodsList;
@@ -103,7 +117,7 @@ public class ClassNodeContent extends JPanel {
                 ? headerBackground
                 : theme.getNodeHeaderBackground(nodeType);
         header.setBackground(bg);
-        header.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 4));
+        header.setBorder(HEADER_BORDER);
 
         JPanel labels = new JPanel();
         labels.setLayout(new BoxLayout(labels, BoxLayout.Y_AXIS));
@@ -118,15 +132,14 @@ public class ClassNodeContent extends JPanel {
             stereoString = " ";
         }
         JLabel stereoLabel = new JLabel(stereoString, SwingConstants.CENTER);
-        stereoLabel.setFont(new Font("SansSerif", Font.PLAIN, 9));
+        stereoLabel.setFont(STEREOTYPE_FONT);
         stereoLabel.setForeground(theme.getStereotypeTextColor());
         stereoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         labels.add(stereoLabel);
 
         boolean isAbstract = Boolean.TRUE.equals(properties != null ? properties.get("abstract") : null);
-        int nameStyle = isAbstract ? (Font.BOLD | Font.ITALIC) : Font.BOLD;
         JLabel nameLabel = new JLabel(name, SwingConstants.CENTER);
-        nameLabel.setFont(new Font("SansSerif", nameStyle, 12));
+        nameLabel.setFont(isAbstract ? ABSTRACT_NAME_FONT : NAME_FONT);
         nameLabel.setForeground(theme.getTextColor());
         nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         labels.add(nameLabel);
@@ -207,7 +220,7 @@ public class ClassNodeContent extends JPanel {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(theme.getNodeBodyBackground());
-        card.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+        card.setBorder(EDIT_CARD_BORDER);
 
         card.add(makeSectionLabel("Fields"));
 
@@ -246,7 +259,7 @@ public class ClassNodeContent extends JPanel {
         lbl.setFont(lbl.getFont().deriveFont(Font.BOLD, 10f));
         lbl.setForeground(theme.getTextColor());
         lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-        lbl.setBorder(BorderFactory.createEmptyBorder(2, 0, 1, 0));
+        lbl.setBorder(SECTION_LABEL_BORDER);
         return lbl;
     }
 
@@ -256,9 +269,9 @@ public class ClassNodeContent extends JPanel {
         ButtonGroup group = new ButtonGroup();
         for (String vis : VISIBILITY_OPTIONS) {
             JToggleButton btn = new JToggleButton(vis);
-            btn.setFont(new Font("Monospaced", Font.BOLD, 11));
+            btn.setFont(VISIBILITY_FONT);
             btn.setFocusPainted(false);
-            btn.setMargin(new Insets(1, 3, 1, 3));
+            btn.setMargin(VISIBILITY_INSETS);
             btn.setSelected(vis.equals(initialValue));
             group.add(btn);
             panel.add(btn);
@@ -298,6 +311,7 @@ public class ClassNodeContent extends JPanel {
                 ((JToggleButton) visPanel.getComponent(0)).setSelected(true);
                 typeField.setText("");
                 nameField.setText("");
+                typeField.requestFocusInWindow();
             }
         });
 
@@ -340,7 +354,7 @@ public class ClassNodeContent extends JPanel {
                                      JTextField nameField,
                                      Component actionBtn) {
         GridBagConstraints c = new GridBagConstraints();
-        c.insets = new Insets(1, 1, 1, 1);
+        c.insets = ROW_INSETS;
         c.fill = GridBagConstraints.HORIZONTAL;
         c.gridy = 0;
 
@@ -523,7 +537,7 @@ public class ClassNodeContent extends JPanel {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(theme.getNodeBodyBackground());
-        panel.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
+        panel.setBorder(SECTION_PADDING);
         return panel;
     }
 
@@ -531,13 +545,13 @@ public class ClassNodeContent extends JPanel {
         JPanel panel = makeSection();
         panel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 1, 0, theme.getTextColor()),
-            BorderFactory.createEmptyBorder(3, 6, 3, 6)));
+            SECTION_PADDING));
         return panel;
     }
 
     private JLabel makePlaceholderLabel(String text) {
         JLabel label = new JLabel("<html><i>" + text + "</i></html>");
-        label.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        label.setFont(PLACEHOLDER_FONT);
         label.setForeground(theme.getTextColor());
         label.setMinimumSize(new Dimension(0, label.getPreferredSize().height));
         return label;
@@ -545,7 +559,7 @@ public class ClassNodeContent extends JPanel {
 
     private JLabel makeEntryLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font("Monospaced", Font.PLAIN, 11));
+        label.setFont(ENTRY_FONT);
         label.setForeground(theme.getTextColor());
         label.setMinimumSize(new Dimension(0, label.getPreferredSize().height));
         return label;

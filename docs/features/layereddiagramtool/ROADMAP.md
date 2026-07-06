@@ -12,6 +12,7 @@
 | 3 | Graph model layer | ✅ Complete | `api` / `core` / `domain.cls` packages; NodeHostPanel, EdgeRenderPanel, CanvasOverlayPanel, OrthogonalRouter; class diagram demo; two-part JSON persistence |
 | 4 | Overlay-painted selection handles | ✅ Complete | Selection handles and resize moved into CanvasOverlayPanel; setBorder() and ResizeHandler cycle eliminated |
 | 4.5 | Drop shadows | ✅ Complete | ShadowLayerPanel at SHADOW_LAYER=150; multi-pass procedural shadow on graph nodes; suspended during drag; toolbar toggle |
+| 4.6 | Runtime theme switching | ⬜ Near-term | setTheme() on DiagramLayeredPane; refreshTheme() propagated to live nodes; no listener infrastructure |
 | 5 | Multi-select and group operations | ⬜ Planned | Rubber-band select; group move/align |
 | 6 | Undo / Redo | ⬜ Planned | `javax.swing.undo` stack; all mutating operations |
 | 7 | Cut / Copy / Paste components | ⬜ Planned | Within and across diagram sessions |
@@ -155,6 +156,66 @@ This avoids recomputing 13 `fillRoundRect` passes per visible node on every drag
 
 **Toolbar**: "Shadows" `JCheckBox` (default ON) calls `DiagramLayeredPane.setShadowsEnabled()`,
 which stores the preference in `boolean shadowsEnabled` so suspend/resume respects it.
+
+---
+
+## Phase 4.6 — Runtime Theme Switching
+
+**Why**: Three `CanvasTheme` implementations already exist. Swapping between them at runtime
+is a natural extension — useful for presentations, for matching the ambient LAF, and for
+future user-defined themes. The architecture is already 70% ready; the missing piece is a
+swap mechanism and a live-node refresh path.
+
+### Architecture
+
+Themes remain **immutable value objects**. Theme change means swapping the instance
+reference on `DiagramLayeredPane`, not mutating an existing object.
+
+**`DiagramLayeredPane.setTheme(CanvasTheme newTheme)`:**
+
+1. Stores the new theme reference
+2. Calls `setBackground(newTheme.getCanvasBackground())` on the pane
+3. Calls `gridPanel.updateTheme(newTheme)` — grid repaints with new line color
+4. Calls `edgePanel.setTheme(newTheme)` — edges repaint with new edge color
+5. Calls `shadowPanel.setTheme(newTheme)` if shadow color becomes theme-driven
+6. Iterates every registered `NodeHostPanel` and calls `refreshTheme(newTheme)` on each
+7. Calls `repaint()` on the pane
+
+**`NodeHostPanel.refreshTheme(CanvasTheme)`** delegates to its wrapped content panel if
+the content implements a `ThemeRefreshable` interface (or equivalent marker). For
+`ClassNodeContent`, this re-applies background and foreground colors to all child
+components set at construction time.
+
+No listener or observer infrastructure is needed. The refresh is a direct method-call
+loop inside `setTheme()` — `DiagramLayeredPane` already owns the node registry and
+naturally drives the cascade.
+
+### Toolbar
+
+A theme selector in the toolbar (dropdown or cycle button) calls `setTheme()` directly on
+the pane. No other wiring is needed.
+
+### In scope for this phase
+
+- `setTheme()` + canvas/grid/edge repaint
+- Live node `refreshTheme()` propagation
+- Toolbar theme selector
+
+### Deferred
+
+- Font methods on `CanvasTheme` — requires a `ClassNodeContent` refactor (all hardcoded
+  `new Font(...)` constructions replaced with theme queries); meaningful but scope-heavy
+- Overlay chrome colors — `CanvasOverlayPanel` static final colors (port anchors, selection
+  handles, rubber-band line) are not yet theme-connected
+- Shadow color theming — `ShadowLayerPanel` always uses black; a `getShadowColor()` method
+  on `CanvasTheme` could expose this
+
+### Verification
+
+- Switch from `WhiteprintCanvasTheme` to `BlueprintCanvasTheme` via toolbar: canvas
+  background, grid, edges, and all node colors update immediately without reopening the diagram
+- Switch back: same result
+- Two diagram windows open simultaneously hold independent theme state
 
 ---
 

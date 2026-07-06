@@ -32,6 +32,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.Scrollable;
+import javax.swing.border.Border;
 
 import org.jwellman.diagram.api.CanvasComponentFactory;
 import org.jwellman.diagram.api.CanvasTheme;
@@ -43,6 +44,15 @@ import org.jwellman.swing.layout.FluidLayout;
  * Factory for class-diagram nodes. Supports node types "CLASS" and "INTERFACE".
  */
 public class ClassDiagramFactory implements CanvasComponentFactory {
+
+    private static final Font   VISIBILITY_FONT  = new Font("Monospaced", Font.BOLD, 11);
+    private static final Insets VISIBILITY_INSETS = new Insets(1, 3, 1, 3);
+    private static final Insets ROW_INSETS        = new Insets(1, 1, 1, 1);
+    private static final Border EDITOR_PADDING    = BorderFactory.createEmptyBorder(8, 8, 8, 8);
+    private static final Border PALETTE_PADDING   = BorderFactory.createEmptyBorder(8, 8, 8, 8);
+    private static final Border EMPTY_BORDER      = BorderFactory.createEmptyBorder();
+    private static final Border BTN_ROW_BORDER    = BorderFactory.createEmptyBorder(4, 0, 0, 0);
+    private static final Border DETAILS_BORDER    = BorderFactory.createEmptyBorder(4, 6, 4, 6);
 
     private final CanvasTheme theme;
 
@@ -86,7 +96,7 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
     public JPanel createNodePalettePanel(BiConsumer<String, Map<String, Object>> addNode) {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        panel.setBorder(PALETTE_PADDING);
 
         JButton addClassBtn = new JButton("Add Class");
         addClassBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -115,7 +125,7 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
                                           Map<String, Object> properties,
                                           Runnable onChanged) {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
-        panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        panel.setBorder(EDITOR_PADDING);
 
         JPanel form = new JPanel();
         form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
@@ -243,7 +253,7 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         JScrollPane scroll = new JScrollPane(body);
         scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.setBorder(EMPTY_BORDER);
 
         JButton applyBtn = new JButton("Apply Changes");
         applyBtn.addActionListener(e -> {
@@ -254,11 +264,11 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
             }
         });
         JPanel btnRow = new JPanel(new BorderLayout());
-        btnRow.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
+        btnRow.setBorder(BTN_ROW_BORDER);
         btnRow.add(applyBtn, BorderLayout.EAST);
 
         JPanel panel = new JPanel(new BorderLayout(0, 4));
-        panel.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
+        panel.setBorder(DETAILS_BORDER);
         panel.add(scroll,  BorderLayout.CENTER);
         panel.add(btnRow,  BorderLayout.SOUTH);
         return panel;
@@ -271,9 +281,9 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         ButtonGroup g = new ButtonGroup();
         for (String vis : opts) {
             JToggleButton btn = new JToggleButton(vis);
-            btn.setFont(new Font("Monospaced", Font.BOLD, 11));
+            btn.setFont(VISIBILITY_FONT);
             btn.setFocusPainted(false);
-            btn.setMargin(new Insets(1, 3, 1, 3));
+            btn.setMargin(VISIBILITY_INSETS);
             btn.setSelected(vis.equals(initial));
             g.add(btn);
             p.add(btn);
@@ -362,7 +372,7 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
     private static void detailsLayoutRow(JPanel row, JPanel vis,
                                           JTextField tf, JTextField nf, Component btn) {
         GridBagConstraints c = new GridBagConstraints();
-        c.insets = new Insets(1, 1, 1, 1);
+        c.insets = ROW_INSETS;
         c.fill   = GridBagConstraints.HORIZONTAL;
         c.gridy  = 0;
 

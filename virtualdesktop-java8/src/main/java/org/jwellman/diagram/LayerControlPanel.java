@@ -16,6 +16,7 @@ import javax.swing.JPanel;
 import javax.swing.JToggleButton;
 import javax.swing.Timer;
 import javax.swing.UIManager;
+import javax.swing.border.Border;
 
 /**
  * Visual control panel for each layer
@@ -35,14 +36,19 @@ class LayerControlPanel extends JPanel {
 
     private static final long serialVersionUID = 1L;
 
+    private static final Font      LAYER_NAME_FONT = new Font("Arial", Font.BOLD, 12);
+    private static final Font      LAYER_LABEL_FONT = new Font("Arial", Font.PLAIN, 10);
+    private static final Dimension MAX_HEIGHT_SIZE  = new Dimension(Integer.MAX_VALUE, 40);
+    private static final Border    PANEL_BORDER     = BorderFactory.createEmptyBorder(5, 5, 5, 5);
+
     public LayerControlPanel(String layerName, Integer layerDepth, DiagramLayeredPane diagramPane) {
         this.layerName = layerName;
         this.layerDepth = layerDepth;
         this.diagramPane = diagramPane;
 
         setLayout(new BorderLayout(5, 0));
-        setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        setMaximumSize(MAX_HEIGHT_SIZE);
+        setBorder(PANEL_BORDER);
 
         // Set initial active state
         isActive = layerDepth.equals(diagramPane.getActiveLayer());
@@ -68,11 +74,11 @@ class LayerControlPanel extends JPanel {
         infoPanel.setOpaque(false);
 
         nameLabel = new JLabel(layerName);
-        nameLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        nameLabel.setFont(LAYER_NAME_FONT);
         infoPanel.add(nameLabel, BorderLayout.NORTH);
 
         countLabel = new JLabel("0 items");
-        countLabel.setFont(new Font("Arial", Font.PLAIN, 10));
+        countLabel.setFont(LAYER_LABEL_FONT);
         countLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
         infoPanel.add(countLabel, BorderLayout.SOUTH);
 
@@ -80,7 +86,7 @@ class LayerControlPanel extends JPanel {
 
         // Layer depth indicator
         JLabel depthLabel = new JLabel("" + layerDepth);
-        depthLabel.setFont(new Font("Arial", Font.PLAIN, 10));
+        depthLabel.setFont(LAYER_LABEL_FONT);
         depthLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
         add(depthLabel, BorderLayout.EAST);
 

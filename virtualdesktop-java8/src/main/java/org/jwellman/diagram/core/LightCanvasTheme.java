@@ -10,6 +10,14 @@ import org.jwellman.diagram.api.CanvasTheme;
  */
 public class LightCanvasTheme implements CanvasTheme {
 
+    private static final Color GRID_LINE        = new Color(220, 220, 220);
+    private static final Color INTERFACE_HEADER = new Color(200, 240, 200);
+    private static final Color CLASS_HEADER     = new Color(180, 210, 255);
+    private static final Color NODE_BODY        = new Color(248, 248, 248);
+    private static final Color NODE_BORDER      = new Color(120, 140, 170);
+    private static final Color STEREOTYPE_TEXT  = new Color(60, 100, 60);
+    private static final Color EDGE             = new Color(60, 60, 60);
+
     @Override
     public Color getCanvasBackground() {
         return Color.WHITE;
@@ -17,25 +25,25 @@ public class LightCanvasTheme implements CanvasTheme {
 
     @Override
     public Color getGridLineColor() {
-        return new Color(220, 220, 220);
+        return GRID_LINE;
     }
 
     @Override
     public Color getNodeHeaderBackground(String stereotype) {
         if ("INTERFACE".equalsIgnoreCase(stereotype)) {
-            return new Color(200, 240, 200);
+            return INTERFACE_HEADER;
         }
-        return new Color(180, 210, 255);
+        return CLASS_HEADER;
     }
 
     @Override
     public Color getNodeBodyBackground() {
-        return new Color(248, 248, 248);
+        return NODE_BODY;
     }
 
     @Override
     public Color getNodeBorderColor() {
-        return new Color(120, 140, 170);
+        return NODE_BORDER;
     }
 
     @Override
@@ -45,11 +53,11 @@ public class LightCanvasTheme implements CanvasTheme {
 
     @Override
     public Color getStereotypeTextColor() {
-        return new Color(60, 100, 60);
+        return STEREOTYPE_TEXT;
     }
 
     @Override
     public Color getEdgeColor() {
-        return new Color(60, 60, 60);
+        return EDGE;
     }
 }

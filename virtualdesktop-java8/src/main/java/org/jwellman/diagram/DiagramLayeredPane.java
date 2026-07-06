@@ -84,8 +84,10 @@ public class DiagramLayeredPane extends JLayeredPane {
 
     private static final long serialVersionUID = 1L;
 
+    private static final Dimension CANVAS_SIZE = new Dimension(2000, 1500);
+
     public DiagramLayeredPane() {
-        setPreferredSize(new Dimension(2000, 1500));
+        setPreferredSize(CANVAS_SIZE);
         setLayout(null); // Required for JLayeredPane
 
         // Canvas background is owned by the pane itself so it persists when the grid is hidden

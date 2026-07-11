@@ -92,7 +92,7 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecDocking",
           "title": "Docking Demo",
-          "icon": "landscape12",
+          "icon": "diagram",
           "enabled": true,
           "desktopOnly": false
         },
@@ -113,14 +113,14 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecDiagramTool",
           "title": "Diagram Tool",
-          "icon": "landscape12",
+          "icon": "diagram",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecUberDragAndDrop",
           "title": "Drag & Drop Demo",
-          "icon": "landscape12",
+          "icon": "diagram",
           "enabled": true,
           "desktopOnly": false
         },
@@ -268,6 +268,12 @@
       "class": "org.jwellman.virtualdesktop.vapps.SpecBeanShell",
       "label": "Beanshell Console",
       "icon": "terminal",
+      "enabled": true
+    },
+    {
+      "class": "org.jwellman.virtualdesktop.vapps.SpecDiagramTool",
+      "label": "Diagrams",
+      "icon": "diagram",
       "enabled": true
     },
     {

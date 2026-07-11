@@ -13,6 +13,7 @@
     { "key": "home",     "provider": "FontAwesome",    "color": "desktop" },
     { "key": "calendar", "provider": "FontAwesome",    "color": "desktop" },
     { "key": "bar_chart", "provider": "FontAwesome",    "color": "desktop" },
+    { "key": "diagram",   "provider": "FontAwesome",    "color": "desktop" },
     { "key": "file-text",   "provider": "FontAwesome",    "color": "desktop" },
     { "key": "file-word-o", "provider": "FontAwesome",    "color": "desktop" },
     { "key": "paint",        "provider": "GoogleMaterial", "color": "desktop" },

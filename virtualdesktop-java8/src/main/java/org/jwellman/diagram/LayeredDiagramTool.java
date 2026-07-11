@@ -134,6 +134,7 @@ public class LayeredDiagramTool extends JPanel {
 
     private JSplitPane outerSplitPane;
     private JButton leftToggleBtn;
+    private JButton addTabButton;
     private int savedLeftWidth = LEFT_CONTENT_WIDTH + LEFT_HANDLE_WIDTH;
     private boolean leftExpanded = true;
 
@@ -155,7 +156,8 @@ public class LayeredDiagramTool extends JPanel {
         diagramCardPanel = new JPanel(diagramCardLayout);
 
         addTabCard(tabs.get(0));
-        diagramTabBar.add(buildAddTabButton());
+        addTabButton = buildAddTabButton();
+        diagramTabBar.add(addTabButton);
         diagramCardLayout.show(diagramCardPanel, tabs.get(0).name);
 
         JPanel leftPanel = buildLeftPanel();
@@ -406,13 +408,15 @@ public class LayeredDiagramTool extends JPanel {
             }
         });
 
+        JButton[] saveBtnRef = new JButton[1];
         JPanel card = new JPanel(new BorderLayout());
-        card.add(buildToolBar(pane), BorderLayout.NORTH);
+        card.add(buildToolBar(pane, saveBtnRef), BorderLayout.NORTH);
         card.add(canvasSplit,        BorderLayout.CENTER);
         card.add(rightPanel,         BorderLayout.EAST);
 
         DiagramTabContent tab = new DiagramTabContent(
             name, pane, card, propEditor, typesTabBtn, nodesPanel, detailsContentPane);
+        tab.saveBtn = saveBtnRef[0];
         wireTabListeners(tab);
         return tab;
     }
@@ -591,12 +595,70 @@ public class LayeredDiagramTool extends JPanel {
         tab.tabBtn = btn;
         diagramTabGroup.add(btn);
 
+        JPanel tabWrapper = wrapTabWithCloseButton(btn, tab);
+
         int insertIdx = diagramTabBar.getComponentCount();
-        if (insertIdx > 0 && !(diagramTabBar.getComponent(insertIdx - 1) instanceof DiagramTabButton)) {
+        if (insertIdx > 0 && diagramTabBar.getComponent(insertIdx - 1) == addTabButton) {
             insertIdx--;  // insert before the "+" button
         }
-        diagramTabBar.add(btn, insertIdx);
+        diagramTabBar.add(tabWrapper, insertIdx);
         btn.setSelected(true);
+        diagramTabBar.revalidate();
+        diagramTabBar.repaint();
+    }
+
+    private JPanel wrapTabWithCloseButton(DiagramTabButton tabBtn, DiagramTabContent tab) {
+        JButton closeBtn = new JButton("×");
+        closeBtn.setFont(closeBtn.getFont().deriveFont(Font.BOLD, 12f));
+        closeBtn.setFocusPainted(false);
+        closeBtn.setBorderPainted(false);
+        closeBtn.setContentAreaFilled(false);
+        closeBtn.setMargin(new java.awt.Insets(0, 2, 0, 6));
+        closeBtn.setToolTipText("Close diagram");
+        closeBtn.addActionListener(e -> closeTab(tab));
+
+        JPanel wrapper = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        wrapper.setOpaque(false);
+        wrapper.add(tabBtn);
+        wrapper.add(closeBtn);
+        return wrapper;
+    }
+
+    private void closeTab(DiagramTabContent tab) {
+        int option = JOptionPane.showConfirmDialog(
+            this,
+            "Save changes to \"" + tab.displayName + "\" before closing?",
+            "Close Diagram",
+            JOptionPane.YES_NO_CANCEL_OPTION,
+            JOptionPane.WARNING_MESSAGE
+        );
+        if (option == JOptionPane.CANCEL_OPTION || option == JOptionPane.CLOSED_OPTION) {
+            return;
+        }
+        if (option == JOptionPane.YES_OPTION) {
+            if (tab.sourceFile != null) {
+                quickSaveDiagram(tab.diagramPane);
+            } else {
+                saveDiagram(tab.diagramPane);
+            }
+        }
+        removeTab(tab);
+    }
+
+    private void removeTab(DiagramTabContent tab) {
+        diagramCardPanel.remove(tab.tabCard);
+        diagramTabBar.remove(tab.tabBtn.getParent());
+        diagramTabGroup.remove(tab.tabBtn);
+        tabs.remove(tab);
+
+        if (tabs.isEmpty()) {
+            createNewTab(pane -> null);
+        } else if (activeTab == tab) {
+            DiagramTabContent fallback = tabs.get(tabs.size() - 1);
+            selectTab(fallback);
+            fallback.tabBtn.setSelected(true);
+        }
+
         diagramTabBar.revalidate();
         diagramTabBar.repaint();
     }
@@ -728,7 +790,7 @@ public class LayeredDiagramTool extends JPanel {
     // Per-tab toolbar
     // ---------------------------------------------------------------
 
-    private JToolBar buildToolBar(DiagramLayeredPane pane) {
+    private JToolBar buildToolBar(DiagramLayeredPane pane, JButton[] saveBtnRef) {
         JToolBar tb = new JToolBar();
         tb.setFloatable(false);
 
@@ -794,13 +856,19 @@ public class LayeredDiagramTool extends JPanel {
 
         tb.addSeparator();
 
-        JButton saveBtn = new JButton("Save Diagram");
-        saveBtn.addActionListener(e -> saveDiagram(pane));
-        tb.add(saveBtn);
-
-        JButton loadBtn = new JButton("Load Diagram");
+        JButton loadBtn = new JButton("Load");
         loadBtn.addActionListener(e -> loadDiagram(pane));
         tb.add(loadBtn);
+
+        JButton saveBtn = new JButton("Save");
+        saveBtn.setEnabled(false);   // enabled once the tab has a source file (loaded or Saved As)
+        saveBtn.addActionListener(e -> quickSaveDiagram(pane));
+        tb.add(saveBtn);
+        saveBtnRef[0] = saveBtn;
+
+        JButton saveAsBtn = new JButton("Save as...");
+        saveAsBtn.addActionListener(e -> saveDiagram(pane));
+        tb.add(saveAsBtn);
 
         tb.addSeparator();
 
@@ -963,6 +1031,7 @@ public class LayeredDiagramTool extends JPanel {
         try {
             tab.diagramPane.loadDiagram(file);
             tab.sourceFile = file;
+            tab.saveBtn.setEnabled(true);
             setModified(false);
             updateTabDisplayName(tab, fileBaseName(file.getName()));
         } catch (Exception ex) {
@@ -976,6 +1045,22 @@ public class LayeredDiagramTool extends JPanel {
     // ---------------------------------------------------------------
     // Save / load (per-tab pane)
     // ---------------------------------------------------------------
+
+    private void quickSaveDiagram(DiagramLayeredPane pane) {
+        DiagramTabContent tab = findTabForPane(pane);
+        if (tab == null || tab.sourceFile == null) {
+            return;
+        }
+        try {
+            pane.setDomainType(tab.factory != null ? tab.factory.getDomainTypeId() : null);
+            pane.saveDiagram(tab.sourceFile);
+            setModified(false);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error saving diagram: " + ex.getMessage(),
+                "Save Error", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+    }
 
     private void saveDiagram(DiagramLayeredPane pane) {
         DiagramTabContent tab = findTabForPane(pane);
@@ -1011,6 +1096,7 @@ public class LayeredDiagramTool extends JPanel {
                 setModified(false);
                 if (tab != null) {
                     tab.sourceFile = file;
+                    tab.saveBtn.setEnabled(true);
                     updateTabDisplayName(tab, fileBaseName(file.getName()));
                 }
                 JOptionPane.showMessageDialog(this, "Diagram saved successfully!",
@@ -1041,6 +1127,7 @@ public class LayeredDiagramTool extends JPanel {
                 setModified(false);
                 if (tab != null) {
                     tab.sourceFile = file;
+                    tab.saveBtn.setEnabled(true);
                     updateTabDisplayName(tab, fileBaseName(file.getName()));
                     updateNodesPanel(tab);
                 }

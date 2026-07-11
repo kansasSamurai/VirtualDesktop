@@ -54,9 +54,14 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
     private static final Border BTN_ROW_BORDER    = BorderFactory.createEmptyBorder(4, 0, 0, 0);
     private static final Border DETAILS_BORDER    = BorderFactory.createEmptyBorder(4, 6, 4, 6);
 
-    private final CanvasTheme theme;
+    private CanvasTheme theme;
 
     public ClassDiagramFactory(CanvasTheme theme) {
+        this.theme = theme;
+    }
+
+    @Override
+    public void setTheme(CanvasTheme theme) {
         this.theme = theme;
     }
 

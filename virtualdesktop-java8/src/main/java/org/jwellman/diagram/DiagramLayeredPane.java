@@ -30,6 +30,7 @@ import org.jwellman.diagram.api.GraphEdge;
 import org.jwellman.diagram.api.GraphNode;
 import org.jwellman.diagram.core.WhiteprintCanvasTheme;
 import org.jwellman.diagram.core.CanvasOverlayPanel;
+import org.jwellman.diagram.core.CanvasThemeRegistry;
 import org.jwellman.diagram.core.DefaultGraphEdge;
 import org.jwellman.diagram.core.EdgeRenderPanel;
 import org.jwellman.diagram.core.NodeHostPanel;
@@ -73,6 +74,10 @@ public class DiagramLayeredPane extends JLayeredPane {
 
     // Canvas theme — controls all colors on the canvas surface and its nodes
     private CanvasTheme theme = new WhiteprintCanvasTheme();
+
+    // Name of a theme referenced by a loaded file that could not be resolved;
+    // cleared by getAndClearThemeWarning() once the caller has shown the warning.
+    private String unresolvedThemeName;
 
     // Graph model
     private EdgeRenderPanel edgePanel;
@@ -233,6 +238,7 @@ public class DiagramLayeredPane extends JLayeredPane {
         DiagramData diagram = new DiagramData();
         diagram.setVersion(FileVersion.current());
         diagram.setDomainType(domainType);
+        diagram.setThemeName(theme.getThemeName());
         diagram.setGridSize(gridSize);
         diagram.setSnapToGrid(snapToGrid);
         diagram.setActiveLayer(activeLayer);
@@ -333,6 +339,17 @@ public class DiagramLayeredPane extends JLayeredPane {
         gridSize = diagram.getGridSize();
         snapToGrid = diagram.isSnapToGrid();
         activeLayer = diagram.getActiveLayer();
+
+        unresolvedThemeName = null;
+        String themeName = diagram.getThemeName();
+        if (themeName != null) {
+            CanvasTheme loadedTheme = CanvasThemeRegistry.byName(themeName);
+            if (loadedTheme != null) {
+                setTheme(loadedTheme);
+            } else {
+                unresolvedThemeName = themeName;
+            }
+        }
 
         // Restore decorative layers
         if (diagram.getLayers() != null) {
@@ -736,6 +753,44 @@ public class DiagramLayeredPane extends JLayeredPane {
         return theme;
     }
 
+    /**
+     * Swaps the active theme and cascades the new palette to the canvas
+     * background, grid, edges, the component factory, and every live graph node.
+     */
+    public void setTheme(CanvasTheme newTheme) {
+        this.theme = newTheme;
+        setBackground(newTheme.getCanvasBackground());
+        gridPanel.setGridLineColor(newTheme.getGridLineColor());
+        edgePanel.setTheme(newTheme);
+
+        if (componentFactory != null) {
+            componentFactory.setTheme(newTheme);
+            for (GraphNode node : graphNodes.values()) {
+                if (node instanceof NodeHostPanel) {
+                    NodeHostPanel nhp = (NodeHostPanel) node;
+                    JPanel newContent = componentFactory.createContentFor(
+                        nhp.getNodeType(), nhp.getProperties(), () -> notifyModified());
+                    nhp.swapContent(newContent);
+                }
+            }
+        }
+
+        revalidate();
+        repaint();
+        notifyModified();
+    }
+
+    /**
+     * Returns the name of a theme referenced by the last loaded file that could not
+     * be resolved, clearing it in the process. Returns {@code null} if the last load
+     * had no unresolved theme (or no file has been loaded yet).
+     */
+    public String getAndClearThemeWarning() {
+        String warning = unresolvedThemeName;
+        unresolvedThemeName = null;
+        return warning;
+    }
+
     public void setShowGrid(boolean show) {
         this.showGrid = show;
         gridPanel.setVisible(show);
@@ -786,6 +841,11 @@ public class DiagramLayeredPane extends JLayeredPane {
             this.gridSize = gridSize;
             this.gridLineColor = gridLineColor;
             setOpaque(false);
+        }
+
+        public void setGridLineColor(Color gridLineColor) {
+            this.gridLineColor = gridLineColor;
+            repaint();
         }
 
         @Override

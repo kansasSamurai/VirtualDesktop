@@ -8,6 +8,7 @@ import java.util.List;
 public class DiagramData {
     private FileVersion version;
     private String domainType;
+    private String themeName;
     private int gridSize;
     private boolean snapToGrid;
     private int activeLayer;
@@ -28,6 +29,14 @@ public class DiagramData {
 
     public void setDomainType(String domainType) {
         this.domainType = domainType;
+    }
+
+    public String getThemeName() {
+        return themeName;
+    }
+
+    public void setThemeName(String themeName) {
+        this.themeName = themeName;
     }
 
     public int getGridSize() {

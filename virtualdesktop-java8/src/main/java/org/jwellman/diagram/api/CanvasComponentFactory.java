@@ -91,4 +91,12 @@ public interface CanvasComponentFactory {
     default JPanel createNodePalettePanel(BiConsumer<String, Map<String, Object>> addNode) {
         return null;
     }
+
+    /**
+     * Updates the theme this factory uses for subsequently created node content.
+     * Called by {@code DiagramLayeredPane.setTheme()} during a runtime theme switch.
+     * The default is a no-op for factories that do not hold a theme reference.
+     */
+    default void setTheme(CanvasTheme theme) {
+    }
 }

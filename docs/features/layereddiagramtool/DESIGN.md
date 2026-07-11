@@ -33,10 +33,11 @@ embeds a semantic version block.
 LayeredDiagramTool (JPanel)
 ├── JToolBar (NORTH)
 │     Add Rectangle / Triangle / Circle / Text
-│     Show Grid / Snap to Grid toggles
+│     Show Grid / Snap to Grid / Shadows toggles
+│     Theme selector (JComboBox) — runtime theme switching, per tab
 │     Bring Forward / Send Back
 │     Delete Selected
-│     Save / Load
+│     Load / Save / Save as...
 │     Connect (JToggleButton) — enters edge-creation mode on the canvas overlay
 ├── JScrollPane > DiagramLayeredPane (CENTER)
 │     GridPanel            @ GRID_LAYER (0)          — 20px grid lines, setOpaque(false)
@@ -81,7 +82,7 @@ LayeredDiagramTool (JPanel)
 
 | Class | Role |
 | --- | --- |
-| `DiagramData` | Root object: `FileVersion version`, `gridSize`, `snapToGrid`, `activeLayer`, `List<LayerData>`, optional `SemanticGraphData` |
+| `DiagramData` | Root object: `FileVersion version`, `domainType`, `themeName`, `gridSize`, `snapToGrid`, `activeLayer`, `List<LayerData>`, optional `SemanticGraphData` |
 | `FileVersion` | Value object: `major`, `minor`, `patch` ints + `CURRENT_*` constants + `current()` factory; `toString()` → `"0.1.0"` |
 | `UnsupportedFormatException` | Thrown by `DiagramLayeredPane.validateFormat()` when the file's major version exceeds the supported maximum |
 | `LayerData` | One layer: `layerDepth`, `visible`, `List<ComponentData>` |
@@ -246,6 +247,7 @@ with `UnsupportedFormatException` before any canvas state is touched.
 ```json
 {
   "version": { "major": 0, "minor": 1, "patch": 0 },
+  "themeName": "Whiteprint",
   "gridSize": 20,
   "snapToGrid": true,
   "activeLayer": 200,
@@ -355,40 +357,67 @@ DiagramLayeredPane (owns the theme, defaults to WhiteprintCanvasTheme)
 This ensures the factory, the canvas background, and the grid lines all use the same
 palette without any static state.
 
-**At runtime (Phase 4.6 — planned):**
+**At runtime (Phase 4.6 — complete):**
 
 `DiagramLayeredPane.setTheme(CanvasTheme newTheme)` swaps the reference and drives a
-direct refresh cascade:
+direct cascade:
 
 ```
 DiagramLayeredPane.setTheme(newTheme)
   ├── setBackground(newTheme.getCanvasBackground())
-  ├── gridPanel.updateTheme(newTheme)
+  ├── gridPanel.setGridLineColor(newTheme.getGridLineColor())
   ├── edgePanel.setTheme(newTheme)
-  └── for each NodeHostPanel in nodeRegistry:
-        nodeHostPanel.refreshTheme(newTheme)
-          └── ClassNodeContent.refreshTheme(newTheme)   ← re-applies colors to child components
+  └── componentFactory.setTheme(newTheme), then for each live NodeHostPanel:
+        content = componentFactory.createContentFor(nodeType, properties, onModified)
+        nodeHostPanel.swapContent(content)
 ```
 
-No listener or observer infrastructure is used. The cascade is a direct method-call loop;
-`DiagramLayeredPane` already owns the node registry and is the natural driver.
+Rather than introduce a `refreshTheme()` / `ThemeRefreshable` cascade into domain content
+classes, node recoloring reuses the **existing rebuild-and-swap path** that already runs
+after a property-editor commit (`createContentFor()` + `swapContent()`). This means
+`ClassNodeContent` needed no new theming API at all — a theme switch simply rebuilds each
+node's content panel from its live `properties` map using the factory's now-updated theme.
+`CanvasComponentFactory.setTheme(CanvasTheme)` is a new default no-op method that
+theme-aware factories (`ClassDiagramFactory`) override to update their held theme reference
+before the rebuild loop runs.
 
-**Domain class import rule:** `ClassNodeContent` is permitted to import `CanvasTheme`
-from `org.jwellman.diagram.api`. It is a pure color-palette interface with no Swing
-dependency, making it safe for domain use. The existing allowlist now includes
-`CanvasTheme` alongside `CanvasComponentFactory`, `EdgeAttributes`, `DefaultGraphEdge`,
-and `NodeHostPanel`.
+No listener or observer infrastructure is used. The cascade is a direct method-call loop;
+`DiagramLayeredPane` already owns the node registry and the component factory reference,
+and is the natural driver.
+
+**`CanvasTheme.getThemeName()`** is a stable identifier (`"Whiteprint"`, `"Blueprint"`,
+`"Light"`) used by two consumers: the toolbar's theme `JComboBox` (populated from
+`CanvasThemeRegistry.names()`) and diagram persistence (see below).
+
+**`CanvasThemeRegistry`** (`org.jwellman.diagram.core`) is a simple name → theme-instance
+lookup table. `byName(String)` returns a fresh instance or `null` if unregistered;
+`names()` returns all registered names in registration order for the toolbar dropdown.
+
+### Theme persistence
+
+`DiagramData.themeName` is written on save (`theme.getThemeName()`) and read on load.
+On load, `DiagramLayeredPane`:
+
+- resolves the name via `CanvasThemeRegistry.byName(...)`
+- if found, calls `setTheme(...)` **before** the semantic graph section is restored, so
+  freshly-created graph nodes are built with the correct theme immediately (no double
+  rebuild)
+- if the name is present but unresolvable (e.g. a theme from a build that no longer ships
+  it), the pane keeps whatever theme it already has and records the unresolved name;
+  `DiagramLayeredPane.getAndClearThemeWarning()` lets the caller retrieve and clear it
+- `LayeredDiagramTool` checks this after every load and shows a warning dialog if non-null
+  — the diagram still loads successfully with the default/current theme
 
 ### Adding a new theme
 
-1. Implement `CanvasTheme` (anywhere — the framework imposes no restriction on location)
-2. Call `DiagramLayeredPane.setTheme(newTheme)` — this method propagates the new palette
-   to the canvas background, grid, edges, and all live nodes via direct refresh calls
-3. The same instance is automatically available via `getDiagramPane().getTheme()` for
+1. Implement `CanvasTheme` (anywhere — the framework imposes no restriction on location),
+   including a unique `getThemeName()`
+2. Register it in `CanvasThemeRegistry`'s static initializer
+3. Call `DiagramLayeredPane.setTheme(newTheme)` (or select it from the toolbar dropdown) —
+   this propagates the new palette to the canvas background, grid, edges, the component
+   factory, and all live nodes
+4. The same instance is automatically available via `getDiagramPane().getTheme()` for
    any `CanvasComponentFactory` that needs to re-query it
-
-Until Phase 4.6 ships, pass the theme at construction time:
-`new ClassDiagramFactory(diagramPane.getTheme())`.
 
 ---
 

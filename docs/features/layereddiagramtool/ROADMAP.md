@@ -12,7 +12,7 @@
 | 3 | Graph model layer | ✅ Complete | `api` / `core` / `domain.cls` packages; NodeHostPanel, EdgeRenderPanel, CanvasOverlayPanel, OrthogonalRouter; class diagram demo; two-part JSON persistence |
 | 4 | Overlay-painted selection handles | ✅ Complete | Selection handles and resize moved into CanvasOverlayPanel; setBorder() and ResizeHandler cycle eliminated |
 | 4.5 | Drop shadows | ✅ Complete | ShadowLayerPanel at SHADOW_LAYER=150; multi-pass procedural shadow on graph nodes; suspended during drag; toolbar toggle |
-| 4.6 | Runtime theme switching | ⬜ Near-term | setTheme() on DiagramLayeredPane; refreshTheme() propagated to live nodes; no listener infrastructure |
+| 4.6 | Runtime theme switching | ✅ Complete | setTheme() on DiagramLayeredPane; toolbar selector; theme persisted with diagram; unresolved theme on load warns and falls back to default |
 | 5 | Multi-select and group operations | ⬜ Planned | Rubber-band select; group move/align |
 | 6 | Undo / Redo | ⬜ Planned | `javax.swing.undo` stack; all mutating operations |
 | 7 | Cut / Copy / Paste components | ⬜ Planned | Within and across diagram sessions |
@@ -159,49 +159,47 @@ which stores the preference in `boolean shadowsEnabled` so suspend/resume respec
 
 ---
 
-## Phase 4.6 — Runtime Theme Switching
+## Phase 4.6 — Runtime Theme Switching ✅
 
 **Why**: Three `CanvasTheme` implementations already exist. Swapping between them at runtime
 is a natural extension — useful for presentations, for matching the ambient LAF, and for
-future user-defined themes. The architecture is already 70% ready; the missing piece is a
-swap mechanism and a live-node refresh path.
+future user-defined themes.
 
-### Architecture
+### What shipped
 
-Themes remain **immutable value objects**. Theme change means swapping the instance
-reference on `DiagramLayeredPane`, not mutating an existing object.
+Themes remain **immutable value objects**; switching means swapping the instance reference,
+not mutating one in place. The actual implementation differs from the originally-sketched
+`refreshTheme()`/`ThemeRefreshable` cascade — it reuses the existing content-rebuild path
+instead of adding a new one:
 
-**`DiagramLayeredPane.setTheme(CanvasTheme newTheme)`:**
+- `CanvasTheme` gained `getThemeName()` — a stable identifier used by the toolbar selector
+  and by persistence. All three implementations (`WhiteprintCanvasTheme`,
+  `BlueprintCanvasTheme`, `LightCanvasTheme`) implement it.
+- `CanvasThemeRegistry` (`org.jwellman.diagram.core`) — name → theme-instance lookup table
+  backing both the toolbar dropdown and file-load resolution.
+- `CanvasComponentFactory.setTheme(CanvasTheme)` — new default no-op method; domain
+  factories that hold a theme reference (`ClassDiagramFactory`) override it to update
+  their field.
+- `DiagramLayeredPane.setTheme(CanvasTheme newTheme)`:
+  1. Stores the new theme reference
+  2. `setBackground(newTheme.getCanvasBackground())` on the pane itself
+  3. `gridPanel.setGridLineColor(newTheme.getGridLineColor())`
+  4. `edgePanel.setTheme(newTheme)` (repaints with the new edge color)
+  5. `componentFactory.setTheme(newTheme)`, then for every live `NodeHostPanel`:
+     `componentFactory.createContentFor(nodeType, properties, onModified)` followed by
+     `nhp.swapContent(newContent)` — the same rebuild-and-swap path already used after a
+     property-editor commit, so no new per-component recoloring logic was needed in
+     `ClassNodeContent`
+- **Toolbar**: a `JComboBox<String>` ("Theme:") per diagram tab, populated from
+  `CanvasThemeRegistry.names()`, calling `pane.setTheme(...)` on selection.
+- **Persistence**: `DiagramData.themeName` is written on save (`theme.getThemeName()`) and
+  read on load. If the name resolves via `CanvasThemeRegistry`, `setTheme()` is called
+  before the semantic graph is restored (so new nodes are built with the correct theme
+  immediately, no double-rebuild). If the name is present but unresolvable, the pane keeps
+  its current theme and `LayeredDiagramTool` shows a warning dialog after the load
+  completes (`DiagramLayeredPane.getAndClearThemeWarning()`); the diagram still loads.
 
-1. Stores the new theme reference
-2. Calls `setBackground(newTheme.getCanvasBackground())` on the pane
-3. Calls `gridPanel.updateTheme(newTheme)` — grid repaints with new line color
-4. Calls `edgePanel.setTheme(newTheme)` — edges repaint with new edge color
-5. Calls `shadowPanel.setTheme(newTheme)` if shadow color becomes theme-driven
-6. Iterates every registered `NodeHostPanel` and calls `refreshTheme(newTheme)` on each
-7. Calls `repaint()` on the pane
-
-**`NodeHostPanel.refreshTheme(CanvasTheme)`** delegates to its wrapped content panel if
-the content implements a `ThemeRefreshable` interface (or equivalent marker). For
-`ClassNodeContent`, this re-applies background and foreground colors to all child
-components set at construction time.
-
-No listener or observer infrastructure is needed. The refresh is a direct method-call
-loop inside `setTheme()` — `DiagramLayeredPane` already owns the node registry and
-naturally drives the cascade.
-
-### Toolbar
-
-A theme selector in the toolbar (dropdown or cycle button) calls `setTheme()` directly on
-the pane. No other wiring is needed.
-
-### In scope for this phase
-
-- `setTheme()` + canvas/grid/edge repaint
-- Live node `refreshTheme()` propagation
-- Toolbar theme selector
-
-### Deferred
+### Deferred (unchanged from original plan)
 
 - Font methods on `CanvasTheme` — requires a `ClassNodeContent` refactor (all hardcoded
   `new Font(...)` constructions replaced with theme queries); meaningful but scope-heavy
@@ -212,10 +210,13 @@ the pane. No other wiring is needed.
 
 ### Verification
 
-- Switch from `WhiteprintCanvasTheme` to `BlueprintCanvasTheme` via toolbar: canvas
-  background, grid, edges, and all node colors update immediately without reopening the diagram
+- Switch from Whiteprint to Blueprint via the toolbar dropdown: canvas background, grid,
+  edges, and all node colors update immediately without reopening the diagram
 - Switch back: same result
-- Two diagram windows open simultaneously hold independent theme state
+- Two diagram tabs open simultaneously hold independent theme state
+- Save a diagram, reload it: the same theme is restored
+- Hand-edit a saved file's `themeName` to a bogus value and load it: a warning dialog
+  appears and the diagram loads with the default theme
 
 ---
 

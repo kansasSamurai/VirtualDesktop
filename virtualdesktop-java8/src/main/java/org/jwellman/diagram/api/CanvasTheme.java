@@ -14,6 +14,9 @@ import java.awt.Color;
  */
 public interface CanvasTheme {
 
+    /** Stable identifier used for the toolbar selector and persistence. */
+    String getThemeName();
+
     /** Background color of the canvas surface. */
     Color getCanvasBackground();
 

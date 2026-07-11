@@ -35,7 +35,7 @@ public class EdgeRenderPanel extends JPanel {
     private final List<GraphEdge> edges = new ArrayList<>();
     private final Map<String, GraphNode> nodeIndex;
     private final EdgeRouter router;
-    private final CanvasTheme theme;
+    private CanvasTheme theme;
 
     // Populated during paintComponent, consumed by findEdgeAt.
     private final Map<String, Path2D> cachedPaths = new HashMap<>();
@@ -86,6 +86,11 @@ public class EdgeRenderPanel extends JPanel {
 
     public void setSelectedEdge(GraphEdge edge) {
         this.selectedEdge = edge;
+        repaint();
+    }
+
+    public void setTheme(CanvasTheme theme) {
+        this.theme = theme;
         repaint();
     }
 

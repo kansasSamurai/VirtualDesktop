@@ -30,6 +30,11 @@ public class WhiteprintCanvasTheme implements CanvasTheme {
     private static final Color STEEL_BLUE   = new Color(0x4A, 0x7A, 0xBF); // #4A7ABF — stereotype label
 
     @Override
+    public String getThemeName() {
+        return "Whiteprint";
+    }
+
+    @Override
     public Color getCanvasBackground() {
         return OFF_WHITE;
     }

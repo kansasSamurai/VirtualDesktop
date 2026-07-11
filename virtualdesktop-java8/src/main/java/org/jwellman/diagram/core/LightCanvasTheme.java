@@ -19,6 +19,11 @@ public class LightCanvasTheme implements CanvasTheme {
     private static final Color EDGE             = new Color(60, 60, 60);
 
     @Override
+    public String getThemeName() {
+        return "Light";
+    }
+
+    @Override
     public Color getCanvasBackground() {
         return Color.WHITE;
     }

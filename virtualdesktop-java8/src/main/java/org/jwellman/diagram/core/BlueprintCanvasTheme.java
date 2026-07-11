@@ -29,6 +29,11 @@ public class BlueprintCanvasTheme implements CanvasTheme {
     private static final Color ICE_BLUE       = new Color(0xE6, 0xF2, 0xFF); // #E6F2FF — stereotype label (lighter tint)
 
     @Override
+    public String getThemeName() {
+        return "Blueprint";
+    }
+
+    @Override
     public Color getCanvasBackground() {
         return PRUSSIAN_BLUE;
     }

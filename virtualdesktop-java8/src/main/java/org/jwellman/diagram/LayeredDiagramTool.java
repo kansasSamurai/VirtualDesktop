@@ -26,6 +26,7 @@ import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -41,9 +42,11 @@ import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.jwellman.diagram.api.CanvasComponentFactory;
+import org.jwellman.diagram.api.CanvasTheme;
 import org.jwellman.diagram.api.EdgeAttributes;
 import org.jwellman.diagram.api.GraphEdge;
 import org.jwellman.diagram.api.RelationshipType;
+import org.jwellman.diagram.core.CanvasThemeRegistry;
 import org.jwellman.diagram.core.NodeHostPanel;
 import org.jwellman.swing.layout.FluidConstraint;
 import org.jwellman.swing.layout.FluidLayout;
@@ -408,15 +411,16 @@ public class LayeredDiagramTool extends JPanel {
             }
         });
 
-        JButton[] saveBtnRef = new JButton[1];
+        ToolBarBundle toolBarBundle = buildToolBar(pane);
         JPanel card = new JPanel(new BorderLayout());
-        card.add(buildToolBar(pane, saveBtnRef), BorderLayout.NORTH);
+        card.add(toolBarBundle.toolBar, BorderLayout.NORTH);
         card.add(canvasSplit,        BorderLayout.CENTER);
         card.add(rightPanel,         BorderLayout.EAST);
 
         DiagramTabContent tab = new DiagramTabContent(
             name, pane, card, propEditor, typesTabBtn, nodesPanel, detailsContentPane);
-        tab.saveBtn = saveBtnRef[0];
+        tab.saveBtn = toolBarBundle.saveBtn;
+        tab.themeCombo = toolBarBundle.themeCombo;
         wireTabListeners(tab);
         return tab;
     }
@@ -790,7 +794,20 @@ public class LayeredDiagramTool extends JPanel {
     // Per-tab toolbar
     // ---------------------------------------------------------------
 
-    private JToolBar buildToolBar(DiagramLayeredPane pane, JButton[] saveBtnRef) {
+    /** Bundles the toolbar with the handful of buttons other methods need to reach later. */
+    private static final class ToolBarBundle {
+        final JToolBar toolBar;
+        final JButton saveBtn;
+        final JComboBox<String> themeCombo;
+
+        ToolBarBundle(JToolBar toolBar, JButton saveBtn, JComboBox<String> themeCombo) {
+            this.toolBar = toolBar;
+            this.saveBtn = saveBtn;
+            this.themeCombo = themeCombo;
+        }
+    }
+
+    private ToolBarBundle buildToolBar(DiagramLayeredPane pane) {
         JToolBar tb = new JToolBar();
         tb.setFloatable(false);
 
@@ -840,6 +857,21 @@ public class LayeredDiagramTool extends JPanel {
         shadowCheck.addActionListener(e -> pane.setShadowsEnabled(shadowCheck.isSelected()));
         tb.add(shadowCheck);
 
+        tb.addSeparator();
+
+        tb.add(new JLabel("Theme:"));
+        JComboBox<String> themeCombo = new JComboBox<>(CanvasThemeRegistry.names());
+        themeCombo.setSelectedItem(pane.getTheme().getThemeName());
+        themeCombo.addActionListener(e -> {
+            CanvasTheme selected = CanvasThemeRegistry.byName((String) themeCombo.getSelectedItem());
+            if (selected != null) {
+                pane.setTheme(selected);
+            }
+        });
+        tb.add(themeCombo);
+
+        tb.addSeparator();
+
         JButton bringForwardBtn = new JButton("Bring Forward");
         bringForwardBtn.addActionListener(e -> pane.bringSelectedForward());
         tb.add(bringForwardBtn);
@@ -864,7 +896,6 @@ public class LayeredDiagramTool extends JPanel {
         saveBtn.setEnabled(false);   // enabled once the tab has a source file (loaded or Saved As)
         saveBtn.addActionListener(e -> quickSaveDiagram(pane));
         tb.add(saveBtn);
-        saveBtnRef[0] = saveBtn;
 
         JButton saveAsBtn = new JButton("Save as...");
         saveAsBtn.addActionListener(e -> saveDiagram(pane));
@@ -882,7 +913,7 @@ public class LayeredDiagramTool extends JPanel {
         });
         tb.add(connectBtn);
 
-        return tb;
+        return new ToolBarBundle(tb, saveBtn, themeCombo);
     }
 
     // ---------------------------------------------------------------
@@ -1032,13 +1063,29 @@ public class LayeredDiagramTool extends JPanel {
             tab.diagramPane.loadDiagram(file);
             tab.sourceFile = file;
             tab.saveBtn.setEnabled(true);
-            setModified(false);
             updateTabDisplayName(tab, fileBaseName(file.getName()));
+            syncThemeAfterLoad(tab);
+            setModified(false);   // last: syncThemeAfterLoad's combo sync can itself trigger a spurious modification
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
                 "Error loading diagram: " + ex.getMessage(),
                 "Load Error", JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Reflects the pane's post-load theme in the toolbar selector, and warns the user
+     * if the file referenced a theme name that could not be resolved (the pane keeps
+     * whatever theme it already had — effectively the default for a fresh tab).
+     */
+    private void syncThemeAfterLoad(DiagramTabContent tab) {
+        tab.themeCombo.setSelectedItem(tab.diagramPane.getTheme().getThemeName());
+        String themeWarning = tab.diagramPane.getAndClearThemeWarning();
+        if (themeWarning != null) {
+            JOptionPane.showMessageDialog(this,
+                "Theme \"" + themeWarning + "\" was not found. Loaded the diagram with the default theme instead.",
+                "Theme Not Found", JOptionPane.WARNING_MESSAGE);
         }
     }
 
@@ -1124,13 +1171,14 @@ public class LayeredDiagramTool extends JPanel {
                 // Factory must be set before loading so graph node restoration works.
                 preApplyFactory(file, pane, tab);
                 pane.loadDiagram(file);
-                setModified(false);
                 if (tab != null) {
                     tab.sourceFile = file;
                     tab.saveBtn.setEnabled(true);
                     updateTabDisplayName(tab, fileBaseName(file.getName()));
                     updateNodesPanel(tab);
+                    syncThemeAfterLoad(tab);
                 }
+                setModified(false);   // last: syncThemeAfterLoad's combo sync can itself trigger a spurious modification
                 JOptionPane.showMessageDialog(this, "Diagram loaded successfully!",
                     "Load Complete", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {

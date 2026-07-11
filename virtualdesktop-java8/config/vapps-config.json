@@ -99,13 +99,20 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecSmartGrid",
           "title": "Smart Grid",
-          "icon": "table1",
+          "icon": "table",
           "enabled": true,
           "desktopOnly": false
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecCalendarDemo",
           "title": "Year Calendar",
+          "icon": "calendar",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecJDatePicker",
+          "title": "Date Picker",
           "icon": "calendar",
           "enabled": true,
           "desktopOnly": false
@@ -121,6 +128,13 @@
           "class": "org.jwellman.virtualdesktop.vapps.SpecUberDragAndDrop",
           "title": "Drag & Drop Demo",
           "icon": "diagram",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecLuceneManagement",
+          "title": "Lucene Management",
+          "icon": "server",
           "enabled": true,
           "desktopOnly": false
         },
@@ -148,7 +162,7 @@
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecJFreeChart",
           "title": "JFreeChart Demo",
-          "icon": "extension",
+          "icon": "line_chart",
           "enabled": true,
           "desktopOnly": false
         },
@@ -167,16 +181,9 @@
           "desktopOnly": false
         },
         {
-          "class": "org.jwellman.virtualdesktop.vapps.SpecJDatePicker",
-          "title": "Date Picker",
-          "icon": "calendar",
-          "enabled": true,
-          "desktopOnly": false
-        },
-        {
           "class": "org.jwellman.virtualdesktop.vapps.SpecVfsFileChooser2",
           "title": "VFS File Chooser",
-          "icon": "briefcase58",
+          "icon": "folder-open",
           "enabled": true,
           "desktopOnly": false
         },
@@ -203,8 +210,8 @@
         },
         {
           "class": "org.jwellman.virtualdesktop.vapps.SpecHtmlViewer",
-          "title": "HTML Viewer",
-          "icon": "internet56",
+          "title": "Template Renderer",
+          "icon": "google-chrome",
           "enabled": true,
           "desktopOnly": false,
           "attrs": {
@@ -226,13 +233,6 @@
           "class": "org.jwellman.virtualdesktop.vapps.SpecScriptTester",
           "title": "Script Tester",
           "icon": "file-text",
-          "enabled": true,
-          "desktopOnly": false
-        },
-        {
-          "class": "org.jwellman.virtualdesktop.vapps.SpecLuceneManagement",
-          "title": "Lucene Management",
-          "icon": "server",
           "enabled": true,
           "desktopOnly": false
         },

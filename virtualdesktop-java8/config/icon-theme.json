@@ -13,9 +13,12 @@
     { "key": "home",     "provider": "FontAwesome",    "color": "desktop" },
     { "key": "calendar", "provider": "FontAwesome",    "color": "desktop" },
     { "key": "bar_chart", "provider": "FontAwesome",    "color": "desktop" },
+    { "key": "line_chart", "provider": "FontAwesome",    "color": "desktop" },
     { "key": "diagram",   "provider": "FontAwesome",    "color": "desktop" },
     { "key": "file-text",   "provider": "FontAwesome",    "color": "desktop" },
     { "key": "file-word-o", "provider": "FontAwesome",    "color": "desktop" },
+    { "key": "folder-open", "provider": "FontAwesome",    "color": "desktop" },
+    { "key": "google-chrome", "provider": "FontAwesome",    "color": "desktop" },
     { "key": "paint",        "provider": "GoogleMaterial", "color": "desktop" },
     { "key": "calculator",  "provider": "FontAwesome",    "color": "desktop" },
     { "key": "svg",  "provider": "FontAwesome",    "color": "desktop" },
@@ -26,6 +29,7 @@
     { "key": "cloud_download",    "provider": "GoogleMaterial", "color": "desktop" },
     { "key": "extension",    "provider": "GoogleMaterial", "color": "desktop" },
     { "key": "power_off",   "provider": "FontAwesome",    "color": "desktop" },
-    { "key": "settings",    "provider": "FontAwesome",    "color": "desktop" }
+    { "key": "settings",    "provider": "FontAwesome",    "color": "desktop" },
+    { "key": "table",    "provider": "FontAwesome",    "color": "desktop" }
   ]
 }

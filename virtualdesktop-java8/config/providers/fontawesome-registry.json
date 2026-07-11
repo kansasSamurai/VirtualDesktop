@@ -1,14 +1,18 @@
 {
   "home":     "HOME",
   "bar_chart": "BAR_CHART",
+  "line_chart": "LINE_CHART",
   "calendar": "CALENDAR",
   "calculator":  "CALCULATOR",
+  "google-chrome":  "CHROME",
   "diagram": "PICTURE_O",
   "file-text":   "FILE_TEXT",
   "file-word-o": "FILE_WORD_O",
+  "folder-open": "FOLDER_OPEN_O",
   "play": "PLAY",
   "server": "SERVER",
   "svg": "PICTURE_O",
   "power_off": "POWER_OFF",
-  "settings": "COG"
+  "settings": "COG",
+  "table": "TABLE"
 }

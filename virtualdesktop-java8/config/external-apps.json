@@ -16,7 +16,7 @@
     },
     {
       "name": "Command.exe",
-      "command": "cmd.exe",
+      "command": "start cmd",
       "icon": "terminal",
       "desktopOnly": true,
       "waitForCompletion": false

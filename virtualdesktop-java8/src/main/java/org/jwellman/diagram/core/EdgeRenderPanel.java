@@ -174,36 +174,50 @@ public class EdgeRenderPanel extends JPanel {
         }
         g2d.draw(path);
 
-        if (attrs.getArrowType() != EdgeAttributes.ArrowType.NONE) {
-            Point approachPt = router.getApproachPoint(startPt, srcPort, endPt, tgtPort);
-            drawArrowhead(g2d, approachPt, endPt, attrs, edgeColor);
-        }
+        // Target-end decoration (triangle or diamond — both are valid on either end)
+        Point targetApproach = router.getApproachPoint(startPt, srcPort, endPt, tgtPort);
+        drawEndDecoration(g2d, attrs.getArrowType(), endPt, targetApproach, edgeColor, attrs.getStrokeWidth());
 
-        if (attrs.getSourceArrowType() == EdgeAttributes.ArrowType.OPEN_DIAMOND ||
-                attrs.getSourceArrowType() == EdgeAttributes.ArrowType.FILLED_DIAMOND) {
-            Point sourceApproach = sourceApproachPoint(startPt, srcPort);
-            boolean filled = attrs.getSourceArrowType() == EdgeAttributes.ArrowType.FILLED_DIAMOND;
-            drawDiamond(g2d, sourceApproach, startPt, filled, edgeColor, attrs.getStrokeWidth());
+        // Source-end decoration
+        Point sourceApproach = sourceApproachPoint(startPt, srcPort);
+        drawEndDecoration(g2d, attrs.getSourceArrowType(), startPt, sourceApproach, edgeColor, attrs.getStrokeWidth());
+    }
+
+    /** Dispatches to the correct glyph for one end's {@link EdgeAttributes.ArrowType}. Symmetric — usable on either end. */
+    private void drawEndDecoration(Graphics2D g2d, EdgeAttributes.ArrowType type,
+                                   Point tip, Point approach, Color color, float strokeWidth) {
+        switch (type) {
+            case OPEN:
+            case FILLED:
+                drawArrowhead(g2d, approach, tip, type == EdgeAttributes.ArrowType.FILLED, color, strokeWidth);
+                break;
+            case OPEN_DIAMOND:
+            case FILLED_DIAMOND:
+                drawDiamond(g2d, approach, tip, type == EdgeAttributes.ArrowType.FILLED_DIAMOND, color, strokeWidth);
+                break;
+            case NONE:
+            default:
+                break;
         }
     }
 
-    private void drawArrowhead(Graphics2D g2d, Point start, Point end,
-                               EdgeAttributes attrs, Color color) {
-        double angle = Math.atan2(end.y - start.y, end.x - start.x);
+    private void drawArrowhead(Graphics2D g2d, Point approach, Point tip,
+                               boolean filled, Color color, float strokeWidth) {
+        double angle = Math.atan2(tip.y - approach.y, tip.x - approach.x);
 
-        int ax1 = (int) (end.x - ARROW_SIZE * Math.cos(angle - Math.PI / 6));
-        int ay1 = (int) (end.y - ARROW_SIZE * Math.sin(angle - Math.PI / 6));
-        int ax2 = (int) (end.x - ARROW_SIZE * Math.cos(angle + Math.PI / 6));
-        int ay2 = (int) (end.y - ARROW_SIZE * Math.sin(angle + Math.PI / 6));
+        int ax1 = (int) (tip.x - ARROW_SIZE * Math.cos(angle - Math.PI / 6));
+        int ay1 = (int) (tip.y - ARROW_SIZE * Math.sin(angle - Math.PI / 6));
+        int ax2 = (int) (tip.x - ARROW_SIZE * Math.cos(angle + Math.PI / 6));
+        int ay2 = (int) (tip.y - ARROW_SIZE * Math.sin(angle + Math.PI / 6));
 
         Polygon arrowHead = new Polygon();
-        arrowHead.addPoint(end.x, end.y);
+        arrowHead.addPoint(tip.x, tip.y);
         arrowHead.addPoint(ax1, ay1);
         arrowHead.addPoint(ax2, ay2);
 
-        g2d.setColor(color);
-        g2d.setStroke(new BasicStroke(attrs.getStrokeWidth()));
-        if (attrs.getArrowType() == EdgeAttributes.ArrowType.FILLED) {
+        g2d.setStroke(new BasicStroke(strokeWidth));
+        if (filled) {
+            g2d.setColor(color);
             g2d.fill(arrowHead);
         } else {
             // OPEN: hollow closed triangle — fill with canvas background then stroke
@@ -214,7 +228,11 @@ public class EdgeRenderPanel extends JPanel {
         }
     }
 
-    /** Returns a point DIAMOND_SIZE pixels from the port in the port's outward direction. */
+    /**
+     * Returns a point DIAMOND_SIZE pixels from the port in the port's outward direction.
+     * Despite the name, used as the approach point for any source-end decoration
+     * (triangle or diamond) — unlike the target end, it is not router-path-aware.
+     */
     private static Point sourceApproachPoint(Point portPt, String portId) {
         int d = DIAMOND_SIZE;
         if ("N".equals(portId)) {
@@ -233,7 +251,7 @@ public class EdgeRenderPanel extends JPanel {
     }
 
     /**
-     * Draws a diamond decoration at {@code tip} (the source port).
+     * Draws a diamond decoration at {@code tip} (either end's port).
      * {@code approach} is a point along the edge outward from the port, used to
      * compute the diamond's orientation.
      */

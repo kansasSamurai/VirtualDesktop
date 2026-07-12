@@ -277,7 +277,10 @@ public class LayeredDiagramTool extends JPanel {
 
         // --- Top half: domain-specific tabs (Types + Relationships) ---
         JPanel nodesPanel = new JPanel(new BorderLayout());
-        JPanel relationshipsPanel = buildRelationshipsPanel(pane);
+        // Populated below via updateRelationshipsPanel() once the tab exists — starts
+        // as the generic picker (no factory yet) and is swapped to the UML preset list
+        // if/when a class-diagram factory is assigned.
+        JPanel relationshipsPanel = new JPanel(new BorderLayout());
 
         CardLayout topCardLayout = new CardLayout();
         JPanel topCardPanel = new JPanel(topCardLayout);
@@ -420,10 +423,11 @@ public class LayeredDiagramTool extends JPanel {
         card.add(rightPanel,         BorderLayout.EAST);
 
         DiagramTabContent tab = new DiagramTabContent(
-            name, pane, card, propEditor, typesTabBtn, nodesPanel, detailsContentPane);
+            name, pane, card, propEditor, typesTabBtn, nodesPanel, relationshipsPanel, detailsContentPane);
         tab.saveBtn = toolBarBundle.saveBtn;
         tab.themeCombo = toolBarBundle.themeCombo;
         wireTabListeners(tab);
+        updateRelationshipsPanel(tab);
         return tab;
     }
 
@@ -717,6 +721,7 @@ public class LayeredDiagramTool extends JPanel {
             tab.factory = factory;
             tab.diagramPane.setComponentFactory(factory);
             updateNodesPanel(tab);
+            updateRelationshipsPanel(tab);
         }
         tabs.add(tab);
         addTabCard(tab);
@@ -756,7 +761,23 @@ public class LayeredDiagramTool extends JPanel {
     // Relationships panel
     // ---------------------------------------------------------------
 
-    private JPanel buildRelationshipsPanel(DiagramLayeredPane pane) {
+    /**
+     * Rebuilds the Relationships tab content for the current domain type: the
+     * named UML preset list for a class-diagram factory, or the generic
+     * line-style + per-end arrow picker when no factory is set (plain diagrams).
+     * Called whenever a tab's factory is assigned or changes.
+     */
+    private void updateRelationshipsPanel(DiagramTabContent tab) {
+        tab.relationshipsPanel.removeAll();
+        JPanel content = (tab.factory != null)
+            ? buildUmlRelationshipsPanel(tab.diagramPane)
+            : buildGenericRelationshipsPanel(tab.diagramPane);
+        tab.relationshipsPanel.add(content, BorderLayout.CENTER);
+        tab.relationshipsPanel.revalidate();
+        tab.relationshipsPanel.repaint();
+    }
+
+    private JPanel buildUmlRelationshipsPanel(DiagramLayeredPane pane) {
         final List<RelationshipControlPanel> tiles = new ArrayList<>();
 
         JPanel listPanel = new JPanel();
@@ -790,6 +811,121 @@ public class LayeredDiagramTool extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(scroll, BorderLayout.CENTER);
         return panel;
+    }
+
+    /**
+     * Generic relationship picker for domain-less (plain) diagrams: a line-style
+     * row (Solid / Dashed) followed by independent Left Arrow / Right Arrow rows,
+     * each offering all five {@code EdgeAttributes.ArrowType} values. Left maps to
+     * the edge's source end, Right to its target end, matching the left/right
+     * convention already used by RelationshipControlPanel's preview painting.
+     */
+    private JPanel buildGenericRelationshipsPanel(DiagramLayeredPane pane) {
+        EdgeAttributes attrs = new EdgeAttributes();
+        attrs.setLineStyle(EdgeAttributes.LineStyle.SOLID);
+        attrs.setArrowType(EdgeAttributes.ArrowType.NONE);
+        attrs.setSourceArrowType(EdgeAttributes.ArrowType.NONE);
+
+        JPanel content = new JPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
+
+        // --- Line style ---
+        JLabel lineLabel = new JLabel("Line Style");
+        lineLabel.setFont(lineLabel.getFont().deriveFont(Font.BOLD, 11f));
+        lineLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(lineLabel);
+        content.add(Box.createVerticalStrut(4));
+
+        JPanel lineRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        lineRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        final List<LineStyleButton> lineButtons = new ArrayList<>();
+        Consumer<LineStyleButton> onLineSelected = selected -> {
+            for (LineStyleButton b : lineButtons) {
+                b.setActive(b == selected);
+            }
+            attrs.setLineStyle(selected.getLineStyleValue());
+            pane.applyRelationship(attrs);
+        };
+        LineStyleButton solidBtn  = new LineStyleButton(EdgeAttributes.LineStyle.SOLID,  "Solid line",  onLineSelected);
+        LineStyleButton dashedBtn = new LineStyleButton(EdgeAttributes.LineStyle.DASHED, "Dashed line", onLineSelected);
+        lineButtons.add(solidBtn);
+        lineButtons.add(dashedBtn);
+        lineRow.add(solidBtn);
+        lineRow.add(dashedBtn);
+        content.add(lineRow);
+        content.add(Box.createVerticalStrut(10));
+
+        // --- Left arrow (source end) / Right arrow (target end) ---
+        content.add(buildArrowRow("Left Arrow", false, attrs, pane,
+            (a, type) -> a.setSourceArrowType(type)));
+        content.add(Box.createVerticalStrut(10));
+        content.add(buildArrowRow("Right Arrow", true, attrs, pane,
+            (a, type) -> a.setArrowType(type)));
+
+        // Pre-select defaults (Solid / None / None) and apply once, after all
+        // three rows exist, so a single applyRelationship() call covers the lot.
+        solidBtn.setActive(true);
+        pane.applyRelationship(attrs);
+
+        JScrollPane scroll = new JScrollPane(content);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scroll.setBorder(RELATIONSHIPS_BORDER);
+
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(scroll, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel buildArrowRow(String label, boolean pointRight, EdgeAttributes attrs,
+            DiagramLayeredPane pane, BiConsumer<EdgeAttributes, EdgeAttributes.ArrowType> setter) {
+        JPanel section = new JPanel();
+        section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
+        section.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel rowLabel = new JLabel(label);
+        rowLabel.setFont(rowLabel.getFont().deriveFont(Font.BOLD, 11f));
+        rowLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        section.add(rowLabel);
+        section.add(Box.createVerticalStrut(4));
+
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        final List<ArrowEndButton> buttons = new ArrayList<>();
+        Consumer<ArrowEndButton> onSelected = selected -> {
+            for (ArrowEndButton b : buttons) {
+                b.setActive(b == selected);
+            }
+            setter.accept(attrs, selected.getArrowTypeValue());
+            pane.applyRelationship(attrs);
+        };
+
+        EdgeAttributes.ArrowType[] types = {
+            EdgeAttributes.ArrowType.NONE,
+            EdgeAttributes.ArrowType.OPEN,
+            EdgeAttributes.ArrowType.FILLED,
+            EdgeAttributes.ArrowType.OPEN_DIAMOND,
+            EdgeAttributes.ArrowType.FILLED_DIAMOND
+        };
+        String[] tooltips = { "None", "Open", "Filled", "Open Diamond", "Filled Diamond" };
+
+        ArrowEndButton defaultBtn = null;
+        for (int i = 0; i < types.length; i++) {
+            ArrowEndButton btn = new ArrowEndButton(types[i], pointRight, tooltips[i], onSelected);
+            buttons.add(btn);
+            row.add(btn);
+            if (types[i] == EdgeAttributes.ArrowType.NONE) {
+                defaultBtn = btn;
+            }
+        }
+        if (defaultBtn != null) {
+            defaultBtn.setActive(true);
+        }
+
+        section.add(row);
+        return section;
     }
 
     // ---------------------------------------------------------------
@@ -1100,6 +1236,7 @@ public class LayeredDiagramTool extends JPanel {
         preApplyFactory(file, tab.diagramPane, tab);
         if (tab.factory != null) {
             updateNodesPanel(tab);
+            updateRelationshipsPanel(tab);
         }
         tabs.add(tab);
         addTabCard(tab);
@@ -1221,6 +1358,7 @@ public class LayeredDiagramTool extends JPanel {
                     tab.saveBtn.setEnabled(true);
                     updateTabDisplayName(tab, fileBaseName(file.getName()));
                     updateNodesPanel(tab);
+                    updateRelationshipsPanel(tab);
                     syncThemeAfterLoad(tab);
                 }
                 setModified(false);   // last: syncThemeAfterLoad's combo sync can itself trigger a spurious modification
@@ -1262,6 +1400,7 @@ public class LayeredDiagramTool extends JPanel {
         activeTab.factory = factory;
         activeTab.diagramPane.setComponentFactory(factory);
         updateNodesPanel(activeTab);
+        updateRelationshipsPanel(activeTab);
     }
 
     public DiagramLayeredPane getDiagramPane() {

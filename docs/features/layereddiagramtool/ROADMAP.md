@@ -14,6 +14,7 @@
 | 4.5 | Drop shadows | ✅ Complete | ShadowLayerPanel at SHADOW_LAYER=150; multi-pass procedural shadow on graph nodes; suspended during drag; toolbar toggle |
 | 4.6 | Runtime theme switching | ✅ Complete | setTheme() on DiagramLayeredPane; toolbar selector; theme persisted with diagram; unresolved theme on load warns and falls back to default |
 | 5 | Multi-select and group operations | ✅ Complete | Rubber-band select; ctrl-click toggle; group move; align/distribute; Select All; multi-delete |
+| 5.5 | Hover-to-connect (implicit edge creation) | ⬜ Planned | Hover a node to reveal its ports; drag port-to-port without toggling "Connect"; hover disabled while anything is selected |
 | 6 | Undo / Redo | ⬜ Planned | `javax.swing.undo` stack; all mutating operations |
 | 7 | Cut / Copy / Paste components | ⬜ Planned | Within and across diagram sessions |
 | 8 | Layer management enhancements | ⬜ Planned | Rename layers; reorder layers; lock layers |
@@ -250,11 +251,16 @@ click on a component that is *already* part of a multi-selection leaves the whol
 selected (so the drag that follows moves everything); a plain click on anything else
 collapses to a single selection as before.
 
-**Group move:** `DragHandler` snapshots the start bounds of every selected component at
-`mousePressed` when the pressed component is part of a multi-selection, then applies the
-same press-to-current delta to each of them on every `mouseDragged` event (with
-per-component grid snapping), unified with the single-component path through one
-`moveTo()` helper.
+**Group move:** `DragHandler` snapshots the start bounds of every component to be
+dragged at `mousePressed` — the whole selection if the pressed component is part of it,
+otherwise just the pressed component alone — then applies one delta to all of them on
+every `mouseDragged` event (with per-component grid snapping), unifying single- and
+multi-component drags into one path. The delta is measured by converting both the press
+point and the current point into `DiagramLayeredPane`'s coordinate space via
+`SwingUtilities.convertPoint()` rather than using the dragged component's own
+(shifting) local coordinates — an initial version used the latter and undertracked the
+mouse by roughly half during group drags, with visible jitter under snap-to-grid; see
+`DESIGN.md`'s Known Design Decisions for the full analysis.
 
 **Align / Distribute:** `DiagramLayeredPane.alignSelected(Alignment)` (6-value enum:
 `LEFT`, `CENTER_HORIZONTAL`, `RIGHT`, `TOP`, `MIDDLE_VERTICAL`, `BOTTOM`) aligns every

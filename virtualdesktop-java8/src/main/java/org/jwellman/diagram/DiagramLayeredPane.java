@@ -24,6 +24,8 @@ import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.Scrollable;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
 import org.jwellman.diagram.api.CanvasComponentFactory;
@@ -47,7 +49,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 /**
  * Custom JLayeredPane with grid, layer management, and graph model support.
  */
-public class DiagramLayeredPane extends JLayeredPane {
+public class DiagramLayeredPane extends JLayeredPane implements Scrollable {
 
     // Define layer constants
     public static final Integer GRID_LAYER       = new Integer(0);
@@ -1057,6 +1059,37 @@ public class DiagramLayeredPane extends JLayeredPane {
             }
         }
         return counts;
+    }
+
+    // ---------------------------------------------------------------
+    // Scrollable — without this, JScrollPane falls back to a tiny default
+    // unit increment (a few px), making mouse-wheel scrolling over the
+    // 2000x1500 canvas feel unusably slow.
+    // ---------------------------------------------------------------
+
+    @Override
+    public Dimension getPreferredScrollableViewportSize() {
+        return getPreferredSize();
+    }
+
+    @Override
+    public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+        return gridSize * 2;
+    }
+
+    @Override
+    public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+        return (orientation == SwingConstants.VERTICAL) ? visibleRect.height : visibleRect.width;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportWidth() {
+        return false;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportHeight() {
+        return false;
     }
 
     // ---------------------------------------------------------------

@@ -216,24 +216,22 @@ Edge selection is mutually exclusive with component selection: selecting an edge
 ### Drag
 
 `DragHandler` is installed on every component at add time (after the selection listener,
-see above) and lives for the component's lifetime. On `mousePressed`, it checks whether
-the pressed component is part of a multi-selection
-(`layeredPane.getSelectedComponents()`); if so, it snapshots the current bounds of every
-selected component into a `Map<Component, Rectangle>`. On each `mouseDragged` event:
+see above) and lives for the component's lifetime. On `mousePressed`, it snapshots the
+current bounds of every component to be dragged into a `Map<Component, Rectangle>` —
+the whole selection if the pressed component is part of it, otherwise just the pressed
+component alone. On each `mouseDragged` event:
 
-1. Compute `dx/dy` from the original press point to the current point
-2. **Single selection** — add the delta to the pressed component's current bounds
-   (unchanged from the pre-Phase-5 behavior)
-3. **Multi-selection** — add the same delta to each component's *snapshotted* start
-   bounds, so the whole group moves together with one uniform offset
-4. If snap-to-grid is on, round each component's `x`/`y` to the nearest 20px multiple
+1. Compute `dx/dy` as the distance from the press point to the current point, with both
+   points converted into `DiagramLayeredPane`'s coordinate space via
+   `SwingUtilities.convertPoint()` (see Known Design Decisions for why this matters)
+2. Add that one delta to each component's *snapshotted* start bounds — single and
+   multi-selection share this same loop, since a single selection is just a
+   one-entry map
+3. If snap-to-grid is on, round each component's `x`/`y` to the nearest 20px multiple
    independently
-5. `setBounds()` on each moved component, then `revalidate()` + `repaint()` on the pane
-6. For each moved component that implements `GraphNode`, call
+4. `setBounds()` on each moved component, then `revalidate()` + `repaint()` on the pane
+5. For each moved component that implements `GraphNode`, call
    `layeredPane.notifyNodeMoved(nodeId)` so `EdgeRenderPanel` repaints affected edges
-
-Both paths funnel through one `moveTo()` helper, so grid snapping and `GraphNode`
-notification are identical for single and group drags.
 
 ### Resize
 
@@ -576,6 +574,31 @@ feature than uniform group translation. Phase 5 shipped group *move* only; group
 is left for a future phase if it turns out to be needed. A multi-selection instead gets a
 plain highlight outline per component with no handles, making the restriction visually
 obvious rather than silently doing nothing on drag.
+
+### Why `DragHandler` measures mouse delta in `DiagramLayeredPane`'s coordinate space, not the dragged component's own
+
+An earlier version of the Phase 5 group-move code computed `dx`/`dy` as
+`e.getPoint()` (component-relative) minus the press point, then added that delta to a
+*fixed* start-bounds snapshot taken once at `mousePressed`. This looks reasonable but is
+wrong: `e.getPoint()` is relative to the dragged component's *current* on-screen
+position, which itself changes every time `setBounds()` moves it mid-gesture. Combining
+a delta measured in that shifting frame with a fixed start-bounds snapshot creates a
+feedback loop — each frame's computed position depends on the previous frame's snapped
+output, which in turn skews the next delta measurement. Worked out algebraically, the
+loop converges to roughly half the true mouse movement per event, with visible
+stutter that snap-to-grid quantization made worse. (The pre-existing single-component
+drag path avoided this by re-reading `comp.getBounds()` fresh every event instead of
+using a fixed snapshot — a different, self-correcting trick that happened to cancel the
+same shifting-frame effect, but doesn't generalize to a *group* of components with
+independent start positions.)
+
+The fix converts both the press point and the current point into
+`DiagramLayeredPane`'s coordinate space via `SwingUtilities.convertPoint()`. The pane
+itself never moves during a drag, so this delta is always the true total mouse
+movement since press, independent of how many components have already been
+repositioned or snapped. It can then be safely added to any component's fixed
+start-bounds snapshot — which is what let single- and multi-component drags collapse
+into one code path instead of two.
 
 ### Why the canvas is always light-colored even when a dark LAF is active
 

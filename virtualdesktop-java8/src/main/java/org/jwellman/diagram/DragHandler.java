@@ -10,22 +10,29 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+import javax.swing.SwingUtilities;
+
 import org.jwellman.diagram.api.GraphNode;
 
 /**
  * Drag handler that works with JLayeredPane and grid snapping (fixes jitter).
  *
- * When the pressed component is part of a multi-selection, all selected
- * components move together: start bounds for every selected component are
- * captured once at mousePressed, and the same press-to-current delta is
- * applied to each of them on every drag event.
+ * The mouse delta is measured in {@code layeredPane}'s coordinate space (via
+ * {@link SwingUtilities#convertPoint}) rather than the dragged component's own
+ * local coordinates. The pane never moves during a drag, so this delta is a
+ * stable, uncorrupted measure of total mouse movement since the press —
+ * unlike a component-relative delta, which shifts every time the component
+ * itself moves and cannot be safely combined with a fixed start-bounds
+ * snapshot (that combination is what caused group drags to undertrack the
+ * mouse and jitter). The same delta is applied to every selected component's
+ * captured start bounds, so single- and multi-component drags share one path.
  */
 class DragHandler extends MouseAdapter {
 
-    private Point pressPoint;
-    private boolean dragging = false;
     private DiagramLayeredPane layeredPane;
-    private Map<Component, Rectangle> groupStartBounds;
+    private Point pressPoint;
+    private Map<Component, Rectangle> startBounds;
+    private boolean dragging = false;
 
     public DragHandler(DiagramLayeredPane layeredPane) {
         this.layeredPane = layeredPane;
@@ -34,18 +41,19 @@ class DragHandler extends MouseAdapter {
     @Override
     public void mousePressed(MouseEvent e) {
         dragging = true;
-        pressPoint = e.getPoint();
         Component comp = e.getComponent();
+        pressPoint = SwingUtilities.convertPoint(comp, e.getPoint(), layeredPane);
         comp.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
         layeredPane.suspendShadows();
 
-        groupStartBounds = null;
+        startBounds = new LinkedHashMap<>();
         Set<Component> selection = layeredPane.getSelectedComponents();
-        if (selection.size() > 1 && selection.contains(comp)) {
-            groupStartBounds = new LinkedHashMap<>();
+        if (selection.contains(comp)) {
             for (Component c : selection) {
-                groupStartBounds.put(c, c.getBounds());
+                startBounds.put(c, c.getBounds());
             }
+        } else {
+            startBounds.put(comp, comp.getBounds());
         }
     }
 
@@ -55,20 +63,13 @@ class DragHandler extends MouseAdapter {
             return;
         }
 
-        Point currentPoint = e.getPoint();
+        Point currentPoint = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(), layeredPane);
         final int dx = currentPoint.x - pressPoint.x;
         final int dy = currentPoint.y - pressPoint.y;
 
-        if (groupStartBounds != null) {
-            for (Map.Entry<Component, Rectangle> entry : groupStartBounds.entrySet()) {
-                Rectangle start = entry.getValue();
-                moveTo(entry.getKey(), start.x + dx, start.y + dy, start.width, start.height);
-            }
-        } else {
-            Component comp = e.getComponent();
-            Rectangle currentBounds = comp.getBounds();
-            moveTo(comp, currentBounds.x + dx, currentBounds.y + dy,
-                currentBounds.width, currentBounds.height);
+        for (Map.Entry<Component, Rectangle> entry : startBounds.entrySet()) {
+            Rectangle start = entry.getValue();
+            moveTo(entry.getKey(), start.x + dx, start.y + dy, start.width, start.height);
         }
 
         layeredPane.revalidate();
@@ -94,7 +95,7 @@ class DragHandler extends MouseAdapter {
     @Override
     public void mouseReleased(MouseEvent e) {
         dragging = false;
-        groupStartBounds = null;
+        startBounds = null;
 
         Component comp = e.getComponent();
         comp.setCursor(Cursor.getDefaultCursor());

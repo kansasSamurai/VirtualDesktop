@@ -50,12 +50,17 @@ public class CanvasOverlayPanel extends JPanel {
     private final Runnable onResizeComplete;
     private final Supplier<EdgeAttributes> edgeAttrsSupplier;
 
-    // Selection / resize state
-    private Component selectedComponent;
+    // Selection / resize state — a single selected component gets resize handles;
+    // a multi-selection gets a plain highlight outline per component and no resize.
+    private java.util.List<Component> selection = java.util.Collections.emptyList();
+    private Component resizeTarget;
     private ResizeDirection resizeDirection = ResizeDirection.NONE;
     private Point pressPoint;
     private Rectangle startBounds;
     private boolean isResizing = false;
+
+    // Rubber-band selection rectangle, in canvas coordinates; null when not marqueeing
+    private Rectangle marqueeRect;
 
     // Edge-drag state
     private GraphNode sourceNode;
@@ -71,6 +76,8 @@ public class CanvasOverlayPanel extends JPanel {
     private static final Color HANDLE_FILL = Color.WHITE;
     private static final Color HANDLE_BORDER = Color.BLUE;
     private static final Color SELECTION_BORDER = Color.BLUE;
+    private static final Color MARQUEE_FILL = new Color(60, 130, 220, 40);
+    private static final Color MARQUEE_BORDER = new Color(60, 130, 220, 200);
 
     private static final ResizeDirection[] HANDLE_DIRECTIONS = {
         ResizeDirection.NW, ResizeDirection.N, ResizeDirection.NE, ResizeDirection.E,
@@ -134,10 +141,25 @@ public class CanvasOverlayPanel extends JPanel {
         repaint();
     }
 
-    /** Sets the component whose selection handles should be painted. Pass null to clear. */
-    public void setSelectedComponent(Component comp) {
-        this.selectedComponent = comp;
+    /**
+     * Sets the components whose selection outline should be painted. A single
+     * component gets full resize handles; two or more get a plain highlight
+     * outline each with no resize affordance. Pass an empty collection to clear.
+     */
+    public void setSelection(java.util.Collection<Component> comps) {
+        this.selection = new java.util.ArrayList<>(comps);
         repaint();
+    }
+
+    /** Sets the rubber-band selection rectangle, in canvas coordinates. Pass null to clear. */
+    public void setMarqueeRect(Rectangle rect) {
+        this.marqueeRect = rect;
+        repaint();
+    }
+
+    /** Returns the sole selected component when exactly one is selected, else null. */
+    private Component resizableComponent() {
+        return (selection.size() == 1) ? selection.get(0) : null;
     }
 
     // ---------------------------------------------------------------
@@ -146,11 +168,13 @@ public class CanvasOverlayPanel extends JPanel {
 
     private void handlePressed(MouseEvent e) {
         if (state == State.IDLE) {
-            if (selectedComponent != null) {
+            Component target = resizableComponent();
+            if (target != null) {
                 resizeDirection = getHandleAt(e.getX(), e.getY());
                 if (resizeDirection != ResizeDirection.NONE) {
                     pressPoint = e.getPoint();
-                    startBounds = selectedComponent.getBounds();
+                    startBounds = target.getBounds();
+                    resizeTarget = target;
                     isResizing = true;
                 }
             }
@@ -168,7 +192,7 @@ public class CanvasOverlayPanel extends JPanel {
     }
 
     private void handleDragged(MouseEvent e) {
-        if (isResizing && selectedComponent != null) {
+        if (isResizing && resizeTarget != null) {
             int dx = e.getX() - pressPoint.x;
             int dy = e.getY() - pressPoint.y;
             Rectangle newBounds = calculateNewBounds(resizeDirection, startBounds, dx, dy);
@@ -178,19 +202,19 @@ public class CanvasOverlayPanel extends JPanel {
             newBounds.height = snapFn.apply(newBounds.height);
             newBounds.width = Math.max(newBounds.width, 30);
             newBounds.height = Math.max(newBounds.height, 30);
-            selectedComponent.setBounds(newBounds);
+            resizeTarget.setBounds(newBounds);
             // revalidate() re-runs the layout manager (e.g. BorderLayout in NodeHostPanel)
             // so inner content fills the new size immediately during drag
-            selectedComponent.revalidate();
-            if (selectedComponent instanceof GraphNode) {
-                GraphNode gn = (GraphNode) selectedComponent;
+            resizeTarget.revalidate();
+            if (resizeTarget instanceof GraphNode) {
+                GraphNode gn = (GraphNode) resizeTarget;
                 gn.invalidatePortCache();
                 edgePanel.nodeUpdated(gn.getNodeId());
             }
             // repaint the parent (JLayeredPane) so the component visually updates;
             // this also repaints the overlay (a sibling child) via the normal Swing pass
-            if (selectedComponent.getParent() != null) {
-                selectedComponent.getParent().repaint();
+            if (resizeTarget.getParent() != null) {
+                resizeTarget.getParent().repaint();
             }
             e.consume();
             return;
@@ -206,6 +230,7 @@ public class CanvasOverlayPanel extends JPanel {
         if (isResizing) {
             isResizing = false;
             resizeDirection = ResizeDirection.NONE;
+            resizeTarget = null;
             if (onResizeComplete != null) {
                 onResizeComplete.run();
             }
@@ -225,7 +250,7 @@ public class CanvasOverlayPanel extends JPanel {
     }
 
     private void handleMoved(MouseEvent e) {
-        if (state == State.IDLE && selectedComponent != null) {
+        if (state == State.IDLE && resizableComponent() != null) {
             ResizeDirection dir = getHandleAt(e.getX(), e.getY());
             setCursor(getCursorForDirection(dir));
         } else if (state == State.EDGE_CREATION) {
@@ -311,10 +336,11 @@ public class CanvasOverlayPanel extends JPanel {
     }
 
     private boolean isNearAnyHandle(int x, int y) {
-        if (selectedComponent == null) {
+        Component target = resizableComponent();
+        if (target == null) {
             return false;
         }
-        Rectangle[] handles = getHandleRects(selectedComponent.getBounds());
+        Rectangle[] handles = getHandleRects(target.getBounds());
         int t = HANDLE_HIT_TOLERANCE / 2;
         for (Rectangle h : handles) {
             if (new Rectangle(h.x - t, h.y - t, h.width + t * 2, h.height + t * 2).contains(x, y)) {
@@ -325,10 +351,11 @@ public class CanvasOverlayPanel extends JPanel {
     }
 
     private ResizeDirection getHandleAt(int x, int y) {
-        if (selectedComponent == null) {
+        Component target = resizableComponent();
+        if (target == null) {
             return ResizeDirection.NONE;
         }
-        Rectangle[] handles = getHandleRects(selectedComponent.getBounds());
+        Rectangle[] handles = getHandleRects(target.getBounds());
         int t = HANDLE_HIT_TOLERANCE / 2;
         for (int i = 0; i < handles.length; i++) {
             Rectangle expanded = new Rectangle(
@@ -375,10 +402,13 @@ public class CanvasOverlayPanel extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        boolean hasSelection = (selectedComponent != null);
+        Component singleSelection = resizableComponent();
+        boolean hasSingleSelection = (singleSelection != null);
+        boolean hasMultiSelection = (selection.size() > 1);
         boolean inActiveMode = (state != State.IDLE);
+        boolean hasMarquee = (marqueeRect != null);
 
-        if (!hasSelection && !inActiveMode) {
+        if (!hasSingleSelection && !hasMultiSelection && !inActiveMode && !hasMarquee) {
             return;
         }
 
@@ -386,8 +416,14 @@ public class CanvasOverlayPanel extends JPanel {
         try {
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            if (hasSelection) {
-                paintSelectionHandles(g2d);
+            if (hasSingleSelection) {
+                paintSelectionHandles(g2d, singleSelection);
+            } else if (hasMultiSelection) {
+                paintMultiSelectionHighlights(g2d);
+            }
+
+            if (hasMarquee) {
+                paintMarquee(g2d);
             }
 
             if (!inActiveMode) {
@@ -425,8 +461,8 @@ public class CanvasOverlayPanel extends JPanel {
         }
     }
 
-    private void paintSelectionHandles(Graphics2D g2d) {
-        Rectangle b = selectedComponent.getBounds();
+    private void paintSelectionHandles(Graphics2D g2d, Component comp) {
+        Rectangle b = comp.getBounds();
 
         // Selection border
         g2d.setColor(SELECTION_BORDER);
@@ -442,6 +478,25 @@ public class CanvasOverlayPanel extends JPanel {
             g2d.setStroke(new BasicStroke(1f));
             g2d.drawRect(h.x, h.y, h.width, h.height);
         }
+    }
+
+    /** Multi-selection gets a plain outline per component — no resize handles. */
+    private void paintMultiSelectionHighlights(Graphics2D g2d) {
+        g2d.setColor(SELECTION_BORDER);
+        g2d.setStroke(new BasicStroke(2f));
+        for (Component comp : selection) {
+            Rectangle b = comp.getBounds();
+            g2d.drawRect(b.x + 1, b.y + 1, b.width - 2, b.height - 2);
+        }
+    }
+
+    private void paintMarquee(Graphics2D g2d) {
+        g2d.setColor(MARQUEE_FILL);
+        g2d.fillRect(marqueeRect.x, marqueeRect.y, marqueeRect.width, marqueeRect.height);
+        g2d.setColor(MARQUEE_BORDER);
+        g2d.setStroke(new BasicStroke(1f, BasicStroke.CAP_BUTT,
+            BasicStroke.JOIN_ROUND, 10f, new float[]{4, 3}, 0f));
+        g2d.drawRect(marqueeRect.x, marqueeRect.y, marqueeRect.width, marqueeRect.height);
     }
 
     // ---------------------------------------------------------------

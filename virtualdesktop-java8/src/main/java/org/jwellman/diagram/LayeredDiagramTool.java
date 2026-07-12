@@ -30,8 +30,10 @@ import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -882,6 +884,12 @@ public class LayeredDiagramTool extends JPanel {
 
         tb.addSeparator();
 
+        JButton alignBtn = new JButton("Align / Distribute");
+        alignBtn.addActionListener(e -> showAlignMenu(pane, alignBtn));
+        tb.add(alignBtn);
+
+        tb.addSeparator();
+
         JButton deleteBtn = new JButton("Delete Selected");
         deleteBtn.addActionListener(e -> pane.deleteSelected());
         tb.add(deleteBtn);
@@ -914,6 +922,43 @@ public class LayeredDiagramTool extends JPanel {
         tb.add(connectBtn);
 
         return new ToolBarBundle(tb, saveBtn, themeCombo);
+    }
+
+    /** Popup menu of align/distribute operations; items disable themselves based on selection size. */
+    private void showAlignMenu(DiagramLayeredPane pane, Component invoker) {
+        int count = pane.getSelectedComponents().size();
+        boolean canAlign = count >= 2;
+        boolean canDistribute = count >= 3;
+
+        JPopupMenu menu = new JPopupMenu();
+        addAlignMenuItem(menu, "Align Left",   pane, DiagramLayeredPane.Alignment.LEFT,             canAlign);
+        addAlignMenuItem(menu, "Align Center", pane, DiagramLayeredPane.Alignment.CENTER_HORIZONTAL, canAlign);
+        addAlignMenuItem(menu, "Align Right",  pane, DiagramLayeredPane.Alignment.RIGHT,             canAlign);
+        menu.addSeparator();
+        addAlignMenuItem(menu, "Align Top",    pane, DiagramLayeredPane.Alignment.TOP,             canAlign);
+        addAlignMenuItem(menu, "Align Middle", pane, DiagramLayeredPane.Alignment.MIDDLE_VERTICAL, canAlign);
+        addAlignMenuItem(menu, "Align Bottom", pane, DiagramLayeredPane.Alignment.BOTTOM,           canAlign);
+        menu.addSeparator();
+
+        JMenuItem distributeH = new JMenuItem("Distribute Horizontally");
+        distributeH.setEnabled(canDistribute);
+        distributeH.addActionListener(e -> pane.distributeSelected(true));
+        menu.add(distributeH);
+
+        JMenuItem distributeV = new JMenuItem("Distribute Vertically");
+        distributeV.setEnabled(canDistribute);
+        distributeV.addActionListener(e -> pane.distributeSelected(false));
+        menu.add(distributeV);
+
+        menu.show(invoker, 0, invoker.getHeight());
+    }
+
+    private void addAlignMenuItem(JPopupMenu menu, String label, DiagramLayeredPane pane,
+            DiagramLayeredPane.Alignment alignment, boolean enabled) {
+        JMenuItem item = new JMenuItem(label);
+        item.setEnabled(enabled);
+        item.addActionListener(e -> pane.alignSelected(alignment));
+        menu.add(item);
     }
 
     // ---------------------------------------------------------------

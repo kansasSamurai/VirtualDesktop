@@ -45,7 +45,7 @@ LayeredDiagramTool (JPanel)
 │     DiagramText*         @ any user layer           — editable text
 │     NodeHostPanel*       @ any user layer           — graph node wrapping a domain JPanel
 │     EdgeRenderPanel      @ CONNECTION_LAYER (400)   — transparent; paints all graph edges
-│     CanvasOverlayPanel   @ OVERLAY_LAYER (500)      — transparent; port anchors + rubber band
+│     CanvasOverlayPanel   @ OVERLAY_LAYER (500)      — transparent; selection handles/highlights, marquee, port anchors + rubber band
 └── layerPanel (EAST, 280px)
       Layers section
         LayerControlPanel × 6  — one per named layer (top→bottom order)
@@ -67,7 +67,7 @@ LayeredDiagramTool (JPanel)
 | --- | --- |
 | `LayeredDiagramTool` | Top-level `JPanel`; builds toolbar, pane, and sidebar; owns `modified` flag, save/load dialogs, and a local `CanvasComponentFactory` reference; exposes `setComponentFactory()` and `getDiagramPane()`; routes node selection to the domain property editor |
 | `DiagramLayeredPane` | `public JLayeredPane` subclass; owns all diagram components, layer state, selection model, drag wiring, popup menu, graph node/edge registry, and save/load serialization |
-| `DragHandler` | `MouseAdapter`; handles drag-to-move with snap-to-grid; notifies `DiagramLayeredPane.notifyNodeMoved()` when a `GraphNode` is dragged so edges redraw |
+| `DragHandler` | `MouseAdapter`; handles drag-to-move with snap-to-grid, including group moves when the pressed component is part of a multi-selection; notifies `DiagramLayeredPane.notifyNodeMoved()` when a `GraphNode` is dragged so edges redraw |
 | `ResizeHandler` | `MouseAdapter`; installed/removed per selection cycle; 8-direction resize; snap-to-grid on each drag event |
 | `LayerControlPanel` | Row UI for one layer: visibility toggle, name label, item count, active-layer highlight; uses a `Timer` to poll item counts |
 | `DiagramShape` | `JComponent`; paints rectangle, circle, or triangle via `Graphics2D`; implements `DiagramColorable` |
@@ -121,7 +121,7 @@ LayeredDiagramTool (JPanel)
 | --- | --- |
 | `NodeHostPanel` | `public JPanel` implementing `GraphNode`; wraps domain-provided content in `BorderLayout.CENTER`; computes port locations lazily from current bounds (no cache); `swapContent(JPanel)` replaces the content panel in-place after a property-editor rebuild |
 | `EdgeRenderPanel` | Transparent `JPanel` at `CONNECTION_LAYER`; paints all edges using the configured `EdgeRouter`; always returns `false` from `contains()` to pass mouse events through |
-| `CanvasOverlayPanel` | Transparent `JPanel` at `OVERLAY_LAYER`; state machine (`IDLE / EDGE_CREATION / EDGE_DRAGGING`); renders port anchor circles and rubber-band line; transparent to mouse events in `IDLE` state |
+| `CanvasOverlayPanel` | Transparent `JPanel` at `OVERLAY_LAYER`; state machine (`IDLE / EDGE_CREATION / EDGE_DRAGGING`); renders selection handles (single selection) or highlight outlines (multi-selection), the rubber-band marquee rectangle, port anchor circles, and the edge-drag rubber-band line; transparent to mouse events in `IDLE` state except near resize handles |
 | `OrthogonalRouter` | Port-direction-aware L/Z router: V-H-V for N/S ports, H-V-H for E/W ports, single-bend L for mixed pairs |
 | `StraightLineRouter` | Straight line from start to end |
 | `DefaultGraphEdge` | Simple immutable `GraphEdge` implementation used for both interactive and persisted edges |
@@ -174,37 +174,77 @@ edge, and overlay panels are excluded from this logic.
 
 ### Selection
 
-Single-click on a component calls `selectComponent()`:
+`DiagramLayeredPane` tracks selection as `Set<Component> selectedComponents` (a
+`LinkedHashSet`), not a single component (Phase 5). `CanvasOverlayPanel` mirrors this
+with its own `List<Component> selection` and renders it differently by size:
 
-- Removes `ResizeBorder` and `ResizeHandler` from the previously selected component
-- Sets a new `ResizeBorder` on the clicked component (paints 8 handles)
-- Installs a fresh `ResizeHandler` on the clicked component
-- Fires `selectionListener` → `PropertyEditorPanel` updates
+- **Exactly one selected** — full resize treatment: the overlay paints the 8-handle
+  selection border and captures mouse events in the handle zones (see Resize, below).
+- **Two or more selected** — a plain highlight outline per component, no resize handles.
+- **None selected** — the overlay paints nothing and is fully transparent to mouse events.
 
-**Known gap / roadmap item:** `ResizeBorder` calls `setBorder()` on the component,
-triggering `revalidate()`. For `DiagramShape` / `DiagramText` (no children) this is
-invisible. For `NodeHostPanel` (real JPanel hierarchy) this causes a brief layout jitter.
-The planned fix is to move all selection-handle rendering into `CanvasOverlayPanel` so no
-border is ever set on any component. See roadmap.
+**Click selection** (`installInteractionHandlers()`): a component's selection-handling
+`MouseListener` is registered *before* its `DragHandler`, so a single `mousePressed`
+gesture resolves selection first and `DragHandler` reads the already-updated state.
+
+- Plain click on a component *not* already selected → replaces the selection with just
+  that component (`selectComponent()`).
+- Plain click on a component that *is* already part of a multi-selection → the selection
+  is left untouched, so the drag that follows moves the whole group. A plain click alone,
+  without a following drag, does **not** collapse the selection back to one component —
+  see Known Design Decisions.
+- Ctrl-click → toggles the clicked component in/out of the selection (`toggleSelection()`).
+
+**Rubber-band (marquee) selection**: a press-drag-release on blank canvas is handled by
+`DiagramLayeredPane`'s own mouse listener, not the overlay (which stays transparent over
+blank canvas in `IDLE` state with no selection nearby). The drag rectangle is normalized
+and forwarded to `CanvasOverlayPanel.setMarqueeRect()` for live rendering (translucent
+fill + dashed border). On release, every `DiagramShape`, `DiagramText`, and `GraphNode`
+whose bounds intersect the rectangle — and whose layer is currently visible — joins the
+selection (`selectComponentsIn()`). Holding Ctrl during the drag adds to the existing
+selection instead of replacing it. A plain click on blank canvas (no drag) still
+deselects immediately.
+
+All selection changes funnel through the private `setSelection()` method, which also
+clears any edge selection and fires `selectionListener` → `PropertyEditorPanel` updates
+(only when exactly one component is selected; zero or multiple selected both report
+`null`, showing "No component selected").
+
+Edge selection is mutually exclusive with component selection: selecting an edge clears
+`selectedComponents`, and selecting any component clears `selectedEdge`.
 
 ### Drag
 
-`DragHandler` is installed on every component at add time and lives for the component's
-lifetime. On `mouseDragged`:
+`DragHandler` is installed on every component at add time (after the selection listener,
+see above) and lives for the component's lifetime. On `mousePressed`, it checks whether
+the pressed component is part of a multi-selection
+(`layeredPane.getSelectedComponents()`); if so, it snapshots the current bounds of every
+selected component into a `Map<Component, Rectangle>`. On each `mouseDragged` event:
 
-1. Compute `dx/dy` from the press point
-2. Add delta to the component's current bounds
-3. If snap-to-grid is on, round `x` and `y` to the nearest 20px multiple
-4. `setBounds()`, then `revalidate()` + `repaint()`
-5. If the component implements `GraphNode`, call `layeredPane.notifyNodeMoved(nodeId)`
-   so `EdgeRenderPanel` repaints affected edges
+1. Compute `dx/dy` from the original press point to the current point
+2. **Single selection** — add the delta to the pressed component's current bounds
+   (unchanged from the pre-Phase-5 behavior)
+3. **Multi-selection** — add the same delta to each component's *snapshotted* start
+   bounds, so the whole group moves together with one uniform offset
+4. If snap-to-grid is on, round each component's `x`/`y` to the nearest 20px multiple
+   independently
+5. `setBounds()` on each moved component, then `revalidate()` + `repaint()` on the pane
+6. For each moved component that implements `GraphNode`, call
+   `layeredPane.notifyNodeMoved(nodeId)` so `EdgeRenderPanel` repaints affected edges
+
+Both paths funnel through one `moveTo()` helper, so grid snapping and `GraphNode`
+notification are identical for single and group drags.
 
 ### Resize
 
-`ResizeHandler` is installed only while a component is selected and removed on deselect.
-Hit-tests an 8px zone at each of the 8 handle positions; changes cursor accordingly.
-On drag: computes new bounds from the active handle direction, enforces 20px minimum size,
-applies snap-to-grid.
+Resize only ever applies to a single selected component — never a multi-selection (see
+Known Design Decisions). `CanvasOverlayPanel` derives its resize target from
+`resizableComponent()`, which returns a component only when exactly one is selected.
+While that condition holds, the overlay hit-tests an 8px zone at each of the 8 handle
+positions and changes the cursor accordingly. On drag: computes new bounds from the
+active handle direction, enforces a 30px minimum size, applies snap-to-grid, and — for a
+`GraphNode` target — invalidates its port cache and notifies `EdgeRenderPanel` so
+attached edges track the live resize.
 
 ### Edge creation (Connect mode)
 
@@ -515,24 +555,27 @@ enough context to choose the right shape without needing access to node bounds.
 `getApproachPoint()` on the same interface derives the arrowhead angle from the actual
 final segment of the computed path rather than the diagonal from source to target.
 
-### Why `ResizeBorder` causes jitter on `NodeHostPanel` (and the planned fix)
+### Why selection-handle rendering moved out of `ResizeBorder`/`ResizeHandler` and into `CanvasOverlayPanel`
 
 `setBorder()` on a `JComponent` changes its insets, which triggers `revalidate()`.
-For `DiagramShape` and `DiagramText` (no child components) the relayout is instant and
+For `DiagramShape` and `DiagramText` (no child components) the relayout was instant and
 invisible. For `NodeHostPanel` (a real `JPanel` hierarchy with labels and separators)
-the relayout causes a brief visual jitter. The planned fix is to move all
-selection-handle rendering into `CanvasOverlayPanel`, which already paints at canvas
-coordinates for port anchors. No border would ever be set on any component; the overlay
-would paint the 8 handle squares over the selected component's bounds. This also
-eliminates the dynamic `ResizeHandler` install/remove cycle, since the overlay can own
-the resize hit-testing directly. See roadmap Phase 4.
+the relayout caused a brief visual jitter. Phase 4 moved all selection-handle rendering
+and resize hit-testing into `CanvasOverlayPanel`, which already paints at canvas
+coordinates for port anchors — no border is ever set on any component, and the dynamic
+`ResizeHandler` install/remove cycle is gone. `ResizeBorder` and `ResizeHandler` remain
+as source files but are no longer referenced by the framework.
 
-### Why `ResizeHandler` is installed and removed per selection cycle
+### Why resize only applies to a single selected component, never a multi-selection
 
-Installing `ResizeHandler` permanently on every component would make every component
-always respond to resize cursor changes, which is confusing when hovering over unselected
-components. Tying it to selection means only the selected component shows resize
-behavior, matching the standard desktop selection model.
+`CanvasOverlayPanel.resizableComponent()` returns a component only when exactly one is
+selected, so resize hit-testing and handle painting are simply absent for a
+multi-selection. Resizing a group would require deciding how each component's individual
+bounds scale relative to the group's combined bounding box — a meaningfully heavier
+feature than uniform group translation. Phase 5 shipped group *move* only; group *resize*
+is left for a future phase if it turns out to be needed. A multi-selection instead gets a
+plain highlight outline per component with no handles, making the restriction visually
+obvious rather than silently doing nothing on drag.
 
 ### Why the canvas is always light-colored even when a dark LAF is active
 

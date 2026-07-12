@@ -6,12 +6,16 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.Window;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 import javax.swing.JColorChooser;
 import javax.swing.JComponent;
@@ -54,12 +58,16 @@ public class DiagramLayeredPane extends JLayeredPane {
     public static final Integer CONNECTION_LAYER = new Integer(400);
     public static final Integer OVERLAY_LAYER    = new Integer(500);
 
+    /** Alignment edge/axis for {@link #alignSelected(Alignment)}. */
+    public enum Alignment { LEFT, CENTER_HORIZONTAL, RIGHT, TOP, MIDDLE_VERTICAL, BOTTOM }
+
     private GridPanel gridPanel;
     @SuppressWarnings("unused")
     private boolean showGrid = true;
     private boolean snapToGrid = true;
     private int gridSize = 20;
-    private Component selectedComponent = null;
+    private Set<Component> selectedComponents = new LinkedHashSet<>();
+    private Point marqueeStart;
     private GraphEdge selectedEdge = null;
     private Integer activeLayer = SHAPE_LAYER;
     private EdgeAttributes activeEdgeAttributes = new EdgeAttributes();
@@ -489,7 +497,8 @@ public class DiagramLayeredPane extends JLayeredPane {
 
     private void notifySelectionChanged() {
         if (selectionListener != null) {
-            selectionListener.accept(selectedComponent);
+            Component target = (selectedComponents.size() == 1) ? selectedComponents.iterator().next() : null;
+            selectionListener.accept(target);
         }
     }
 
@@ -500,7 +509,7 @@ public class DiagramLayeredPane extends JLayeredPane {
     }
 
     private void setupMouseListeners() {
-        addMouseListener(new MouseAdapter() {
+        MouseAdapter canvasHandler = new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
                 requestFocusInWindow();
@@ -509,21 +518,76 @@ public class DiagramLayeredPane extends JLayeredPane {
                     GraphEdge hitEdge = edgePanel.findEdgeAt(e.getX(), e.getY());
                     if (hitEdge != null) {
                         selectEdge(hitEdge);
-                    } else {
+                        return;
+                    }
+                    if (!e.isControlDown()) {
                         deselectAll();
                     }
+                    marqueeStart = e.getPoint();
+                    overlayPanel.setMarqueeRect(new Rectangle(marqueeStart));
                 }
             }
-        });
+
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (marqueeStart == null) {
+                    return;
+                }
+                overlayPanel.setMarqueeRect(normalizedRect(marqueeStart, e.getPoint()));
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (marqueeStart == null) {
+                    return;
+                }
+                Rectangle rect = normalizedRect(marqueeStart, e.getPoint());
+                marqueeStart = null;
+                overlayPanel.setMarqueeRect(null);
+                if (rect.width > 2 || rect.height > 2) {
+                    selectComponentsIn(rect, e.isControlDown());
+                }
+            }
+        };
+        addMouseListener(canvasHandler);
+        addMouseMotionListener(canvasHandler);
+
         addKeyListener(new java.awt.event.KeyAdapter() {
             @Override
             public void keyPressed(java.awt.event.KeyEvent e) {
                 if (e.getKeyCode() == java.awt.event.KeyEvent.VK_DELETE
                         || e.getKeyCode() == java.awt.event.KeyEvent.VK_BACK_SPACE) {
                     deleteSelected();
+                } else if (e.getKeyCode() == java.awt.event.KeyEvent.VK_A && e.isControlDown()) {
+                    selectAll();
                 }
             }
         });
+    }
+
+    private static Rectangle normalizedRect(Point a, Point b) {
+        int x = Math.min(a.x, b.x);
+        int y = Math.min(a.y, b.y);
+        int w = Math.abs(a.x - b.x);
+        int h = Math.abs(a.y - b.y);
+        return new Rectangle(x, y, w, h);
+    }
+
+    private void selectComponentsIn(Rectangle rect, boolean addToExisting) {
+        Set<Component> hits = new LinkedHashSet<>();
+        if (addToExisting) {
+            hits.addAll(selectedComponents);
+        }
+        for (Component comp : getComponents()) {
+            if (isSelectable(comp) && isLayerVisible(getLayer(comp)) && comp.getBounds().intersects(rect)) {
+                hits.add(comp);
+            }
+        }
+        setSelection(hits);
+    }
+
+    private boolean isSelectable(Component comp) {
+        return comp instanceof DiagramShape || comp instanceof DiagramText || comp instanceof GraphNode;
     }
 
     // ---------------------------------------------------------------
@@ -540,19 +604,24 @@ public class DiagramLayeredPane extends JLayeredPane {
     }
 
     private void installInteractionHandlers(final JComponent component) {
-        // Drag
-        DragHandler dragHandler = new DragHandler(this);
-        component.addMouseListener(dragHandler);
-        component.addMouseMotionListener(dragHandler);
-
-        // Selection + context menu
+        // Selection + context menu — registered before the drag handler so a
+        // group drag (started by the same mousePressed gesture) sees the
+        // click-updated selection rather than whatever was selected before it.
         component.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
                 if (e.getButton() == MouseEvent.BUTTON1) {
-                    selectComponent(component);
+                    if (e.isControlDown()) {
+                        toggleSelection(component);
+                    } else if (!selectedComponents.contains(component)) {
+                        selectComponent(component);
+                    }
+                    // else: already part of the selection — preserve the group
+                    // so the drag that follows moves every selected component
                 } else if (e.getButton() == MouseEvent.BUTTON3) {
-                    selectComponent(component);
+                    if (!selectedComponents.contains(component)) {
+                        selectComponent(component);
+                    }
                     // Only show context menu for decorative elements
                     if (!(component instanceof GraphNode)) {
                         showComponentPopupMenu(component, e.getX(), e.getY());
@@ -560,6 +629,11 @@ public class DiagramLayeredPane extends JLayeredPane {
                 }
             }
         });
+
+        // Drag
+        DragHandler dragHandler = new DragHandler(this);
+        component.addMouseListener(dragHandler);
+        component.addMouseMotionListener(dragHandler);
     }
 
     private void showComponentPopupMenu(JComponent component, int x, int y) {
@@ -648,8 +722,9 @@ public class DiagramLayeredPane extends JLayeredPane {
         JMenuItem deleteItem = new JMenuItem("Delete");
         deleteItem.addActionListener(e -> {
             remove(component);
-            if (selectedComponent == component) {
-                selectedComponent = null;
+            if (selectedComponents.remove(component)) {
+                overlayPanel.setSelection(selectedComponents);
+                notifySelectionChanged();
             }
             revalidate();
             repaint();
@@ -677,35 +752,60 @@ public class DiagramLayeredPane extends JLayeredPane {
     }
 
     private void selectComponent(Component comp) {
-        if (comp == selectedComponent) {
-            return;
+        Set<Component> single = new LinkedHashSet<>();
+        single.add(comp);
+        setSelection(single);
+    }
+
+    private void toggleSelection(Component comp) {
+        Set<Component> updated = new LinkedHashSet<>(selectedComponents);
+        if (!updated.remove(comp)) {
+            updated.add(comp);
         }
-        deselectAll();
-        selectedComponent = comp;
-        overlayPanel.setSelectedComponent(comp);
+        setSelection(updated);
+    }
+
+    /** Replaces the current multi-selection, clearing any edge selection. */
+    private void setSelection(Set<Component> newSelection) {
+        selectedComponents.clear();
+        selectedComponents.addAll(newSelection);
+        selectedEdge = null;
+        edgePanel.setSelectedEdge(null);
+        overlayPanel.setSelection(selectedComponents);
+        repaint();
         notifySelectionChanged();
+        notifyEdgeSelectionChanged();
+    }
+
+    public void selectAll() {
+        Set<Component> all = new LinkedHashSet<>();
+        for (Component comp : getComponents()) {
+            if (isSelectable(comp)) {
+                all.add(comp);
+            }
+        }
+        setSelection(all);
+    }
+
+    public Set<Component> getSelectedComponents() {
+        return java.util.Collections.unmodifiableSet(selectedComponents);
     }
 
     private void selectEdge(GraphEdge edge) {
         if (edge == selectedEdge) {
             return;
         }
-        selectedComponent = null;
-        overlayPanel.setSelectedComponent(null);
+        selectedComponents.clear();
+        overlayPanel.setSelection(selectedComponents);
         selectedEdge = edge;
         edgePanel.setSelectedEdge(edge);
         repaint();
+        notifySelectionChanged();
         notifyEdgeSelectionChanged();
     }
 
     private void deselectAll() {
-        selectedComponent = null;
-        selectedEdge = null;
-        edgePanel.setSelectedEdge(null);
-        overlayPanel.setSelectedComponent(null);
-        repaint();
-        notifySelectionChanged();
-        notifyEdgeSelectionChanged();
+        setSelection(java.util.Collections.<Component>emptySet());
     }
 
     public void deleteSelected() {
@@ -716,37 +816,170 @@ public class DiagramLayeredPane extends JLayeredPane {
             notifyEdgeSelectionChanged();
             return;
         }
-        if (selectedComponent != null && selectedComponent != gridPanel) {
-            if (selectedComponent instanceof GraphNode) {
-                removeGraphNode(((GraphNode) selectedComponent).getNodeId());
-            } else {
-                remove(selectedComponent);
-                selectedComponent = null;
-                revalidate();
-                repaint();
-                notifyModified();
+        if (!selectedComponents.isEmpty()) {
+            java.util.List<Component> toRemove = new java.util.ArrayList<>(selectedComponents);
+            for (Component comp : toRemove) {
+                if (comp instanceof GraphNode) {
+                    removeGraphNode(((GraphNode) comp).getNodeId());
+                } else {
+                    remove(comp);
+                }
             }
+            selectedComponents.clear();
+            overlayPanel.setSelection(selectedComponents);
+            revalidate();
+            repaint();
+            notifyModified();
+            notifySelectionChanged();
         }
     }
 
     public void bringSelectedForward() {
-        if (selectedComponent != null) {
-            Integer currentLayer = getLayer(selectedComponent);
-            setLayer(selectedComponent, currentLayer + 1);
-            repaint();
-            notifyModified();
+        if (selectedComponents.isEmpty()) {
+            return;
         }
+        for (Component comp : selectedComponents) {
+            Integer currentLayer = getLayer(comp);
+            setLayer(comp, currentLayer + 1);
+        }
+        repaint();
+        notifyModified();
     }
 
     public void sendSelectedBack() {
-        if (selectedComponent != null) {
-            Integer currentLayer = getLayer(selectedComponent);
+        if (selectedComponents.isEmpty()) {
+            return;
+        }
+        for (Component comp : selectedComponents) {
+            Integer currentLayer = getLayer(comp);
             if (currentLayer > GRID_LAYER + 1) {
-                setLayer(selectedComponent, currentLayer - 1);
-                repaint();
-                notifyModified();
+                setLayer(comp, currentLayer - 1);
             }
         }
+        repaint();
+        notifyModified();
+    }
+
+    // ---------------------------------------------------------------
+    // Align / distribute (Phase 5 — multi-select group operations)
+    // ---------------------------------------------------------------
+
+    /** Aligns all selected components to the given edge/axis of their combined bounding box. No-op below 2 selected. */
+    public void alignSelected(Alignment alignment) {
+        if (selectedComponents.size() < 2) {
+            return;
+        }
+        Rectangle bbox = computeBoundingBox(selectedComponents);
+        for (Component comp : selectedComponents) {
+            int newX = comp.getX();
+            int newY = comp.getY();
+            switch (alignment) {
+                case LEFT:
+                    newX = bbox.x;
+                    break;
+                case RIGHT:
+                    newX = bbox.x + bbox.width - comp.getWidth();
+                    break;
+                case CENTER_HORIZONTAL:
+                    newX = bbox.x + (bbox.width - comp.getWidth()) / 2;
+                    break;
+                case TOP:
+                    newY = bbox.y;
+                    break;
+                case BOTTOM:
+                    newY = bbox.y + bbox.height - comp.getHeight();
+                    break;
+                case MIDDLE_VERTICAL:
+                    newY = bbox.y + (bbox.height - comp.getHeight()) / 2;
+                    break;
+                default:
+                    break;
+            }
+            moveComponentTo(comp, newX, newY);
+        }
+        revalidate();
+        repaint();
+        notifyModified();
+    }
+
+    /** Spaces the selected components evenly between the outermost two along one axis. No-op below 3 selected. */
+    public void distributeSelected(boolean horizontal) {
+        if (selectedComponents.size() < 3) {
+            return;
+        }
+        java.util.List<Component> sorted = new java.util.ArrayList<>(selectedComponents);
+        if (horizontal) {
+            java.util.Collections.sort(sorted, new java.util.Comparator<Component>() {
+                @Override
+                public int compare(Component a, Component b) {
+                    return Integer.compare(a.getX(), b.getX());
+                }
+            });
+            Component first = sorted.get(0);
+            Component last = sorted.get(sorted.size() - 1);
+            int span = (last.getX() + last.getWidth()) - first.getX();
+            int occupied = 0;
+            for (Component c : sorted) {
+                occupied += c.getWidth();
+            }
+            double gap = (double) (span - occupied) / (sorted.size() - 1);
+            double cursor = first.getX() + first.getWidth();
+            for (int i = 1; i < sorted.size() - 1; i++) {
+                Component c = sorted.get(i);
+                int newX = (int) Math.round(cursor + gap);
+                moveComponentTo(c, newX, c.getY());
+                cursor = newX + c.getWidth();
+            }
+        } else {
+            java.util.Collections.sort(sorted, new java.util.Comparator<Component>() {
+                @Override
+                public int compare(Component a, Component b) {
+                    return Integer.compare(a.getY(), b.getY());
+                }
+            });
+            Component first = sorted.get(0);
+            Component last = sorted.get(sorted.size() - 1);
+            int span = (last.getY() + last.getHeight()) - first.getY();
+            int occupied = 0;
+            for (Component c : sorted) {
+                occupied += c.getHeight();
+            }
+            double gap = (double) (span - occupied) / (sorted.size() - 1);
+            double cursor = first.getY() + first.getHeight();
+            for (int i = 1; i < sorted.size() - 1; i++) {
+                Component c = sorted.get(i);
+                int newY = (int) Math.round(cursor + gap);
+                moveComponentTo(c, c.getX(), newY);
+                cursor = newY + c.getHeight();
+            }
+        }
+        revalidate();
+        repaint();
+        notifyModified();
+    }
+
+    private void moveComponentTo(Component comp, int newX, int newY) {
+        comp.setLocation(newX, newY);
+        if (comp instanceof GraphNode) {
+            GraphNode gn = (GraphNode) comp;
+            gn.invalidatePortCache();
+            edgePanel.nodeUpdated(gn.getNodeId());
+        }
+    }
+
+    private Rectangle computeBoundingBox(java.util.Collection<Component> comps) {
+        int minX = Integer.MAX_VALUE;
+        int minY = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int maxY = Integer.MIN_VALUE;
+        for (Component c : comps) {
+            Rectangle b = c.getBounds();
+            minX = Math.min(minX, b.x);
+            minY = Math.min(minY, b.y);
+            maxX = Math.max(maxX, b.x + b.width);
+            maxY = Math.max(maxY, b.y + b.height);
+        }
+        return new Rectangle(minX, minY, maxX - minX, maxY - minY);
     }
 
     public CanvasTheme getTheme() {

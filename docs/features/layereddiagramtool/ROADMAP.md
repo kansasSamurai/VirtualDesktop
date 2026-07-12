@@ -13,7 +13,7 @@
 | 4 | Overlay-painted selection handles | ✅ Complete | Selection handles and resize moved into CanvasOverlayPanel; setBorder() and ResizeHandler cycle eliminated |
 | 4.5 | Drop shadows | ✅ Complete | ShadowLayerPanel at SHADOW_LAYER=150; multi-pass procedural shadow on graph nodes; suspended during drag; toolbar toggle |
 | 4.6 | Runtime theme switching | ✅ Complete | setTheme() on DiagramLayeredPane; toolbar selector; theme persisted with diagram; unresolved theme on load warns and falls back to default |
-| 5 | Multi-select and group operations | ⬜ Planned | Rubber-band select; group move/align |
+| 5 | Multi-select and group operations | ✅ Complete | Rubber-band select; ctrl-click toggle; group move; align/distribute; Select All; multi-delete |
 | 6 | Undo / Redo | ⬜ Planned | `javax.swing.undo` stack; all mutating operations |
 | 7 | Cut / Copy / Paste components | ⬜ Planned | Within and across diagram sessions |
 | 8 | Layer management enhancements | ⬜ Planned | Rename layers; reorder layers; lock layers |
@@ -220,52 +220,86 @@ instead of adding a new one:
 
 ---
 
-## Phase 5 — Multi-Select and Group Operations
+## Phase 5 — Multi-Select and Group Operations ✅
 
 **Why**: Single-selection dragging is the baseline; multi-select is the first feature that
 moves the tool from "toy" to "useful" for real diagrams with many components.
 
-### Implementation
+### What shipped
 
-**Rubber-band selection:**
+**Selection model:** `DiagramLayeredPane` now tracks `Set<Component> selectedComponents`
+(a `LinkedHashSet`) instead of a single `Component`. `CanvasOverlayPanel` mirrors this with
+`List<Component> selection`; a single selected component still gets the full 8-handle
+resize border, while two or more get a plain highlight outline each and no resize
+affordance (resize only ever applies to a lone selection).
 
-- Click-drag on the blank diagram background creates a selection rectangle (painted on SELECTION_LAYER)
-- On mouse release: all `DiagramShape` and `DiagramText` components that intersect the
-  rectangle are added to the selection set
-- Existing single-click selection still works; rubber-band extends it or replaces it
-  depending on whether Ctrl is held
+**Rubber-band selection:** implemented directly on `DiagramLayeredPane`'s own
+mouse listener (not the overlay) — a press-drag-release on blank canvas builds a
+normalized `Rectangle` and calls `CanvasOverlayPanel.setMarqueeRect()` for live
+rendering (translucent fill + dashed border). On release, every `DiagramShape`,
+`DiagramText`, and `GraphNode` whose bounds intersect the rectangle — and whose layer
+is currently visible — joins the selection. Holding Ctrl during the drag adds to the
+existing selection instead of replacing it; a plain click on blank canvas still
+deselects immediately, matching the pre-Phase-5 behavior.
 
-**Selection model:** `Set<JComponent> selectedComponents` on `DiagramLayeredPane`.
-Replace the current single-selected-component tracking with this set. `ResizeBorder`
-remains visible only when exactly one component is selected (multi-select shows a simpler
-highlight).
+**Ctrl-click toggle and group-preserving click:** `installInteractionHandlers()` now
+registers the selection-handling `MouseListener` *before* `DragHandler`, so a single
+`mousePressed` gesture updates the selection first and `DragHandler` reads the
+click-resolved state. Ctrl-click toggles a component in/out of the selection; a plain
+click on a component that is *already* part of a multi-selection leaves the whole group
+selected (so the drag that follows moves everything); a plain click on anything else
+collapses to a single selection as before.
 
-**Group move:**
+**Group move:** `DragHandler` snapshots the start bounds of every selected component at
+`mousePressed` when the pressed component is part of a multi-selection, then applies the
+same press-to-current delta to each of them on every `mouseDragged` event (with
+per-component grid snapping), unified with the single-component path through one
+`moveTo()` helper.
 
-- When drag starts on a component that is in the selection set, all selected components
-  move together
-- Delta is computed once from the dragged component's movement and applied uniformly
+**Align / Distribute:** `DiagramLayeredPane.alignSelected(Alignment)` (6-value enum:
+`LEFT`, `CENTER_HORIZONTAL`, `RIGHT`, `TOP`, `MIDDLE_VERTICAL`, `BOTTOM`) aligns every
+selected component to an edge/axis of the selection's combined bounding box; a no-op
+below 2 selected. `distributeSelected(boolean horizontal)` spaces components evenly
+between the two outermost along one axis; a no-op below 3 selected. Both are exposed via
+a single "Align / Distribute" toolbar button opening a `JPopupMenu`
+(`LayeredDiagramTool.showAlignMenu()`), whose items self-disable based on the current
+selection count rather than requiring the user to discover the minimum via trial and error.
 
-**Align operations** (toolbar buttons or right-click menu):
+**Select All / Delete:** `Ctrl+A` (`DiagramLayeredPane.selectAll()`) selects every
+selectable component on the canvas. `Delete` / `Backspace` (`deleteSelected()`) now
+removes every component in the selection set, not just one.
 
-- Align Left, Center, Right (horizontal axis)
-- Align Top, Middle, Bottom (vertical axis)
-- Distribute Horizontally / Distribute Vertically
+**Bring Forward / Send Back:** extended to iterate the whole selection rather than a
+single component, for consistency with the new multi-select model.
 
-**Select All** (`Ctrl+A`): adds all diagram components to the selection set.
+### Deliberate simplification
 
-**Delete selected** (`Delete` / `Backspace`): removes all components in the selection set.
+A plain (non-Ctrl) click-and-release *without* dragging on a component that is already
+part of a multi-selection does **not** collapse the selection down to that one component
+— it requires clicking on blank canvas or a different, unselected component first. Many
+desktop tools defer this decision to `mouseReleased` (collapse only if no drag occurred);
+that would need extra state to distinguish a click from the start of a drag. Deferred as
+unnecessary polish for a proof-of-concept tool — the group stays selected until the user
+explicitly clicks elsewhere.
 
 ### Verification
 
 - Rubber-band drag selects multiple shapes; all highlight simultaneously
-- Drag any selected shape; all move together with correct offsets
-- Align Left on 3 shapes: all snap to the leftmost x coordinate
-- Ctrl+A selects all; Delete removes all
+- Ctrl-drag rubber-band adds to the existing selection instead of replacing it
+- Ctrl-click toggles a single component in/out of the selection
+- Drag any selected shape; all move together with correct offsets, including graph nodes
+  (edges track live)
+- Align Left/Right/Center and Top/Bottom/Middle on 3+ shapes: all snap to the selection's
+  bounding-box edge or axis; menu items disable below 2 selected
+- Distribute Horizontally/Vertically on 3+ shapes: even spacing between the two outermost;
+  menu items disable below 3 selected
+- Ctrl+A selects all; Delete removes all selected components (including graph nodes)
+- Right-click Delete on a single component still removes just that one and updates the
+  overlay if it was part of a larger selection
 
 ---
 
-## Phase 5 — Undo / Redo
+## Phase 6 — Undo / Redo
 
 **Why**: Undo is the single most important missing feature for a drawing tool — it
 transforms "risky" interactions (accidental deletes, bad moves) into recoverable ones.
@@ -304,7 +338,7 @@ unbounded memory growth in long editing sessions.
 
 ---
 
-## Phase 6 — Cut / Copy / Paste
+## Phase 7 — Cut / Copy / Paste
 
 **Why**: Duplicating shapes is the second most common drawing operation after move.
 
@@ -335,7 +369,7 @@ This is an optional enhancement on top of in-memory paste.
 
 ---
 
-## Phase 7 — Layer Management Enhancements
+## Phase 8 — Layer Management Enhancements
 
 **Why**: The layer panel is currently read-only beyond visibility. Giving users control
 over layer names and ordering makes the tool usable for anything beyond the simplest
@@ -378,7 +412,7 @@ diagrams.
 
 ---
 
-## Phase 8 — Export (PNG / SVG / Print)
+## Phase 9 — Export (PNG / SVG / Print)
 
 **Why**: A diagram that cannot leave the application is a dead end. Export unlocks sharing,
 documentation, and embedding in other tools.
@@ -413,7 +447,7 @@ File menu or toolbar buttons: "Export PNG…", "Export SVG…", "Print…" — e
 
 ---
 
-## Phase 9 — Shape Library Expansion
+## Phase 10 — Shape Library Expansion
 
 **Why**: Rectangle, circle, and triangle cover the basics but exclude common diagram
 vocabularies (flowcharts, UML, network diagrams).
@@ -437,7 +471,7 @@ component, enabling import of SVG path data or BeanShell-constructed polygons.
 
 ---
 
-## Phase 10 — Multi-Line / Rich Text
+## Phase 11 — Multi-Line / Rich Text
 
 **Why**: `DiagramText` currently wraps a single-line `JTextField`. Most diagram labels
 require word-wrap at minimum; callouts and documentation boxes need multi-line support.
@@ -459,7 +493,7 @@ ship and be used for a while before committing to 10b.
 
 ---
 
-## Phase 11 — BeanShell Integration
+## Phase 12 — BeanShell Integration
 
 **Why**: BeanShell is the orchestration glue in VirtualDesktop. Exposing the diagram
 API to scripts lets users build diagrams programmatically — from database query results,

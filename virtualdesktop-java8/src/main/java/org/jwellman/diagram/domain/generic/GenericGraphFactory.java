@@ -31,6 +31,10 @@ import org.jwellman.swing.colorchooser.SwatchColorPicker;
  */
 public class GenericGraphFactory implements CanvasComponentFactory {
 
+    /** Node type identifiers, shared across this package to avoid literal-string drift. */
+    public static final String NODE_TYPE_RECT   = "RECT_NODE";
+    public static final String NODE_TYPE_CIRCLE = "CIRCLE_NODE";
+
     private static final Border PALETTE_PADDING = BorderFactory.createEmptyBorder(8, 8, 8, 8);
     private static final Border EDITOR_PADDING  = BorderFactory.createEmptyBorder(8, 8, 8, 8);
 
@@ -45,7 +49,10 @@ public class GenericGraphFactory implements CanvasComponentFactory {
         String label = (String) properties.getOrDefault("label", "");
         Color fill   = decodeColor(properties.get("fillColor"), DEFAULT_FILL);
         Color border = decodeColor(properties.get("borderColor"), DEFAULT_BORDER);
-        return new GenericNodeContent(nodeType, label, fill, border);
+        // No fixed default: mirrors whatever the border color currently is until the
+        // user explicitly picks a text color, so it keeps tracking border changes too.
+        Color text   = decodeColor(properties.get("textColor"), border);
+        return new GenericNodeContent(nodeType, label, fill, border, text);
     }
 
     @Override
@@ -75,7 +82,7 @@ public class GenericGraphFactory implements CanvasComponentFactory {
         addRectBtn.addActionListener(e -> {
             Map<String, Object> props = new HashMap<>();
             props.put("label", "Node");
-            addNode.accept("RECT_NODE", props);
+            addNode.accept(NODE_TYPE_RECT, props);
         });
 
         JButton addCircleBtn = new JButton("Add Circle");
@@ -83,7 +90,7 @@ public class GenericGraphFactory implements CanvasComponentFactory {
         addCircleBtn.addActionListener(e -> {
             Map<String, Object> props = new HashMap<>();
             props.put("label", "Node");
-            addNode.accept("CIRCLE_NODE", props);
+            addNode.accept(NODE_TYPE_CIRCLE, props);
         });
 
         panel.add(addRectBtn);
@@ -102,7 +109,7 @@ public class GenericGraphFactory implements CanvasComponentFactory {
         JPanel form = new JPanel();
         form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
 
-        String typeText = "CIRCLE_NODE".equals(nodeType) ? "Type: Circle" : "Type: Rectangle";
+        String typeText = NODE_TYPE_CIRCLE.equals(nodeType) ? "Type: Circle" : "Type: Rectangle";
         JLabel typeLabel = new JLabel(typeText);
         typeLabel.setFont(typeLabel.getFont().deriveFont(Font.BOLD));
         form.add(typeLabel);
@@ -155,6 +162,20 @@ public class GenericGraphFactory implements CanvasComponentFactory {
         });
         borderPicker.setAlignmentX(Component.LEFT_ALIGNMENT);
         form.add(borderPicker);
+        form.add(Box.createVerticalStrut(8));
+
+        // Text color — defaults to (and keeps tracking) the border color until picked explicitly
+        JLabel textColorLabel = new JLabel("Text color:");
+        textColorLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(textColorLabel);
+        form.add(Box.createVerticalStrut(2));
+        Color currentText = decodeColor(properties.get("textColor"), currentBorder);
+        SwatchColorPicker textColorPicker = new SwatchColorPicker(currentText, chosen -> {
+            properties.put("textColor", encodeColor(chosen));
+            onChanged.run();
+        });
+        textColorPicker.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(textColorPicker);
 
         panel.add(form, BorderLayout.NORTH);
         return panel;

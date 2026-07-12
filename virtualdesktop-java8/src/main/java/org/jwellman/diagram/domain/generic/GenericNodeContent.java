@@ -26,7 +26,8 @@ public class GenericNodeContent extends JPanel {
     private final Color fillColor;
     private final Color borderColor;
 
-    public GenericNodeContent(String nodeType, String label, Color fillColor, Color borderColor) {
+    public GenericNodeContent(String nodeType, String label, Color fillColor, Color borderColor,
+                              Color textColor) {
         this.nodeType    = nodeType;
         this.fillColor   = fillColor;
         this.borderColor = borderColor;
@@ -36,6 +37,7 @@ public class GenericNodeContent extends JPanel {
 
         JLabel textLabel = new JLabel(label, SwingConstants.CENTER);
         textLabel.setFont(textLabel.getFont().deriveFont(Font.PLAIN, 12f));
+        textLabel.setForeground(textColor);
         add(textLabel, BorderLayout.CENTER);
     }
 
@@ -47,21 +49,31 @@ public class GenericNodeContent extends JPanel {
 
         int width  = getWidth();
         int height = getHeight();
-        boolean isCircle = "CIRCLE_NODE".equals(nodeType);
+        boolean isCircle = GenericGraphFactory.NODE_TYPE_CIRCLE.equals(nodeType);
+
+        // Extend to (nearly) the full node bounds — not DiagramShape's 5px inset —
+        // so the visible shape's edge lines up with ShadowLayerPanel's shadow, which
+        // is always sized from the node's full bounds. 1px is just enough margin to
+        // keep the 2px border stroke from being clipped at the component edge.
+        int margin = 1;
+        int x = margin;
+        int y = margin;
+        int w = width - margin * 2;
+        int h = height - margin * 2;
 
         g2d.setColor(fillColor);
         if (isCircle) {
-            g2d.fillOval(5, 5, width - 10, height - 10);
+            g2d.fillOval(x, y, w, h);
         } else {
-            g2d.fillRoundRect(5, 5, width - 10, height - 10, 10, 10);
+            g2d.fillRoundRect(x, y, w, h, 10, 10);
         }
 
         g2d.setColor(borderColor);
         g2d.setStroke(new BasicStroke(2));
         if (isCircle) {
-            g2d.drawOval(5, 5, width - 10, height - 10);
+            g2d.drawOval(x, y, w, h);
         } else {
-            g2d.drawRoundRect(5, 5, width - 10, height - 10, 10, 10);
+            g2d.drawRoundRect(x, y, w, h, 10, 10);
         }
     }
 }

@@ -10,11 +10,19 @@ import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
 
 import org.jwellman.diagram.api.GraphNode;
+import org.jwellman.diagram.domain.generic.GenericGraphFactory;
 
 /**
  * Transparent full-canvas panel at SHADOW_LAYER that paints a soft multi-pass
- * drop shadow behind every visible graph node. Shadows are node-only because
- * nodes are always rectangular; other shape types may be added in a later phase.
+ * drop shadow behind every visible graph node — a rounded-rect silhouette by
+ * default, an oval for {@code GenericGraphFactory.NODE_TYPE_CIRCLE} nodes.
+ *
+ * The circle check is a deliberate, narrow exception to "framework doesn't
+ * depend on domain classes": it's a node-type string comparison, not an import
+ * of domain painting/behavior, and it's the simplest way to keep a circular
+ * node's shadow from looking like a rectangle poking out from behind it. If a
+ * third shape-aware shadow silhouette is ever needed, promote this to a
+ * GraphNode-level hint instead of adding more type-string branches here.
  *
  * Always passes mouse events through to layers below.
  * Hidden during node drag (suspended by DiagramLayeredPane) to avoid recomputing
@@ -48,8 +56,9 @@ public class ShadowLayerPanel extends JPanel {
 
             for (Component comp : pane.getComponents()) {
                 if (comp instanceof GraphNode && comp.isVisible()) {
+                    boolean oval = GenericGraphFactory.NODE_TYPE_CIRCLE.equals(((GraphNode) comp).getNodeType());
                     paintMultiPassShadow(g2d, comp.getX(), comp.getY(),
-                        comp.getWidth(), comp.getHeight());
+                        comp.getWidth(), comp.getHeight(), oval);
                 }
             }
         } finally {
@@ -57,20 +66,21 @@ public class ShadowLayerPanel extends JPanel {
         }
     }
 
-    private void paintMultiPassShadow(Graphics2D g2d, int x, int y, int w, int h) {
+    private void paintMultiPassShadow(Graphics2D g2d, int x, int y, int w, int h, boolean oval) {
         for (int i = SHADOW_SIZE; i >= 0; i--) {
             float progress = (float) i / SHADOW_SIZE;
             float opacity = MAX_OPACITY * (1.0f - (progress * progress));
             g2d.setColor(new Color(0, 0, 0, opacity));
             int expand = i * 2;
-            g2d.fillRoundRect(
-                x - i,
-                y - i + SHADOW_OFFSET_Y,
-                w + expand,
-                h + expand,
-                CORNER_RADIUS + expand,
-                CORNER_RADIUS + expand
-            );
+            int sx = x - i;
+            int sy = y - i + SHADOW_OFFSET_Y;
+            int sw = w + expand;
+            int sh = h + expand;
+            if (oval) {
+                g2d.fillOval(sx, sy, sw, sh);
+            } else {
+                g2d.fillRoundRect(sx, sy, sw, sh, CORNER_RADIUS + expand, CORNER_RADIUS + expand);
+            }
         }
     }
 

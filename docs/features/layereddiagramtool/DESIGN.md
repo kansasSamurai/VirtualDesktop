@@ -119,7 +119,7 @@ LayeredDiagramTool (JPanel)
 
 | Class | Role |
 | --- | --- |
-| `NodeHostPanel` | `public JPanel` implementing `GraphNode`; wraps domain-provided content in `BorderLayout.CENTER`; computes port locations lazily from current bounds (no cache); `swapContent(JPanel)` replaces the content panel in-place after a property-editor rebuild |
+| `NodeHostPanel` | `public JPanel` implementing `GraphNode`; wraps domain-provided content in `BorderLayout.CENTER`; non-opaque shell — paints nothing itself so content that doesn't fully cover its own bounds (e.g. a circle) isn't haloed by an opaque wrapper background; computes port locations lazily from current bounds (no cache); `swapContent(JPanel)` replaces the content panel in-place after a property-editor rebuild |
 | `EdgeRenderPanel` | Transparent `JPanel` at `CONNECTION_LAYER`; paints all edges using the configured `EdgeRouter`; always returns `false` from `contains()` to pass mouse events through |
 | `CanvasOverlayPanel` | Transparent `JPanel` at `OVERLAY_LAYER`; state machine (`IDLE / EDGE_CREATION / EDGE_DRAGGING`); renders selection handles (single selection) or highlight outlines (multi-selection), the rubber-band marquee rectangle, port anchor circles, and the edge-drag rubber-band line; transparent to mouse events in `IDLE` state except near resize handles |
 | `OrthogonalRouter` | Port-direction-aware L/Z router: V-H-V for N/S ports, H-V-H for E/W ports, single-bend L for mixed pairs |
@@ -139,6 +139,23 @@ LayeredDiagramTool (JPanel)
 | `ClassDiagramDemo` | Static `buildDemo(DiagramLayeredPane, CanvasComponentFactory)` method; populates 4 nodes and 3 edges illustrating class relationships |
 | `ToolDiagramDemo` | Self-describing startup diagram of the tool's UI layer (9 nodes, 8 edges); wired as the default at startup in `SpecDiagramTool` |
 | `ToolFrameworkDiagram` | Self-describing diagram of the framework's api interfaces and core implementations (11 nodes, 4 implements edges); call `buildDemo()` to display on demand |
+
+---
+
+### `org.jwellman.diagram.domain.generic` — plain-diagram graph domain
+
+Registered as the factory for the "Plain Diagram" type (`SpecDiagramTool`), giving
+domain-less diagrams connectable node types instead of leaving them decoration-only.
+
+| Class | Role |
+| --- | --- |
+| `GenericNodeContent` | Pure-Swing `JPanel`; custom-painted rectangle or ellipse (visually identical to the decorative `DiagramShape` rectangle/circle) with a centered text label; no fields/methods |
+| `GenericGraphFactory` | Implements `CanvasComponentFactory`; node types `RECT_NODE` / `CIRCLE_NODE`; property editor exposes Label + fill/border `SwatchColorPicker`s; deliberately does not override `setTheme()` (fixed default colors, like `DiagramShape`) or `getRelationshipPresets()` (falls back to the generic per-end line-style/arrow picker on the Relationships tab, since "no named relationship vocabulary" is the correct default for a domain-less graph) |
+
+The decorative `DiagramShape` rectangle/circle (toolbar "Add Rectangle" / "Add Circle")
+remain unchanged and available on every diagram type, including class diagrams — they
+are non-connectable, layer-based visual elements (watermarks, region fills, callouts),
+distinct from `GenericGraphFactory`'s connectable graph nodes.
 
 ---
 

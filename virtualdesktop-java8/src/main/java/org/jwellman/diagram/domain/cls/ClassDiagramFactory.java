@@ -36,6 +36,7 @@ import javax.swing.border.Border;
 
 import org.jwellman.diagram.api.CanvasComponentFactory;
 import org.jwellman.diagram.api.CanvasTheme;
+import org.jwellman.diagram.api.RelationshipType;
 import org.jwellman.swing.colorchooser.SwatchColorPicker;
 import org.jwellman.swing.layout.FluidConstraint;
 import org.jwellman.swing.layout.FluidLayout;
@@ -90,6 +91,11 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
     @Override
     public String getDomainTypeId() {
         return "Class Diagram";
+    }
+
+    @Override
+    public List<RelationshipType> getRelationshipPresets() {
+        return RelationshipType.defaultUmlTypes();
     }
 
     @Override

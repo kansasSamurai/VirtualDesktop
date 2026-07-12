@@ -3,6 +3,7 @@ package org.jwellman.virtualdesktop.vapps;
 import org.jwellman.diagram.LayeredDiagramTool;
 import org.jwellman.diagram.domain.cls.ClassDiagramFactory;
 import org.jwellman.diagram.domain.cls.ToolDiagramDemo;
+import org.jwellman.diagram.domain.generic.GenericGraphFactory;
 
 /**
  * VApp that hosts the LayeredDiagramTool inside a VirtualDesktop internal frame.
@@ -18,7 +19,7 @@ public class SpecDiagramTool extends VirtualAppSpec {
         LayeredDiagramTool tool = new LayeredDiagramTool();
 
         // Register available diagram types shown in the "+" new-diagram dialog
-        tool.registerDiagramType("Plain Diagram", pane -> null);
+        tool.registerDiagramType("Plain Diagram", pane -> new GenericGraphFactory());
         tool.registerDiagramType("Class Diagram", pane -> new ClassDiagramFactory(pane.getTheme()));
 
         // Prime the initial tab with a class diagram factory and demo content

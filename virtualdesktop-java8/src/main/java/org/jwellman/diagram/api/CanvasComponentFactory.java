@@ -1,5 +1,6 @@
 package org.jwellman.diagram.api;
 
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
@@ -98,5 +99,16 @@ public interface CanvasComponentFactory {
      * The default is a no-op for factories that do not hold a theme reference.
      */
     default void setTheme(CanvasTheme theme) {
+    }
+
+    /**
+     * Named relationship presets for the Relationships tab (e.g. UML's Association,
+     * Inheritance, Aggregation...), or {@code null}/empty for none. The framework
+     * falls back to the generic line-style + per-end arrow picker when this returns
+     * null or empty — the right choice for domains with no meaningful named
+     * vocabulary for their connections (e.g. a plain/generic graph editor).
+     */
+    default List<RelationshipType> getRelationshipPresets() {
+        return null;
     }
 }

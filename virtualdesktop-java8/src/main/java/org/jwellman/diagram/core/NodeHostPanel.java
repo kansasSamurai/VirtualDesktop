@@ -34,6 +34,11 @@ public class NodeHostPanel extends JPanel implements GraphNode {
         this.nodeType = type;
         this.properties = props;
         this.portIds = portIds;
+        // The shell itself paints nothing — content decides its own opacity. A JPanel
+        // is opaque by default; leaving that on here would paint a background behind
+        // any content that doesn't fully cover its own bounds (e.g. GenericNodeContent's
+        // circle/rounded-rect, which deliberately leaves its corners unpainted).
+        setOpaque(false);
         add(content, BorderLayout.CENTER);
     }
 

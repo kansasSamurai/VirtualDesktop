@@ -15,6 +15,7 @@
 | 4.6 | Runtime theme switching | ✅ Complete | setTheme() on DiagramLayeredPane; toolbar selector; theme persisted with diagram; unresolved theme on load warns and falls back to default |
 | 5 | Multi-select and group operations | ✅ Complete | Rubber-band select; ctrl-click toggle; group move; align/distribute; Select All; multi-delete |
 | 5.5 | Hover-to-connect (implicit edge creation) | ⬜ Planned | Hover a node to reveal its ports; drag port-to-port without toggling "Connect"; hover disabled while anything is selected |
+| 5.6 | Utility actions strip | ⬜ Planned | Fixed strip pinned below the right panel's split; migrates existing toolbar actions to small icon buttons |
 | 6 | Undo / Redo | ⬜ Planned | `javax.swing.undo` stack; all mutating operations |
 | 7 | Cut / Copy / Paste components | ⬜ Planned | Within and across diagram sessions |
 | 8 | Layer management enhancements | ⬜ Planned | Rename layers; reorder layers; lock layers |
@@ -369,6 +370,48 @@ individually; hover-connect is the fast path for a single quick connection.
 - The "Connect" toggle still works exactly as before for multi-edge sessions
 - Starting a rubber-band marquee or a component drag near a node does not spuriously
   trigger port-hover capture
+
+---
+
+## Phase 5.6 — Utility Actions Strip
+
+**Why**: This tool is primarily a graph editor; the toolbar has accumulated actions
+(add shape/text, grid/snap/shadow toggles, layer nudge, align/distribute, delete,
+load/save, connect) that are secondary to the core node/edge workflow. Moving them into
+the right panel as small icon buttons — the same visual family as the Line Style /
+Arrow End buttons from the Relationships tab — declutters the toolbar and keeps
+frequently-used actions glanceable without competing with primary canvas real estate.
+
+### Implementation
+
+**Placement**: a fixed, non-resizable strip pinned to `rightPanel`'s `BorderLayout.SOUTH`,
+below the existing Types/Relationships-over-Layers/Properties `JSplitPane` — not a third
+split section (would cramp the existing 50/50 balance in a 280px-wide column) and not a
+third tab (quick actions should stay glanceable without an extra click, which is the
+whole point of moving them out of the toolbar).
+
+**Scope discipline**: only actions that exist in the toolbar today move here — no new
+actions invented for this phase. Kept to one or two rows of small square icon buttons
+(matching `LineStyleButton`/`ArrowEndButton` sizing and hover/active styling) so the
+strip's footprint stays predictable regardless of how many actions eventually migrate.
+
+**Known wrinkle to solve when this phase starts**: the toolbar's "Align / Distribute"
+control is a `JPopupMenu` behind a single button (8 operations: 3 horizontal align, 3
+vertical align, 2 distribute) — that doesn't reduce to one small icon button the way
+"Bring Forward" or "Delete Selected" do. Options to weigh at implementation time: keep
+it as a single icon button that still opens the popup menu (simplest, breaks the
+"everything is a flat icon" consistency), expand it into its own small labeled
+sub-section within the strip (8 icon buttons, consistent but eats more strip height),
+or leave Align/Distribute in the toolbar as a deliberate exception. No decision made yet.
+
+### Verification
+
+- Every action currently reachable only via the toolbar is also reachable from the strip
+  (or a documented, deliberate exception)
+- Strip height stays fixed regardless of canvas size; does not participate in the
+  Types/Relationships-over-Layers/Properties split's resize
+- Icon buttons are legible and hit-testable at their small size; tooltips cover for the
+  lack of text labels
 
 ---
 

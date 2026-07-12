@@ -763,21 +763,25 @@ public class LayeredDiagramTool extends JPanel {
 
     /**
      * Rebuilds the Relationships tab content for the current domain type: the
-     * named UML preset list for a class-diagram factory, or the generic
-     * line-style + per-end arrow picker when no factory is set (plain diagrams).
-     * Called whenever a tab's factory is assigned or changes.
+     * factory's named preset list (e.g. UML relationships for class diagrams) if
+     * it declares one, or the generic line-style + per-end arrow picker
+     * otherwise (plain diagrams, or any factory that opts out). Called whenever
+     * a tab's factory is assigned or changes.
      */
     private void updateRelationshipsPanel(DiagramTabContent tab) {
         tab.relationshipsPanel.removeAll();
-        JPanel content = (tab.factory != null)
-            ? buildUmlRelationshipsPanel(tab.diagramPane)
+        List<RelationshipType> presets = (tab.factory != null)
+            ? tab.factory.getRelationshipPresets()
+            : null;
+        JPanel content = (presets != null && !presets.isEmpty())
+            ? buildUmlRelationshipsPanel(tab.diagramPane, presets)
             : buildGenericRelationshipsPanel(tab.diagramPane);
         tab.relationshipsPanel.add(content, BorderLayout.CENTER);
         tab.relationshipsPanel.revalidate();
         tab.relationshipsPanel.repaint();
     }
 
-    private JPanel buildUmlRelationshipsPanel(DiagramLayeredPane pane) {
+    private JPanel buildUmlRelationshipsPanel(DiagramLayeredPane pane, List<RelationshipType> presets) {
         final List<RelationshipControlPanel> tiles = new ArrayList<>();
 
         JPanel listPanel = new JPanel();
@@ -790,14 +794,14 @@ public class LayeredDiagramTool extends JPanel {
             pane.applyRelationship(selected.getRelationshipType().attributes);
         };
 
-        for (RelationshipType rt : RelationshipType.defaultUmlTypes()) {
+        for (RelationshipType rt : presets) {
             RelationshipControlPanel tile = new RelationshipControlPanel(rt, onSelected);
             tiles.add(tile);
             listPanel.add(tile);
             listPanel.add(Box.createVerticalStrut(1));
         }
 
-        // Pre-select Association (first tile) as the default active relationship
+        // Pre-select the first preset as the default active relationship
         if (!tiles.isEmpty()) {
             tiles.get(0).setActive(true);
             pane.applyRelationship(tiles.get(0).getRelationshipType().attributes);
@@ -814,11 +818,13 @@ public class LayeredDiagramTool extends JPanel {
     }
 
     /**
-     * Generic relationship picker for domain-less (plain) diagrams: a line-style
-     * row (Solid / Dashed) followed by independent Left Arrow / Right Arrow rows,
-     * each offering all five {@code EdgeAttributes.ArrowType} values. Left maps to
-     * the edge's source end, Right to its target end, matching the left/right
-     * convention already used by RelationshipControlPanel's preview painting.
+     * Generic relationship picker used whenever the active factory has no named
+     * presets (plain diagrams today; any future factory that doesn't override
+     * {@code getRelationshipPresets()}): a line-style row (Solid / Dashed)
+     * followed by independent Left Arrow / Right Arrow rows, each offering all
+     * five {@code EdgeAttributes.ArrowType} values. Left maps to the edge's
+     * source end, Right to its target end, matching the left/right convention
+     * already used by RelationshipControlPanel's preview painting.
      */
     private JPanel buildGenericRelationshipsPanel(DiagramLayeredPane pane) {
         EdgeAttributes attrs = new EdgeAttributes();

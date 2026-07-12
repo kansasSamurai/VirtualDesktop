@@ -775,8 +775,12 @@ public class DiagramLayeredPane extends JLayeredPane implements Scrollable {
         edgePanel.setSelectedEdge(null);
         overlayPanel.setSelection(selectedComponents);
         repaint();
-        notifySelectionChanged();
+        // Edge-clear notification must fire first: it always carries null and
+        // LayeredDiagramTool's edge listener treats a null edge as "blank the
+        // property editor" — firing it after notifySelectionChanged() would
+        // wipe out the property editor content that call just populated.
         notifyEdgeSelectionChanged();
+        notifySelectionChanged();
     }
 
     public void selectAll() {

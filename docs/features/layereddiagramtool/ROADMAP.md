@@ -305,6 +305,73 @@ explicitly clicks elsewhere.
 
 ---
 
+## Phase 5.5 — Hover-to-Connect (Implicit Edge Creation)
+
+**Why**: The explicit "Connect" toggle button works but is a modal detour from the
+direct-manipulation paradigm most diagram tools use today: hover a node, its ports
+appear, drag from a port to another node's port — no mode switch required. Most of the
+underlying mechanics already exist from Phase 3; this is primarily an interaction-wiring
+pass, not new infrastructure.
+
+### Implementation
+
+**Reused as-is (no changes needed):**
+
+- Port hit-testing (`CanvasOverlayPanel.findNearestPort()`), the rubber-band line,
+  `OrthogonalRouter`, and edge commit/persistence (`DefaultGraphEdge`,
+  `DiagramLayeredPane.addGraphEdge()`) — the "Connect" toggle mode already does the
+  actual connecting; only the entry trigger changes.
+- The "narrow hot-zone captures the overlay even while otherwise transparent" pattern
+  already used for resize handles (`isNearAnyHandle()` / `getHandleAt()` + the
+  `contains()` override in `IDLE`) — port-hover-hit-capture reuses the identical
+  mechanism with a different hot zone.
+- Z-order hit-priority: `CanvasOverlayPanel` sits at `OVERLAY_LAYER` (500), above every
+  node's own layer, so a `contains()` hit there already wins over the node's own
+  click-to-select/drag listeners with no new plumbing.
+
+**New work:**
+
+1. **Hover tracking** — wire `mouseEntered` / `mouseExited` per `GraphNode` (in
+   `DiagramLayeredPane.installInteractionHandlers()`) to a `hoveredNode` field on the
+   pane/overlay.
+2. **Paint gating** — in `IDLE` state, show port anchors for only the hovered node (not
+   all nodes, which is what the "Connect" toggle does today — less clutter). Once a drag
+   actually starts (`EDGE_DRAGGING`), fall back to showing anchors on all nodes, matching
+   current behavior, so the user can see every valid drop target.
+3. **Implicit drag-to-connect** — a port-press while hovering (no toggle active) jumps
+   straight into `EDGE_DRAGGING`; on release, commit the edge (or cancel) and drop
+   straight back to plain hover-tracking, rather than staying in `EDGE_CREATION` for a
+   multi-edge session the way the toggle-driven flow does.
+4. **Drag/marquee guard** — suppress hover-port-hit-capture while a resize, component
+   drag, or rubber-band marquee is already in progress (reuse existing state checks).
+
+**Design decision — selection/hover collision:** ports sit at N/S/E/W (mid-edge), the
+same positions as 4 of the 8 resize handles, so a node that is both selected and hovered
+would have a port anchor and a resize handle at the same pixel. Resolved by **disabling
+hover entirely whenever anything is selected** (single or multi) rather than offsetting
+anchors or requiring a modifier key. This sidesteps the collision outright and matches
+the direct-manipulation model most comparable tools use — the user deselects (click
+blank canvas) before starting a new connection, so "selected" and "about to connect" are
+never simultaneous states.
+
+**Coexistence with the toggle:** the explicit "Connect" button stays. It remains the
+better flow for drawing several edges in a row without re-hovering each node
+individually; hover-connect is the fast path for a single quick connection.
+
+### Verification
+
+- Hovering a node (nothing selected) reveals only that node's ports; moving off hides them
+- Selecting any component (single or multi) suppresses hover-port reveal even when the
+  mouse crosses a node
+- Press-drag from a hovered port to another node's port commits an edge and immediately
+  returns to plain hover-tracking (no lingering edge-creation mode)
+- Releasing off any port cancels the in-progress edge cleanly
+- The "Connect" toggle still works exactly as before for multi-edge sessions
+- Starting a rubber-band marquee or a component drag near a node does not spuriously
+  trigger port-hover capture
+
+---
+
 ## Phase 6 — Undo / Redo
 
 **Why**: Undo is the single most important missing feature for a drawing tool — it

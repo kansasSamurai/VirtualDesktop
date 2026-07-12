@@ -140,18 +140,6 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         form.add(typeLabel);
         form.add(Box.createVerticalStrut(8));
 
-        // Abstract
-        JCheckBox abstractCheck = new JCheckBox("Abstract",
-            Boolean.TRUE.equals(properties.get("abstract")));
-        abstractCheck.setAlignmentX(Component.LEFT_ALIGNMENT);
-        abstractCheck.setEnabled(!"INTERFACE".equalsIgnoreCase(nodeType));
-        abstractCheck.addActionListener(e -> {
-            properties.put("abstract", abstractCheck.isSelected());
-            onChanged.run();
-        });
-        form.add(abstractCheck);
-        form.add(Box.createVerticalStrut(6));
-
         // Name
         JPanel nameRow = new JPanel(new BorderLayout(4, 0));
         nameRow.add(new JLabel("Name:"), BorderLayout.WEST);
@@ -192,6 +180,18 @@ public class ClassDiagramFactory implements CanvasComponentFactory {
         stereoRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         stereoRow.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, stereoRow.getPreferredSize().height));
         form.add(stereoRow);
+        form.add(Box.createVerticalStrut(6));
+
+        // Abstract
+        JCheckBox abstractCheck = new JCheckBox("Abstract",
+            Boolean.TRUE.equals(properties.get("abstract")));
+        abstractCheck.setAlignmentX(Component.LEFT_ALIGNMENT);
+        abstractCheck.setEnabled(!"INTERFACE".equalsIgnoreCase(nodeType));
+        abstractCheck.addActionListener(e -> {
+            properties.put("abstract", abstractCheck.isSelected());
+            onChanged.run();
+        });
+        form.add(abstractCheck);
         form.add(Box.createVerticalStrut(8));
 
         // Header background color

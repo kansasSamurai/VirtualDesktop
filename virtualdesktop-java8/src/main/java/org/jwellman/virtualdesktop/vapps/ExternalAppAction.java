@@ -55,11 +55,7 @@ public class ExternalAppAction extends DesktopAction {
         );
 
         // Set icon if available
-        if (getValue(SMALL_ICON) != null) {
-            spec.setIcon((javax.swing.Icon) getValue(SMALL_ICON));
-        } else if (getValue(LARGE_ICON_KEY) != null) {
-            spec.setIcon((javax.swing.Icon) getValue(LARGE_ICON_KEY));
-        }
+        applyIconToSpec(spec);
 
         // Use DesktopManager to launch (it will detect ExternalAppSpec and launch appropriately)
         DesktopManager.get().createVApp(spec);

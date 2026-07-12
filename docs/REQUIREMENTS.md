@@ -47,6 +47,7 @@ Practically this means: state lives in Redux, controllers mediate all mutations,
 - [UI/UX Guidelines](#ui-ux-guidelines)
 - [Desktop](#desktop)
 - [Taskbar](#taskbar)
+- [Icons](#icons)
 - [Credential Management](#credential-management)
 - [State Management (Redux-Style)](#state-management-redux-style)
 
@@ -177,6 +178,24 @@ See **[docs/features/DESKTOP.md](features/DESKTOP.md)** for full design, current
 The taskbar shows all open tools and their lifecycle state (minimized, active, grouped). It is implemented as a Redux subscriber (`WindowListController`) backed by immutable state (`WindowListState`, `ToolInstance`). This is the reference architecture for reactive UI subsystems in VirtualDesktop.
 
 See **[docs/features/TASKBAR.md](features/TASKBAR.md)** for full architecture, data flow, and known gaps.
+
+---
+
+### Icons
+
+Icon rendering is backed by a single shared registry (`DSP.Icons`, defined in the sibling
+`swing-utils` project), but four independent mechanisms register into it — filesystem
+auto-discovery, hardcoded one-offs in `App.java`, a config-driven two-layer loader
+(`config/icon-theme.json` + `config/providers/*.json`), and a wholly separate legacy
+system scoped to the file manager. A fifth, partially-adopted semantic-size wrapper
+(`IconSize`/`ThemeManager`) coexists with older raw string-concatenation call sites.
+
+This is a current-state audit, not a target architecture — written up after tracking down
+two related bugs where internal tool frames showed the wrong (or a generic fallback)
+icon depending on launch path.
+
+See **[docs/features/ICONS.md](features/ICONS.md)** for the full registration-mechanism
+inventory, known design deficiencies, and file references.
 
 ---
 

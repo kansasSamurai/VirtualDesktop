@@ -181,6 +181,7 @@ public class ActionFactory {
             }
 
             Icon largeIcon = null;
+            Icon smallIcon = null;
 
             // Try to load requested icon, fallback to add196 if not found
             try {
@@ -194,12 +195,28 @@ public class ActionFactory {
                 }
             }
 
+            // Small variant — used for the internal frame / toolbar decoration when this
+            // shortcut's vapp is launched; the large variant above is only for the desktop tile.
+            try {
+                smallIcon = DSP.Icons.getIcon(iconKey + "-small");
+            } catch (Exception ex) {
+                LOG.warn("Icon not found: {}-small, using fallback add196-small", iconKey);
+                try {
+                    smallIcon = DSP.Icons.getIcon("add196-small");
+                } catch (Exception ex2) {
+                    LOG.error("Fallback icon add196-small also not found");
+                }
+            }
+
             DesktopAction action = new DesktopAction(shortcut.getLabel());
             action.setDesktopOnly(true);
             action.setClazzName(shortcut.getClassName());
 
             if (largeIcon != null) {
                 action.putValue(Action.LARGE_ICON_KEY, largeIcon);
+            }
+            if (smallIcon != null) {
+                action.putValue(Action.SMALL_ICON, smallIcon);
             }
 
             getListOfActions().add(action);
@@ -257,22 +274,34 @@ public class ActionFactory {
             // Load icon if specified
             final String iconValue = appConfig.getIcon();
             if (iconValue != null && !iconValue.isEmpty()) {
-                // Get icons from DSP.Icons registry using semantic size keys
-                Icon largeIcon = DSP.Icons.getIcon(iconValue + "-large");
-                Icon smallIcon = DSP.Icons.getIcon(iconValue + "-small");
+                // Get icons from DSP.Icons registry using semantic size keys.
+                // A missing key throws rather than returning null, so both lookups
+                // must be guarded individually or a single miss aborts the whole
+                // external app registration before the fallback below ever runs.
+                Icon largeIcon = null;
+                Icon smallIcon = null;
+                try {
+                    largeIcon = DSP.Icons.getIcon(iconValue + "-large");
+                    smallIcon = DSP.Icons.getIcon(iconValue + "-small");
+                } catch (Exception ex) {
+                    LOG.warn("Icon not found in registry for {}: {}", appConfig.getName(), iconValue);
+                    LOG.warn("Make sure the icon is in the auto-discovered directory or manually registered.");
+                }
 
                 if (largeIcon != null && smallIcon != null) {
                     action.putValue(Action.LARGE_ICON_KEY, largeIcon);
                     action.putValue(Action.SMALL_ICON, smallIcon);
                 } else {
-                    LOG.warn("Icon not found in registry for {}: {}", appConfig.getName(), iconValue);
-                    LOG.warn("Make sure the icon is in the auto-discovered directory or manually registered.");
                     // Use default icon
-                    Icon defaultLargeIcon = DSP.Icons.getIcon("winking18-large");
-                    Icon defaultSmallIcon = DSP.Icons.getIcon("winking18-small");
-                    if (defaultLargeIcon != null && defaultSmallIcon != null) {
-                        action.putValue(Action.LARGE_ICON_KEY, defaultLargeIcon);
-                        action.putValue(Action.SMALL_ICON, defaultSmallIcon);
+                    try {
+                        Icon defaultLargeIcon = DSP.Icons.getIcon("winking18-large");
+                        Icon defaultSmallIcon = DSP.Icons.getIcon("winking18-small");
+                        if (defaultLargeIcon != null && defaultSmallIcon != null) {
+                            action.putValue(Action.LARGE_ICON_KEY, defaultLargeIcon);
+                            action.putValue(Action.SMALL_ICON, defaultSmallIcon);
+                        }
+                    } catch (Exception ex2) {
+                        LOG.error("Fallback icon winking18 also not found");
                     }
                 }
             }

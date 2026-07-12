@@ -67,10 +67,35 @@ public class DesktopAction extends AbstractAction implements Runnable {
                     ((Configurable) spec).configure(this.attrs);
                 }
 
+                if (spec instanceof VirtualAppSpec) {
+                    applyIconToSpec((VirtualAppSpec) spec);
+                }
+
                 DesktopManager.get().createVApp(spec);
             } catch (InstantiationException | IllegalAccessException ex) {
                 Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
             }
+    }
+
+    /**
+     * Transfers this action's configured icon (as loaded from vapps-config.json /
+     * external-apps.json) onto the spec that will back the resulting internal frame.
+     * Without this, {@code VirtualAppSpec.getIcon()} stays {@code null} and
+     * {@code DesktopManager} falls back to the generic "jpad.java" icon, even though
+     * the launching desktop shortcut or Tools-menu item itself shows the correct icon.
+     * A spec that already set its own icon (e.g. in its constructor) is left alone.
+     */
+    protected void applyIconToSpec(VirtualAppSpec spec) {
+        if (spec.getIcon() != null) {
+            return;
+        }
+        Icon icon = (Icon) getValue(SMALL_ICON);
+        if (icon == null) {
+            icon = (Icon) getValue(LARGE_ICON_KEY);
+        }
+        if (icon != null) {
+            spec.setIcon(icon);
+        }
     }
 
     public static void setDesktop(App a) { vdesktop = a; }

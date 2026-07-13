@@ -20,6 +20,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.border.Border;
 
+import org.jwellman.diagram.FontPickerPanel;
 import org.jwellman.diagram.api.CanvasComponentFactory;
 import org.jwellman.swing.colorchooser.SwatchColorPicker;
 
@@ -41,6 +42,9 @@ public class GenericGraphFactory implements CanvasComponentFactory {
     private static final Color DEFAULT_FILL   = new Color(173, 216, 230, 200);
     private static final Color DEFAULT_BORDER = new Color(70, 130, 180);
 
+    // Matches DiagramText's own default font exactly, per "same as the text shape."
+    private static final Font DEFAULT_FONT = new Font("Segoe UI", Font.BOLD, 16);
+
     // Deliberately theme-independent, like the decorative DiagramShape rectangle/circle
     // it mirrors — fixed default colors, no setTheme() override (default no-op applies).
 
@@ -51,8 +55,9 @@ public class GenericGraphFactory implements CanvasComponentFactory {
         Color border = decodeColor(properties.get("borderColor"), DEFAULT_BORDER);
         // No fixed default: mirrors whatever the border color currently is until the
         // user explicitly picks a text color, so it keeps tracking border changes too.
-        Color text   = decodeColor(properties.get("textColor"), border);
-        return new GenericNodeContent(nodeType, label, fill, border, text);
+        Color text = decodeColor(properties.get("textColor"), border);
+        Font font  = decodeFont(properties);
+        return new GenericNodeContent(nodeType, label, fill, border, text, font);
     }
 
     @Override
@@ -176,6 +181,19 @@ public class GenericGraphFactory implements CanvasComponentFactory {
         });
         textColorPicker.setAlignmentX(Component.LEFT_ALIGNMENT);
         form.add(textColorPicker);
+        form.add(Box.createVerticalStrut(8));
+
+        // Font — the same picker used for the decorative text shape
+        Font currentFont = decodeFont(properties);
+        FontPickerPanel fontPicker = new FontPickerPanel(
+            currentFont.getName(), currentFont.getSize(), currentFont.getStyle(), font -> {
+                properties.put("fontName", font.getName());
+                properties.put("fontSize", font.getSize());
+                properties.put("fontStyle", font.getStyle());
+                onChanged.run();
+            });
+        fontPicker.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(fontPicker);
 
         panel.add(form, BorderLayout.NORTH);
         return panel;
@@ -195,5 +213,14 @@ public class GenericGraphFactory implements CanvasComponentFactory {
             }
         }
         return fallback;
+    }
+
+    private static Font decodeFont(Map<String, Object> properties) {
+        String name = (String) properties.getOrDefault("fontName", DEFAULT_FONT.getName());
+        Object sizeVal = properties.get("fontSize");
+        int size = (sizeVal instanceof Number) ? ((Number) sizeVal).intValue() : DEFAULT_FONT.getSize();
+        Object styleVal = properties.get("fontStyle");
+        int style = (styleVal instanceof Number) ? ((Number) styleVal).intValue() : DEFAULT_FONT.getStyle();
+        return new Font(name, style, size);
     }
 }

@@ -27,7 +27,7 @@ public class GenericNodeContent extends JPanel {
     private final Color borderColor;
 
     public GenericNodeContent(String nodeType, String label, Color fillColor, Color borderColor,
-                              Color textColor) {
+                              Color textColor, Font font) {
         this.nodeType    = nodeType;
         this.fillColor   = fillColor;
         this.borderColor = borderColor;
@@ -36,7 +36,7 @@ public class GenericNodeContent extends JPanel {
         setLayout(new BorderLayout());
 
         JLabel textLabel = new JLabel(label, SwingConstants.CENTER);
-        textLabel.setFont(textLabel.getFont().deriveFont(Font.PLAIN, 12f));
+        textLabel.setFont(font);
         textLabel.setForeground(textColor);
         add(textLabel, BorderLayout.CENTER);
     }

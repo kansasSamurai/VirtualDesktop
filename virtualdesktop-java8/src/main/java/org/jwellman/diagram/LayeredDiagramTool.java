@@ -517,14 +517,6 @@ public class LayeredDiagramTool extends JPanel {
         form.add(title);
         form.add(Box.createVerticalStrut(8));
 
-        // Text labels — auto-positioned at render time (center, and near each end)
-        form.add(buildEdgeLabelRow("Label:", edge, "label", tab));
-        form.add(Box.createVerticalStrut(4));
-        form.add(buildEdgeLabelRow("Source label:", edge, "sourceLabel", tab));
-        form.add(Box.createVerticalStrut(4));
-        form.add(buildEdgeLabelRow("Target label:", edge, "targetLabel", tab));
-        form.add(Box.createVerticalStrut(8));
-
         // Line style
         JLabel lineLabel = new JLabel("Line style:");
         lineLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -590,6 +582,14 @@ public class LayeredDiagramTool extends JPanel {
             tab.diagramPane.notifyModified();
         });
         form.add(arrowRow);
+        form.add(Box.createVerticalStrut(8));
+
+        // Text labels — auto-positioned at render time (center, and near each end)
+        form.add(buildEdgeLabelRow("Label:", edge, "label", tab));
+        form.add(Box.createVerticalStrut(4));
+        form.add(buildEdgeLabelRow("Source label:", edge, "sourceLabel", tab));
+        form.add(Box.createVerticalStrut(4));
+        form.add(buildEdgeLabelRow("Target label:", edge, "targetLabel", tab));
 
         panel.add(form, BorderLayout.NORTH);
         return panel;

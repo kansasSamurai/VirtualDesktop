@@ -14,7 +14,6 @@ import java.awt.geom.Path2D;
 import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -187,50 +186,59 @@ public class EdgeRenderPanel extends JPanel {
         Point sourceApproach = sourceApproachPoint(startPt, srcPort);
         drawEndDecoration(g2d, attrs.getSourceArrowType(), startPt, sourceApproach, edgeColor, attrs.getStrokeWidth());
 
-        paintEdgeLabels(g2d, edge, path);
+        paintEdgeLabels(g2d, edge, path, startPt, srcPort, endPt, tgtPort);
     }
 
     // ---------------------------------------------------------------
     // Edge text labels ("label", "sourceLabel", "targetLabel" properties)
     // ---------------------------------------------------------------
 
-    private static final Font LABEL_FONT        = new Font("SansSerif", Font.PLAIN, 11);
-    private static final int  LABEL_END_MARGIN  = 18; // px back from each port, measured along the path
-    private static final int  LABEL_PAD_X       = 4;
-    private static final int  LABEL_PAD_Y       = 1;
+    private static final Font LABEL_FONT  = new Font("SansSerif", Font.PLAIN, 11);
+    private static final int  LABEL_GAP   = 4; // px between text and the line/port it hugs
+    private static final int  LABEL_PAD_X = 4;
+    private static final int  LABEL_PAD_Y = 1;
 
     /**
-     * Positions are computed fresh from the current path on every paint — nothing
-     * is persisted beyond the text itself, so labels track the edge automatically
-     * as nodes move. Router-agnostic: walks the flattened path by arc length
-     * rather than assuming any particular routing shape.
+     * Positions are computed fresh from the current path/port locations on every
+     * paint — nothing is persisted beyond the text itself, so labels track the
+     * edge automatically as nodes move.
+     *
+     * The center label sits LABEL_GAP px off the line, on the side determined by
+     * the local segment's orientation at its anchor (above a horizontal segment,
+     * right of a vertical one). The end labels sit LABEL_GAP px off their own
+     * port, on the side away from the node along the port's own axis — right of
+     * the port for E, left for W, always above for both since both exit
+     * horizontally; above the port for N, below for S, always to the right of
+     * the line for both since both exit vertically. This only holds because the
+     * router always exits/enters a port along its own axis (a horizontal stub
+     * for E/W, a vertical stub for N/S) — true for every EdgeRouter in this
+     * framework, not just the orthogonal one.
      */
-    private void paintEdgeLabels(Graphics2D g2d, GraphEdge edge, Path2D path) {
+    private void paintEdgeLabels(Graphics2D g2d, GraphEdge edge, Path2D path,
+                                 Point sourcePt, String sourcePortId,
+                                 Point targetPt, String targetPortId) {
         Map<String, Object> props = edge.getProperties();
         if (props == null || props.isEmpty()) {
             return;
         }
 
-        List<Point2D> points = flatten(path);
-        if (points.size() < 2) {
-            return;
-        }
-
         String label = asLabelText(props.get("label"));
         if (label != null) {
-            drawLabelAt(g2d, label, pointAtDistance(points, pathLength(points) * 0.5));
+            List<Point2D> points = flatten(path);
+            if (points.size() >= 2) {
+                PathAnchor anchor = pointAtDistance(points, pathLength(points) * 0.5);
+                drawCenterLabel(g2d, label, anchor);
+            }
         }
 
         String sourceLabel = asLabelText(props.get("sourceLabel"));
         if (sourceLabel != null) {
-            drawLabelAt(g2d, sourceLabel, pointAtDistance(points, LABEL_END_MARGIN));
+            drawEndLabel(g2d, sourceLabel, sourcePt, sourcePortId);
         }
 
         String targetLabel = asLabelText(props.get("targetLabel"));
         if (targetLabel != null) {
-            List<Point2D> reversed = new ArrayList<>(points);
-            Collections.reverse(reversed);
-            drawLabelAt(g2d, targetLabel, pointAtDistance(reversed, LABEL_END_MARGIN));
+            drawEndLabel(g2d, targetLabel, targetPt, targetPortId);
         }
     }
 
@@ -242,27 +250,67 @@ public class EdgeRenderPanel extends JPanel {
         return text.isEmpty() ? null : text;
     }
 
-    /** Draws {@code text} centered on {@code anchor}, backed by a matte so it reads clearly over the line. */
-    private void drawLabelAt(Graphics2D g2d, String text, Point2D anchor) {
-        FontMetrics fm = g2d.getFontMetrics(LABEL_FONT);
-        int textWidth  = fm.stringWidth(text);
-        int cx = (int) Math.round(anchor.getX());
-        int cy = (int) Math.round(anchor.getY());
+    /** Center label: hugs the line, above a horizontal segment or right of a vertical one. */
+    private void drawCenterLabel(Graphics2D g2d, String text, PathAnchor anchor) {
+        FontMetrics fm  = g2d.getFontMetrics(LABEL_FONT);
+        int rectW = fm.stringWidth(text) + LABEL_PAD_X * 2;
+        int rectH = fm.getHeight() + LABEL_PAD_Y * 2;
+        int cx = (int) Math.round(anchor.point.getX());
+        int cy = (int) Math.round(anchor.point.getY());
 
-        int rectW = textWidth + LABEL_PAD_X * 2;
+        int rx, ry;
+        if (anchor.horizontal) {
+            rx = cx - rectW / 2;
+            ry = cy - LABEL_GAP - rectH;
+        } else {
+            rx = cx + LABEL_GAP;
+            ry = cy - rectH / 2;
+        }
+        drawLabelRect(g2d, text, fm, rx, ry, rectW, rectH);
+    }
+
+    /** End label: hugs its own port, on the side away from the node along the port's axis. */
+    private void drawEndLabel(Graphics2D g2d, String text, Point portPt, String portId) {
+        FontMetrics fm  = g2d.getFontMetrics(LABEL_FONT);
+        int rectW = fm.stringWidth(text) + LABEL_PAD_X * 2;
         int rectH = fm.getHeight() + LABEL_PAD_Y * 2;
 
+        int rx, ry;
+        if ("N".equals(portId) || "S".equals(portId)) {
+            rx = portPt.x + LABEL_GAP;
+            ry = "N".equals(portId) ? portPt.y - LABEL_GAP - rectH : portPt.y + LABEL_GAP;
+        } else {
+            rx = "W".equals(portId) ? portPt.x - LABEL_GAP - rectW : portPt.x + LABEL_GAP;
+            ry = portPt.y - LABEL_GAP - rectH;
+        }
+        drawLabelRect(g2d, text, fm, rx, ry, rectW, rectH);
+    }
+
+    /** Fills the background matte and centers {@code text} within the given box. */
+    private void drawLabelRect(Graphics2D g2d, String text, FontMetrics fm, int rx, int ry, int rectW, int rectH) {
         g2d.setColor(theme.getCanvasBackground());
-        g2d.fillRect(cx - rectW / 2, cy - rectH / 2, rectW, rectH);
+        g2d.fillRect(rx, ry, rectW, rectH);
 
         g2d.setFont(LABEL_FONT);
         g2d.setColor(theme.getTextColor());
-        g2d.drawString(text, cx - textWidth / 2, cy - fm.getHeight() / 2 + fm.getAscent());
+        int textWidth = fm.stringWidth(text);
+        g2d.drawString(text, rx + (rectW - textWidth) / 2, ry + (rectH - fm.getHeight()) / 2 + fm.getAscent());
     }
 
     // ---------------------------------------------------------------
     // Path geometry helpers (arc-length walk; works for any router's Path2D)
     // ---------------------------------------------------------------
+
+    /** A point on the path plus whether the segment it falls on is horizontal- or vertical-dominant. */
+    private static final class PathAnchor {
+        final Point2D point;
+        final boolean horizontal;
+
+        PathAnchor(Point2D point, boolean horizontal) {
+            this.point      = point;
+            this.horizontal = horizontal;
+        }
+    }
 
     private static List<Point2D> flatten(Path2D path) {
         List<Point2D> points = new ArrayList<>();
@@ -287,7 +335,7 @@ public class EdgeRenderPanel extends JPanel {
     }
 
     /** Walks {@code points} from the start by {@code distance} px; clamps to the final point past the end. */
-    private static Point2D pointAtDistance(List<Point2D> points, double distance) {
+    private static PathAnchor pointAtDistance(List<Point2D> points, double distance) {
         double remaining = Math.max(0, distance);
         for (int i = 1; i < points.size(); i++) {
             Point2D a = points.get(i - 1);
@@ -296,15 +344,18 @@ public class EdgeRenderPanel extends JPanel {
             if (segLen == 0) {
                 continue;
             }
+            boolean horizontal = Math.abs(b.getX() - a.getX()) >= Math.abs(b.getY() - a.getY());
             if (remaining <= segLen || i == points.size() - 1) {
                 double t = Math.min(1.0, remaining / segLen);
-                return new Point2D.Double(
+                Point2D p = new Point2D.Double(
                     a.getX() + (b.getX() - a.getX()) * t,
                     a.getY() + (b.getY() - a.getY()) * t);
+                return new PathAnchor(p, horizontal);
             }
             remaining -= segLen;
         }
-        return points.get(points.size() - 1);
+        Point2D last = points.get(points.size() - 1);
+        return new PathAnchor(last, true);
     }
 
     /** Dispatches to the correct glyph for one end's {@link EdgeAttributes.ArrowType}. Symmetric — usable on either end. */

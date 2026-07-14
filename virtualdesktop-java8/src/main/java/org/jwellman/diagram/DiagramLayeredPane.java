@@ -809,6 +809,7 @@ public class DiagramLayeredPane extends JLayeredPane implements Scrollable {
         selectedComponents.addAll(newSelection);
         selectedEdge = null;
         edgePanel.setSelectedEdge(null);
+        overlayPanel.setSelectedEdge(null);
         overlayPanel.setSelection(selectedComponents);
         repaint();
         // Edge-clear notification must fire first: it always carries null and
@@ -841,6 +842,7 @@ public class DiagramLayeredPane extends JLayeredPane implements Scrollable {
         overlayPanel.setSelection(selectedComponents);
         selectedEdge = edge;
         edgePanel.setSelectedEdge(edge);
+        overlayPanel.setSelectedEdge(edge);
         repaint();
         notifySelectionChanged();
         notifyEdgeSelectionChanged();
@@ -855,6 +857,7 @@ public class DiagramLayeredPane extends JLayeredPane implements Scrollable {
             removeGraphEdge(selectedEdge.getEdgeId());
             selectedEdge = null;
             edgePanel.setSelectedEdge(null);
+            overlayPanel.setSelectedEdge(null);
             notifyEdgeSelectionChanged();
             return;
         }

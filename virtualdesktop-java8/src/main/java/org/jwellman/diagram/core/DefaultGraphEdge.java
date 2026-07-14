@@ -7,17 +7,19 @@ import org.jwellman.diagram.api.EdgeAttributes;
 import org.jwellman.diagram.api.GraphEdge;
 
 /**
- * Simple immutable-identity GraphEdge used by the framework for in-memory and
- * persisted edges. "Immutable" applies to identity/endpoints only — attributes
- * and properties are mutated in place by the property editor.
+ * Simple GraphEdge used by the framework for in-memory and persisted edges.
+ * Only {@code edgeId} is truly immutable — endpoints, attributes, type, and
+ * properties are all mutated in place (by the property editor or an
+ * interactive endpoint drag), consistent with edges being shared live
+ * references rather than copy-on-write value objects.
  */
 public class DefaultGraphEdge implements GraphEdge {
 
     private final String edgeId;
-    private final String sourceNodeId;
-    private final String sourcePortId;
-    private final String targetNodeId;
-    private final String targetPortId;
+    private String sourceNodeId;
+    private String sourcePortId;
+    private String targetNodeId;
+    private String targetPortId;
     private final EdgeAttributes attributes;
     private final Map<String, Object> properties;
     private String edgeType;
@@ -62,6 +64,18 @@ public class DefaultGraphEdge implements GraphEdge {
 
     @Override
     public String getTargetPortId() { return targetPortId; }
+
+    @Override
+    public void setSourceEndpoint(String nodeId, String portId) {
+        this.sourceNodeId = nodeId;
+        this.sourcePortId = portId;
+    }
+
+    @Override
+    public void setTargetEndpoint(String nodeId, String portId) {
+        this.targetNodeId = nodeId;
+        this.targetPortId = portId;
+    }
 
     @Override
     public EdgeAttributes getAttributes() { return attributes; }

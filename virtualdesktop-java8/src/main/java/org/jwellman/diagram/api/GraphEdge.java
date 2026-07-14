@@ -17,6 +17,12 @@ public interface GraphEdge {
 
     String getTargetPortId();
 
+    /** Reassigns the source end, e.g. after an interactive endpoint drag. */
+    void setSourceEndpoint(String nodeId, String portId);
+
+    /** Reassigns the target end, e.g. after an interactive endpoint drag. */
+    void setTargetEndpoint(String nodeId, String portId);
+
     EdgeAttributes getAttributes();
 
     /**

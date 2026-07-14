@@ -17,6 +17,7 @@
 | 5.5 | Hover-to-connect (implicit edge creation) | ⬜ Planned | Hover a node to reveal its ports; drag port-to-port without toggling "Connect"; hover disabled while anything is selected |
 | 5.6 | Utility actions strip | ⬜ Planned | Fixed strip pinned below the right panel's split; migrates existing toolbar actions to small icon buttons |
 | 5.7 | Edge text labels | ✅ Complete | `GraphEdge.getProperties()`; "label"/"sourceLabel"/"targetLabel" auto-positioned along the routed path; edited from the existing edge property editor |
+| 5.8 | Edge endpoint drag/drop | ✅ Complete | Select an edge, drag either endpoint's grip handle to a different port/node; `GraphEdge.setSourceEndpoint()`/`setTargetEndpoint()`; independent `isDraggingEndpoint` track in `CanvasOverlayPanel`, mirroring `isResizing` |
 | 6 | Undo / Redo | ⬜ Planned | `javax.swing.undo` stack; all mutating operations |
 | 7 | Cut / Copy / Paste components | ⬜ Planned | Within and across diagram sessions |
 | 8 | Layer management enhancements | ⬜ Planned | Rename layers; reorder layers; lock layers |
@@ -503,6 +504,112 @@ per-label configurable.
 - Save and reload a diagram with edge labels/type set; everything is restored
 - Load a diagram saved before this phase (no `type`/`properties` on edges):
   loads cleanly with no labels and "Type: (none)"
+
+---
+
+## Phase 5.8 — Edge Endpoint Drag/Drop ✅
+
+**Why**: Edges were create-only — the sole way to change what one connects to
+was delete and redraw. Selecting an edge already worked; this closes the gap
+by letting either end be grabbed and dropped on a different port once
+selected, without touching the (separately roadmapped, still-deferred)
+hover-to-connect flow.
+
+### What shipped
+
+- `GraphEdge.setSourceEndpoint(nodeId, portId)` / `setTargetEndpoint(...)` —
+  new mutators alongside the existing getters. `DefaultGraphEdge`'s
+  `sourceNodeId`/`sourcePortId`/`targetNodeId`/`targetPortId` fields went
+  from `final` to plain mutable fields; only `edgeId` remains truly fixed
+  now, consistent with `edgeType` becoming mutable earlier. No persistence
+  changes needed — `saveDiagram`/`loadDiagram` already read the getters
+  fresh, and `EdgeRenderPanel.paintEdge` already resolves source/target
+  nodes fresh on every paint, so a plain `repaint()` after mutating an
+  endpoint is enough to re-route correctly.
+- `CanvasOverlayPanel` gained edge-endpoint dragging as an **independent
+  boolean track** (`isDraggingEndpoint`/`draggingSourceEnd`/
+  `endpointDragCurrent`), mirroring how `isResizing` already sits alongside
+  — not inside — the `IDLE`/`EDGE_CREATION`/`EDGE_DRAGGING` `State` enum:
+  `isResizing` is checked first in every mouse handler, ahead of any
+  `state`-based branching, because it's driven by component *selection*, not
+  by a toolbar mode; endpoint-drag is driven by edge *selection*, so it
+  belongs in the same orthogonal bucket rather than adding a new `State`.
+- New `setSelectedEdge(GraphEdge)` on `CanvasOverlayPanel`, mirroring
+  `setSelection(...)` — wired from `DiagramLayeredPane.selectEdge()` /
+  `setSelection()` / `deleteSelected()` alongside their existing
+  `edgePanel.setSelectedEdge(...)` calls. Selecting an edge now paints two
+  small grip circles at its live source/target port locations (previously
+  the overlay painted nothing at all when only an edge was selected — edge
+  highlighting came entirely from `EdgeRenderPanel`'s own translucent
+  stroke). Dragging a grip reuses `findNearestPort()` unchanged and shows
+  the same all-nodes port-anchor dots + dashed rubber-band line the
+  Connect-toggle new-edge flow already uses, from the *fixed* (non-dragged)
+  end to the cursor.
+- Drop validation mirrors the existing `isSamePort()` semantics for
+  new-edge creation: rejected only if the target port is identical (same
+  node *and* same port ID) to the edge's other, fixed end — same-node,
+  different-port self-loops remain legal. An invalid or missed drop is a
+  plain no-op cancel; nothing is mutated until a valid drop commits.
+- The commit itself calls `selectedEdge.setSourceEndpoint(...)` /
+  `.setTargetEndpoint(...)` directly on the shared live edge object — no new
+  callback plumbing, mirroring how `applyRelationship()` already mutates a
+  selected edge's attributes/type in place, visible everywhere since
+  `DiagramLayeredPane`, `EdgeRenderPanel`, and `CanvasOverlayPanel` all hold
+  the same reference.
+- `CanvasOverlayPanel`'s `onResizeComplete` callback/field/param was renamed
+  to `onDirectEditComplete` and is now shared by both resize-drag-end and
+  endpoint-drag-end completion — it already meant "an interactive geometry
+  edit on this overlay just finished, mark the diagram dirty" and its only
+  call site was the generic `() -> notifyModified()`, so reusing it avoided
+  a duplicate identical-purpose callback.
+- Endpoint hit-testing/painting is gated to `state == State.IDLE` only.
+  Toggling the toolbar's "Connect" button never clears `selectedEdge`, so a
+  user can select an edge and then turn on Connect mode, leaving a selected
+  edge live while `state != IDLE`; without the IDLE gate, a click on what
+  looks like a grip handle would instead silently start an unrelated
+  new-edge drag (Connect mode's `handlePressed` unconditionally treats any
+  non-IDLE press as new-edge port hit-testing). This is a pre-existing rough
+  edge the new feature makes newly visible, not one it introduces — changing
+  Connect mode's own selection behavior is out of scope here.
+
+### Deliberately deferred
+
+- **Hover-to-connect** (roadmap Phase 5.5) — shares `findNearestPort()` and
+  the rubber-band-line paint pattern with this feature, but its actual new
+  work (per-node hover tracking, gating which node's ports are shown,
+  letting a port-press start a drag without the Connect toggle) is separable
+  and not a prerequisite. Kept out to keep this change isolated.
+- **"AUTO" port** — an edge endpoint that would pick its N/S/E/W side at
+  render time based on relative node position, instead of a fixed stored
+  port. Since `GraphEdge` stores a concrete port ID per endpoint and
+  `getPortLocation` is always computed live from current bounds, this would
+  most naturally be a sentinel port ID string (e.g. `"AUTO"`) resolved
+  inside `GraphNode.getPortLocation`/`EdgeRenderPanel.paintEdge` — picking a
+  side at paint time — rather than a new `GraphEdge` field. Purely a design
+  pointer; no implementation.
+- **Orphaned-edge cleanup** — node deletion still doesn't prune edges that
+  reference the deleted node (pre-existing; `EdgeRenderPanel.paintEdge`
+  already null-guards this). Every new lookup this phase added
+  (`endpointLocation()`, `getEndpointHandleAt()`, the grip/rubber-band paint
+  code) null-guards the same way rather than fixing the underlying gap.
+
+### Verification
+
+- Select an edge: two grip circles appear at its current endpoints; nothing
+  else changes visually
+- Drag a grip to a different port on the *same* node: edge re-routes as a
+  self-loop; try both ends
+- Drag a grip to a port on a *different* node: edge re-routes there; the
+  other (fixed) end doesn't move
+- Start a drag and release on blank canvas: edge unchanged, no error
+- Drag onto the exact same node+port as the edge's other end: rejected,
+  edge unchanged
+- Save, reload: the new endpoint persists correctly
+- With an edge selected, toggle Connect mode on: no crash; clicking near the
+  now-hidden grip location behaves like ordinary new-edge port hit-testing
+- Delete the edge's source or target node via the node's own right-click
+  delete (not the edge's) while the edge is still selected, then click
+  around where its handles were: no `NullPointerException`
 
 ---
 

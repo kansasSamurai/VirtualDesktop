@@ -47,7 +47,7 @@ public class CanvasOverlayPanel extends JPanel {
     private final EdgeRenderPanel edgePanel;
     private final Consumer<GraphEdge> onEdgeCreated;
     private final UnaryOperator<Integer> snapFn;
-    private final Runnable onResizeComplete;
+    private final Runnable onDirectEditComplete;
     private final Supplier<EdgeAttributes> edgeAttrsSupplier;
 
     // Selection / resize state — a single selected component gets resize handles;
@@ -62,15 +62,28 @@ public class CanvasOverlayPanel extends JPanel {
     // Rubber-band selection rectangle, in canvas coordinates; null when not marqueeing
     private Rectangle marqueeRect;
 
-    // Edge-drag state
+    // Edge-drag state (new-edge creation, via the Connect toggle)
     private GraphNode sourceNode;
     private String sourcePortId;
     private Point dragCurrent;
+
+    // Selected-edge endpoint-drag state — an independent track, mirroring how
+    // isResizing sits alongside (not inside) the State enum: this is driven by
+    // edge *selection*, not by a toolbar mode, so it must not interfere with
+    // IDLE/EDGE_CREATION/EDGE_DRAGGING semantics used for new-edge creation.
+    private GraphEdge selectedEdge;
+    private boolean isDraggingEndpoint;
+    private boolean draggingSourceEnd;
+    private Point endpointDragCurrent;
+
+    private enum EndpointEnd { SOURCE, TARGET }
 
     private static final int PORT_HIT_RADIUS = 8;
     private static final int PORT_ANCHOR_RADIUS = 5;
     private static final int HANDLE_SIZE = 8;
     private static final int HANDLE_HIT_TOLERANCE = HANDLE_SIZE;
+    private static final int ENDPOINT_HANDLE_RADIUS = 6;
+    private static final int ENDPOINT_HANDLE_HIT_RADIUS = 8;
     private static final Color PORT_COLOR = new Color(60, 130, 220);
     private static final Color RUBBER_BAND_COLOR = new Color(60, 130, 220, 180);
     private static final Color HANDLE_FILL = Color.WHITE;
@@ -78,6 +91,7 @@ public class CanvasOverlayPanel extends JPanel {
     private static final Color SELECTION_BORDER = Color.BLUE;
     private static final Color MARQUEE_FILL = new Color(60, 130, 220, 40);
     private static final Color MARQUEE_BORDER = new Color(60, 130, 220, 200);
+    private static final Color ENDPOINT_HANDLE_FILL = new Color(30, 90, 200);
 
     private static final ResizeDirection[] HANDLE_DIRECTIONS = {
         ResizeDirection.NW, ResizeDirection.N, ResizeDirection.NE, ResizeDirection.E,
@@ -92,19 +106,21 @@ public class CanvasOverlayPanel extends JPanel {
      * @param onEdgeCreated   called when the user completes an edge drag
      * @param snapFn          applied to each coordinate during resize; returns the
      *                        value unchanged when snap-to-grid is disabled
-     * @param onResizeComplete called once when a resize drag ends
+     * @param onDirectEditComplete called once when a resize drag or an edge
+     *                        endpoint drag ends — any interactive geometry edit
+     *                        made directly on this overlay, not just resize
      */
     public CanvasOverlayPanel(Map<String, GraphNode> nodeIndex,
                                EdgeRenderPanel edgePanel,
                                Consumer<GraphEdge> onEdgeCreated,
                                UnaryOperator<Integer> snapFn,
-                               Runnable onResizeComplete,
+                               Runnable onDirectEditComplete,
                                Supplier<EdgeAttributes> edgeAttrsSupplier) {
         this.nodeIndex = nodeIndex;
         this.edgePanel = edgePanel;
         this.onEdgeCreated = onEdgeCreated;
         this.snapFn = snapFn;
-        this.onResizeComplete = onResizeComplete;
+        this.onDirectEditComplete = onDirectEditComplete;
         this.edgeAttrsSupplier = edgeAttrsSupplier;
 
         setOpaque(false);
@@ -157,6 +173,30 @@ public class CanvasOverlayPanel extends JPanel {
         repaint();
     }
 
+    /**
+     * Sets the edge whose endpoint grip handles should be painted (and made
+     * draggable). Pass null to clear — mirrors setSelection()'s role for
+     * component selection, but edge and component selection are mutually
+     * exclusive by construction in DiagramLayeredPane, so at most one of
+     * {@code selection} / {@code selectedEdge} is ever non-empty.
+     */
+    public void setSelectedEdge(GraphEdge edge) {
+        this.selectedEdge = edge;
+        repaint();
+    }
+
+    /**
+     * Resolves an edge endpoint's current pixel location, or null if the node
+     * is missing (e.g. deleted while this edge remained selected — node
+     * deletion doesn't prune edges that reference it, so this is a real,
+     * already-possible state, not just defensive boilerplate) or not yet laid
+     * out.
+     */
+    private Point endpointLocation(String nodeId, String portId) {
+        GraphNode node = nodeIndex.get(nodeId);
+        return (node != null) ? node.getPortLocation(portId) : null;
+    }
+
     /** Returns the sole selected component when exactly one is selected, else null. */
     private Component resizableComponent() {
         return (selection.size() == 1) ? selection.get(0) : null;
@@ -176,7 +216,15 @@ public class CanvasOverlayPanel extends JPanel {
                     startBounds = target.getBounds();
                     resizeTarget = target;
                     isResizing = true;
+                    return;
                 }
+            }
+            EndpointEnd hitEnd = getEndpointHandleAt(e.getX(), e.getY());
+            if (hitEnd != null) {
+                isDraggingEndpoint = true;
+                draggingSourceEnd = (hitEnd == EndpointEnd.SOURCE);
+                endpointDragCurrent = e.getPoint();
+                repaint();
             }
             return;
         }
@@ -219,6 +267,12 @@ public class CanvasOverlayPanel extends JPanel {
             e.consume();
             return;
         }
+        if (isDraggingEndpoint) {
+            endpointDragCurrent = e.getPoint();
+            repaint();
+            e.consume();
+            return;
+        }
         if (state != State.EDGE_DRAGGING) {
             return;
         }
@@ -231,10 +285,29 @@ public class CanvasOverlayPanel extends JPanel {
             isResizing = false;
             resizeDirection = ResizeDirection.NONE;
             resizeTarget = null;
-            if (onResizeComplete != null) {
-                onResizeComplete.run();
+            if (onDirectEditComplete != null) {
+                onDirectEditComplete.run();
             }
             repaint();
+            return;
+        }
+        if (isDraggingEndpoint) {
+            PortHit target = findNearestPort(e.getPoint());
+            if (target != null && !isSameAsFixedEnd(target)) {
+                if (draggingSourceEnd) {
+                    selectedEdge.setSourceEndpoint(target.node.getNodeId(), target.portId);
+                } else {
+                    selectedEdge.setTargetEndpoint(target.node.getNodeId(), target.portId);
+                }
+                edgePanel.repaint();
+                if (onDirectEditComplete != null) {
+                    onDirectEditComplete.run();
+                }
+            }
+            isDraggingEndpoint = false;
+            endpointDragCurrent = null;
+            repaint();
+            e.consume();
             return;
         }
         if (state != State.EDGE_DRAGGING) {
@@ -253,6 +326,10 @@ public class CanvasOverlayPanel extends JPanel {
         if (state == State.IDLE && resizableComponent() != null) {
             ResizeDirection dir = getHandleAt(e.getX(), e.getY());
             setCursor(getCursorForDirection(dir));
+        } else if (state == State.IDLE && selectedEdge != null) {
+            setCursor(getEndpointHandleAt(e.getX(), e.getY()) != null
+                ? Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR)
+                : Cursor.getDefaultCursor());
         } else if (state == State.EDGE_CREATION) {
             PortHit hit = findNearestPort(e.getPoint());
             if (hit != null) {
@@ -265,6 +342,19 @@ public class CanvasOverlayPanel extends JPanel {
 
     private boolean isSamePort(PortHit target) {
         return target.node == sourceNode && target.portId.equals(sourcePortId);
+    }
+
+    /**
+     * True if {@code target} is identical (same node and port) to the
+     * currently-dragged edge's OTHER, fixed end — dropping there would
+     * collapse the edge to a zero-length self-connection. Same-node,
+     * different-port self-loops remain allowed, matching isSamePort()'s
+     * existing semantics for brand-new edge creation.
+     */
+    private boolean isSameAsFixedEnd(PortHit target) {
+        String fixedNodeId = draggingSourceEnd ? selectedEdge.getTargetNodeId() : selectedEdge.getSourceNodeId();
+        String fixedPortId = draggingSourceEnd ? selectedEdge.getTargetPortId() : selectedEdge.getSourcePortId();
+        return target.node.getNodeId().equals(fixedNodeId) && target.portId.equals(fixedPortId);
     }
 
     private void commitEdge(PortHit target) {
@@ -368,6 +458,28 @@ public class CanvasOverlayPanel extends JPanel {
         return ResizeDirection.NONE;
     }
 
+    /** True if (x,y) is within grab range of either of the selected edge's endpoint handles. */
+    private boolean isNearEndpointHandle(int x, int y) {
+        return getEndpointHandleAt(x, y) != null;
+    }
+
+    /** Returns which end of the selected edge (x,y) is near, or null if neither/no edge selected. */
+    private EndpointEnd getEndpointHandleAt(int x, int y) {
+        if (selectedEdge == null) {
+            return null;
+        }
+        Point p = new Point(x, y);
+        Point sourceLoc = endpointLocation(selectedEdge.getSourceNodeId(), selectedEdge.getSourcePortId());
+        if (sourceLoc != null && p.distance(sourceLoc) <= ENDPOINT_HANDLE_HIT_RADIUS) {
+            return EndpointEnd.SOURCE;
+        }
+        Point targetLoc = endpointLocation(selectedEdge.getTargetNodeId(), selectedEdge.getTargetPortId());
+        if (targetLoc != null && p.distance(targetLoc) <= ENDPOINT_HANDLE_HIT_RADIUS) {
+            return EndpointEnd.TARGET;
+        }
+        return null;
+    }
+
     private Cursor getCursorForDirection(ResizeDirection dir) {
         switch (dir) {
             case NW: case SE: return Cursor.getPredefinedCursor(Cursor.NW_RESIZE_CURSOR);
@@ -407,8 +519,11 @@ public class CanvasOverlayPanel extends JPanel {
         boolean hasMultiSelection = (selection.size() > 1);
         boolean inActiveMode = (state != State.IDLE);
         boolean hasMarquee = (marqueeRect != null);
+        // IDLE-only: see contains()'s comment on why endpoint handles don't show
+        // (or hit-test) while Connect mode happens to be on with an edge selected.
+        boolean hasSelectedEdge = (selectedEdge != null && state == State.IDLE);
 
-        if (!hasSingleSelection && !hasMultiSelection && !inActiveMode && !hasMarquee) {
+        if (!hasSingleSelection && !hasMultiSelection && !inActiveMode && !hasMarquee && !hasSelectedEdge) {
             return;
         }
 
@@ -426,7 +541,11 @@ public class CanvasOverlayPanel extends JPanel {
                 paintMarquee(g2d);
             }
 
-            if (!inActiveMode) {
+            if (hasSelectedEdge) {
+                paintEndpointHandles(g2d);
+            }
+
+            if (!inActiveMode && !isDraggingEndpoint) {
                 return;
             }
 
@@ -446,7 +565,7 @@ public class CanvasOverlayPanel extends JPanel {
                 }
             }
 
-            // Rubber-band line while dragging an edge
+            // Rubber-band line while dragging a brand-new edge (Connect toggle)
             if (state == State.EDGE_DRAGGING && sourceNode != null && dragCurrent != null) {
                 Point sourceLoc = sourceNode.getPortLocation(sourcePortId);
                 if (sourceLoc != null) {
@@ -456,9 +575,49 @@ public class CanvasOverlayPanel extends JPanel {
                     g2d.drawLine(sourceLoc.x, sourceLoc.y, dragCurrent.x, dragCurrent.y);
                 }
             }
+
+            // Rubber-band line while dragging a selected edge's endpoint to a new port
+            if (isDraggingEndpoint && endpointDragCurrent != null && selectedEdge != null) {
+                Point fixedLoc = draggingSourceEnd
+                    ? endpointLocation(selectedEdge.getTargetNodeId(), selectedEdge.getTargetPortId())
+                    : endpointLocation(selectedEdge.getSourceNodeId(), selectedEdge.getSourcePortId());
+                if (fixedLoc != null) {
+                    g2d.setColor(RUBBER_BAND_COLOR);
+                    g2d.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_BUTT,
+                        BasicStroke.JOIN_ROUND, 10f, new float[]{5, 3}, 0f));
+                    g2d.drawLine(fixedLoc.x, fixedLoc.y, endpointDragCurrent.x, endpointDragCurrent.y);
+                }
+            }
         } finally {
             g2d.dispose();
         }
+    }
+
+    /** Paints a small filled grip circle at each of the selected edge's current endpoints. */
+    private void paintEndpointHandles(Graphics2D g2d) {
+        if (isDraggingEndpoint) {
+            // The dragged end already has a rubber-band tip following the cursor;
+            // painting a static grip there too would just be visual clutter.
+            paintEndpointHandle(g2d, draggingSourceEnd
+                ? endpointLocation(selectedEdge.getTargetNodeId(), selectedEdge.getTargetPortId())
+                : endpointLocation(selectedEdge.getSourceNodeId(), selectedEdge.getSourcePortId()));
+            return;
+        }
+        paintEndpointHandle(g2d, endpointLocation(selectedEdge.getSourceNodeId(), selectedEdge.getSourcePortId()));
+        paintEndpointHandle(g2d, endpointLocation(selectedEdge.getTargetNodeId(), selectedEdge.getTargetPortId()));
+    }
+
+    private void paintEndpointHandle(Graphics2D g2d, Point loc) {
+        if (loc == null) {
+            return;
+        }
+        g2d.setColor(ENDPOINT_HANDLE_FILL);
+        g2d.fillOval(loc.x - ENDPOINT_HANDLE_RADIUS, loc.y - ENDPOINT_HANDLE_RADIUS,
+            ENDPOINT_HANDLE_RADIUS * 2, ENDPOINT_HANDLE_RADIUS * 2);
+        g2d.setColor(Color.WHITE);
+        g2d.setStroke(new BasicStroke(1.5f));
+        g2d.drawOval(loc.x - ENDPOINT_HANDLE_RADIUS, loc.y - ENDPOINT_HANDLE_RADIUS,
+            ENDPOINT_HANDLE_RADIUS * 2, ENDPOINT_HANDLE_RADIUS * 2);
     }
 
     private void paintSelectionHandles(Graphics2D g2d, Component comp) {
@@ -508,7 +667,11 @@ public class CanvasOverlayPanel extends JPanel {
         if (state != State.IDLE) {
             return super.contains(x, y);
         }
-        // In IDLE, only capture events near resize handles
-        return isNearAnyHandle(x, y);
+        // In IDLE, only capture events near resize handles or a selected edge's
+        // endpoint handles. (Endpoint handles are IDLE-only on purpose: toggling
+        // Connect mode never clears selectedEdge, so gating on IDLE keeps a click
+        // near a grip handle from being swallowed by new-edge-creation hit-testing
+        // instead while Connect mode happens to be on.)
+        return isNearAnyHandle(x, y) || isNearEndpointHandle(x, y);
     }
 }

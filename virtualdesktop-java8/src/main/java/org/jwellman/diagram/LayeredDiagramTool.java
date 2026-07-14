@@ -185,17 +185,47 @@ public class LayeredDiagramTool extends JPanel {
         projectsTabBtn.setSelected(true);
     }
 
-    /** Centered (GridBagLayout, single unconstrained cell) "New Diagram" tile launcher. */
+    /**
+     * West: "New Diagram" launcher tiles, stacked in a natural-height column
+     * (GridBagLayout + weighty=0 rows and a weighty=1 filler, rather than
+     * BoxLayout — avoids BoxLayout's unbounded-max-height stretch on plain
+     * JPanel rows). Center: an embedded copy of the "Open Diagram" file browser
+     * (see buildFileBrowserPanel()) so opening an existing file doesn't require
+     * the separate modal dialog.
+     */
     private JPanel buildProjectsPanel() {
-        newDiagramTilesPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 12));
+        newDiagramTilesPanel = new JPanel(new GridBagLayout());
         newDiagramTilesPanel.setBorder(BorderFactory.createTitledBorder("New Diagram"));
+        int row = 0;
         for (DiagramTypeEntry entry : diagramTypes) {
-            newDiagramTilesPanel.add(buildDiagramTypeTile(entry));
+            GridBagConstraints gbc = newDiagramTileConstraints();
+            gbc.gridy = row++;
+            newDiagramTilesPanel.add(buildDiagramTypeTile(entry), gbc);
         }
+        GridBagConstraints filler = newDiagramTileConstraints();
+        filler.gridy = row;
+        filler.weighty = 1.0;
+        filler.fill = GridBagConstraints.BOTH;
+        newDiagramTilesPanel.add(new JPanel(), filler);
 
-        JPanel centered = new JPanel(new GridBagLayout());
-        centered.add(newDiagramTilesPanel, new GridBagConstraints());
-        return centered;
+        JPanel openPanel = buildFileBrowserPanel(defaultDiagramDirectory(), this::openDiagramFile);
+        openPanel.setBorder(BorderFactory.createTitledBorder("Open Diagram"));
+
+        JPanel panel = new JPanel(new BorderLayout(12, 0));
+        panel.setBorder(DIALOG_CONTENT_BORDER);
+        panel.add(newDiagramTilesPanel, BorderLayout.WEST);
+        panel.add(openPanel, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private GridBagConstraints newDiagramTileConstraints() {
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.weightx = 1.0;
+        gbc.weighty = 0.0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new java.awt.Insets(4, 4, 4, 4);
+        return gbc;
     }
 
     /** Visually mirrors buildFileTile()'s "Open Diagram" tiles: bordered box, hover highlight, click to act. */
@@ -1149,19 +1179,40 @@ public class LayeredDiagramTool extends JPanel {
     // File browser — opens a diagram file into a new tab
     // ---------------------------------------------------------------
 
-    private void openFileBrowser() {
-        // Prefer OneDrive\Documents; fall back to plain Documents if absent.
-        java.io.File defaultDir = new java.io.File(
+    /** Prefers OneDrive\Documents; falls back to plain Documents if absent. */
+    private static java.io.File defaultDiagramDirectory() {
+        java.io.File dir = new java.io.File(
             System.getProperty("user.home"),
             "OneDrive" + java.io.File.separator + "Documents");
-        if (!defaultDir.exists()) {
-            defaultDir = new java.io.File(System.getProperty("user.home"), "Documents");
+        if (!dir.exists()) {
+            dir = new java.io.File(System.getProperty("user.home"), "Documents");
         }
+        return dir;
+    }
 
+    private void openFileBrowser() {
         JDialog dialog = new JDialog(
             SwingUtilities.getWindowAncestor(this),
             "Open Diagram  (*.dgx, *.json)", Dialog.ModalityType.APPLICATION_MODAL);
 
+        JPanel content = buildFileBrowserPanel(defaultDiagramDirectory(), f -> {
+            dialog.dispose();
+            openDiagramFile(f);
+        });
+
+        dialog.add(content);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    /**
+     * Directory field + scrollable file tiles, shared by the modal "Open Diagram"
+     * dialog and the Projects tab's embedded copy. Directory contents are read once
+     * on build and again only when the user re-enters the directory field (Enter) —
+     * no polling, matching how the dialog already behaved.
+     */
+    private JPanel buildFileBrowserPanel(java.io.File initialDir, Consumer<java.io.File> onFileChosen) {
         JPanel tilesPanel = new JPanel(new FluidLayout(8, 8));
         tilesPanel.setBorder(TILES_PANEL_BORDER);
 
@@ -1171,17 +1222,17 @@ public class LayeredDiagramTool extends JPanel {
         scroll.setPreferredSize(FILE_BROWSER_SIZE);
 
         javax.swing.JTextField dirField = new javax.swing.JTextField(
-            defaultDir.getAbsolutePath());
+            initialDir.getAbsolutePath());
         dirField.setFont(dirField.getFont().deriveFont(Font.BOLD));
         dirField.addActionListener(e -> {
             java.io.File chosen = new java.io.File(dirField.getText().trim());
-            populateTiles(tilesPanel, chosen, dialog);
+            populateTiles(tilesPanel, chosen, onFileChosen);
             tilesPanel.revalidate();
             tilesPanel.repaint();
             scroll.getVerticalScrollBar().setValue(0);
         });
 
-        populateTiles(tilesPanel, defaultDir, dialog);
+        populateTiles(tilesPanel, initialDir, onFileChosen);
 
         JPanel headerRow = new JPanel(new BorderLayout(6, 0));
         headerRow.setBorder(HEADER_ROW_BORDER);
@@ -1192,14 +1243,10 @@ public class LayeredDiagramTool extends JPanel {
         content.setBorder(DIALOG_CONTENT_BORDER);
         content.add(headerRow, BorderLayout.NORTH);
         content.add(scroll, BorderLayout.CENTER);
-
-        dialog.add(content);
-        dialog.pack();
-        dialog.setLocationRelativeTo(this);
-        dialog.setVisible(true);
+        return content;
     }
 
-    private void populateTiles(JPanel tilesPanel, java.io.File dir, JDialog dialog) {
+    private void populateTiles(JPanel tilesPanel, java.io.File dir, Consumer<java.io.File> onFileChosen) {
         tilesPanel.removeAll();
 
         // xs=12 (1/row), sm=6 (2/row), med=4 (3/row), lg=3 (4/row), xl=3 (4/row)
@@ -1220,7 +1267,7 @@ public class LayeredDiagramTool extends JPanel {
 
         if (diagrams.length > 0) {
             for (java.io.File f : diagrams) {
-                tilesPanel.add(buildFileTile(f, dialog), tileConstraint);
+                tilesPanel.add(buildFileTile(f, onFileChosen), tileConstraint);
             }
         } else {
             JLabel empty = new JLabel(
@@ -1230,7 +1277,7 @@ public class LayeredDiagramTool extends JPanel {
         }
     }
 
-    private JPanel buildFileTile(java.io.File f, JDialog dialog) {
+    private JPanel buildFileTile(java.io.File f, Consumer<java.io.File> onFileChosen) {
         JPanel tile = new JPanel(new BorderLayout(4, 2));
         tile.setPreferredSize(FILE_TILE_SIZE);
         tile.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -1257,8 +1304,7 @@ public class LayeredDiagramTool extends JPanel {
         tile.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                dialog.dispose();
-                openDiagramFile(f);
+                onFileChosen.accept(f);
             }
 
             @Override

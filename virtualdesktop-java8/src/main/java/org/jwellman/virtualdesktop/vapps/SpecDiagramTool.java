@@ -19,8 +19,12 @@ public class SpecDiagramTool extends VirtualAppSpec {
         LayeredDiagramTool tool = new LayeredDiagramTool();
 
         // Register available diagram types shown in the "+" new-diagram dialog
-        tool.registerDiagramType("Plain Diagram", pane -> new GenericGraphFactory());
-        tool.registerDiagramType("Class Diagram", pane -> new ClassDiagramFactory(pane.getTheme()));
+        tool.registerDiagramType("Plain Diagram",
+            "Free-form shapes and connectors with no fixed vocabulary.",
+            pane -> new GenericGraphFactory());
+        tool.registerDiagramType("Class Diagram",
+            "UML-style classes and relationships (association, inheritance, etc.).",
+            pane -> new ClassDiagramFactory(pane.getTheme()));
 
         // Prime the initial tab with a class diagram factory and demo content
         ClassDiagramFactory f = new ClassDiagramFactory(tool.getDiagramPane().getTheme());

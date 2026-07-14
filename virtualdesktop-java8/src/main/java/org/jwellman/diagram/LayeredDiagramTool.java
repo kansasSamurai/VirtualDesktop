@@ -9,8 +9,6 @@ import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
@@ -44,7 +42,6 @@ import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -76,7 +73,8 @@ public class LayeredDiagramTool extends JPanel {
     private static final Dimension COLLAPSED_PANEL_SIZE  = new Dimension(0, COLLAPSED_BOTTOM_HEIGHT);
     private static final Dimension FILE_BROWSER_SIZE     = new Dimension(640, 300);
     private static final Dimension FILE_TILE_SIZE        = new Dimension(1, 64);
-    private static final Dimension NEW_DIAGRAM_TILE_SIZE = new Dimension(140, 90);
+    private static final Dimension NEW_DIAGRAM_TILE_SIZE = new Dimension(1, 56);
+    private static final Dimension NEW_DIAGRAM_PANEL_SIZE = new Dimension(240, 300);
 
     private static final String PROJECTS_CARD_KEY = "__projects__";
 
@@ -94,10 +92,12 @@ public class LayeredDiagramTool extends JPanel {
 
     private static final class DiagramTypeEntry {
         final String name;
+        final String description;
         final Function<DiagramLayeredPane, CanvasComponentFactory> factoryFn;
 
-        DiagramTypeEntry(String name, Function<DiagramLayeredPane, CanvasComponentFactory> fn) {
+        DiagramTypeEntry(String name, String description, Function<DiagramLayeredPane, CanvasComponentFactory> fn) {
             this.name = name;
+            this.description = description;
             this.factoryFn = fn;
         }
 
@@ -111,7 +111,12 @@ public class LayeredDiagramTool extends JPanel {
 
     public void registerDiagramType(String name,
                                     Function<DiagramLayeredPane, CanvasComponentFactory> factoryFn) {
-        DiagramTypeEntry entry = new DiagramTypeEntry(name, factoryFn);
+        registerDiagramType(name, "", factoryFn);
+    }
+
+    public void registerDiagramType(String name, String description,
+                                    Function<DiagramLayeredPane, CanvasComponentFactory> factoryFn) {
+        DiagramTypeEntry entry = new DiagramTypeEntry(name, description, factoryFn);
         diagramTypes.add(entry);
         if (newDiagramTilesPanel != null) {
             addDiagramTypeTile(entry);
@@ -119,7 +124,7 @@ public class LayeredDiagramTool extends JPanel {
     }
 
     private void addDiagramTypeTile(DiagramTypeEntry entry) {
-        newDiagramTilesPanel.add(buildDiagramTypeTile(entry));
+        newDiagramTilesPanel.add(buildDiagramTypeTile(entry), FluidConstraint.FULLWIDTH);
         newDiagramTilesPanel.revalidate();
         newDiagramTilesPanel.repaint();
     }
@@ -186,59 +191,56 @@ public class LayeredDiagramTool extends JPanel {
     }
 
     /**
-     * West: "New Diagram" launcher tiles, stacked in a natural-height column
-     * (GridBagLayout + weighty=0 rows and a weighty=1 filler, rather than
-     * BoxLayout — avoids BoxLayout's unbounded-max-height stretch on plain
-     * JPanel rows). Center: an embedded copy of the "Open Diagram" file browser
-     * (see buildFileBrowserPanel()) so opening an existing file doesn't require
-     * the separate modal dialog.
+     * West: "New Diagram" launcher tiles, stacked one per row via
+     * {@code FluidConstraint.FULLWIDTH} (same FluidLayout the file browser's
+     * tiles use, just constrained to always be 1-per-row instead of wrapping),
+     * scrolled — future-proofing for when the type list outgrows one screen,
+     * though it's nowhere near that yet. Center: an embedded copy of the
+     * "Open Diagram" file browser (see buildFileBrowserPanel()) so opening an
+     * existing file doesn't require the separate modal dialog.
      */
     private JPanel buildProjectsPanel() {
-        newDiagramTilesPanel = new JPanel(new GridBagLayout());
-        newDiagramTilesPanel.setBorder(BorderFactory.createTitledBorder("New Diagram"));
-        int row = 0;
+        newDiagramTilesPanel = new JPanel(new FluidLayout(8, 8));
+        newDiagramTilesPanel.setBorder(TILES_PANEL_BORDER);
         for (DiagramTypeEntry entry : diagramTypes) {
-            GridBagConstraints gbc = newDiagramTileConstraints();
-            gbc.gridy = row++;
-            newDiagramTilesPanel.add(buildDiagramTypeTile(entry), gbc);
+            newDiagramTilesPanel.add(buildDiagramTypeTile(entry), FluidConstraint.FULLWIDTH);
         }
-        GridBagConstraints filler = newDiagramTileConstraints();
-        filler.gridy = row;
-        filler.weighty = 1.0;
-        filler.fill = GridBagConstraints.BOTH;
-        newDiagramTilesPanel.add(new JPanel(), filler);
+
+        JScrollPane newDiagramScroll = new JScrollPane(newDiagramTilesPanel);
+        newDiagramScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        newDiagramScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        newDiagramScroll.setPreferredSize(NEW_DIAGRAM_PANEL_SIZE);
+
+        JPanel newDiagramPanel = new JPanel(new BorderLayout());
+        newDiagramPanel.setBorder(BorderFactory.createTitledBorder("New Diagram"));
+        newDiagramPanel.add(newDiagramScroll, BorderLayout.CENTER);
 
         JPanel openPanel = buildFileBrowserPanel(defaultDiagramDirectory(), this::openDiagramFile);
         openPanel.setBorder(BorderFactory.createTitledBorder("Open Diagram"));
 
         JPanel panel = new JPanel(new BorderLayout(12, 0));
         panel.setBorder(DIALOG_CONTENT_BORDER);
-        panel.add(newDiagramTilesPanel, BorderLayout.WEST);
+        panel.add(newDiagramPanel, BorderLayout.WEST);
         panel.add(openPanel, BorderLayout.CENTER);
         return panel;
     }
 
-    private GridBagConstraints newDiagramTileConstraints() {
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.weightx = 1.0;
-        gbc.weighty = 0.0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new java.awt.Insets(4, 4, 4, 4);
-        return gbc;
-    }
-
-    /** Visually mirrors buildFileTile()'s "Open Diagram" tiles: bordered box, hover highlight, click to act. */
+    /** Visually mirrors buildFileTile()'s "Open Diagram" tiles: bold name, small description underneath. */
     private JPanel buildDiagramTypeTile(DiagramTypeEntry entry) {
-        JPanel tile = new JPanel(new BorderLayout());
+        JPanel tile = new JPanel(new BorderLayout(4, 2));
         tile.setPreferredSize(NEW_DIAGRAM_TILE_SIZE);
         tile.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         tile.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(separatorColor()),
             FILE_TILE_INNER_BORDER));
 
-        JLabel nameLabel = new JLabel("<html><b>" + entry.name + "</b></html>", SwingConstants.CENTER);
-        tile.add(nameLabel, BorderLayout.CENTER);
+        JLabel nameLabel = new JLabel("<html><b>" + entry.name + "</b></html>");
+        tile.add(nameLabel, BorderLayout.NORTH);
+
+        if (entry.description != null && !entry.description.isEmpty()) {
+            JLabel descLabel = new JLabel("<html><small>" + entry.description + "</small></html>");
+            tile.add(descLabel, BorderLayout.CENTER);
+        }
 
         Color defaultBg = tile.getBackground();
         tile.addMouseListener(new MouseAdapter() {

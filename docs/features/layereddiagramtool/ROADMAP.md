@@ -16,6 +16,7 @@
 | 5 | Multi-select and group operations | ✅ Complete | Rubber-band select; ctrl-click toggle; group move; align/distribute; Select All; multi-delete |
 | 5.5 | Hover-to-connect (implicit edge creation) | ⬜ Planned | Hover a node to reveal its ports; drag port-to-port without toggling "Connect"; hover disabled while anything is selected |
 | 5.6 | Utility actions strip | ⬜ Planned | Fixed strip pinned below the right panel's split; migrates existing toolbar actions to small icon buttons |
+| 5.7 | Edge text labels | ✅ Complete | `GraphEdge.getProperties()`; "label"/"sourceLabel"/"targetLabel" auto-positioned along the routed path; edited from the existing edge property editor |
 | 6 | Undo / Redo | ⬜ Planned | `javax.swing.undo` stack; all mutating operations |
 | 7 | Cut / Copy / Paste components | ⬜ Planned | Within and across diagram sessions |
 | 8 | Layer management enhancements | ⬜ Planned | Rename layers; reorder layers; lock layers |
@@ -412,6 +413,52 @@ or leave Align/Distribute in the toolbar as a deliberate exception. No decision 
   Types/Relationships-over-Layers/Properties split's resize
 - Icon buttons are legible and hit-testable at their small size; tooltips cover for the
   lack of text labels
+
+---
+
+## Phase 5.7 — Edge Text Labels ✅
+
+**Why**: An edge is more than a line — relationship names and end-role/multiplicity
+text ("contains", "0..*") are common on structural diagrams. Mirrors the node
+`properties` map pattern instead of hardcoding fields, keeping the framework
+ignorant of what any given key means.
+
+### What shipped
+
+- `GraphEdge.getProperties()` — a `Map<String, Object>` alongside the existing
+  `EdgeAttributes` (visual line/arrow style stays separate from domain text data).
+  `DefaultGraphEdge` gained an overload accepting the map; the existing 6-arg
+  constructor still works unchanged (defaults to an empty map) so none of the
+  dozen-plus existing call sites needed touching.
+- `GraphEdgeData.properties` persists the map; absent on older files (Jackson
+  leaves it `null`, treated as empty on load). `FileVersion` patch bumped to
+  0.1.1 as a safe additive field.
+- `EdgeRenderPanel` paints three optional keys — `label` (center), `sourceLabel`,
+  `targetLabel` (~18px back from each port) — each backed by a small matte
+  (`theme.getCanvasBackground()`) so text reads clearly over the line. Positions
+  are recomputed every paint by walking the routed `Path2D` by arc length
+  (`flatten()` + `pointAtDistance()`), so they track node moves automatically and
+  work under any `EdgeRouter` implementation, not just the orthogonal one.
+- Edited via three text fields added to the existing edge property editor
+  (`LayeredDiagramTool.buildEdgePropertyEditor()`), committing on focus-lost —
+  the same pattern `GenericGraphFactory` already uses for node labels.
+
+### Deliberately deferred
+
+No pixel coordinates are persisted for labels — positions are always derived,
+not stored — which leaves room for a later phase to add drag-to-reposition
+(dragging would set a persisted offset from the auto position) without a schema
+rework. Font/color are fixed (11pt SansSerif, theme text color) rather than
+per-label configurable.
+
+### Verification
+
+- Select an edge; type into Label / Source label / Target label — text appears
+  centered on the line / near each end immediately
+- Drag either endpoint node; all three labels track the new path on the next paint
+- Save and reload a diagram with edge labels set; text and positions are restored
+- Load a diagram saved before this phase (no `properties` on edges): loads
+  cleanly with no labels shown
 
 ---
 

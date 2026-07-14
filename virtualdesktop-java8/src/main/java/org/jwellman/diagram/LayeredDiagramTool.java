@@ -11,6 +11,8 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -39,6 +41,7 @@ import javax.swing.JPopupMenu;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.SwingConstants;
@@ -514,6 +517,14 @@ public class LayeredDiagramTool extends JPanel {
         form.add(title);
         form.add(Box.createVerticalStrut(8));
 
+        // Text labels — auto-positioned at render time (center, and near each end)
+        form.add(buildEdgeLabelRow("Label:", edge, "label", tab));
+        form.add(Box.createVerticalStrut(4));
+        form.add(buildEdgeLabelRow("Source label:", edge, "sourceLabel", tab));
+        form.add(Box.createVerticalStrut(4));
+        form.add(buildEdgeLabelRow("Target label:", edge, "targetLabel", tab));
+        form.add(Box.createVerticalStrut(8));
+
         // Line style
         JLabel lineLabel = new JLabel("Line style:");
         lineLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -582,6 +593,35 @@ public class LayeredDiagramTool extends JPanel {
 
         panel.add(form, BorderLayout.NORTH);
         return panel;
+    }
+
+    /**
+     * One labeled text field bound to an edge's {@code properties} map, committing
+     * on focus-lost — same pattern as {@code GenericGraphFactory}'s node label field.
+     */
+    private JPanel buildEdgeLabelRow(String labelText, GraphEdge edge, String propertyKey, DiagramTabContent tab) {
+        JPanel row = new JPanel(new BorderLayout(4, 0));
+        row.add(new JLabel(labelText), BorderLayout.WEST);
+
+        Map<String, Object> properties = edge.getProperties();
+        JTextField field = new JTextField((String) properties.getOrDefault(propertyKey, ""));
+        field.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                String val = field.getText().trim();
+                if (!val.equals(properties.getOrDefault(propertyKey, ""))) {
+                    properties.put(propertyKey, val);
+                    tab.diagramPane.repaint();
+                    tab.diagramPane.notifyModified();
+                }
+            }
+        });
+        field.addActionListener(e -> field.transferFocus());
+        row.add(field, BorderLayout.CENTER);
+
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
+        return row;
     }
 
     private void createFirstTab() {

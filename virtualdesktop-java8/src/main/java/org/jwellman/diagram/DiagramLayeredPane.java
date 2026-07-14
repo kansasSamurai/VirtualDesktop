@@ -319,6 +319,9 @@ public class DiagramLayeredPane extends JLayeredPane implements Scrollable {
                 if (attrs.getSourceArrowType() != EdgeAttributes.ArrowType.NONE) {
                     ed.setSourceArrowType(attrs.getSourceArrowType().name());
                 }
+                if (!edge.getProperties().isEmpty()) {
+                    ed.setProperties(edge.getProperties());
+                }
                 graphData.getEdges().add(ed);
             }
 
@@ -409,7 +412,8 @@ public class DiagramLayeredPane extends JLayeredPane implements Scrollable {
                     ed.getId(),
                     ed.getSourceNodeId(), ed.getSourcePortId(),
                     ed.getTargetNodeId(), ed.getTargetPortId(),
-                    attrs));
+                    attrs,
+                    ed.getProperties() != null ? ed.getProperties() : new HashMap<>()));
             }
         }
 

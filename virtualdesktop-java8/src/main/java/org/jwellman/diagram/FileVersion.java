@@ -14,7 +14,7 @@ public class FileVersion {
 
     public static final int CURRENT_MAJOR = 0;
     public static final int CURRENT_MINOR = 1;
-    public static final int CURRENT_PATCH = 0;
+    public static final int CURRENT_PATCH = 1;
 
     private int major;
     private int minor;

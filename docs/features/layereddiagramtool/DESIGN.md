@@ -91,7 +91,7 @@ LayeredDiagramTool (JPanel)
 | `TextData` | Extends `ComponentData`; captures bounds, text, font name/size/style, all three colors |
 | `SemanticGraphData` | Container for `List<GraphNodeData>` and `List<GraphEdgeData>` |
 | `GraphNodeData` | Node snapshot: id, type, properties map, x/y/w/h, layer |
-| `GraphEdgeData` | Edge snapshot: id, source/target node+port ids, lineStyle, arrowType |
+| `GraphEdgeData` | Edge snapshot: id, source/target node+port ids, lineStyle, arrowType, properties map (`label`/`sourceLabel`/`targetLabel` text; absent on pre-Phase-5.7 files) |
 
 **Interfaces:**
 
@@ -107,7 +107,7 @@ LayeredDiagramTool (JPanel)
 | Interface / Class | Role |
 | --- | --- |
 | `GraphNode` | Identity, type, property map, port IDs, canvas-coordinate port locations, visual component accessor |
-| `GraphEdge` | Directed edge: source/target node + port IDs, `EdgeAttributes` |
+| `GraphEdge` | Directed edge: source/target node + port IDs, `EdgeAttributes` (visual), `Map<String,Object>` properties (domain text — `label`/`sourceLabel`/`targetLabel`), mirroring `GraphNode`'s property map |
 | `EdgeAttributes` | Value class: `LineStyle` (SOLID/DASHED), `ArrowType` (OPEN/FILLED/NONE), color, stroke width |
 | `EdgeRouter` | Strategy: `calculatePath(start, startPortId, end, endPortId)` and `getApproachPoint(...)` for arrowhead orientation |
 | `CanvasComponentFactory` | Domain plugin: `createContentFor(nodeType, properties)` → `JPanel`; `getPortIds(nodeType)`; `default createPropertyEditorFor(nodeType, properties, onChanged)` → `JPanel` (returns `null` by default — no editor) |
@@ -120,7 +120,7 @@ LayeredDiagramTool (JPanel)
 | Class | Role |
 | --- | --- |
 | `NodeHostPanel` | `public JPanel` implementing `GraphNode`; wraps domain-provided content in `BorderLayout.CENTER`; non-opaque shell — paints nothing itself so content that doesn't fully cover its own bounds (e.g. a circle) isn't haloed by an opaque wrapper background; computes port locations lazily from current bounds (no cache); `swapContent(JPanel)` replaces the content panel in-place after a property-editor rebuild |
-| `EdgeRenderPanel` | Transparent `JPanel` at `CONNECTION_LAYER`; paints all edges using the configured `EdgeRouter`; always returns `false` from `contains()` to pass mouse events through |
+| `EdgeRenderPanel` | Transparent `JPanel` at `CONNECTION_LAYER`; paints all edges using the configured `EdgeRouter`; always returns `false` from `contains()` to pass mouse events through; also paints any `label`/`sourceLabel`/`targetLabel` properties, positioned by walking the routed `Path2D` by arc length (router-agnostic, recomputed every paint — no persisted label coordinates) |
 | `CanvasOverlayPanel` | Transparent `JPanel` at `OVERLAY_LAYER`; state machine (`IDLE / EDGE_CREATION / EDGE_DRAGGING`); renders selection handles (single selection) or highlight outlines (multi-selection), the rubber-band marquee rectangle, port anchor circles, and the edge-drag rubber-band line; transparent to mouse events in `IDLE` state except near resize handles |
 | `OrthogonalRouter` | Port-direction-aware L/Z router: V-H-V for N/S ports, H-V-H for E/W ports, single-bend L for mixed pairs |
 | `StraightLineRouter` | Straight line from start to end |

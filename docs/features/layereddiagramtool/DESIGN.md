@@ -91,7 +91,7 @@ LayeredDiagramTool (JPanel)
 | `TextData` | Extends `ComponentData`; captures bounds, text, font name/size/style, all three colors |
 | `SemanticGraphData` | Container for `List<GraphNodeData>` and `List<GraphEdgeData>` |
 | `GraphNodeData` | Node snapshot: id, type, properties map, x/y/w/h, layer |
-| `GraphEdgeData` | Edge snapshot: id, source/target node+port ids, lineStyle, arrowType, properties map (`label`/`sourceLabel`/`targetLabel` text; absent on pre-Phase-5.7 files) |
+| `GraphEdgeData` | Edge snapshot: id, source/target node+port ids, lineStyle, arrowType, `type` (named relationship kind, e.g. "Composition"), properties map (`label`/`sourceLabel`/`targetLabel` text; both absent on pre-Phase-5.7 files) |
 
 **Interfaces:**
 
@@ -107,7 +107,7 @@ LayeredDiagramTool (JPanel)
 | Interface / Class | Role |
 | --- | --- |
 | `GraphNode` | Identity, type, property map, port IDs, canvas-coordinate port locations, visual component accessor |
-| `GraphEdge` | Directed edge: source/target node + port IDs, `EdgeAttributes` (visual), `Map<String,Object>` properties (domain text — `label`/`sourceLabel`/`targetLabel`), mirroring `GraphNode`'s property map |
+| `GraphEdge` | Directed edge: source/target node + port IDs, `EdgeAttributes` (visual), mutable `edgeType` (named relationship kind, mirroring but unlike `GraphNode.getNodeType()` — reassignable, since a preset can be applied to an existing edge), `Map<String,Object>` properties reserved for optional domain-level data (currently `label`/`sourceLabel`/`targetLabel` text) |
 | `EdgeAttributes` | Value class: `LineStyle` (SOLID/DASHED), `ArrowType` (OPEN/FILLED/NONE), color, stroke width |
 | `EdgeRouter` | Strategy: `calculatePath(start, startPortId, end, endPortId)` and `getApproachPoint(...)` for arrowhead orientation |
 | `CanvasComponentFactory` | Domain plugin: `createContentFor(nodeType, properties)` → `JPanel`; `getPortIds(nodeType)`; `default createPropertyEditorFor(nodeType, properties, onChanged)` → `JPanel` (returns `null` by default — no editor) |

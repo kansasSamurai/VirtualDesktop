@@ -73,6 +73,7 @@ public class DiagramLayeredPane extends JLayeredPane implements Scrollable {
     private GraphEdge selectedEdge = null;
     private Integer activeLayer = SHAPE_LAYER;
     private EdgeAttributes activeEdgeAttributes = new EdgeAttributes();
+    private String activeEdgeType; // "type" property applied to newly created edges; null = no named preset active
     private Map<Integer, Boolean> layerVisibility = new HashMap<>();
     private Runnable modificationListener;
     private java.util.function.Consumer<Component> selectionListener;
@@ -135,7 +136,7 @@ public class DiagramLayeredPane extends JLayeredPane implements Scrollable {
         // Canvas overlay — handles port anchors, edge-creation drag, and selection handles
         overlayPanel = new CanvasOverlayPanel(
             graphNodes, edgePanel,
-            edge -> addGraphEdge(edge),
+            edge -> addGraphEdge(withActiveType(edge)),
             coord -> isSnapToGrid() ? snapToGrid(coord) : coord,
             () -> notifyModified(),
             () -> activeEdgeAttributes
@@ -166,6 +167,14 @@ public class DiagramLayeredPane extends JLayeredPane implements Scrollable {
     public void addGraphEdge(GraphEdge edge) {
         edgePanel.addEdge(edge);
         notifyModified();
+    }
+
+    /** Stamps the currently active named relationship type (if any) onto a freshly created edge. */
+    private GraphEdge withActiveType(GraphEdge edge) {
+        if (activeEdgeType != null) {
+            edge.setEdgeType(activeEdgeType);
+        }
+        return edge;
     }
 
     public void removeGraphNode(String nodeId) {
@@ -319,6 +328,7 @@ public class DiagramLayeredPane extends JLayeredPane implements Scrollable {
                 if (attrs.getSourceArrowType() != EdgeAttributes.ArrowType.NONE) {
                     ed.setSourceArrowType(attrs.getSourceArrowType().name());
                 }
+                ed.setType(edge.getEdgeType());
                 if (!edge.getProperties().isEmpty()) {
                     ed.setProperties(edge.getProperties());
                 }
@@ -408,12 +418,18 @@ public class DiagramLayeredPane extends JLayeredPane implements Scrollable {
                 if (ed.getSourceArrowType() != null) {
                     attrs.setSourceArrowType(EdgeAttributes.ArrowType.valueOf(ed.getSourceArrowType()));
                 }
+                Map<String, Object> edgeProps = ed.getProperties() != null ? ed.getProperties() : new HashMap<>();
+                String edgeType = ed.getType();
+                if (edgeType == null && edgeProps.get("type") instanceof String) {
+                    // Migrates files saved during the brief window "type" lived in
+                    // properties instead of as its own field.
+                    edgeType = (String) edgeProps.remove("type");
+                }
                 addGraphEdge(new DefaultGraphEdge(
                     ed.getId(),
                     ed.getSourceNodeId(), ed.getSourcePortId(),
                     ed.getTargetNodeId(), ed.getTargetPortId(),
-                    attrs,
-                    ed.getProperties() != null ? ed.getProperties() : new HashMap<>()));
+                    attrs, edgeType, edgeProps));
             }
         }
 
@@ -478,11 +494,24 @@ public class DiagramLayeredPane extends JLayeredPane implements Scrollable {
     }
 
     /**
-     * Sets the active relationship type used when drawing new edges, and applies
-     * those attributes to the currently selected edge (if any).
+     * Sets the active relationship attributes used when drawing new edges, and
+     * applies them to the currently selected edge (if any). Used by the generic
+     * (non-UML) line-style/arrow picker, which has no named relationship type.
      */
     public void applyRelationship(EdgeAttributes attrs) {
+        applyRelationship(attrs, null);
+    }
+
+    /**
+     * Same as {@link #applyRelationship(EdgeAttributes)}, plus a named relationship
+     * type (e.g. "Composition") — set on new edges going forward and, if non-null,
+     * on the currently selected edge's {@link GraphEdge#setEdgeType(String)}. A
+     * null typeName leaves the selected edge's existing type untouched (so tweaking
+     * line style/arrow directly doesn't erase a previously chosen preset).
+     */
+    public void applyRelationship(EdgeAttributes attrs, String typeName) {
         activeEdgeAttributes = new EdgeAttributes(attrs);
+        activeEdgeType = typeName;
         if (selectedEdge != null) {
             EdgeAttributes target = selectedEdge.getAttributes();
             target.setLineStyle(attrs.getLineStyle());
@@ -490,6 +519,9 @@ public class DiagramLayeredPane extends JLayeredPane implements Scrollable {
             target.setSourceArrowType(attrs.getSourceArrowType());
             target.setColor(attrs.getColor());
             target.setStrokeWidth(attrs.getStrokeWidth());
+            if (typeName != null) {
+                selectedEdge.setEdgeType(typeName);
+            }
             edgePanel.repaint();
             notifyModified();
         }

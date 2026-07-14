@@ -434,14 +434,49 @@ ignorant of what any given key means.
   leaves it `null`, treated as empty on load). `FileVersion` patch bumped to
   0.1.1 as a safe additive field.
 - `EdgeRenderPanel` paints three optional keys — `label` (center), `sourceLabel`,
-  `targetLabel` (~18px back from each port) — each backed by a small matte
-  (`theme.getCanvasBackground()`) so text reads clearly over the line. Positions
-  are recomputed every paint by walking the routed `Path2D` by arc length
-  (`flatten()` + `pointAtDistance()`), so they track node moves automatically and
-  work under any `EdgeRouter` implementation, not just the orthogonal one.
+  `targetLabel` — each backed by a small matte (`theme.getCanvasBackground()`) so
+  text reads clearly over the line, offset 4px off the line/port rather than
+  straddling it: the center label sits above a horizontal segment or right of a
+  vertical one (based on the local segment direction at its arc-length midpoint);
+  each end label sits right at its own port, offset along that port's axis away
+  from the node — right of an E port / left of a W port (both above the line,
+  since both exit horizontally), above an N port / below an S port (both right of
+  the line, since both exit vertically). This holds for any `EdgeRouter`, since a
+  port's stub always exits along its own axis. Positions are recomputed every
+  paint (`flatten()` + `pointAtDistance()` walk the routed `Path2D` by arc length
+  for the center label; end labels read the port location directly), so labels
+  track node moves automatically.
 - Edited via three text fields added to the existing edge property editor
-  (`LayeredDiagramTool.buildEdgePropertyEditor()`), committing on focus-lost —
-  the same pattern `GenericGraphFactory` already uses for node labels.
+  (`LayeredDiagramTool.buildEdgePropertyEditor()`, below the Line style/Arrow
+  rows), committing on focus-lost — the same pattern `GenericGraphFactory` already
+  uses for node labels.
+- `GraphEdge.getEdgeType()` / `setEdgeType(String)` — a first-class field (e.g.
+  `"Composition"`), mirroring `GraphNode.getNodeType()` but mutable, since a
+  preset can be reassigned to an existing edge (a node's type is fixed at
+  creation). Deliberately **not** stored in the `properties` map: `properties`
+  is reserved for optional, domain-level data (currently only the text labels
+  above); `type` is expected on every edge going forward, so it gets its own
+  field the same way node identity does. `GraphEdgeData.type` persists it
+  alongside — but separate from — `properties`.
+  Selecting a named UML preset in the Relationships tab (`RelationshipControlPanel`)
+  calls `DiagramLayeredPane.applyRelationship(attrs, presetName)`, which sets
+  `edgeType` on the currently selected edge (if any) and becomes the active type
+  for newly drawn edges (`activeEdgeType`, applied in `withActiveType()` right
+  before `addGraphEdge()`). The generic (non-UML) line-style/arrow picker calls
+  the original one-arg `applyRelationship(attrs)`, which passes a null type —
+  clears the active-type-for-new-edges but leaves an already-set type on the
+  selected edge untouched, so nudging line style doesn't erase a chosen preset.
+  Shown read-only as "Type: X" (or "Type: (none)") at the top of the edge editor.
+  Loading a file saved during the brief window `type` lived inside `properties`
+  (this same session) migrates it to the first-class field on load.
+- Relationships tab tile highlighting syncs to the selected edge's actual type:
+  `DiagramTabContent.syncRelationshipSelection` (a `Consumer<String>`, set by
+  `buildUmlRelationshipsPanel()`, `null` when the generic picker is active) is
+  called with `edge.getEdgeType()` on every edge selection and highlights the
+  matching tile (or none, if the type doesn't match any preset — e.g. an edge
+  loaded from a file created by a different domain). Display-only: it never
+  calls `applyRelationship()`, so merely clicking through edges can't overwrite
+  their attributes or silently change the default for the next new edge.
 
 ### Deliberately deferred
 
@@ -454,11 +489,20 @@ per-label configurable.
 ### Verification
 
 - Select an edge; type into Label / Source label / Target label — text appears
-  centered on the line / near each end immediately
+  hugging the line/port immediately, never overlapping it
 - Drag either endpoint node; all three labels track the new path on the next paint
-- Save and reload a diagram with edge labels set; text and positions are restored
-- Load a diagram saved before this phase (no `properties` on edges): loads
-  cleanly with no labels shown
+- Select a UML preset (e.g. "Composition") with an edge selected: attrs update
+  and the editor's "Type:" line shows the preset name; save/reload round-trips it
+- Click between two edges with different types (e.g. Composition and
+  Inheritance): the Relationships tab's active tile updates to match each one
+- Click a third edge with no type (or deselect): no tile is highlighted, and
+  clicking a fresh edge afterward still re-syncs correctly
+- Draw a new edge while a preset is active: the new edge's type matches
+- Switch to the generic line-style picker and tweak a radio button on an edge
+  that already has a type set: the type line is unchanged
+- Save and reload a diagram with edge labels/type set; everything is restored
+- Load a diagram saved before this phase (no `type`/`properties` on edges):
+  loads cleanly with no labels and "Type: (none)"
 
 ---
 

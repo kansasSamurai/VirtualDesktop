@@ -28,6 +28,13 @@ class DiagramTabContent {
     JButton saveBtn;                     // toolbar "Save" button; enabled once sourceFile is non-null
     JComboBox<String> themeCombo;        // toolbar theme selector; synced after load
 
+    // Highlights the Relationships tab's tile matching a type name, or clears all
+    // highlighting if no tile matches; null when the active picker has no named
+    // presets (generic line-style/arrow picker). Set by LayeredDiagramTool's
+    // updateRelationshipsPanel(); called on edge selection with the selected
+    // edge's type. Display-only — never mutates edge attributes itself.
+    java.util.function.Consumer<String> syncRelationshipSelection;
+
     DiagramTabContent(String name, DiagramLayeredPane diagramPane, JPanel tabCard,
                       PropertyEditorPanel propertyEditor,
                       JToggleButton nodesTabButton, JPanel nodesPanel,

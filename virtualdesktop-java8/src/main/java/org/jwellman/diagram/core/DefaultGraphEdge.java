@@ -20,19 +20,21 @@ public class DefaultGraphEdge implements GraphEdge {
     private final String targetPortId;
     private final EdgeAttributes attributes;
     private final Map<String, Object> properties;
+    private String edgeType;
 
     public DefaultGraphEdge(String edgeId,
                              String sourceNodeId, String sourcePortId,
                              String targetNodeId, String targetPortId,
                              EdgeAttributes attributes) {
         this(edgeId, sourceNodeId, sourcePortId, targetNodeId, targetPortId,
-            attributes, new HashMap<>());
+            attributes, null, new HashMap<>());
     }
 
     public DefaultGraphEdge(String edgeId,
                              String sourceNodeId, String sourcePortId,
                              String targetNodeId, String targetPortId,
                              EdgeAttributes attributes,
+                             String edgeType,
                              Map<String, Object> properties) {
         this.edgeId       = edgeId;
         this.sourceNodeId = sourceNodeId;
@@ -42,6 +44,7 @@ public class DefaultGraphEdge implements GraphEdge {
         // Defensive copy — callers may share an EdgeAttributes instance across edges;
         // each edge must own its attributes so mutations to one don't affect others.
         this.attributes   = new EdgeAttributes(attributes);
+        this.edgeType     = edgeType;
         this.properties   = properties != null ? properties : new HashMap<>();
     }
 
@@ -62,6 +65,12 @@ public class DefaultGraphEdge implements GraphEdge {
 
     @Override
     public EdgeAttributes getAttributes() { return attributes; }
+
+    @Override
+    public String getEdgeType() { return edgeType; }
+
+    @Override
+    public void setEdgeType(String edgeType) { this.edgeType = edgeType; }
 
     @Override
     public Map<String, Object> getProperties() { return properties; }

@@ -15,6 +15,7 @@ public class GraphEdgeData {
     private String lineStyle;       // EdgeAttributes.LineStyle name
     private String arrowType;       // EdgeAttributes.ArrowType name
     private String sourceArrowType; // EdgeAttributes.ArrowType name; absent = NONE (backward compat)
+    private String type;            // named relationship kind, e.g. "Composition"; null = untyped
     private Map<String, Object> properties; // e.g. "label", "sourceLabel", "targetLabel"; absent on older files
 
     public String getId() { return id; }
@@ -40,6 +41,9 @@ public class GraphEdgeData {
 
     public String getSourceArrowType() { return sourceArrowType; }
     public void setSourceArrowType(String sourceArrowType) { this.sourceArrowType = sourceArrowType; }
+
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
 
     public Map<String, Object> getProperties() { return properties; }
     public void setProperties(Map<String, Object> properties) { this.properties = properties; }

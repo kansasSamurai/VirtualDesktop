@@ -494,6 +494,9 @@ public class LayeredDiagramTool extends JPanel {
         tab.diagramPane.setEdgeSelectionListener(edge -> {
             if (edge != null) {
                 tab.propertyEditor.showNodeEditor(buildEdgePropertyEditor(edge, tab));
+                if (tab.syncRelationshipSelection != null) {
+                    tab.syncRelationshipSelection.accept(edge.getEdgeType());
+                }
             } else {
                 tab.propertyEditor.setSelectedComponent(null);
             }
@@ -515,6 +518,12 @@ public class LayeredDiagramTool extends JPanel {
         JLabel title = new JLabel("Edge");
         title.setFont(title.getFont().deriveFont(Font.BOLD));
         form.add(title);
+
+        String edgeType = edge.getEdgeType();
+        String typeText = (edgeType != null && !edgeType.isEmpty()) ? edgeType : "(none)";
+        JLabel typeLabel = new JLabel("Type: " + typeText);
+        typeLabel.setForeground(Color.GRAY);
+        form.add(typeLabel);
         form.add(Box.createVerticalStrut(8));
 
         // Line style
@@ -789,18 +798,20 @@ public class LayeredDiagramTool extends JPanel {
      */
     private void updateRelationshipsPanel(DiagramTabContent tab) {
         tab.relationshipsPanel.removeAll();
+        tab.syncRelationshipSelection = null; // no tiles yet; UML branch below re-sets it
         List<RelationshipType> presets = (tab.factory != null)
             ? tab.factory.getRelationshipPresets()
             : null;
         JPanel content = (presets != null && !presets.isEmpty())
-            ? buildUmlRelationshipsPanel(tab.diagramPane, presets)
+            ? buildUmlRelationshipsPanel(tab, presets)
             : buildGenericRelationshipsPanel(tab.diagramPane);
         tab.relationshipsPanel.add(content, BorderLayout.CENTER);
         tab.relationshipsPanel.revalidate();
         tab.relationshipsPanel.repaint();
     }
 
-    private JPanel buildUmlRelationshipsPanel(DiagramLayeredPane pane, List<RelationshipType> presets) {
+    private JPanel buildUmlRelationshipsPanel(DiagramTabContent tab, List<RelationshipType> presets) {
+        DiagramLayeredPane pane = tab.diagramPane;
         final List<RelationshipControlPanel> tiles = new ArrayList<>();
 
         JPanel listPanel = new JPanel();
@@ -810,7 +821,8 @@ public class LayeredDiagramTool extends JPanel {
             for (RelationshipControlPanel tile : tiles) {
                 tile.setActive(tile == selected);
             }
-            pane.applyRelationship(selected.getRelationshipType().attributes);
+            RelationshipType rt = selected.getRelationshipType();
+            pane.applyRelationship(rt.attributes, rt.name);
         };
 
         for (RelationshipType rt : presets) {
@@ -820,10 +832,21 @@ public class LayeredDiagramTool extends JPanel {
             listPanel.add(Box.createVerticalStrut(1));
         }
 
+        // Display-only sync, called on edge selection with the selected edge's type —
+        // highlights the matching tile (or none, if no tile's name matches). Never
+        // calls applyRelationship(), so merely selecting an edge can't overwrite its
+        // attributes or change the active type for the next new edge.
+        tab.syncRelationshipSelection = typeName -> {
+            for (RelationshipControlPanel tile : tiles) {
+                tile.setActive(tile.getRelationshipType().name.equals(typeName));
+            }
+        };
+
         // Pre-select the first preset as the default active relationship
         if (!tiles.isEmpty()) {
             tiles.get(0).setActive(true);
-            pane.applyRelationship(tiles.get(0).getRelationshipType().attributes);
+            RelationshipType defaultRt = tiles.get(0).getRelationshipType();
+            pane.applyRelationship(defaultRt.attributes, defaultRt.name);
         }
 
         JScrollPane scroll = new JScrollPane(listPanel);

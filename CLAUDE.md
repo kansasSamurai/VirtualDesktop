@@ -106,6 +106,23 @@ When running on JDK9+ (due to Groovy console requirements), add this VM argument
   - `VActionLNF` - Look and Feel actions
   - `VException` - Custom exception handling
 
+- **`org.jwellman.virtualdesktop.desktopmgr`** - Legacy window-list Swing adapters
+  - `VAppListCellRenderer` - Renders vapp frames in a Swing list
+  - `VAppListSelectionListener` - Activates frames selected from the list
+
+- **`org.jwellman.virtualdesktop.state`** - Redux-style application state
+  - `AppStore` - Central state store and subscriber coordinator
+  - `AppReducer` - Root reducer for application state
+  - Actions, middleware, immutable state models, and feature reducers live in subpackages
+
+- **`org.jwellman.virtualdesktop.taskbar`** - Window-list taskbar UI
+  - `WindowListController` - Bridges application state to window-list views
+  - `WindowListView` - View abstraction with JList and SmartGrid implementations
+
+- **`org.jwellman.virtualdesktop.vswing`** - Virtual desktop Swing extensions
+  - `VDesktopPane` - Desktop pane with background-image and transfer support
+  - `VDesktopManager` - Custom Swing desktop manager
+
 - **`org.jwellman.virtualdesktop.security`** - Security components
   - `NoExitSecurityManager` - Prevents System.exit() calls from vapps to avoid JVM crashes
 

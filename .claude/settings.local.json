@@ -7,7 +7,10 @@
       "Bash(javap:*)",
       "Bash(grep -E \"\\\\.\\(java|xml\\)$\")",
       "Bash(xargs grep *)",
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "Bash(grep -n \"^### Desktop$\" -A 80 docs/REQUIREMENTS.md)",
+      "Bash(find virtualdesktop-java8/target -iname \"DSP*.class\")",
+      "Bash(find virtualdesktop-java8/target -iname \"IconSpecifier*.class\")"
     ],
     "ask": [
       "Bash(mvn:*)"

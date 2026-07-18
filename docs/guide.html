@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Developer Guide: The Desktop Paradigm — VirtualDesktop</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          maxWidth: {
+            content: '1100px',
+          },
+          colors: {
+            surface: {
+              DEFAULT: '#ffffff',
+              muted: '#f4f4f5',
+              border: '#e4e4e7',
+            },
+            ink: {
+              DEFAULT: '#18181b',
+              secondary: '#71717a',
+              muted: '#a1a1aa',
+            },
+            accent: {
+              info: '#0284c7',
+              'info-bg': '#e0f2fe',
+              'info-border': '#7dd3fc',
+              warn: '#b45309',
+              'warn-bg': '#fef3c7',
+              'warn-border': '#fcd34d',
+              ok: '#15803d',
+              'ok-bg': '#dcfce7',
+              'ok-border': '#86efac',
+              danger: '#b91c1c',
+              'danger-bg': '#fee2e2',
+              'danger-border': '#fca5a5',
+              neutral: '#52525b',
+              'neutral-bg': '#f4f4f5',
+              'neutral-border': '#d4d4d8',
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <style type="text/tailwindcss">
+    @layer components {
+      .pill {
+        @apply inline-flex items-center rounded-full border border-surface-border bg-surface-muted px-2.5 py-0.5 text-xs font-medium text-ink;
+      }
+      .code {
+        @apply rounded bg-surface-muted px-1.5 py-0.5 font-mono text-[0.8125rem] text-ink;
+      }
+      .stat-card {
+        @apply rounded-lg border border-surface-border bg-surface p-4;
+      }
+      .stat-value {
+        @apply text-2xl font-semibold tracking-tight text-ink;
+      }
+      .stat-label {
+        @apply mt-1 text-sm text-ink-secondary;
+      }
+      .callout {
+        @apply rounded-lg border px-4 py-3;
+      }
+      .card {
+        @apply rounded-lg border border-surface-border bg-surface overflow-hidden;
+      }
+      .card-header {
+        @apply flex items-center justify-between gap-3 border-b border-surface-border px-4 py-3 text-sm font-semibold text-ink;
+      }
+      .card-body {
+        @apply px-4 py-3;
+      }
+      .data-table {
+        @apply w-full border-collapse text-left text-sm;
+      }
+      .data-table thead th {
+        @apply border-b border-surface-border bg-surface-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-secondary;
+      }
+      .data-table tbody td {
+        @apply border-b border-surface-border px-3 py-2.5 align-top text-ink;
+      }
+      .data-table tbody tr:last-child td {
+        @apply border-b-0;
+      }
+      .prose-p {
+        @apply text-ink leading-relaxed;
+      }
+      .section-title {
+        @apply text-xl font-semibold tracking-tight text-ink;
+      }
+      .subsection-title {
+        @apply text-lg font-semibold tracking-tight text-ink;
+      }
+      .contract-name {
+        @apply font-mono text-sm font-semibold text-ink;
+      }
+      .done-when {
+        @apply mt-2 text-sm italic text-ink-secondary leading-relaxed;
+      }
+    }
+  </style>
+</head>
+<body class="bg-zinc-50 text-ink antialiased">
+  <main class="mx-auto max-w-content space-y-8 p-6">
+
+    <!-- Header -->
+    <header class="space-y-3">
+      <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">VirtualDesktop / jPad</p>
+      <h1 class="text-3xl font-semibold tracking-tight text-ink">
+        Developer Guide: The Desktop Paradigm
+      </h1>
+      <p class="prose-p text-ink-secondary">
+        The intended desktop architecture: what the application <em>means</em> by a desktop,
+        which <strong>interfaces</strong> define that meaning, and which
+        <strong>implementation classes</strong> realize it today (or will realize it next).
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <span class="pill">Interfaces = paradigm</span>
+        <span class="pill">Implementations = replaceable</span>
+        <span class="pill">Views never invent tools</span>
+      </div>
+      <nav class="rounded-lg border border-surface-border bg-surface px-4 py-3 text-sm text-ink-secondary">
+        <span class="font-semibold text-ink">Companions:</span>
+        <a class="text-accent-info underline-offset-2 hover:underline" href="analysis.html">analysis.html</a>
+        <span class="text-ink-muted">·</span>
+        <a class="text-accent-info underline-offset-2 hover:underline" href="paradigm.html">paradigm.html</a>
+        <span class="text-ink-muted">·</span>
+        <a class="text-accent-info underline-offset-2 hover:underline" href="REQUIREMENTS.md">REQUIREMENTS.md</a>
+        <span class="text-ink-muted">·</span>
+        <a class="text-accent-info underline-offset-2 hover:underline" href="features/DESKTOP.md">DESKTOP.md</a>
+        <span class="text-ink-muted">·</span>
+        <a class="text-accent-info underline-offset-2 hover:underline" href="features/TASKBAR.md">TASKBAR.md</a>
+        <span class="text-ink-muted">·</span>
+        <a class="text-accent-info underline-offset-2 hover:underline" href="DEVELOPER_GUIDE.md">DEVELOPER_GUIDE.md</a>
+      </nav>
+    </header>
+
+    <!-- §1 -->
+    <section class="space-y-4">
+      <h2 class="section-title">1. What the desktop paradigm is</h2>
+
+      <aside class="callout border-accent-info-border bg-accent-info-bg" role="note">
+        <div class="text-sm font-semibold text-accent-info">The core story</div>
+        <p class="mt-2 text-sm leading-relaxed text-ink">
+          The core of the desktop paradigm is to define which tools we
+          <em>can</em> launch, give the user one or more ways to launch each tool,
+          and then provide a way to manage the display of that tool once launched.
+        </p>
+      </aside>
+
+      <ol class="list-decimal space-y-2 pl-5 prose-p">
+        <li><strong>Define which tools we <em>can</em> launch</strong></li>
+        <li><strong>Give the user one or more ways to launch each tool</strong></li>
+        <li><strong>Manage the display of that tool once it is launched</strong></li>
+      </ol>
+
+      <p class="prose-p text-ink-secondary">
+        Everything else — wallpaper, taskbar chrome, docking tabs, Look and Feel — is either a
+        <em>view</em> of that story or an optional capability layered beside it.
+      </p>
+
+      <p class="prose-p">
+        A <strong>tool</strong> (user-facing word; historically “vapp” in code) is not
+        “a <code class="code">JInternalFrame</code>.” A tool is something the environment knows how to start,
+        and for which it always hosts <strong>at least one panel</strong>
+        (<code class="code">JPanel</code> / <code class="code">JComponent</code>) after launch.
+      </p>
+
+      <aside class="callout border-accent-neutral-border bg-accent-neutral-bg" role="note">
+        <div class="text-sm font-semibold text-accent-neutral">External applications still fit</div>
+        <p class="mt-1 text-sm leading-relaxed text-ink">
+          The OS process is started as a side effect, but the desktop still creates and manages
+          a panel that represents that launch inside the environment. In-process UI is the common
+          case, not a hard requirement of the paradigm.
+        </p>
+      </aside>
+    </section>
+
+    <!-- §2 -->
+    <section class="space-y-3">
+      <h2 class="section-title">2. Three verbs, three layers</h2>
+      <p class="prose-p text-ink-secondary">It helps to keep three verbs separate:</p>
+
+      <div class="overflow-x-auto rounded-lg border border-surface-border bg-surface">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Verb</th>
+              <th>Question</th>
+              <th>Lives in</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-semibold">Catalog</td>
+              <td>What <em>can</em> we launch?</td>
+              <td class="text-ink-secondary">Definitions + catalog API</td>
+            </tr>
+            <tr>
+              <td class="font-semibold">Launch</td>
+              <td>How does the user ask to start one?</td>
+              <td class="text-ink-secondary">Launch surfaces (views) → lifecycle service</td>
+            </tr>
+            <tr>
+              <td class="font-semibold">Host</td>
+              <td>How do we show and manage an open one?</td>
+              <td class="text-ink-secondary">Runtime instances + windows + host/views</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="prose-p">
+        Views never invent tools. They read catalog and/or open-instance state, then ask a
+        <strong>service interface</strong> to open, focus, minimize, or close.
+      </p>
+    </section>
+
+    <hr class="border-surface-border" />
+
+    <!-- §3 -->
+    <section class="space-y-6">
+      <div class="space-y-2">
+        <h2 class="section-title">3. Interfaces (the paradigm contract)</h2>
+        <p class="prose-p text-ink-secondary">
+          These are the types a developer should program to. Some already exist as interfaces;
+          some exist only as concrete classes today and should be extracted; some are planned.
+        </p>
+      </div>
+
+      <!-- 3.1 -->
+      <div class="space-y-3">
+        <h3 class="subsection-title">3.1 What we can launch</h3>
+
+        <article class="card">
+          <div class="card-header">
+            <span class="contract-name">ToolDefinition</span>
+            <span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">target model</span>
+          </div>
+          <div class="card-body space-y-2">
+            <p class="text-sm prose-p">
+              An immutable catalog entry: identity, title, icon key(s), how to instantiate
+              (e.g. class name), optional attributes, flags such as “desktop shortcut only.”
+            </p>
+            <p class="text-sm text-ink-secondary">
+              <span class="font-semibold text-ink">Stand-ins today:</span>
+              <code class="code">VappConfig</code>, <code class="code">DesktopShortcut</code>,
+              <code class="code">ExternalAppConfig</code> — good data shapes, not yet one catalog type.
+            </p>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <span class="contract-name">ToolCatalog</span>
+            <span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">target interface</span>
+          </div>
+          <div class="card-body space-y-2">
+            <p class="text-sm prose-p">
+              Queryable set of definitions: list all, find by id, walk menu structure, etc.
+              No Swing types in the API.
+            </p>
+            <p class="text-sm text-ink-secondary">
+              <span class="font-semibold text-ink">Stand-in today:</span>
+              <code class="code">ActionFactory</code> — loads JSON correctly, but exposes
+              <code class="code">List&lt;DesktopAction&gt;</code> (Swing), not definitions.
+              Treat it as a transitional loader, not the paradigm API.
+            </p>
+          </div>
+        </article>
+      </div>
+
+      <!-- 3.2 -->
+      <div class="space-y-3">
+        <h3 class="subsection-title">3.2 How a tool is built when launched</h3>
+
+        <article class="card">
+          <div class="card-header">
+            <span class="contract-name">ToolSpec</span>
+            <span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">target interface</span>
+          </div>
+          <div class="card-body space-y-3">
+            <p class="text-sm prose-p">
+              The launch <em>recipe</em>: metadata (title, icon) plus
+              <code class="code">getContent()</code> returning the panel the environment will host.
+            </p>
+            <p class="text-sm prose-p">Optional capabilities stay as separate <strong>existing interfaces</strong>:</p>
+            <ul class="list-disc space-y-1 pl-5 text-sm text-ink-secondary">
+              <li><code class="code">Configurable</code> — <code class="code">configure(Map)</code> after construction</li>
+              <li><code class="code">LaunchAware</code> — <code class="code">launch()</code> for side effects (e.g. OS process)</li>
+            </ul>
+            <p class="text-sm prose-p">
+              A Spec is <strong>not</strong> the open window, <strong>not</strong> the docking framework,
+              and <strong>not</strong> a Swing listener. It answers: “If you start me, here is my panel
+              (and any extra launch work).”
+            </p>
+            <p class="text-sm text-ink-secondary">
+              <span class="font-semibold text-ink">Implementation today:</span>
+              abstract class <code class="code">VirtualAppSpec</code> and <code class="code">Spec*</code> subclasses.
+              The <em>idea</em> matches ToolSpec; the <em>class</em> also owns docking workspace setup —
+              ownership leak to move off Spec.
+            </p>
+          </div>
+        </article>
+      </div>
+
+      <!-- 3.3 -->
+      <div class="space-y-3">
+        <h3 class="subsection-title">3.3 What “open” means at runtime</h3>
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <article class="card">
+            <div class="card-header">
+              <span class="contract-name">ToolInstance</span>
+              <span class="pill border-accent-ok-border bg-accent-ok-bg text-accent-ok">existing model</span>
+            </div>
+            <div class="card-body">
+              <p class="text-sm text-ink-secondary">
+                One running tool: id, type/definition reference, title, frame state, docking-related state.
+                The store’s notion of “open.”
+              </p>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card-header">
+              <span class="contract-name">ToolsState / AppState</span>
+              <span class="pill border-accent-ok-border bg-accent-ok-bg text-accent-ok">existing model</span>
+            </div>
+            <div class="card-body">
+              <p class="text-sm text-ink-secondary">
+                Open-tool map and related UI preferences (e.g. window-list grouping).
+              </p>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card-header">
+              <span class="contract-name">AppStore</span>
+              <span class="pill border-accent-ok-border bg-accent-ok-bg text-accent-ok">existing</span>
+            </div>
+            <div class="card-body">
+              <p class="text-sm text-ink-secondary">
+                Dispatch → reducers → subscribers. Treat the <em>pattern</em> as the interface;
+                views do not mutate tool lists ad hoc.
+              </p>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <!-- 3.4 -->
+      <div class="space-y-3">
+        <h3 class="subsection-title">3.4 Lifecycle operations</h3>
+        <article class="card">
+          <div class="card-header">
+            <span class="contract-name">ToolService</span>
+            <span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">target interface</span>
+          </div>
+          <div class="card-body space-y-2">
+            <p class="text-sm prose-p">
+              Application-level operations: open (by definition id or spec), close, activate,
+              minimize, restore. Signatures should not require
+              <code class="code">JInternalFrame</code>, <code class="code">JList</code>, or
+              <code class="code">JDesktopPane</code>.
+            </p>
+            <p class="text-sm text-ink-secondary">
+              <span class="font-semibold text-ink">Stand-in today:</span>
+              concrete class <code class="code">DesktopManager</code>. It <em>performs</em> lifecycle work,
+              but is not an interface and is entangled with Swing (see §5). Call sites should eventually
+              depend on <code class="code">ToolService</code>, not on <code class="code">DesktopManager</code> by name.
+            </p>
+          </div>
+        </article>
+      </div>
+
+      <!-- 3.5 -->
+      <div class="space-y-3">
+        <h3 class="subsection-title">3.5 Hosting chrome for one open tool</h3>
+        <article class="card">
+          <div class="card-header">
+            <span class="contract-name">ToolWindow</span>
+            <span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">target interface</span>
+          </div>
+          <div class="card-body space-y-2">
+            <p class="text-sm prose-p">
+              Host chrome around one instance’s content: identity (<code class="code">toolId</code>),
+              show/hide, attach content, decorations. The paradigm requires hosting; it does not
+              require that the host <em>be</em> a <code class="code">JInternalFrame</code>.
+            </p>
+            <p class="text-sm text-ink-secondary">
+              <span class="font-semibold text-ink">Implementation today:</span>
+              <code class="code">VirtualAppFrame</code> extends <code class="code">JInternalFrame</code> —
+              useful default Swing host; the frame class <em>is</em> the view leak until a thin
+              <code class="code">ToolWindow</code> interface sits in front of it.
+            </p>
+          </div>
+        </article>
+      </div>
+
+      <!-- 3.6 -->
+      <div class="space-y-3">
+        <h3 class="subsection-title">3.6 Launch and management surfaces (views)</h3>
+        <p class="prose-p text-ink-secondary">
+          Views are <strong>interfaces</strong>. Concrete Swing widgets implement them.
+          Controllers sit between store/service and views.
+        </p>
+
+        <div class="overflow-x-auto rounded-lg border border-surface-border bg-surface">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>View interface</th>
+                <th>Reads</th>
+                <th>User intents go to</th>
+                <th>Example implementations</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-medium">DesktopView <span class="pill ml-1">target</span></td>
+                <td>Shortcut layout (DesktopState)</td>
+                <td>open tool, move/select shortcut</td>
+                <td class="text-ink-secondary">Today: ad hoc VDesktopPane + VShortcut</td>
+              </tr>
+              <tr>
+                <td class="font-medium">WindowListView <span class="pill ml-1 border-accent-ok-border bg-accent-ok-bg text-accent-ok">existing</span></td>
+                <td>Open tools (ToolsState + WindowListState)</td>
+                <td>activate, close, grouping UX</td>
+                <td class="text-ink-secondary">SmartGridWindowListView, JListWindowListView</td>
+              </tr>
+              <tr>
+                <td class="font-medium">ToolBrowserView <span class="pill ml-1">target</span></td>
+                <td>Catalog ⊕ which tools are open</td>
+                <td>launch, or focus if already open</td>
+                <td class="text-ink-secondary">Today: Tools menu (approximate only)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="prose-p text-sm text-ink-secondary">
+          <code class="code">WindowListViewListener</code> (existing) is the intent channel for the window list.
+          Desktop and browser views should get analogous listener interfaces.
+          Controllers (e.g. <code class="code">WindowListController</code>; planned
+          <code class="code">DesktopController</code>) are <strong>implementation classes</strong>:
+          subscribe, push props into a view interface, call <code class="code">ToolService</code> on intents.
+          They should not own docking frameworks or paint pixels.
+        </p>
+      </div>
+
+      <!-- 3.7 -->
+      <div class="space-y-3">
+        <h3 class="subsection-title">3.7 Desktop layout (shortcuts as data)</h3>
+        <article class="card">
+          <div class="card-header">
+            <span class="contract-name">DesktopState / Shortcut</span>
+            <span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">target model</span>
+          </div>
+          <div class="card-body space-y-2">
+            <p class="text-sm prose-p">
+              Where shortcuts sit, what they point at (definition id), selection, later persistence.
+              This is <em>data</em>, not a <code class="code">JLabel</code>.
+            </p>
+            <p class="text-sm text-ink-secondary">
+              <span class="font-semibold text-ink">Stand-in today:</span>
+              <code class="code">DesktopShortcut</code> config DTO (definition only). Runtime tiles are
+              <code class="code">VShortcut</code> widgets created in <code class="code">App</code> with hardcoded coordinates.
+            </p>
+          </div>
+        </article>
+      </div>
+
+      <!-- 3.8 -->
+      <div class="space-y-3">
+        <h3 class="subsection-title">3.8 Docking (orthogonal capability)</h3>
+        <aside class="callout border-accent-neutral-border bg-accent-neutral-bg" role="note">
+          <div class="text-sm font-semibold text-accent-neutral">Not required to understand the paradigm</div>
+          <p class="mt-1 text-sm leading-relaxed text-ink">
+            Docking is an optional layout capability <em>inside</em> a hosted tool window.
+          </p>
+          <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-secondary">
+            <li><strong>Interfaces (existing SPI):</strong> DockingService, DockingProvider, DockingWorkspace, Dockable, …</li>
+            <li><strong>Implementations:</strong> Bibliothek adapters under <code class="code">docking.impl.bibliothek</code></li>
+            <li><strong>Rule:</strong> sessions keyed by <code class="code">toolId</code> (or owned by the tool window host), not by <code class="code">VirtualAppSpec</code></li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <hr class="border-surface-border" />
+
+    <!-- §4 -->
+    <section class="space-y-4">
+      <h2 class="section-title">4. A walk through a launch (intended flow)</h2>
+
+      <ol class="space-y-3">
+        <li class="rounded-lg border border-surface-border bg-surface px-4 py-3">
+          <div class="text-sm font-semibold text-ink">1. Catalog</div>
+          <p class="mt-1 text-sm text-ink-secondary">Configuration loads into ToolDefinition records held by a ToolCatalog implementation.</p>
+        </li>
+        <li class="rounded-lg border border-surface-border bg-surface px-4 py-3">
+          <div class="text-sm font-semibold text-ink">2. Launch surface</div>
+          <p class="mt-1 text-sm text-ink-secondary">
+            User double-clicks a shortcut (<code class="code">DesktopView</code>), picks a menu item
+            (<code class="code">ToolBrowserView</code>), or activates a taskbar row if already open
+            (<code class="code">WindowListView</code>).
+          </p>
+        </li>
+        <li class="rounded-lg border border-surface-border bg-surface px-4 py-3">
+          <div class="text-sm font-semibold text-ink">3. Service</div>
+          <p class="mt-1 text-sm text-ink-secondary">
+            Surface asks <code class="code">ToolService.open(definitionId)</code> — it does not
+            <code class="code">new Spec…()</code> for product logic.
+          </p>
+        </li>
+        <li class="rounded-lg border border-surface-border bg-surface px-4 py-3">
+          <div class="text-sm font-semibold text-ink">4. Recipe</div>
+          <p class="mt-1 text-sm text-ink-secondary">
+            Service resolves definition, instantiates ToolSpec implementation, applies Configurable if present, obtains getContent().
+          </p>
+        </li>
+        <li class="rounded-lg border border-surface-border bg-surface px-4 py-3">
+          <div class="text-sm font-semibold text-ink">5. Host</div>
+          <p class="mt-1 text-sm text-ink-secondary">
+            Service creates/obtains ToolWindow, attaches content, shows it, records ToolInstance in the store (TOOL_OPENED).
+          </p>
+        </li>
+        <li class="rounded-lg border border-surface-border bg-surface px-4 py-3">
+          <div class="text-sm font-semibold text-ink">6. Side effects</div>
+          <p class="mt-1 text-sm text-ink-secondary">
+            If LaunchAware, launch() runs (e.g. external process). The managed panel still exists.
+          </p>
+        </li>
+        <li class="rounded-lg border border-surface-border bg-surface px-4 py-3">
+          <div class="text-sm font-semibold text-ink">7. Views update</div>
+          <p class="mt-1 text-sm text-ink-secondary">
+            Subscribers re-render from store state. They do not scrape a private list of frames to learn what is open.
+          </p>
+        </li>
+      </ol>
+
+      <aside class="callout border-accent-warn-border bg-accent-warn-bg" role="note">
+        <div class="text-sm font-semibold text-accent-warn">Today vs intended</div>
+        <p class="mt-1 text-sm leading-relaxed text-ink">
+          Today steps 1–2 and 4–6 roughly happen via
+          <code class="code">DesktopAction</code> → <code class="code">DesktopManager</code> →
+          <code class="code">VirtualAppFrame</code>, with the store updated as a
+          <em>side projection</em> of Swing events. The end state makes the store +
+          <code class="code">ToolService</code> the spine.
+        </p>
+      </aside>
+    </section>
+
+    <hr class="border-surface-border" />
+
+    <!-- §5 -->
+    <section class="space-y-4">
+      <h2 class="section-title">5. Implementation reality (read this before changing code)</h2>
+
+      <h3 class="subsection-title">What already matches the paradigm</h3>
+      <div class="overflow-x-auto rounded-lg border border-surface-border bg-surface">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Paradigm piece</th>
+              <th>Implementation status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="bg-accent-ok-bg/40">
+              <td class="font-medium">Capability interfaces</td>
+              <td><code class="code">Configurable</code>, <code class="code">LaunchAware</code> — keep</td>
+            </tr>
+            <tr class="bg-accent-ok-bg/40">
+              <td class="font-medium">Open-tool model</td>
+              <td><code class="code">ToolInstance</code>, <code class="code">ToolsState</code>, <code class="code">WindowListState</code> — keep; later add definitionId / icon key</td>
+            </tr>
+            <tr class="bg-accent-ok-bg/40">
+              <td class="font-medium">Store pattern</td>
+              <td><code class="code">AppStore</code>, reducers, subscribers — keep</td>
+            </tr>
+            <tr class="bg-accent-ok-bg/40">
+              <td class="font-medium">Substitutable open-list view</td>
+              <td><code class="code">WindowListView</code> + <code class="code">WindowListController</code> — reference pattern for Desktop</td>
+            </tr>
+            <tr class="bg-accent-ok-bg/40">
+              <td class="font-medium">Docking library boundary</td>
+              <td><code class="code">DockingService</code> / <code class="code">DockingProvider</code> SPI — keep; fix <em>ownership</em></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="subsection-title">What is transitional</h3>
+      <p class="text-sm text-ink-secondary">Concrete class standing in for an interface:</p>
+      <div class="overflow-x-auto rounded-lg border border-surface-border bg-surface">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Ideal interface</th>
+              <th>Current class</th>
+              <th>Why it’s transitional</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="bg-accent-warn-bg/30">
+              <td class="font-mono text-xs">ToolCatalog</td>
+              <td>ActionFactory</td>
+              <td>Loads JSON well; publishes Swing DesktopActions</td>
+            </tr>
+            <tr class="bg-accent-warn-bg/30">
+              <td class="font-mono text-xs">ToolSpec</td>
+              <td>VirtualAppSpec</td>
+              <td>Correct recipe idea; also owns docking workspace/service</td>
+            </tr>
+            <tr class="bg-accent-warn-bg/30">
+              <td class="font-mono text-xs">ToolService</td>
+              <td>DesktopManager</td>
+              <td>Performs lifecycle; also is Swing listener + frame roster owner</td>
+            </tr>
+            <tr class="bg-accent-warn-bg/30">
+              <td class="font-mono text-xs">ToolWindow</td>
+              <td>VirtualAppFrame</td>
+              <td>Has toolId; <em>is</em> a JInternalFrame</td>
+            </tr>
+            <tr class="bg-accent-warn-bg/30">
+              <td class="font-mono text-xs">ToolDefinition</td>
+              <td>VappConfig / DesktopShortcut / …</td>
+              <td>Good DTOs; not one ToolDefinition API</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="subsection-title">About DesktopManager specifically</h3>
+      <aside class="callout border-accent-warn-border bg-accent-warn-bg" role="note">
+        <div class="text-sm font-semibold text-accent-warn">Listeners are symptoms, not the whole disease</div>
+        <p class="mt-1 text-sm leading-relaxed text-ink">
+          The issue is <strong>not only</strong> that DesktopManager implements
+          <code class="code">ListSelectionListener</code> and
+          <code class="code">InternalFrameListener</code>.
+        </p>
+        <p class="mt-2 text-sm leading-relaxed text-ink">It conflates three roles:</p>
+        <ol class="mt-2 list-decimal space-y-1 pl-5 text-sm text-ink">
+          <li><strong>Paradigm service</strong> — create/show/manage tools (→ ToolService)</li>
+          <li><strong>Swing host adapter</strong> — JDesktopPane, frame listeners, JList selection sync</li>
+          <li><strong>Authoritative registry</strong> — EventList&lt;VirtualAppFrame&gt; as live “what is open”</li>
+        </ol>
+        <p class="mt-2 text-sm leading-relaxed text-ink">
+          Listening to frames <em>inside</em> a Swing adapter implementation is fine.
+          Making that adapter the type every feature programs to — and treating its frame list
+          as source of truth — is what we unwind.
+        </p>
+      </aside>
+
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <article class="card">
+          <div class="card-header">Dual registry — Swing</div>
+          <div class="card-body">
+            <p class="text-sm text-ink-secondary">
+              DesktopManager’s list of VirtualAppFrame
+            </p>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-header">Dual registry — Model</div>
+          <div class="card-body">
+            <p class="text-sm text-ink-secondary">
+              AppStore → ToolsState
+            </p>
+          </div>
+        </article>
+      </div>
+      <p class="text-sm text-ink-secondary">
+        The window list prefers the store for display, then reaches back into frames
+        (<code class="code">frameCache</code>) for icons and activate/close. That reach-back is the tell
+        that ToolInstance and ToolService are not yet rich enough.
+      </p>
+    </section>
+
+    <hr class="border-surface-border" />
+
+    <!-- §6 -->
+    <section class="space-y-4">
+      <h2 class="section-title">6. Migration narrative (six steps, in story form)</h2>
+      <p class="prose-p text-ink-secondary">
+        Ordered by <strong>dependency</strong>, not six unrelated cleanups.
+        Doing “store as sole registry” first fights the still-Swing-centric manager;
+        catalog/service seams first make later flips smaller.
+      </p>
+
+      <article class="card">
+        <div class="card-header">
+          <span>Step 1 — Catalog becomes data, Actions become adapters</span>
+          <span class="pill">1</span>
+        </div>
+        <div class="card-body">
+          <p class="text-sm prose-p">
+            Introduce <code class="code">ToolDefinition</code> and a <code class="code">ToolCatalog</code> interface.
+            Teach JSON loaders to populate the catalog. Keep <code class="code">DesktopAction</code>
+            (implementation) as a thin adapter: on click, call
+            <code class="code">ToolService.open(defId)</code> instead of being the catalog itself.
+          </p>
+          <p class="done-when">
+            Done when: menus and shortcuts can be described without saying “the list of Actions
+            <em>is</em> the product catalog.”
+          </p>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-header">
+          <span>Step 2 — Lifecycle has an application interface</span>
+          <span class="pill">2</span>
+        </div>
+        <div class="card-body">
+          <p class="text-sm prose-p">
+            Declare <code class="code">ToolService</code>. Make <code class="code">DesktopManager</code>
+            the <strong>first implementation</strong> (it may still create VirtualAppFrames and listen
+            to them internally). Point launch surfaces and controllers at the interface.
+          </p>
+          <p class="done-when">
+            Done when: feature code can manage tools without importing DesktopManager — even if the
+            runtime object is still that class behind the interface.
+          </p>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-header">
+          <span>Step 3 — Spec means recipe + panel again</span>
+          <span class="pill">3</span>
+        </div>
+        <div class="card-body">
+          <p class="text-sm prose-p">
+            Narrow VirtualAppSpec toward ToolSpec: title, icon, content, optional Configurable /
+            LaunchAware. Relocate docking session ownership to a toolId-scoped host. Leave the
+            docking <strong>SPI interfaces</strong> as they are.
+          </p>
+          <p class="done-when">
+            Done when: a new tool author never touches DockingService to “just show a panel.”
+          </p>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-header">
+          <span>Step 4 — Open instances carry what views need</span>
+          <span class="pill">4</span>
+        </div>
+        <div class="card-body">
+          <p class="text-sm prose-p">
+            Extend ToolInstance with definition id and icon key. Route activate/close through
+            ToolService. Remove WindowListController’s frameCache as a display dependency.
+          </p>
+          <p class="done-when">
+            Done when: the taskbar can render and request lifecycle changes without asking
+            DesktopManager.getFrames().
+          </p>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-header">
+          <span>Step 5 — Desktop surface follows the taskbar pattern</span>
+          <span class="pill">5</span>
+        </div>
+        <div class="card-body">
+          <p class="text-sm prose-p">
+            Add DesktopState / shortcut model, a DesktopView interface + listener, a DesktopController,
+            and reduce VShortcut to a pure rendering/input widget (implementation of the view, not the model).
+          </p>
+          <p class="done-when">
+            Done when: a second desktop look can ship by implementing DesktopView only.
+          </p>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-header">
+          <span>Step 6 — Store becomes the sole open-tool registry</span>
+          <span class="pill">6</span>
+        </div>
+        <div class="card-body">
+          <p class="text-sm prose-p">
+            Make ToolsState authoritative for what is open. The frame map becomes an internal
+            realizer cache for the ToolService / Swing host implementation. Align close/hide
+            semantics (HIDE_ON_CLOSE vs TOOL_CLOSED).
+          </p>
+          <p class="done-when">
+            Done when: no view or controller treats EventList&lt;VirtualAppFrame&gt; as the product’s
+            list of open tools.
+          </p>
+        </div>
+      </article>
+    </section>
+
+    <hr class="border-surface-border" />
+
+    <!-- §7 -->
+    <section class="space-y-3">
+      <h2 class="section-title">7. Practical rules of thumb</h2>
+      <ol class="list-decimal space-y-3 pl-5 prose-p">
+        <li>
+          <strong>If it names Swing in its public API, it is probably an implementation</strong>,
+          not the paradigm interface (ToolService, ToolCatalog, ToolSpec, view interfaces).
+        </li>
+        <li>
+          <strong>If a view needs a VirtualAppFrame to know the title or icon</strong>, the model is
+          incomplete — fix ToolInstance (or the projection DTO), don’t grow another frame cache.
+        </li>
+        <li>
+          <strong>Spec subclasses should look boring:</strong> construct content, set title/icon,
+          maybe implement Configurable / LaunchAware. Window management or docking control belongs elsewhere.
+        </li>
+        <li>
+          <strong>External tools are not exceptions to hosting:</strong> always a managed panel;
+          process launch is extra.
+        </li>
+        <li>
+          <strong>Docking is optional complexity</strong> beside the paradigm, not the definition of a tool.
+        </li>
+        <li>
+          <strong>Prefer evolving names in place</strong> (VirtualAppSpec → implements ToolSpec) over a
+          big-bang rewrite. Interfaces first; swap implementations when the seams exist.
+        </li>
+      </ol>
+    </section>
+
+    <!-- §8 -->
+    <section class="space-y-3">
+      <h2 class="section-title">8. Glossary bridge</h2>
+      <div class="overflow-x-auto rounded-lg border border-surface-border bg-surface">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Guide term</th>
+              <th>Prefer in new code</th>
+              <th>Historical / UI</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-medium">Tool</td>
+              <td>tool</td>
+              <td class="text-ink-secondary">vapp (code legacy)</td>
+            </tr>
+            <tr>
+              <td class="font-medium">Definition</td>
+              <td><code class="code">ToolDefinition</code></td>
+              <td class="text-ink-secondary">VappConfig, shortcut config</td>
+            </tr>
+            <tr>
+              <td class="font-medium">Spec / recipe</td>
+              <td><code class="code">ToolSpec</code></td>
+              <td class="text-ink-secondary">VirtualAppSpec</td>
+            </tr>
+            <tr>
+              <td class="font-medium">Open instance</td>
+              <td><code class="code">ToolInstance</code></td>
+              <td class="text-ink-secondary">“frame” when you mean window chrome</td>
+            </tr>
+            <tr>
+              <td class="font-medium">Lifecycle API</td>
+              <td><code class="code">ToolService</code></td>
+              <td class="text-ink-secondary">DesktopManager (impl)</td>
+            </tr>
+            <tr>
+              <td class="font-medium">Host chrome</td>
+              <td><code class="code">ToolWindow</code></td>
+              <td class="text-ink-secondary">VirtualAppFrame (impl)</td>
+            </tr>
+            <tr>
+              <td class="font-medium">Open-list UI</td>
+              <td><code class="code">WindowListView</code></td>
+              <td class="text-ink-secondary">taskbar / window list</td>
+            </tr>
+            <tr>
+              <td class="font-medium">Shortcut surface</td>
+              <td><code class="code">DesktopView</code></td>
+              <td class="text-ink-secondary">desktop pane + icons</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-sm text-ink-secondary">
+        See also <a class="text-accent-info underline-offset-2 hover:underline" href="../GLOSSARY.md">GLOSSARY.md</a>
+        for project-wide terminology.
+      </p>
+    </section>
+
+    <!-- §9 -->
+    <section class="space-y-3">
+      <h2 class="section-title">9. Where to go next</h2>
+      <ul class="list-disc space-y-2 pl-5 prose-p">
+        <li>
+          <strong>Implementing seams:</strong> start with Step 1 or Step 2 (catalog or ToolService interface) —
+          both are low drama and unlock the rest.
+        </li>
+        <li>
+          <strong>Desktop-only work:</strong> follow DESKTOP.md once Step 2 exists so shortcut open goes through ToolService.
+        </li>
+        <li>
+          <strong>Deep docking Redux:</strong> wait until Step 3 (ownership) and stable toolId bridging —
+          otherwise the model mirrors incomplete events.
+        </li>
+      </ul>
+
+      <aside class="callout border-accent-info-border bg-accent-info-bg" role="note">
+        <div class="text-sm font-semibold text-accent-info">The litmus test</div>
+        <p class="mt-1 text-sm leading-relaxed text-ink">
+          When in doubt, ask: <em>Could I replace this Swing class with another implementation
+          without changing the story in §1?</em> If no, you are editing an implementation detail
+          that has leaked into the paradigm — extract an interface first.
+        </p>
+      </aside>
+    </section>
+
+    <footer class="pb-8 pt-2 text-xs leading-relaxed text-ink-muted">
+      Source of truth for prose: docs/DEVELOPER_GUIDE.md. HTML presentation: docs/guide.html
+      (Tailwind, same visual system as analysis.html and paradigm.html).
+    </footer>
+  </main>
+</body>
+</html>

@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "App",
+            "request": "launch",
+            "mainClass": "org.jwellman.virtualdesktop.App",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
             "name": "Launch VirtualDesktop",
             "request": "launch",
             "mainClass": "org.jwellman.virtualdesktop.App",

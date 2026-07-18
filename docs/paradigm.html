@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>End-state desktop paradigm — VirtualDesktop</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          maxWidth: {
+            content: '1100px',
+          },
+          colors: {
+            surface: {
+              DEFAULT: '#ffffff',
+              muted: '#f4f4f5',
+              border: '#e4e4e7',
+            },
+            ink: {
+              DEFAULT: '#18181b',
+              secondary: '#71717a',
+              muted: '#a1a1aa',
+            },
+            accent: {
+              info: '#0284c7',
+              'info-bg': '#e0f2fe',
+              'info-border': '#7dd3fc',
+              warn: '#b45309',
+              'warn-bg': '#fef3c7',
+              'warn-border': '#fcd34d',
+              ok: '#15803d',
+              'ok-bg': '#dcfce7',
+              'ok-border': '#86efac',
+              danger: '#b91c1c',
+              'danger-bg': '#fee2e2',
+              'danger-border': '#fca5a5',
+              neutral: '#52525b',
+              'neutral-bg': '#f4f4f5',
+              'neutral-border': '#d4d4d8',
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <style type="text/tailwindcss">
+    @layer components {
+      .pill {
+        @apply inline-flex items-center rounded-full border border-surface-border bg-surface-muted px-2.5 py-0.5 text-xs font-medium text-ink;
+      }
+      .code {
+        @apply rounded bg-surface-muted px-1.5 py-0.5 font-mono text-[0.8125rem] text-ink;
+      }
+      .stat-card {
+        @apply rounded-lg border border-surface-border bg-surface p-4;
+      }
+      .stat-value {
+        @apply text-2xl font-semibold tracking-tight text-ink;
+      }
+      .stat-label {
+        @apply mt-1 text-sm text-ink-secondary;
+      }
+      .callout {
+        @apply rounded-lg border px-4 py-3;
+      }
+      .card {
+        @apply rounded-lg border border-surface-border bg-surface overflow-hidden;
+      }
+      .card-header {
+        @apply flex items-center justify-between gap-3 border-b border-surface-border px-4 py-3 text-sm font-semibold text-ink;
+      }
+      .card-body {
+        @apply px-4 py-3;
+      }
+      .data-table {
+        @apply w-full border-collapse text-left text-sm;
+      }
+      .data-table thead th {
+        @apply border-b border-surface-border bg-surface-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-secondary;
+      }
+      .data-table tbody td {
+        @apply border-b border-surface-border px-3 py-2.5 align-top text-ink;
+      }
+      .data-table tbody tr:last-child td {
+        @apply border-b-0;
+      }
+    }
+  </style>
+</head>
+<body class="bg-zinc-50 text-ink antialiased">
+  <main class="mx-auto max-w-content space-y-6 p-6">
+
+    <!-- Header -->
+    <header class="space-y-2">
+      <h1 class="text-3xl font-semibold tracking-tight text-ink">
+        End-state desktop paradigm
+      </h1>
+      <p class="text-ink-secondary leading-relaxed">
+        Reframe: define the desktop as a data model and operation interfaces;
+        any view that meets the contract can realize it. Prefer existing types
+        where they already fit; mark the rest as gaps.
+      </p>
+      <div class="flex flex-wrap gap-2 pt-1">
+        <span class="pill">Model first</span>
+        <span class="pill">Views are substitutable</span>
+        <span class="pill">ToolSpec = launch + ≥1 panel</span>
+        <span class="pill">External apps still fit</span>
+      </div>
+    </header>
+
+    <!-- Stats -->
+    <section class="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Summary metrics">
+      <div class="stat-card border-l-4 border-l-accent-info">
+        <div class="stat-value text-accent-info">10</div>
+        <div class="stat-label">Core contracts in the paradigm</div>
+      </div>
+      <div class="stat-card border-l-4 border-l-accent-ok">
+        <div class="stat-value text-accent-ok">5</div>
+        <div class="stat-label">Already Met (keep)</div>
+      </div>
+      <div class="stat-card border-l-4 border-l-accent-warn">
+        <div class="stat-value text-accent-warn">5</div>
+        <div class="stat-label">Partial / Gap (implement)</div>
+      </div>
+    </section>
+
+    <!-- Invariant -->
+    <aside class="callout border-accent-info-border bg-accent-info-bg" role="note">
+      <div class="text-sm font-semibold text-accent-info">The invariant (your AppSpec insight)</div>
+      <p class="mt-1 text-sm leading-relaxed text-ink">
+        A tool is defined by how it is launched and by at least one
+        <code class="code">JPanel</code> (or <code class="code">JComponent</code>) the environment hosts.
+        External apps still fit: the OS process is a side effect of
+        <code class="code">LaunchAware</code>; the desktop still creates and manages a panel
+        for that launch. Views never invent tools — they ask
+        <code class="code">ToolService</code> / the store.
+      </p>
+    </aside>
+
+    <aside class="callout border-accent-neutral-border bg-accent-neutral-bg" role="note">
+      <div class="text-sm font-semibold text-accent-neutral">Aligned with existing docs</div>
+      <p class="mt-1 text-sm leading-relaxed text-ink">
+        This matches REQUIREMENTS.md “view substitutability” and DESKTOP.md’s
+        planned DesktopState → DesktopController → pure VShortcut path. Taskbar
+        remains the reference implementation of the pattern.
+      </p>
+    </aside>
+
+    <!-- 1. Contracts -->
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold tracking-tight text-ink">
+        1. Theoretical contracts
+      </h2>
+      <p class="text-ink-secondary leading-relaxed">
+        Names below are target vocabulary. “Existing anchor” is what to evolve
+        or keep rather than invent from scratch.
+      </p>
+      <div class="overflow-x-auto rounded-lg border border-surface-border bg-surface">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Contract</th>
+              <th>Role</th>
+              <th>Minimum surface</th>
+              <th>Existing anchor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-medium">ToolDefinition</td>
+              <td>Catalog entry: what can be launched</td>
+              <td class="text-ink-secondary">id, title, iconKey(s), className, attrs, flags</td>
+              <td class="text-ink-secondary">VappConfig + DesktopShortcut + ExternalAppConfig</td>
+            </tr>
+            <tr>
+              <td class="font-medium">ToolCatalog</td>
+              <td>Queryable set of definitions</td>
+              <td class="text-ink-secondary">list / findById / byMenuGroup</td>
+              <td class="text-ink-secondary">ActionFactory (static list) — not a real catalog API</td>
+            </tr>
+            <tr>
+              <td class="font-medium">ToolSpec</td>
+              <td>Launch recipe + exposed content</td>
+              <td class="text-ink-secondary">title, icon, getContent(): JPanel, optional configure/launch</td>
+              <td class="text-ink-secondary">VirtualAppSpec (closest ancestor of the idea)</td>
+            </tr>
+            <tr>
+              <td class="font-medium">ToolInstance</td>
+              <td>One running tool</td>
+              <td class="text-ink-secondary">id, definitionId/type, title, frameState, …</td>
+              <td class="text-ink-secondary">ToolInstance (state.model) — keep</td>
+            </tr>
+            <tr>
+              <td class="font-medium">ToolService</td>
+              <td>Lifecycle operations (mutations)</td>
+              <td class="text-ink-secondary">open / close / activate / minimize / restore</td>
+              <td class="text-ink-secondary">DesktopManager methods — concrete, not an interface</td>
+            </tr>
+            <tr>
+              <td class="font-medium">ToolWindow</td>
+              <td>Host chrome for one instance’s content</td>
+              <td class="text-ink-secondary">toolId, setContent, show/hide, frame chrome</td>
+              <td class="text-ink-secondary">VirtualAppFrame — is a JInternalFrame today</td>
+            </tr>
+            <tr>
+              <td class="font-medium">DesktopState + Shortcut</td>
+              <td>Shortcut placements on the surface</td>
+              <td class="text-ink-secondary">shortcutId → defId, x, y, label, icon</td>
+              <td class="text-ink-secondary">DesktopShortcut DTO only; DESKTOP.md names DesktopState</td>
+            </tr>
+            <tr>
+              <td class="font-medium">DesktopView</td>
+              <td>Renders desktop surface (shortcuts ± wallpaper)</td>
+              <td class="text-ink-secondary">setShortcuts / listener for open/move/select</td>
+              <td class="text-ink-secondary">Missing — VDesktopPane + VShortcut are ad hoc</td>
+            </tr>
+            <tr>
+              <td class="font-medium">WindowListView</td>
+              <td>Renders open-tools list (taskbar zone)</td>
+              <td class="text-ink-secondary">setItems / setSelectedId / listener</td>
+              <td class="text-ink-secondary">WindowListView — keep (reference pattern)</td>
+            </tr>
+            <tr>
+              <td class="font-medium">ToolBrowserView (optional)</td>
+              <td>Renders catalog ± open status</td>
+              <td class="text-ink-secondary">definitions + which ids are open</td>
+              <td class="text-ink-secondary">Missing — menus approximate this poorly</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Layering -->
+    <section class="space-y-3">
+      <h3 class="text-lg font-semibold tracking-tight text-ink">
+        Layering (who talks to whom)
+      </h3>
+      <article class="card">
+        <div class="card-body space-y-2">
+          <p class="text-sm text-ink-secondary leading-relaxed">
+            <span class="font-semibold text-ink">Catalog:</span>
+            ToolDefinition → ToolCatalog (load from JSON; no Swing)
+          </p>
+          <p class="text-sm text-ink-secondary leading-relaxed">
+            <span class="font-semibold text-ink">Recipe:</span>
+            ToolCatalog.open(defId) → instantiate ToolSpec → optional Configurable / LaunchAware
+          </p>
+          <p class="text-sm text-ink-secondary leading-relaxed">
+            <span class="font-semibold text-ink">Runtime:</span>
+            ToolService assigns ToolInstance id, asks ToolWindow host for chrome, puts
+            Spec.getContent() inside, dispatches store updates
+          </p>
+          <p class="text-sm text-ink-secondary leading-relaxed">
+            <span class="font-semibold text-ink">Views:</span>
+            subscribe to AppStore (and/or catalog); emit intents via listeners; never hold the live frame
+            list as authority
+          </p>
+          <p class="text-sm text-ink-secondary leading-relaxed">
+            <span class="font-semibold text-ink">Docking (orthogonal):</span>
+            DockingSession keyed by toolId; SPI stays; Spec does not own the service
+          </p>
+        </div>
+      </article>
+    </section>
+
+    <!-- 2. Views -->
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold tracking-tight text-ink">
+        2. Views as realizations of the same model
+      </h2>
+      <div class="overflow-x-auto rounded-lg border border-surface-border bg-surface">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>View contract</th>
+              <th>Reads</th>
+              <th>Writes via</th>
+              <th>Example realization</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-medium">DesktopView</td>
+              <td>DesktopState (shortcuts)</td>
+              <td>open tool, move/select shortcut</td>
+              <td class="text-ink-secondary">VDesktopPane + VShortcut tiles</td>
+            </tr>
+            <tr>
+              <td class="font-medium">WindowListView</td>
+              <td>ToolsState ∩ WindowListState (open tools)</td>
+              <td>activate / close / group UX</td>
+              <td class="text-ink-secondary">SmartGridWindowListView, JListWindowListView</td>
+            </tr>
+            <tr>
+              <td class="font-medium">ToolBrowserView</td>
+              <td>ToolCatalog ⊕ open ToolInstance ids</td>
+              <td>launch / focus if already open</td>
+              <td class="text-ink-secondary">Tools menu today; could be palette, dock, grid</td>
+            </tr>
+            <tr>
+              <td class="font-medium">ToolWindow (frame chrome)</td>
+              <td>one ToolInstance + content from ToolSpec</td>
+              <td>close / minimize / focus (via ToolService)</td>
+              <td class="text-ink-secondary">VirtualAppFrame on VDesktopPane</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <aside class="callout border-accent-info-border bg-accent-info-bg" role="note">
+        <div class="text-sm font-semibold text-accent-info">Toolbar is not one thing</div>
+        <p class="mt-1 text-sm leading-relaxed text-ink">
+          A taskbar that shows only open tools is a WindowListView over
+          ToolsState. A launcher that shows all available tools and whether each
+          is open is a ToolBrowserView over ToolCatalog ⊕ ToolsState. Same
+          paradigm; different projections. Menus are just another ToolBrowserView.
+        </p>
+      </aside>
+    </section>
+
+    <hr class="border-surface-border" />
+
+    <!-- 3. Met vs gaps -->
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold tracking-tight text-ink">
+        3. Met vs gaps (current codebase)
+      </h2>
+      <div class="overflow-x-auto rounded-lg border border-surface-border bg-surface">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Piece</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="bg-accent-ok-bg/40">
+              <td><span class="pill border-accent-ok-border bg-accent-ok-bg text-accent-ok">Met</span></td>
+              <td class="font-medium">Configurable, LaunchAware</td>
+              <td>Capability interfaces on specs — keep as-is</td>
+            </tr>
+            <tr class="bg-accent-ok-bg/40">
+              <td><span class="pill border-accent-ok-border bg-accent-ok-bg text-accent-ok">Met</span></td>
+              <td class="font-medium">ToolInstance / ToolsState / WindowListState</td>
+              <td>Right runtime shapes; add iconKey + definitionId later</td>
+            </tr>
+            <tr class="bg-accent-ok-bg/40">
+              <td><span class="pill border-accent-ok-border bg-accent-ok-bg text-accent-ok">Met</span></td>
+              <td class="font-medium">AppStore + StoreSubscriber</td>
+              <td>Mutation/notify backbone — keep</td>
+            </tr>
+            <tr class="bg-accent-ok-bg/40">
+              <td><span class="pill border-accent-ok-border bg-accent-ok-bg text-accent-ok">Met</span></td>
+              <td class="font-medium">WindowListView + WindowListViewListener</td>
+              <td>Canonical view contract — clone for Desktop</td>
+            </tr>
+            <tr class="bg-accent-ok-bg/40">
+              <td><span class="pill border-accent-ok-border bg-accent-ok-bg text-accent-ok">Met</span></td>
+              <td class="font-medium">WindowListController</td>
+              <td>Reference controller; drop frameCache when ToolInstance carries icons + ToolService handles activate</td>
+            </tr>
+            <tr class="bg-accent-warn-bg/30">
+              <td><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Partial</span></td>
+              <td class="font-medium">VirtualAppSpec → ToolSpec</td>
+              <td>Idea is right; strip docking/workspace/content ownership leaks</td>
+            </tr>
+            <tr class="bg-accent-warn-bg/30">
+              <td><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Partial</span></td>
+              <td class="font-medium">VappConfig / DesktopShortcut → ToolDefinition</td>
+              <td>Good JSON DTOs; unify under one catalog concept</td>
+            </tr>
+            <tr class="bg-accent-warn-bg/30">
+              <td><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Partial</span></td>
+              <td class="font-medium">ActionFactory → ToolCatalog</td>
+              <td>Loads config correctly; emits Swing Actions instead of definitions</td>
+            </tr>
+            <tr class="bg-accent-warn-bg/30">
+              <td><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Partial</span></td>
+              <td class="font-medium">DesktopManager → ToolService</td>
+              <td>Does lifecycle; also owns Swing list, JList, frame construction</td>
+            </tr>
+            <tr class="bg-accent-warn-bg/30">
+              <td><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Partial</span></td>
+              <td class="font-medium">VirtualAppFrame → ToolWindow</td>
+              <td>Has toolId; inherits JInternalFrame (view leaked into model host)</td>
+            </tr>
+            <tr class="bg-accent-warn-bg/30">
+              <td><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Partial</span></td>
+              <td class="font-medium">DockingService SPI</td>
+              <td>Library boundary good; ownership must leave Spec</td>
+            </tr>
+            <tr class="bg-accent-danger-bg/40">
+              <td><span class="pill border-accent-danger-border bg-accent-danger-bg text-accent-danger">Gap</span></td>
+              <td class="font-medium">DesktopState / Shortcut / DesktopView / DesktopController</td>
+              <td>Documented in DESKTOP.md; not implemented</td>
+            </tr>
+            <tr class="bg-accent-danger-bg/40">
+              <td><span class="pill border-accent-danger-border bg-accent-danger-bg text-accent-danger">Gap</span></td>
+              <td class="font-medium">ToolBrowserView</td>
+              <td>Available-tools view with open badges</td>
+            </tr>
+            <tr class="bg-accent-danger-bg/40">
+              <td><span class="pill border-accent-danger-border bg-accent-danger-bg text-accent-danger">Gap</span></td>
+              <td class="font-medium">Pure VShortcut</td>
+              <td>Still Action + mouse + paint + invoke</td>
+            </tr>
+            <tr class="bg-accent-danger-bg/40">
+              <td><span class="pill border-accent-danger-border bg-accent-danger-bg text-accent-danger">Gap</span></td>
+              <td class="font-medium">Single registry</td>
+              <td>Store projection vs DesktopManager.frames</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ToolSpec meaning -->
+    <section class="space-y-3">
+      <h3 class="text-lg font-semibold tracking-tight text-ink">
+        What “Met” means for ToolSpec
+      </h3>
+      <p class="text-ink leading-relaxed">
+        Keep the mental model of VirtualAppSpec: definition of launch + one
+        hosted panel. Refactor toward an interface roughly like:
+      </p>
+      <article class="card">
+        <div class="card-body space-y-2">
+          <p class="text-sm text-ink-secondary leading-relaxed">
+            <code class="code">String getTitle(); Icon getIcon(); JPanel getContent();</code>
+          </p>
+          <p class="text-sm text-ink-secondary leading-relaxed">
+            plus optional <code class="code">Configurable</code> / <code class="code">LaunchAware</code>
+          </p>
+          <p class="text-sm text-ink-secondary leading-relaxed">
+            Move off Spec: DockingWorkspace, static DockingService, global
+            dockable ID set, InternalFrameProvider as a rare host strategy —
+            not part of the core ToolSpec contract
+          </p>
+        </div>
+      </article>
+    </section>
+
+    <hr class="border-surface-border" />
+
+    <!-- 4. Type map -->
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold tracking-tight text-ink">
+        4. Suggested type map (evolve, don’t boil the ocean)
+      </h2>
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <article class="card">
+          <div class="card-header">Keep / thin-wrap</div>
+          <div class="card-body space-y-2">
+            <p class="text-sm text-ink-secondary">ToolInstance, ToolsState, AppStore</p>
+            <p class="text-sm text-ink-secondary">WindowListView*, WindowListController</p>
+            <p class="text-sm text-ink-secondary">Configurable, LaunchAware</p>
+            <p class="text-sm text-ink-secondary">DockingService / DockingProvider SPI</p>
+            <p class="text-sm text-ink-secondary">VappConfig JSON (feed ToolCatalog)</p>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-header">Introduce / extract</div>
+          <div class="card-body space-y-2">
+            <p class="text-sm text-ink-secondary">ToolDefinition + ToolCatalog</p>
+            <p class="text-sm text-ink-secondary">ToolSpec interface (from VirtualAppSpec)</p>
+            <p class="text-sm text-ink-secondary">ToolService (from DesktopManager)</p>
+            <p class="text-sm text-ink-secondary">DesktopState, Shortcut, DesktopView, DesktopController</p>
+            <p class="text-sm text-ink-secondary">ToolBrowserView (optional but clarifying)</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- 5. Implementation order -->
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold tracking-tight text-ink">
+        5. Implementation order (gaps only)
+      </h2>
+      <ol class="list-decimal space-y-2 pl-5 text-ink leading-relaxed">
+        <li>
+          Extract ToolDefinition + ToolCatalog from ActionFactory/JSON —
+          Actions become adapters that call ToolService.open(defId).
+        </li>
+        <li>
+          Declare ToolService; make DesktopManager the first implementation
+          still creating VirtualAppFrames, but all views call the interface.
+        </li>
+        <li>
+          Narrow VirtualAppSpec toward ToolSpec (content + metadata only);
+          relocate docking session to toolId-scoped owner.
+        </li>
+        <li>
+          Put iconKey (and definitionId) on ToolInstance; delete
+          WindowListController.frameCache.
+        </li>
+        <li>
+          DesktopState + DesktopView + pure VShortcut (DESKTOP.md) — same
+          pattern as taskbar.
+        </li>
+        <li>
+          Only then: AppStore as sole open-tool registry; frames list becomes
+          a realizer cache, not authority.
+        </li>
+      </ol>
+    </section>
+
+    <aside class="callout border-accent-warn-border bg-accent-warn-bg" role="note">
+      <div class="text-sm font-semibold text-accent-warn">Edge case that stays true</div>
+      <p class="mt-1 text-sm leading-relaxed text-ink">
+        ExternalAppSpec: ToolSpec.getContent() still returns a managed panel;
+        LaunchAware.launch() starts the OS process. The paradigm does not require
+        “all UI is in-process” — only that the desktop always hosts ≥1 panel per
+        open ToolInstance.
+      </p>
+    </aside>
+
+    <footer class="pb-8 pt-2 text-xs leading-relaxed text-ink-muted">
+      Companion to docs/analysis.html (desktop data model review). Anchors:
+      REQUIREMENTS.md view substitutability, DESKTOP.md migration, taskbar as
+      reference. Exported from Cursor canvas: desktop-paradigm-end-state.
+    </footer>
+  </main>
+</body>
+</html>

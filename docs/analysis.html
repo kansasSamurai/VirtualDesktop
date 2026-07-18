@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Desktop data model vs realization — VirtualDesktop</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          maxWidth: {
+            content: '1100px',
+          },
+          colors: {
+            surface: {
+              DEFAULT: '#ffffff',
+              muted: '#f4f4f5',
+              border: '#e4e4e7',
+            },
+            ink: {
+              DEFAULT: '#18181b',
+              secondary: '#71717a',
+              muted: '#a1a1aa',
+            },
+            accent: {
+              info: '#0284c7',
+              'info-bg': '#e0f2fe',
+              'info-border': '#7dd3fc',
+              warn: '#b45309',
+              'warn-bg': '#fef3c7',
+              'warn-border': '#fcd34d',
+              ok: '#15803d',
+              'ok-bg': '#dcfce7',
+              'ok-border': '#86efac',
+              danger: '#b91c1c',
+              'danger-bg': '#fee2e2',
+              'danger-border': '#fca5a5',
+              neutral: '#52525b',
+              'neutral-bg': '#f4f4f5',
+              'neutral-border': '#d4d4d8',
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <style type="text/tailwindcss">
+    @layer components {
+      .pill {
+        @apply inline-flex items-center rounded-full border border-surface-border bg-surface-muted px-2.5 py-0.5 text-xs font-medium text-ink;
+      }
+      .code {
+        @apply rounded bg-surface-muted px-1.5 py-0.5 font-mono text-[0.8125rem] text-ink;
+      }
+      .stat-card {
+        @apply rounded-lg border border-surface-border bg-surface p-4;
+      }
+      .stat-value {
+        @apply text-2xl font-semibold tracking-tight text-ink;
+      }
+      .stat-label {
+        @apply mt-1 text-sm text-ink-secondary;
+      }
+      .callout {
+        @apply rounded-lg border px-4 py-3;
+      }
+      .card {
+        @apply rounded-lg border border-surface-border bg-surface overflow-hidden;
+      }
+      .card-header {
+        @apply flex items-center justify-between gap-3 border-b border-surface-border px-4 py-3 text-sm font-semibold text-ink;
+      }
+      .card-body {
+        @apply px-4 py-3;
+      }
+      .data-table {
+        @apply w-full border-collapse text-left text-sm;
+      }
+      .data-table thead th {
+        @apply border-b border-surface-border bg-surface-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-secondary;
+      }
+      .data-table tbody td {
+        @apply border-b border-surface-border px-3 py-2.5 align-top text-ink;
+      }
+      .data-table tbody tr:last-child td {
+        @apply border-b-0;
+      }
+    }
+  </style>
+</head>
+<body class="bg-zinc-50 text-ink antialiased">
+  <main class="mx-auto max-w-content space-y-6 p-6">
+
+    <!-- Header -->
+    <header class="space-y-2">
+      <h1 class="text-3xl font-semibold tracking-tight text-ink">
+        Desktop data model vs realization
+      </h1>
+      <p class="text-ink-secondary leading-relaxed">
+        Architecture review of VirtualDesktop windowing: catalog, launch,
+        open windows, shortcuts, taskbar, and docking (treated separately).
+        Source: virtualdesktop-java8 code inspection.
+      </p>
+      <div class="flex flex-wrap gap-2 pt-1">
+        <span class="pill">Catalog JSON: strong</span>
+        <span class="pill">Dual registry: open windows</span>
+        <span class="pill">Taskbar view swap: closest to goal</span>
+        <span class="pill">Docking SPI good / ownership leaky</span>
+      </div>
+    </header>
+
+    <!-- Stats (canvas Stat grid) -->
+    <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Summary metrics">
+      <div class="stat-card border-l-4 border-l-accent-warn">
+        <div class="stat-value text-accent-warn">2</div>
+        <div class="stat-label">Live registries for open tools</div>
+      </div>
+      <div class="stat-card border-l-4 border-l-accent-warn">
+        <div class="stat-value text-accent-warn">4</div>
+        <div class="stat-label">ID namespaces in play</div>
+      </div>
+      <div class="stat-card border-l-4 border-l-accent-ok">
+        <div class="stat-value text-accent-ok">1</div>
+        <div class="stat-label">Truly swappable view (taskbar)</div>
+      </div>
+      <div class="stat-card border-l-4 border-l-accent-info">
+        <div class="stat-value text-accent-info">SPI</div>
+        <div class="stat-label">Docking library boundary</div>
+      </div>
+    </section>
+
+    <!-- Goal callout -->
+    <aside class="callout border-accent-info-border bg-accent-info-bg" role="note">
+      <div class="text-sm font-semibold text-accent-info">Your stated goal</div>
+      <p class="mt-1 text-sm leading-relaxed text-ink">
+        Solid underlying data model first; views (taskbar, shortcuts, frames)
+        should be replaceable. Today the taskbar path is closest. Frames and
+        shortcuts are still Swing-first, with AppStore as a growing shadow of
+        DesktopManager rather than the single source of truth.
+      </p>
+    </aside>
+
+    <!-- Layers table -->
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold tracking-tight text-ink">
+        Intended layers (as the code actually evolved)
+      </h2>
+      <div class="overflow-x-auto rounded-lg border border-surface-border bg-surface">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Owns</th>
+              <th>Key types</th>
+              <th class="text-center">Health</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-medium">Catalog (declared)</td>
+              <td>What can be launched</td>
+              <td class="text-ink-secondary">VappConfig, DesktopShortcut, ExternalAppConfig, MenuGroup</td>
+              <td class="text-center"><span class="pill border-accent-ok-border bg-accent-ok-bg text-accent-ok">Solid</span></td>
+            </tr>
+            <tr>
+              <td class="font-medium">Launch recipe</td>
+              <td>How to instantiate a tool</td>
+              <td class="text-ink-secondary">DesktopAction, ExternalAppAction, VirtualAppSpec</td>
+              <td class="text-center"><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Mixed</span></td>
+            </tr>
+            <tr>
+              <td class="font-medium">Runtime identity</td>
+              <td>One open window instance</td>
+              <td class="text-ink-secondary">VirtualAppFrame.toolId, ToolInstance</td>
+              <td class="text-center"><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Split</span></td>
+            </tr>
+            <tr>
+              <td class="font-medium">App state (Redux)</td>
+              <td>Immutable projection of open tools</td>
+              <td class="text-ink-secondary">AppStore → AppState → ToolsState / WindowListState</td>
+              <td class="text-center"><span class="pill border-accent-info-border bg-accent-info-bg text-accent-info">Emerging</span></td>
+            </tr>
+            <tr>
+              <td class="font-medium">Realization</td>
+              <td>Swing surfaces that display/act</td>
+              <td class="text-ink-secondary">DesktopManager, VShortcut, WindowListView*, VDesktopPane</td>
+              <td class="text-center"><span class="pill">Authoritative</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Concept → model → realization -->
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold tracking-tight text-ink">
+        Concept → model → realization
+      </h2>
+      <div class="overflow-x-auto rounded-lg border border-surface-border bg-surface">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Concept</th>
+              <th>Data / model today</th>
+              <th>What displays it</th>
+              <th>Main leak</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-medium">Tool catalog entry</td>
+              <td>VappConfig / DesktopShortcut (JSON)</td>
+              <td>ActionFactory → DesktopAction → menu / VShortcut</td>
+              <td class="text-ink-secondary">DesktopAction is both catalog handle and javax.swing.Action</td>
+            </tr>
+            <tr>
+              <td class="font-medium">Tool recipe (spec)</td>
+              <td>VirtualAppSpec (title, icon, clazz, flags)</td>
+              <td>Spec subclasses build JPanel; DesktopManager hosts it</td>
+              <td class="text-ink-secondary">Spec also owns DockingWorkspace + content JPanel</td>
+            </tr>
+            <tr>
+              <td class="font-medium">Open window</td>
+              <td>ToolInstance (id, type, title, FrameState)</td>
+              <td>VirtualAppFrame on VDesktopPane</td>
+              <td class="text-ink-secondary">DesktopManager.frames EventList is still the live registry</td>
+            </tr>
+            <tr>
+              <td class="font-medium">Desktop icon</td>
+              <td>DesktopShortcut DTO (label, className, icon, enabled)</td>
+              <td>VShortcut extends JLabel + Action + mouse/paint</td>
+              <td class="text-ink-secondary">No runtime Shortcut model; positions hardcoded in App</td>
+            </tr>
+            <tr>
+              <td class="font-medium">Window list / taskbar</td>
+              <td>WindowListState + ToolInstance list</td>
+              <td>WindowListController → WindowListView</td>
+              <td class="text-ink-secondary">Controller caches VirtualAppFrame for activate/close</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <hr class="border-surface-border" />
+
+    <!-- Strengths -->
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold tracking-tight text-ink">Strengths</h2>
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <article class="card">
+          <div class="card-header">
+            <span>Catalog</span>
+            <span class="pill">S1</span>
+          </div>
+          <div class="card-body">
+            <p class="text-sm text-ink-secondary leading-relaxed">
+              JSON-driven registration (vapps-config / external-apps) keeps the
+              tool roster out of Java hardcoding.
+            </p>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-header">
+            <span>Launch pipeline</span>
+            <span class="pill">S2</span>
+          </div>
+          <div class="card-body">
+            <p class="text-sm text-ink-secondary leading-relaxed">
+              DesktopAction → (new Spec) → DesktopManager.createVApp is a clear
+              create path for menus and shortcuts.
+            </p>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-header">
+            <span>Taskbar</span>
+            <span class="pill">S3</span>
+          </div>
+          <div class="card-body">
+            <p class="text-sm text-ink-secondary leading-relaxed">
+              WindowListView is a real view interface; JList vs SmartGrid swap
+              without touching Redux or controller logic.
+            </p>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-header">
+            <span>State shapes</span>
+            <span class="pill">S4</span>
+          </div>
+          <div class="card-body">
+            <p class="text-sm text-ink-secondary leading-relaxed">
+              ToolInstance / ToolsState / WindowListState are immutable and
+              copy-on-write — right shape for a solid model.
+            </p>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-header">
+            <span>Vocabulary</span>
+            <span class="pill">S5</span>
+          </div>
+          <div class="card-body">
+            <p class="text-sm text-ink-secondary leading-relaxed">
+              GLOSSARY.md + CLAUDE.md give consistent names (tool/vapp, Spec,
+              Frame, DockingWorkspace).
+            </p>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-header">
+            <span>External apps</span>
+            <span class="pill">S6</span>
+          </div>
+          <div class="card-body">
+            <p class="text-sm text-ink-secondary leading-relaxed">
+              LaunchAware / ExternalAppSpec keep process launch as a variant of
+              the same create path.
+            </p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Weaknesses -->
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold tracking-tight text-ink">
+        Weaknesses &amp; abstraction leaks
+      </h2>
+      <div class="overflow-x-auto rounded-lg border border-surface-border bg-surface">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Severity</th>
+              <th>Area</th>
+              <th>Finding</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="bg-accent-danger-bg/40">
+              <td class="font-mono text-xs font-semibold">W1</td>
+              <td><span class="pill border-accent-danger-border bg-accent-danger-bg text-accent-danger">High</span></td>
+              <td class="font-medium">Dual registry</td>
+              <td>Open windows live in DesktopManager.frames (Swing) and AppStore.ToolsState. Store is a projection fed by listeners, not the source of truth.</td>
+            </tr>
+            <tr class="bg-accent-danger-bg/40">
+              <td class="font-mono text-xs font-semibold">W2</td>
+              <td><span class="pill border-accent-danger-border bg-accent-danger-bg text-accent-danger">High</span></td>
+              <td class="font-medium">Spec pollution</td>
+              <td>VirtualAppSpec mixes metadata, content factory, Icon, and docking workspace/service — not a pure recipe.</td>
+            </tr>
+            <tr class="bg-accent-danger-bg/40">
+              <td class="font-mono text-xs font-semibold">W3</td>
+              <td><span class="pill border-accent-danger-border bg-accent-danger-bg text-accent-danger">High</span></td>
+              <td class="font-medium">Identity</td>
+              <td>toolId (UUID on frame), toolType (Spec simple name), dockableId (title string), workspaceId (often null at open) are four loosely related IDs.</td>
+            </tr>
+            <tr class="bg-accent-warn-bg/30">
+              <td class="font-mono text-xs font-semibold">W4</td>
+              <td><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Med</span></td>
+              <td class="font-medium">DesktopManager</td>
+              <td>Orchestrator + InternalFrameListener + ListSelectionListener + legacy observedJList + AppStore dispatcher. Still holds a dummy JList in Redux mode.</td>
+            </tr>
+            <tr class="bg-accent-warn-bg/30">
+              <td class="font-mono text-xs font-semibold">W5</td>
+              <td><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Med</span></td>
+              <td class="font-medium">Shortcuts</td>
+              <td>VShortcut is view+behavior only. DesktopShortcut DTO exists at load time; no model for position/selection/persistence of icons.</td>
+            </tr>
+            <tr class="bg-accent-warn-bg/30">
+              <td class="font-mono text-xs font-semibold">W6</td>
+              <td><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Med</span></td>
+              <td class="font-medium">Lifecycle</td>
+              <td>HIDE_ON_CLOSE means TOOL_CLOSED may never fire; frames list cleanup is TODO. Closed vs hidden diverges store vs UI.</td>
+            </tr>
+            <tr class="bg-accent-warn-bg/30">
+              <td class="font-mono text-xs font-semibold">W7</td>
+              <td><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Med</span></td>
+              <td class="font-medium">Action as model</td>
+              <td>javax.swing.Action is the catalog object. Icons/commands live in Action keys; Spec gets icons only via applyIconToSpec.</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-xs font-semibold">W8</td>
+              <td><span class="pill">Low</span></td>
+              <td class="font-medium">Legacy parallel</td>
+              <td>desktopmgr (JList adapters) coexists with taskbar; App still wires both paths depending on version flag.</td>
+            </tr>
+            <tr class="bg-accent-warn-bg/30">
+              <td class="font-mono text-xs font-semibold">W9</td>
+              <td><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Med</span></td>
+              <td class="font-medium">Activation triplicated</td>
+              <td>Frame activate/restore logic exists in DesktopManager.valueChanged, desktopmgr.VAppListSelectionListener, and WindowListController.activateTool.</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-xs font-semibold">W10</td>
+              <td><span class="pill">Low</span></td>
+              <td class="font-medium">Dead / unused wiring</td>
+              <td>VDesktopManager is unused (App.SnappingDesktopManager is live); TOOL_MAXIMIZED / FrameState.HIDDEN mostly unused; DesktopAction.setDesktop static unused.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Highest-impact leaks -->
+    <section class="space-y-2">
+      <h3 class="text-lg font-semibold tracking-tight text-ink">
+        Highest-impact leaks (detail)
+      </h3>
+
+      <aside class="callout border-accent-warn-border bg-accent-warn-bg" role="note">
+        <div class="text-sm font-semibold text-accent-warn">W1 — Dual registry</div>
+        <p class="mt-1 text-sm leading-relaxed text-ink">
+          <code class="code">DesktopManager</code> keeps
+          <code class="code">EventList&lt;VirtualAppFrame&gt;</code> and is still what
+          activates/closes frames. <code class="code">AppStore</code> is updated from
+          InternalFrameListener callbacks.
+          <code class="code">WindowListController</code> rebuilds a
+          <code class="code">frameCache</code> from DesktopManager on every state change so
+          the view can act on real frames. Swappable taskbar views sit on top
+          of a non-swappable Swing registry.
+        </p>
+      </aside>
+
+      <aside class="callout border-accent-warn-border bg-accent-warn-bg" role="note">
+        <div class="text-sm font-semibold text-accent-warn">W2 — Spec is not a recipe</div>
+        <p class="mt-1 text-sm leading-relaxed text-ink">
+          <code class="code">VirtualAppSpec</code> holds title/icon flags and the content
+          <code class="code">JPanel</code>, a <code class="code">DockingWorkspace</code>, a static
+          <code class="code">DockingService</code>, and dockable ID bookkeeping. The
+          glossary calls Spec a descriptor; the class is also a mini controller
+          for docking. That blocks treating Spec as serializable/pure model.
+        </p>
+      </aside>
+
+      <aside class="callout border-accent-warn-border bg-accent-warn-bg" role="note">
+        <div class="text-sm font-semibold text-accent-warn">W3 — Fragmented identity</div>
+        <p class="mt-1 text-sm leading-relaxed text-ink">
+          Frame: UUID <code class="code">toolId</code>. Grouping: Spec simple name as
+          <code class="code">toolType</code>. Docking: title-derived
+          <code class="code">dockableId</code>. Store open:
+          <code class="code">workspaceId = null</code>. Location events: CLocation
+          <code class="code">toString()</code>. Joining “this tool’s panel moved to that
+          frame’s workspace” requires ad-hoc string matching.
+        </p>
+      </aside>
+    </section>
+
+    <hr class="border-surface-border" />
+
+    <!-- Docking -->
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold tracking-tight text-ink">
+        Docking (separate track)
+      </h2>
+      <p class="text-ink-secondary leading-relaxed">
+        Docking started as a complicated add-on and shows a cleaner library
+        boundary than ownership model. Treat it as orthogonal to desktop-level
+        windowing until IDs and ownership are unified.
+      </p>
+
+      <div class="overflow-x-auto rounded-lg border border-surface-border bg-surface">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Piece</th>
+              <th>Status</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-medium">SPI surface</td>
+              <td><span class="pill border-accent-ok-border bg-accent-ok-bg text-accent-ok">Good</span></td>
+              <td>DockingService / DockingProvider / Dockable / DockingWorkspace abstract Bibliothek well.</td>
+            </tr>
+            <tr>
+              <td class="font-medium">Ownership</td>
+              <td><span class="pill border-accent-danger-border bg-accent-danger-bg text-accent-danger">Leaky</span></td>
+              <td>VirtualAppSpec owns workspace + static DockingService; Spec.setContent() auto-creates workspace.</td>
+            </tr>
+            <tr>
+              <td class="font-medium">isDockable()</td>
+              <td><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Stub</span></td>
+              <td>Always returns true — docking is not really optional per tool.</td>
+            </tr>
+            <tr>
+              <td class="font-medium">Redux DockingState</td>
+              <td><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Partial</span></td>
+              <td>Model exists; TOOL_OPENED passes workspaceId=null; PANEL_LOCATION_CHANGED mostly logs.</td>
+            </tr>
+            <tr>
+              <td class="font-medium">ID bridge</td>
+              <td><span class="pill border-accent-danger-border bg-accent-danger-bg text-accent-danger">Weak</span></td>
+              <td>Dockable IDs from titles; toolIds are UUIDs. Cross-frame dock tracking cannot cleanly join them.</td>
+            </tr>
+            <tr>
+              <td class="font-medium">Impl cast</td>
+              <td><span class="pill border-accent-danger-border bg-accent-danger-bg text-accent-danger">Leak</span></td>
+              <td>VirtualAppSpec casts DockingService → DockingServiceImpl to get provider for builders.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <aside class="callout border-accent-neutral-border bg-accent-neutral-bg" role="note">
+        <div class="text-sm font-semibold text-accent-neutral">Recommended framing for docking work</div>
+        <p class="mt-1 text-sm leading-relaxed text-ink">
+          Keep the SPI. Move workspace ownership off Spec onto Frame (or a
+          DockingSession keyed by toolId). Make dockableId == toolId (or a
+          stable child id under toolId). Only then deepen Redux DockingState —
+          otherwise the model will keep mirroring incomplete events.
+        </p>
+      </aside>
+
+      <aside class="callout border-accent-warn-border bg-accent-warn-bg" role="note">
+        <div class="text-sm font-semibold text-accent-warn">SpecDocking escape hatch</div>
+        <p class="mt-1 text-sm leading-relaxed text-ink">
+          <code class="code">SpecDocking</code> talks to native Bibliothek
+          <code class="code">CControl</code>
+          directly — an intentional demo leak past the SPI. Do not treat it as
+          the pattern for production tools.
+        </p>
+      </aside>
+    </section>
+
+    <hr class="border-surface-border" />
+
+    <!-- Goal vs reality -->
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold tracking-tight text-ink">Goal vs reality</h2>
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <article class="card">
+          <div class="card-header">Closest to the goal</div>
+          <div class="card-body space-y-2">
+            <p class="text-sm text-ink-secondary leading-relaxed">
+              Taskbar: Redux state → controller → <code class="code">WindowListView</code>.
+              Views are replaceable; grouping logic stays out of the view.
+            </p>
+            <p class="text-sm text-ink-secondary leading-relaxed">
+              Catalog JSON: declarative list of what exists to launch.
+            </p>
+            <p class="text-sm text-ink-secondary leading-relaxed">
+              Immutable ToolInstance: good target shape for “one open tool.”
+            </p>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-header">Still Swing-first</div>
+          <div class="card-body space-y-2">
+            <p class="text-sm text-ink-secondary leading-relaxed">
+              Open windows: DesktopManager + VirtualAppFrame are authoritative.
+            </p>
+            <p class="text-sm text-ink-secondary leading-relaxed">
+              Shortcuts: VShortcut JLabel; no position/selection model.
+            </p>
+            <p class="text-sm text-ink-secondary leading-relaxed">
+              Actions: Swing Action is the catalog object, not a pure command DTO.
+            </p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Consolidation order -->
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold tracking-tight text-ink">
+        Suggested consolidation order (no code yet)
+      </h2>
+      <ol class="list-decimal space-y-2 pl-5 text-ink leading-relaxed">
+        <li>
+          Pick one registry for open tools — prefer AppStore as source of
+          truth; DesktopManager becomes a “realizer” that creates/destroys
+          frames from toolOpened/toolClosed.
+        </li>
+        <li>
+          Split Spec into pure metadata/recipe vs content builder vs docking
+          session.
+        </li>
+        <li>
+          Introduce a Shortcut model (id, actionRef, x, y, label, iconKey)
+          separate from VShortcut view.
+        </li>
+        <li>
+          Unify IDs (toolId everywhere; dockables derive from toolId).
+        </li>
+        <li>
+          Only then expand DockingState and drop the dummy observed JList /
+          desktopmgr legacy path.
+        </li>
+      </ol>
+    </section>
+
+    <footer class="pb-8 pt-2 text-xs leading-relaxed text-ink-muted">
+      Reviewed packages: vapps, desktop, DesktopManager, VirtualAppFrame,
+      state.*, taskbar.*, docking.*, desktopmgr. Stated goals also appear in
+      docs/REQUIREMENTS.md (store as SoT, unidirectional flow) — code is
+      transitional relative to that doc. Docking SPI under
+      org.jwellman.virtualdesktop.docking.
+      <br />
+      Exported from Cursor canvas: desktop-data-model-review.
+    </footer>
+  </main>
+</body>
+</html>

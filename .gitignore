@@ -24,6 +24,14 @@ buildNumber.properties
 # https://maven.apache.org/wrapper/#usage-without-binary-jar
 .mvn/wrapper/maven-wrapper.jar
 
+# === VisualStudio/Cursor
+# Keep project-wide config, ignore personal dev clutter
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
 
 # === Java :: https://github.com/github/gitignore/blob/main/Java.gitignore
 # These probably aren't necessary as they are covered by most preceding

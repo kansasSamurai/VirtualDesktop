@@ -21,7 +21,7 @@ The core of the desktop paradigm is to:
 2. **Give the user one or more ways to launch each tool**
 3. **Manage the display of that tool once it is launched**
 
-Everything else — wallpaper, taskbar chrome, docking tabs, Look and Feel — is either a *view* of that story or an optional capability layered beside it.
+Everything else — wallpaper, taskbar chrome, Look and Feel — is either a *view* of that story or presentation layered beside it. **Docking** is different: for this product it is a *fundamental* layout rule (see §3.8), not an optional add-on.
 
 A **tool** (user-facing word; historically “vapp” in code) is not “a `JInternalFrame`.” A tool is something the environment knows how to start, and for which it always hosts **at least one panel** (`JPanel` / `JComponent`) after launch.
 
@@ -117,15 +117,19 @@ Where shortcuts sit, what they point at (definition id), selection, later persis
 
 **Existing stand-in:** `DesktopShortcut` config DTO (definition only, no live positions). Runtime tiles are `VShortcut` widgets created in `App` with hardcoded coordinates.
 
-### 3.8 Docking (orthogonal capability)
+### 3.8 Docking (fundamental; single-host is a special case)
 
-Docking is **not** required to understand the desktop paradigm. It is an optional layout capability *inside* a hosted tool window.
+From a generic “desktop toolkit” perspective, docking can sound optional. **For this product’s goals, docking is fundamental:** every open tool’s content is a dockable unit that lives in some host container (frame / workspace). Hosts are temporary — a panel may start in the frame created at open and later move into a workspace frame (or another host).
 
-**Interfaces (existing SPI):** `DockingService`, `DockingProvider`, `DockingWorkspace`, `Dockable`, …  
+What an end user might experience as “no docking” is just the **degenerate special case**: a tool remains for its whole life in a single container and is never relocated. The UX looks like a classic one-tool-one-window desktop; the model still treats content as dockable and the container as a host, not as the identity of the tool.
+
+**Close implication:** closing a tool means disposing that tool’s content (and deregistering it from docking) **wherever it currently lives**, then dropping the `ToolInstance` — not necessarily closing the original `JInternalFrame` that opened it. The durable correlation for lifecycle is **`toolId` → content**, with host location as current placement. A realizer/registry behind `ToolService` owns that map; `ToolInstance` stays Swing-free.
+
+**Interfaces (existing SPI):** `DockingService`, `DockingProvider`, `DockingWorkspace`, `Dockable`, …
 
 **Implementations:** Bibliothek adapters under `docking.impl.bibliothek`.
 
-**Rule of thumb:** docking sessions should be keyed by `toolId` (or owned by the tool window host), not by `VirtualAppSpec`. Spec remains “panel + launch”; docking remains “how panels are arranged inside hosts.”
+**Rule of thumb:** dockable / content identity should be stable and keyed by `toolId` (sessions owned beside or inside the host layer, not by `VirtualAppSpec`). Spec remains “panel + launch”; docking is “where that panel is arranged among hosts.”
 
 ---
 
@@ -234,7 +238,7 @@ Make **`ToolsState`** authoritative for what is open. The frame map becomes an i
 2. **If a view needs a `VirtualAppFrame` to know the title or icon**, the model is incomplete — fix `ToolInstance` (or the projection DTO), don’t grow another frame cache.
 3. **Spec subclasses should look boring:** construct content, set title/icon, maybe implement `Configurable` / `LaunchAware`. Anything that sounds like window management or docking control belongs elsewhere.
 4. **External tools are not exceptions to hosting:** always a managed panel; process launch is extra.
-5. **Docking is optional complexity** beside the paradigm, not the definition of a tool.
+5. **Docking is fundamental** to this desktop; a single always-docked-in-one-container tool is a special case that may *look* like “no docking” to users. Do not model “tool identity” as “the frame that opened it.”
 6. **Prefer evolving names in place** (`VirtualAppSpec` → implements `ToolSpec`) over a big-bang rewrite. Interfaces first; swap implementations when the seams exist.
 
 ---

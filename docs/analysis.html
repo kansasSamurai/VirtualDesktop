@@ -99,7 +99,8 @@
       </h1>
       <p class="text-ink-secondary leading-relaxed">
         Architecture review of VirtualDesktop windowing: catalog, launch,
-        open windows, shortcuts, taskbar, and docking (treated separately).
+        open windows, shortcuts, taskbar, and docking (fundamental layout;
+        analyzed on its own track because of SPI/ownership complexity).
         Source: virtualdesktop-java8 code inspection.
       </p>
       <div class="flex flex-wrap gap-2 pt-1">
@@ -107,6 +108,7 @@
         <span class="pill">Dual registry: open windows</span>
         <span class="pill">Taskbar view swap: closest to goal</span>
         <span class="pill">Docking SPI good / ownership leaky</span>
+        <span class="pill">Docking fundamental; single-host = special case</span>
       </div>
     </header>
 
@@ -454,12 +456,16 @@
     <!-- Docking -->
     <section class="space-y-3">
       <h2 class="text-xl font-semibold tracking-tight text-ink">
-        Docking (separate track)
+        Docking (separate track — fundamental to the product)
       </h2>
       <p class="text-ink-secondary leading-relaxed">
         Docking started as a complicated add-on and shows a cleaner library
-        boundary than ownership model. Treat it as orthogonal to desktop-level
-        windowing until IDs and ownership are unified.
+        boundary than ownership model. For <em>this</em> desktop’s goals it is not
+        “optional chrome”: every open tool’s content is a dockable unit; hosts
+        (frames / workspaces) are temporary placement. A tool that never leaves its
+        opening container is the degenerate special case that may look like “no
+        docking” to users. The analysis below still treats docking separately because
+        of SPI/implementation complexity — not because it is optional to the paradigm.
       </p>
 
       <div class="overflow-x-auto rounded-lg border border-surface-border bg-surface">
@@ -485,7 +491,7 @@
             <tr>
               <td class="font-medium">isDockable()</td>
               <td><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Stub</span></td>
-              <td>Always returns true — docking is not really optional per tool.</td>
+              <td>Always returns true — accidentally aligned with “docking is fundamental,” but not designed as a product rule yet.</td>
             </tr>
             <tr>
               <td class="font-medium">Redux DockingState</td>
@@ -495,7 +501,7 @@
             <tr>
               <td class="font-medium">ID bridge</td>
               <td><span class="pill border-accent-danger-border bg-accent-danger-bg text-accent-danger">Weak</span></td>
-              <td>Dockable IDs from titles; toolIds are UUIDs. Cross-frame dock tracking cannot cleanly join them.</td>
+              <td>Dockable IDs from titles; toolIds are UUIDs. Cross-frame dock tracking and future close-by-content cannot cleanly join them.</td>
             </tr>
             <tr>
               <td class="font-medium">Impl cast</td>
@@ -509,10 +515,13 @@
       <aside class="callout border-accent-neutral-border bg-accent-neutral-bg" role="note">
         <div class="text-sm font-semibold text-accent-neutral">Recommended framing for docking work</div>
         <p class="mt-1 text-sm leading-relaxed text-ink">
-          Keep the SPI. Move workspace ownership off Spec onto Frame (or a
-          DockingSession keyed by toolId). Make dockableId == toolId (or a
-          stable child id under toolId). Only then deepen Redux DockingState —
-          otherwise the model will keep mirroring incomplete events.
+          Keep the SPI. Move workspace ownership off Spec onto a toolId-scoped session
+          (beside the host layer). Make dockableId == toolId (or a stable child id under
+          toolId). Treat hosts as temporary: a content realizer
+          (<code class="code">toolId</code> → panel/dockable + current host) should back
+          close/move — closing disposes content wherever it lives, not necessarily the
+          opening frame. Only then deepen Redux DockingState — otherwise the model will
+          keep mirroring incomplete events.
         </p>
       </aside>
 
@@ -577,8 +586,9 @@
           frames from toolOpened/toolClosed.
         </li>
         <li>
-          Split Spec into pure metadata/recipe vs content builder vs docking
-          session.
+          Split Spec into pure metadata/recipe vs content builder; relocate docking
+          ownership so content-by-toolId (not the opening frame) is the durable unit
+          under docking.
         </li>
         <li>
           Introduce a Shortcut model (id, actionRef, x, y, label, iconKey)

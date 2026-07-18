@@ -200,9 +200,9 @@
             </tr>
             <tr>
               <td class="font-medium">ToolWindow</td>
-              <td>Host chrome for one instance’s content</td>
-              <td class="text-ink-secondary">toolId, setContent, show/hide, frame chrome</td>
-              <td class="text-ink-secondary">VirtualAppFrame — is a JInternalFrame today</td>
+              <td>Host chrome for content (temporary placement)</td>
+              <td class="text-ink-secondary">toolId, setContent, show/hide; content may move to another host under docking</td>
+              <td class="text-ink-secondary">VirtualAppFrame — is a JInternalFrame today; not the durable identity of the tool</td>
             </tr>
             <tr>
               <td class="font-medium">DesktopState + Shortcut</td>
@@ -259,8 +259,11 @@
             list as authority
           </p>
           <p class="text-sm text-ink-secondary leading-relaxed">
-            <span class="font-semibold text-ink">Docking (orthogonal):</span>
-            DockingSession keyed by toolId; SPI stays; Spec does not own the service
+            <span class="font-semibold text-ink">Docking (fundamental):</span>
+            Every open tool’s content is a dockable unit; hosts (frames/workspaces) are temporary
+            placement. Single-host-for-life is the special case that may look like “no docking.”
+            Dockable identity keyed by toolId; SPI stays; Spec does not own the service. Close disposes
+            content wherever it lives, not necessarily the opening frame.
           </p>
         </div>
       </article>
@@ -302,9 +305,9 @@
             </tr>
             <tr>
               <td class="font-medium">ToolWindow (frame chrome)</td>
-              <td>one ToolInstance + content from ToolSpec</td>
-              <td>close / minimize / focus (via ToolService)</td>
-              <td class="text-ink-secondary">VirtualAppFrame on VDesktopPane</td>
+              <td>current host for one ToolInstance’s content</td>
+              <td>close / minimize / focus (via ToolService) — close targets content-by-toolId when docking moves panels</td>
+              <td class="text-ink-secondary">VirtualAppFrame on VDesktopPane (temporary host)</td>
             </tr>
           </tbody>
         </table>
@@ -391,7 +394,7 @@
             <tr class="bg-accent-warn-bg/30">
               <td><span class="pill border-accent-warn-border bg-accent-warn-bg text-accent-warn">Partial</span></td>
               <td class="font-medium">DockingService SPI</td>
-              <td>Library boundary good; ownership must leave Spec</td>
+              <td>Library boundary good; product intent is docking-fundamental (single-host = special case). Ownership must leave Spec; dockable identity should equal toolId; realizer should track content-by-toolId for close/move.</td>
             </tr>
             <tr class="bg-accent-danger-bg/40">
               <td><span class="pill border-accent-danger-border bg-accent-danger-bg text-accent-danger">Gap</span></td>
@@ -491,7 +494,9 @@
         </li>
         <li>
           Narrow VirtualAppSpec toward ToolSpec (content + metadata only);
-          relocate docking session to toolId-scoped owner.
+          relocate docking session to toolId-scoped owner. Treat docking as fundamental:
+          hosts are temporary; a content realizer (toolId → panel/dockable) supports close
+          wherever the panel currently lives.
         </li>
         <li>
           Put iconKey (and definitionId) on ToolInstance; delete
@@ -515,6 +520,16 @@
         LaunchAware.launch() starts the OS process. The paradigm does not require
         “all UI is in-process” — only that the desktop always hosts ≥1 panel per
         open ToolInstance.
+      </p>
+    </aside>
+
+    <aside class="callout border-accent-info-border bg-accent-info-bg" role="note">
+      <div class="text-sm font-semibold text-accent-info">Docking: fundamental, with a “no docking” special case</div>
+      <p class="mt-1 text-sm leading-relaxed text-ink">
+        For this product, every open tool’s content is a dockable unit; frames/workspaces are
+        temporary hosts. A tool that never leaves its opening container is just the degenerate
+        special case — it may <em>look</em> like classic one-window-per-tool UI, but close/move
+        still mean content-by-toolId, not “whatever frame opened this.”
       </p>
     </aside>
 

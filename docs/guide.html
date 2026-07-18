@@ -159,8 +159,10 @@
       </ol>
 
       <p class="prose-p text-ink-secondary">
-        Everything else — wallpaper, taskbar chrome, docking tabs, Look and Feel — is either a
-        <em>view</em> of that story or an optional capability layered beside it.
+        Everything else — wallpaper, taskbar chrome, Look and Feel — is either a
+        <em>view</em> of that story or presentation layered beside it.
+        <strong>Docking</strong> is different: for this product it is a
+        <em>fundamental</em> layout rule (see §3.8), not an optional add-on.
       </p>
 
       <p class="prose-p">
@@ -474,16 +476,36 @@
 
       <!-- 3.8 -->
       <div class="space-y-3">
-        <h3 class="subsection-title">3.8 Docking (orthogonal capability)</h3>
-        <aside class="callout border-accent-neutral-border bg-accent-neutral-bg" role="note">
-          <div class="text-sm font-semibold text-accent-neutral">Not required to understand the paradigm</div>
+        <h3 class="subsection-title">3.8 Docking (fundamental; single-host is a special case)</h3>
+        <aside class="callout border-accent-info-border bg-accent-info-bg" role="note">
+          <div class="text-sm font-semibold text-accent-info">Product goal, not “optional chrome”</div>
           <p class="mt-1 text-sm leading-relaxed text-ink">
-            Docking is an optional layout capability <em>inside</em> a hosted tool window.
+            From a generic “desktop toolkit” perspective, docking can sound optional.
+            <strong>For this product’s goals, docking is fundamental:</strong> every open tool’s
+            content is a dockable unit that lives in some host container (frame / workspace).
+            Hosts are temporary — a panel may start in the frame created at open and later move
+            into a workspace frame (or another host).
+          </p>
+          <p class="mt-2 text-sm leading-relaxed text-ink">
+            What an end user might experience as “no docking” is just the
+            <strong>degenerate special case</strong>: a tool remains for its whole life in a single
+            container and is never relocated. The UX looks like a classic one-tool-one-window
+            desktop; the model still treats content as dockable and the container as a host,
+            not as the identity of the tool.
+          </p>
+          <p class="mt-2 text-sm leading-relaxed text-ink">
+            <strong>Close implication:</strong> closing a tool means disposing that tool’s content
+            (and deregistering it from docking) <em>wherever it currently lives</em>, then dropping
+            the <code class="code">ToolInstance</code> — not necessarily closing the original
+            <code class="code">JInternalFrame</code> that opened it. The durable correlation for
+            lifecycle is <code class="code">toolId</code> → content, with host location as current
+            placement. A realizer/registry behind <code class="code">ToolService</code> owns that map;
+            <code class="code">ToolInstance</code> stays Swing-free.
           </p>
           <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-secondary">
             <li><strong>Interfaces (existing SPI):</strong> DockingService, DockingProvider, DockingWorkspace, Dockable, …</li>
             <li><strong>Implementations:</strong> Bibliothek adapters under <code class="code">docking.impl.bibliothek</code></li>
-            <li><strong>Rule:</strong> sessions keyed by <code class="code">toolId</code> (or owned by the tool window host), not by <code class="code">VirtualAppSpec</code></li>
+            <li><strong>Rule:</strong> dockable / content identity should be stable and keyed by <code class="code">toolId</code> (sessions owned beside or inside the host layer, not by <code class="code">VirtualAppSpec</code>). Spec remains “panel + launch”; docking is “where that panel is arranged among hosts.”</li>
           </ul>
         </aside>
       </div>
@@ -820,7 +842,9 @@
           process launch is extra.
         </li>
         <li>
-          <strong>Docking is optional complexity</strong> beside the paradigm, not the definition of a tool.
+          <strong>Docking is fundamental</strong> to this desktop; a single always-docked-in-one-container
+          tool is a special case that may <em>look</em> like “no docking” to users. Do not model
+          “tool identity” as “the frame that opened it.”
         </li>
         <li>
           <strong>Prefer evolving names in place</strong> (VirtualAppSpec → implements ToolSpec) over a

@@ -29,7 +29,6 @@ import javax.swing.plaf.ComponentUI;
 
 import org.apache.batik.transcoder.TranscoderException;
 import org.jwellman.virtualdesktop.vapps.DesktopAction;
-import org.jwellman.virtualdesktop.vapps.ExternalAppAction;
 
 /**
  * A desktop shortcut
@@ -84,7 +83,7 @@ public class VShortcut extends JLabel {
 
     private void init(Action a, String label, Icon icon, int yPos, int xPos) {
         this.action   = a;
-        this.external = (a instanceof ExternalAppAction);
+        this.external = (a instanceof DesktopAction) && ((DesktopAction) a).isExternal();
 
         this.setText(label);
         this.setFont(LABEL_FONT);

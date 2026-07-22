@@ -1,10 +1,12 @@
 package org.jwellman.virtualdesktop.vapps;
 
-import org.jwellman.virtualdesktop.DesktopManager;
+import org.jwellman.virtualdesktop.tools.ToolDefinition;
 
 /**
- * Action for launching external applications.
- * Extends DesktopAction but launches external processes instead of internal vapps.
+ * Desktop shortcut adapter for externally launched tools.
+ *
+ * <p>Launch logic lives in {@code ToolService}; this subclass exists so
+ * desktop tiles can detect external tools (e.g. indicator glyph).</p>
  *
  * @author Rick Wellman
  */
@@ -12,94 +14,11 @@ public class ExternalAppAction extends DesktopAction {
 
     private static final long serialVersionUID = 1L;
 
-    private String command;
-    private String workingDirectory;
-    private boolean waitForCompletion;
-
     /**
-     * Creates an external app action with simple command execution
-     * @param name the display name for the application
-     * @param command the command line to execute
+     * @param definition EXTERNAL catalog entry
      */
-    public ExternalAppAction(String name, String command) {
-        this(name, command, null, false);
+    public ExternalAppAction(ToolDefinition definition) {
+        super(definition, true);
     }
 
-    /**
-     * Creates an external app action with full configuration
-     * @param name the display name for the application
-     * @param command the command line to execute
-     * @param workingDir the working directory (null for current directory)
-     * @param wait whether to wait for the process to complete
-     */
-    public ExternalAppAction(String name, String command, String workingDir, boolean wait) {
-        super(name);
-        this.command = command;
-        this.workingDirectory = workingDir;
-        this.waitForCompletion = wait;
-        this.setDesktopOnly(true); // External apps are typically desktop-only
-    }
-
-    /**
-     * Overrides the run method to launch external apps instead of internal vapps.
-     * Called by actionPerformed() which is inherited from DesktopAction.
-     */
-    @Override
-    public void run() {
-        // Create the external app spec and launch it via DesktopManager
-        ExternalAppSpec spec = new ExternalAppSpec(
-            (String) getValue(NAME),
-            command,
-            workingDirectory,
-            waitForCompletion
-        );
-
-        // Set icon if available
-        applyIconToSpec(spec);
-
-        // Use DesktopManager to launch (it will detect ExternalAppSpec and launch appropriately)
-        DesktopManager.get().createVApp(spec);
-    }
-
-    /**
-     * @return the command
-     */
-    public String getCommand() {
-        return command;
-    }
-
-    /**
-     * @param command the command to set
-     */
-    public void setCommand(String command) {
-        this.command = command;
-    }
-
-    /**
-     * @return the working directory
-     */
-    public String getWorkingDirectory() {
-        return workingDirectory;
-    }
-
-    /**
-     * @param workingDirectory the working directory to set
-     */
-    public void setWorkingDirectory(String workingDirectory) {
-        this.workingDirectory = workingDirectory;
-    }
-
-    /**
-     * @return whether to wait for completion
-     */
-    public boolean isWaitForCompletion() {
-        return waitForCompletion;
-    }
-
-    /**
-     * @param waitForCompletion whether to wait for completion
-     */
-    public void setWaitForCompletion(boolean waitForCompletion) {
-        this.waitForCompletion = waitForCompletion;
-    }
 }

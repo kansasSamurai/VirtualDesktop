@@ -4,19 +4,29 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.Action;
 import javax.swing.Icon;
 
 import org.jwellman.dsp.DSP;
+import org.jwellman.virtualdesktop.DesktopManager;
+import org.jwellman.virtualdesktop.tools.InMemoryToolCatalog;
+import org.jwellman.virtualdesktop.tools.ToolCatalog;
+import org.jwellman.virtualdesktop.tools.ToolDefinition;
+import org.jwellman.virtualdesktop.tools.ToolEnvironment;
+import org.jwellman.virtualdesktop.tools.ToolLaunchKind;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * This class is responsible for creating all desktop actions
- * and their corresponding action components.
+ * Loads tool configuration into a {@link ToolCatalog} and builds Swing
+ * {@link DesktopAction} adapters for menus and desktop shortcuts.
+ *
+ * <p>The catalog is the product roster of what can be launched. Actions are
+ * thin adapters that call {@code ToolService.open(definitionId)}.</p>
  *
  * @author rwellman
  */
@@ -25,9 +35,11 @@ public class ActionFactory {
     private static final Logger LOG = LoggerFactory.getLogger(ActionFactory.class);
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    private static final List<DesktopAction> listOfActions = new ArrayList<>();
+    private static final List<DesktopAction> listOfActions = new ArrayList<DesktopAction>();
 
     private static VappsConfig vappsConfig = null;
+
+    private static InMemoryToolCatalog catalog = null;
 
     /**
      * Get the loaded vapps configuration
@@ -37,12 +49,26 @@ public class ActionFactory {
         return vappsConfig;
     }
 
-    public static void initDesktop() {
-        // Load vapps from config (with fallback to hardcoded)
-        loadVappsConfig();
+    /**
+     * @return the populated tool catalog
+     */
+    public static ToolCatalog getCatalog() {
+        if (catalog == null) {
+            throw new IllegalStateException("Catalog not initialized — call initDesktop() first");
+        }
+        return catalog;
+    }
 
-        // Load external applications from configuration file
+    public static void initDesktop() {
+        catalog = new InMemoryToolCatalog();
+        listOfActions.clear();
+
+        loadVappsConfig();
         loadExternalApps();
+
+        ToolEnvironment.init(catalog, DesktopManager.get());
+        LOG.info("Tool catalog ready: {} definition(s), {} action adapter(s)",
+            catalog.size(), listOfActions.size());
     }
 
     /**
@@ -61,12 +87,10 @@ public class ActionFactory {
             vappsConfig = mapper.readValue(configFile, VappsConfig.class);
             LOG.info("Loaded VApps configuration version {}", vappsConfig.getVersion());
 
-            // Process menu vapps
             for (MenuGroup menuGroup : vappsConfig.getMenuStructure()) {
                 processMenuGroup(menuGroup, vappsConfig.getDefaultIcon());
             }
 
-            // Process desktop shortcuts
             for (DesktopShortcut shortcut : vappsConfig.getDesktopShortcuts()) {
                 if (shortcut.isEnabled()) {
                     registerDesktopShortcut(shortcut, vappsConfig.getDefaultIcon());
@@ -79,88 +103,50 @@ public class ActionFactory {
         }
     }
 
-    /**
-     * Recursively process a menu group and register all vapps within it
-     * @param group the menu group to process
-     * @param defaultIcon the default icon key to use if vapp has none
-     */
     private static void processMenuGroup(MenuGroup group, String defaultIcon) {
-        // Process vapps at this level
         for (VappConfig vappConfig : group.getVapps()) {
             if (vappConfig.isEnabled()) {
                 registerVapp(vappConfig, defaultIcon);
             }
         }
 
-        // Recursively process nested groups
         for (MenuGroup subgroup : group.getGroups()) {
             processMenuGroup(subgroup, defaultIcon);
         }
     }
 
-    /**
-     * Register a vapp from configuration
-     * @param vappConfig the vapp configuration
-     * @param defaultIcon the default icon key to use if vapp has none
-     */
     private static void registerVapp(VappConfig vappConfig, String defaultIcon) {
         try {
-            // Determine title
             String title = vappConfig.getTitle();
             if (title == null || title.isEmpty()) {
                 Class<?> clazz = Class.forName(vappConfig.getClassName());
                 title = clazz.getSimpleName();
             }
 
-            DesktopAction action = new DesktopAction(title);
-
-            // Set icon
             String iconKey = vappConfig.getIcon();
             if (iconKey == null || iconKey.isEmpty()) {
                 iconKey = defaultIcon;
             }
 
-            Icon smallIcon = null;
-            Icon largeIcon = null;
-
-            // Try to load requested icon, fallback to add196 if not found
-            try {
-                smallIcon = DSP.Icons.getIcon(iconKey + "-small");
-            } catch (Exception ex) {
-                LOG.warn("Icon not found: {}-small, using fallback add196-small", iconKey);
-                try {
-                    smallIcon = DSP.Icons.getIcon("add196-small");
-                } catch (Exception ex2) {
-                    LOG.error("Fallback icon add196-small also not found");
-                }
+            Map<String, String> attrs = vappConfig.getAttrs();
+            if (attrs == null) {
+                attrs = vappConfig.getArgs();
             }
 
-            try {
-                largeIcon = DSP.Icons.getIcon(iconKey + "-large");
-            } catch (Exception ex) {
-                LOG.warn("Icon not found: {}-large, using fallback add196-large", iconKey);
-                try {
-                    largeIcon = DSP.Icons.getIcon("add196-large");
-                } catch (Exception ex2) {
-                    LOG.error("Fallback icon add196-large also not found");
-                }
-            }
+            ToolDefinition definition = ToolDefinition.builder()
+                .id(ToolDefinition.internalId(vappConfig.getClassName(), attrs))
+                .title(title)
+                .iconKey(iconKey)
+                .className(vappConfig.getClassName())
+                .attrs(attrs)
+                .launchKind(ToolLaunchKind.INTERNAL)
+                .build();
 
-            if (smallIcon != null) {
-                action.putValue(Action.SMALL_ICON, smallIcon);
-            }
-            if (largeIcon != null) {
-                action.putValue(Action.LARGE_ICON_KEY, largeIcon);
-            }
+            definition = catalog.register(definition);
 
-            action.putValue(Action.ACTION_COMMAND_KEY, vappConfig.getClassName());
-            action.setDesktopOnly(vappConfig.isDesktopOnly());
-
-            // Pass configuration attributes for Configurable specs
-            if (vappConfig.getAttrs() != null) {
-                action.setAttrs(vappConfig.getAttrs());
-            }
-
+            // desktopOnly in config means "do not put in Tools menu" — adapter placement only
+            DesktopAction action = new DesktopAction(definition, vappConfig.isDesktopOnly());
+            applyIcons(action, iconKey, "add196");
             getListOfActions().add(action);
 
         } catch (ClassNotFoundException ex) {
@@ -168,11 +154,6 @@ public class ActionFactory {
         }
     }
 
-    /**
-     * Register a desktop shortcut from configuration
-     * @param shortcut the desktop shortcut configuration
-     * @param defaultIcon the default icon key to use if shortcut has none
-     */
     private static void registerDesktopShortcut(DesktopShortcut shortcut, String defaultIcon) {
         try {
             String iconKey = shortcut.getIcon();
@@ -180,45 +161,25 @@ public class ActionFactory {
                 iconKey = defaultIcon;
             }
 
-            Icon largeIcon = null;
-            Icon smallIcon = null;
-
-            // Try to load requested icon, fallback to add196 if not found
-            try {
-                largeIcon = DSP.Icons.getIcon(iconKey + "-large");
-            } catch (Exception ex) {
-                LOG.warn("Icon not found: {}-large, using fallback add196-large", iconKey);
-                try {
-                    largeIcon = DSP.Icons.getIcon("add196-large");
-                } catch (Exception ex2) {
-                    LOG.error("Fallback icon add196-large also not found");
-                }
+            String id = ToolDefinition.internalId(shortcut.getClassName(), null);
+            ToolDefinition definition = catalog.findById(id);
+            if (definition == null) {
+                definition = ToolDefinition.builder()
+                    .id(id)
+                    .title(shortcut.getLabel())
+                    .iconKey(iconKey)
+                    .className(shortcut.getClassName())
+                    .launchKind(ToolLaunchKind.INTERNAL)
+                    .build();
+                definition = catalog.register(definition);
             }
 
-            // Small variant — used for the internal frame / toolbar decoration when this
-            // shortcut's vapp is launched; the large variant above is only for the desktop tile.
-            try {
-                smallIcon = DSP.Icons.getIcon(iconKey + "-small");
-            } catch (Exception ex) {
-                LOG.warn("Icon not found: {}-small, using fallback add196-small", iconKey);
-                try {
-                    smallIcon = DSP.Icons.getIcon("add196-small");
-                } catch (Exception ex2) {
-                    LOG.error("Fallback icon add196-small also not found");
-                }
+            DesktopAction action = new DesktopAction(definition, true);
+            // Shortcut tiles prefer the shortcut label when present
+            if (shortcut.getLabel() != null && !shortcut.getLabel().isEmpty()) {
+                action.putValue(Action.NAME, shortcut.getLabel());
             }
-
-            DesktopAction action = new DesktopAction(shortcut.getLabel());
-            action.setDesktopOnly(true);
-            action.setClazzName(shortcut.getClassName());
-
-            if (largeIcon != null) {
-                action.putValue(Action.LARGE_ICON_KEY, largeIcon);
-            }
-            if (smallIcon != null) {
-                action.putValue(Action.SMALL_ICON, smallIcon);
-            }
-
+            applyIcons(action, iconKey, "add196");
             getListOfActions().add(action);
 
         } catch (Exception ex) {
@@ -226,10 +187,6 @@ public class ActionFactory {
         }
     }
 
-    /**
-     * Loads external application definitions from a JSON configuration file.
-     * If the file doesn't exist or cannot be read, this method fails silently.
-     */
     private static void loadExternalApps() {
         File configFile = new File("config/external-apps.json");
 
@@ -253,62 +210,25 @@ public class ActionFactory {
         }
     }
 
-    /**
-     * Registers an external application as a desktop action
-     * @param appConfig the external app configuration
-     */
     private static void registerExternalApp(ExternalAppConfig appConfig) {
         try {
-            // Create the action
-            ExternalAppAction action = new ExternalAppAction(
-                appConfig.getName(),
-                appConfig.getCommand(),
-                appConfig.getWorkingDir(),
-                appConfig.isWaitForCompletion()
-            );
-            action.setClazzName("org.jwellman.virtualdesktop.vapps.ExternalAppSpec");
+            String iconKey = appConfig.getIcon();
 
-            // Set desktop-only flag
-            action.setDesktopOnly(appConfig.isDesktopOnly());
+            ToolDefinition definition = ToolDefinition.builder()
+                .id(ToolDefinition.externalId(appConfig.getName()))
+                .title(appConfig.getName())
+                .iconKey(iconKey)
+                .className("org.jwellman.virtualdesktop.vapps.ExternalAppSpec")
+                .launchKind(ToolLaunchKind.EXTERNAL)
+                .command(appConfig.getCommand())
+                .workingDirectory(appConfig.getWorkingDir())
+                .waitForCompletion(appConfig.isWaitForCompletion())
+                .build();
 
-            // Load icon if specified
-            final String iconValue = appConfig.getIcon();
-            if (iconValue != null && !iconValue.isEmpty()) {
-                // Get icons from DSP.Icons registry using semantic size keys.
-                // A missing key throws rather than returning null, so both lookups
-                // must be guarded individually or a single miss aborts the whole
-                // external app registration before the fallback below ever runs.
-                Icon largeIcon = null;
-                Icon smallIcon = null;
-                try {
-                    largeIcon = DSP.Icons.getIcon(iconValue + "-large");
-                    smallIcon = DSP.Icons.getIcon(iconValue + "-small");
-                } catch (Exception ex) {
-                    LOG.warn("Icon not found in registry for {}: {}", appConfig.getName(), iconValue);
-                    LOG.warn("Make sure the icon is in the auto-discovered directory or manually registered.");
-                }
+            definition = catalog.register(definition);
 
-                if (largeIcon != null && smallIcon != null) {
-                    action.putValue(Action.LARGE_ICON_KEY, largeIcon);
-                    action.putValue(Action.SMALL_ICON, smallIcon);
-                } else {
-                    // Use default icon
-                    try {
-                        Icon defaultLargeIcon = DSP.Icons.getIcon("winking18-large");
-                        Icon defaultSmallIcon = DSP.Icons.getIcon("winking18-small");
-                        if (defaultLargeIcon != null && defaultSmallIcon != null) {
-                            action.putValue(Action.LARGE_ICON_KEY, defaultLargeIcon);
-                            action.putValue(Action.SMALL_ICON, defaultSmallIcon);
-                        }
-                    } catch (Exception ex2) {
-                        LOG.error("Fallback icon winking18 also not found");
-                    }
-                }
-            }
-
-            action.putValue(Action.NAME, appConfig.getName());
-
-            // Add to list of actions
+            DesktopAction action = new DesktopAction(definition, appConfig.isDesktopOnly());
+            applyIcons(action, iconKey, "winking18");
             getListOfActions().add(action);
 
         } catch (Exception ex) {
@@ -316,8 +236,38 @@ public class ActionFactory {
         }
     }
 
+    private static void applyIcons(DesktopAction action, String iconKey, String fallbackKey) {
+        if (iconKey == null || iconKey.isEmpty()) {
+            iconKey = fallbackKey;
+        }
+
+        Icon smallIcon = loadIcon(iconKey + "-small", fallbackKey + "-small");
+        Icon largeIcon = loadIcon(iconKey + "-large", fallbackKey + "-large");
+
+        if (smallIcon != null) {
+            action.putValue(Action.SMALL_ICON, smallIcon);
+        }
+        if (largeIcon != null) {
+            action.putValue(Action.LARGE_ICON_KEY, largeIcon);
+        }
+    }
+
+    private static Icon loadIcon(String key, String fallbackKey) {
+        try {
+            return DSP.Icons.getIcon(key);
+        } catch (Exception ex) {
+            LOG.warn("Icon not found: {}, trying fallback {}", key, fallbackKey);
+            try {
+                return DSP.Icons.getIcon(fallbackKey);
+            } catch (Exception ex2) {
+                LOG.error("Fallback icon also not found: {}", fallbackKey);
+                return null;
+            }
+        }
+    }
+
     /**
-     * @return the listOfActions
+     * @return Swing action adapters (not the catalog)
      */
     public static List<DesktopAction> getListOfActions() {
         return listOfActions;

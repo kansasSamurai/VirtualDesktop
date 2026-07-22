@@ -20,6 +20,12 @@ import org.slf4j.LoggerFactory;
 import org.jwellman.dsp.DSP;
 import org.jwellman.virtualdesktop.state.actions.SimpleAction;
 import org.jwellman.virtualdesktop.state.store.AppStore;
+import org.jwellman.virtualdesktop.tools.ToolDefinition;
+import org.jwellman.virtualdesktop.tools.ToolEnvironment;
+import org.jwellman.virtualdesktop.tools.ToolLaunchKind;
+import org.jwellman.virtualdesktop.tools.ToolService;
+import org.jwellman.virtualdesktop.vapps.Configurable;
+import org.jwellman.virtualdesktop.vapps.ExternalAppSpec;
 import org.jwellman.virtualdesktop.vapps.LaunchAware;
 import org.jwellman.virtualdesktop.vapps.SpecScriptedObject;
 import org.jwellman.virtualdesktop.vapps.VirtualAppSpec;
@@ -34,13 +40,16 @@ import ca.odell.glazedlists.EventList;
  * the desktop.  Currently, its main purpose is to control the life cycle
  * and maintain the collection of active applications.
  * 
+ * <p>Implements {@link ToolService} (migration step 1+): callers should prefer
+ * {@code ToolService.open(definitionId)} over constructing specs in Actions.</p>
+ * 
  * It is envisioned that this class will either help or morph into 
  * an actual Java Desktop Manager.
  * 
  * @author rwellman
  *
  */
-public class DesktopManager implements ListSelectionListener, InternalFrameListener {
+public class DesktopManager implements ListSelectionListener, InternalFrameListener, ToolService {
 
     private static final Logger LOG = LoggerFactory.getLogger(DesktopManager.class);
 
@@ -68,6 +77,79 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 		if (SINGLETON == null) SINGLETON = new DesktopManager();
 		return SINGLETON;
 	}
+
+    /**
+     * Opens a tool by catalog definition id.
+     * Instantiates the Spec, applies configuration/icons, and hosts it.
+     */
+    @Override
+    public void open(String definitionId) {
+        ToolDefinition definition = ToolEnvironment.catalog().findById(definitionId);
+        if (definition == null) {
+            LOG.error("Cannot open tool — unknown definition id: {}", definitionId);
+            return;
+        }
+
+        try {
+            VirtualAppSpec spec;
+            if (definition.getLaunchKind() == ToolLaunchKind.EXTERNAL) {
+                spec = new ExternalAppSpec(
+                    definition.getTitle(),
+                    definition.getCommand(),
+                    definition.getWorkingDirectory(),
+                    definition.isWaitForCompletion()
+                );
+            } else {
+                Class<?> clazz = Class.forName(definition.getClassName());
+                Object instance = clazz.newInstance();
+                if (!(instance instanceof VirtualAppSpec)) {
+                    LOG.error("Class {} is not a VirtualAppSpec", definition.getClassName());
+                    return;
+                }
+                spec = (VirtualAppSpec) instance;
+                if (instance instanceof Configurable && !definition.getAttrs().isEmpty()) {
+                    ((Configurable) instance).configure(definition.getAttrs());
+                }
+            }
+
+            applyIconFromDefinition(spec, definition);
+            // Use Object overload so internalFrameProvider specs take the void path
+            createVApp((Object) spec);
+        } catch (ClassNotFoundException ex) {
+            LOG.error("Cannot open tool — class not found: {}", definition.getClassName(), ex);
+        } catch (InstantiationException | IllegalAccessException ex) {
+            LOG.error("Cannot open tool — failed to instantiate: {}", definition.getClassName(), ex);
+        } catch (Exception ex) {
+            LOG.error("Cannot open tool — definition id: {}", definitionId, ex);
+        }
+    }
+
+    private void applyIconFromDefinition(VirtualAppSpec spec, ToolDefinition definition) {
+        if (spec.getIcon() != null) {
+            return;
+        }
+        String iconKey = definition.getIconKey();
+        if (iconKey == null || iconKey.isEmpty()) {
+            return;
+        }
+        try {
+            Icon icon = DSP.Icons.getIcon(iconKey + "-small");
+            if (icon != null) {
+                spec.setIcon(icon);
+                return;
+            }
+        } catch (Exception ex) {
+            LOG.debug("Small icon not found for key {}", iconKey);
+        }
+        try {
+            Icon icon = DSP.Icons.getIcon(iconKey + "-large");
+            if (icon != null) {
+                spec.setIcon(icon);
+            }
+        } catch (Exception ex) {
+            LOG.debug("Large icon not found for key {}", iconKey);
+        }
+    }
 
 	/**
 	 * Create a new application.

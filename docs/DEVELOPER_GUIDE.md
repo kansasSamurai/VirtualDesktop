@@ -69,7 +69,7 @@ The launch *recipe*: metadata (title, icon) plus **`getContent()`** returning th
 
 A Spec is **not** the open window, **not** the docking framework, and **not** a Swing listener. It answers: “If you start me, here is my panel (and any extra launch work).”
 
-**Existing implementation:** abstract class `VirtualAppSpec` and its `Spec*` subclasses. The *idea* matches `ToolSpec`; the *class* currently also owns docking workspace setup and a static docking service — that ownership is implementation leak to be moved off Spec.
+**Existing implementation:** abstract class `VirtualAppSpec` implements `ToolSpec`. Docking session ownership lives on the host (`VirtualAppFrame` / `DockingSession` keyed by `toolId`); Spec authors that only need a panel never touch `DockingService`.
 
 ### 3.3 What “open” means at runtime
 
@@ -164,7 +164,7 @@ Today steps 1–2 and 4–6 roughly happen, but through `DesktopAction` → `Des
 | Ideal interface | Current class | Why it’s transitional |
 | :--- | :--- | :--- |
 | `ToolCatalog` | `ActionFactory` | Loads JSON well; publishes Swing `DesktopAction`s |
-| `ToolSpec` | `VirtualAppSpec` | Correct recipe idea; also owns docking workspace/service |
+| `ToolSpec` | `VirtualAppSpec` | Implements ToolSpec; docking owned by DockingSession on VirtualAppFrame |
 | `ToolService` | `DesktopManager` | Performs lifecycle; also is Swing listener + frame roster owner |
 | `ToolWindow` | `VirtualAppFrame` | Has `toolId`; *is* a `JInternalFrame` |
 | Catalog entries | `VappConfig` / `DesktopShortcut` / … | Good DTOs; not one `ToolDefinition` API |
@@ -206,11 +206,11 @@ Declare **`ToolService`**. Make **`DesktopManager` the first implementation** (i
 
 *You have finished this step when* feature code can manage tools without importing `DesktopManager` — even if the runtime object is still that class behind the interface.
 
-### Step 3 — Spec means recipe + panel again
+### Step 3 — Spec means recipe + panel again ✅
 
 Narrow **`VirtualAppSpec`** toward **`ToolSpec`**: title, icon, content, optional `Configurable` / `LaunchAware`. Relocate docking session ownership to a toolId-scoped host (beside or inside the tool window implementation). Leave the docking **SPI interfaces** as they are.
 
-*You have finished this step when* a new tool author never touches `DockingService` to “just show a panel.”
+*Done when* a new tool author never touches `DockingService` to “just show a panel.”
 
 ### Step 4 — Open instances carry what views need
 

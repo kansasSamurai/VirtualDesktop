@@ -486,7 +486,7 @@
             <tr>
               <td class="font-medium">Ownership</td>
               <td><span class="pill border-accent-danger-border bg-accent-danger-bg text-accent-danger">Leaky</span></td>
-              <td>VirtualAppSpec owns workspace + static DockingService; Spec.setContent() auto-creates workspace.</td>
+              <td>VirtualAppSpec implements ToolSpec; DockingSession on VirtualAppFrame owns workspace by toolId.</td>
             </tr>
             <tr>
               <td class="font-medium">isDockable()</td>

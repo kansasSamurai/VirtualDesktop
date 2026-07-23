@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.jwellman.dsp.DSP;
+import org.jwellman.virtualdesktop.docking.DockingSession;
 import org.jwellman.virtualdesktop.state.actions.SimpleAction;
 import org.jwellman.virtualdesktop.state.store.AppStore;
 import org.jwellman.virtualdesktop.tools.ToolDefinition;
@@ -350,10 +351,16 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
             frame.setFrameIcon(DSP.Icons.getIcon("jpad.java"));
         }
 
+        // Docking ownership is toolId-scoped on the frame; Spec only holds a recipe.
+        if (spec.isDockable()) {
+            DockingSession session = DockingSession.open(frame.getToolId());
+            frame.setDockingSession(session);
+            spec.attachDockingSession(session);
+        }
+
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             @Override public void run() {
                 try {
-                    // final VirtualAppFrame frame = new VirtualAppFrame(title);
                     if (spec.isDockable()) {
                         frame.setContentPane(spec.getDockableContent());
                         spec.addDockable(spec.getContent());
@@ -458,12 +465,12 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
                 } }
         	);
 
-        // Dispatch TOOL_OPENED action to Redux store
+        // Dispatch TOOL_OPENED; workspaceId aligns with toolId when docked
         AppStore.get().dispatch(SimpleAction.toolOpened(
             frame.getToolId(),
             frame.getToolType(),
             title,
-            null  // workspaceId - will be set when docking is implemented
+            frame.getToolId()
         ));
 
         return frame;
@@ -519,8 +526,9 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 		// Dispatch TOOL_CLOSED action to Redux store
 		JInternalFrame source = e.getInternalFrame();
 		if (source instanceof VirtualAppFrame) {
-			String toolId = ((VirtualAppFrame) source).getToolId();
-			AppStore.get().dispatch(SimpleAction.toolClosed(toolId));
+			VirtualAppFrame vaf = (VirtualAppFrame) source;
+			vaf.releaseDockingSession();
+			AppStore.get().dispatch(SimpleAction.toolClosed(vaf.getToolId()));
 		}
 
 		// TODO Remove the object reference from the list so that it can be garbage collected

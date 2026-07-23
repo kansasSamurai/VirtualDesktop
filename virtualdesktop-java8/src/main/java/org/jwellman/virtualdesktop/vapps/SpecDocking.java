@@ -12,6 +12,8 @@ import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
 import org.jwellman.virtualdesktop.App;
+import org.jwellman.virtualdesktop.docking.DockingService;
+import org.jwellman.virtualdesktop.docking.DockingServiceFactory;
 import org.jwellman.virtualdesktop.docking.impl.DockingServiceImpl;
 import org.jwellman.virtualdesktop.docking.spi.DockingProvider;
 
@@ -73,6 +75,7 @@ public class SpecDocking extends VirtualAppSpec {
      * @return the native CControl instance
      */
     private static CControl getNativeControl() {
+        DockingService dockingService = DockingServiceFactory.getInstance();
         if (dockingService instanceof DockingServiceImpl) {
             DockingServiceImpl impl = (DockingServiceImpl) dockingService;
             DockingProvider provider = impl.getProvider();

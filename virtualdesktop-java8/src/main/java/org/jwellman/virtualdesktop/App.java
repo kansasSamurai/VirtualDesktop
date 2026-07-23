@@ -46,6 +46,7 @@ import org.jwellman.virtualdesktop.desktop.VActionLNF;
 import org.jwellman.virtualdesktop.desktop.VException;
 import org.jwellman.virtualdesktop.desktop.VShortcut;
 import org.jwellman.virtualdesktop.desktopmgr.VAppListCellRenderer;
+import org.jwellman.virtualdesktop.docking.DockingBootstrap;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
 import org.jwellman.virtualdesktop.state.reducers.AppReducer;
 import org.jwellman.virtualdesktop.state.store.AppStore;
@@ -57,7 +58,6 @@ import org.jwellman.virtualdesktop.vapps.DesktopAction;
 import org.jwellman.virtualdesktop.vapps.MenuGroup;
 import org.jwellman.virtualdesktop.vapps.VappConfig;
 import org.jwellman.virtualdesktop.vapps.VappsConfig;
-import org.jwellman.virtualdesktop.vapps.VirtualAppSpec;
 import org.jwellman.virtualdesktop.vswing.VDesktopPane;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -281,9 +281,8 @@ public class App extends JFrame implements ActionListener {
             }
         }
         
-        // Initialize the docking service
-        // Note: This could also be done via SpecDocking.setJFrame(this) for backward compatibility
-        VirtualAppSpec.setJFrame(this);
+        // Initialize the docking service (composition root — not Spec)
+        DockingBootstrap.initialize(this);
 
     }
 

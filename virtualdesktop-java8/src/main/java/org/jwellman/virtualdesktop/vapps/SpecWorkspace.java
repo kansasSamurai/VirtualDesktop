@@ -13,6 +13,7 @@ import javax.swing.SwingConstants;
 
 import org.jwellman.virtualdesktop.bsh.BeanShellService;
 import org.jwellman.virtualdesktop.docking.DockableLocation;
+import org.jwellman.virtualdesktop.docking.DockingWorkspace;
 
 import bsh.EvalError;
 
@@ -126,18 +127,19 @@ public class SpecWorkspace extends VirtualAppSpec implements Configurable {
             }
             LOG.info("loading {}, {}, {} ...", tool, position, size);
 
-            // Resolve location from position hint
+            // Resolve location from position hint (workspace attached by host)
+            DockingWorkspace ws = getDockingWorkspace();
             DockableLocation location;
             if ("north".equals(position) || "top".equals(position)) {
-                location = DockableLocation.northIn(workspace, size);
+                location = DockableLocation.northIn(ws, size);
             } else if ("south".equals(position) || "bottom".equals(position)) {
-                location = DockableLocation.southIn(workspace, size);
+                location = DockableLocation.southIn(ws, size);
             } else if ("west".equals(position) || "left".equals(position)) {
-                location = DockableLocation.westIn(workspace, size);
+                location = DockableLocation.westIn(ws, size);
             } else if ("east".equals(position) || "right".equals(position)) {
-                location = DockableLocation.eastIn(workspace, size);
+                location = DockableLocation.eastIn(ws, size);
             } else {
-                location = DockableLocation.normalIn(workspace);
+                location = DockableLocation.normalIn(ws);
             }
 
             try {

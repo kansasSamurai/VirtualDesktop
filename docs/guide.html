@@ -303,8 +303,8 @@
             <p class="text-sm text-ink-secondary">
               <span class="font-semibold text-ink">Implementation today:</span>
               abstract class <code class="code">VirtualAppSpec</code> and <code class="code">Spec*</code> subclasses.
-              The <em>idea</em> matches ToolSpec; the <em>class</em> also owns docking workspace setup —
-              ownership leak to move off Spec.
+              The <em>idea</em> matches ToolSpec; VirtualAppSpec implements ToolSpec.
+              Docking ownership lives on DockingSession / VirtualAppFrame (toolId-scoped).
             </p>
           </div>
         </article>
@@ -635,7 +635,7 @@
             <tr class="bg-accent-warn-bg/30">
               <td class="font-mono text-xs">ToolSpec</td>
               <td>VirtualAppSpec</td>
-              <td>Correct recipe idea; also owns docking workspace/service</td>
+              <td>Implements ToolSpec; docking owned by DockingSession on VirtualAppFrame</td>
             </tr>
             <tr class="bg-accent-warn-bg/30">
               <td class="font-mono text-xs">ToolService</td>
@@ -752,7 +752,7 @@
 
       <article class="card">
         <div class="card-header">
-          <span>Step 3 — Spec means recipe + panel again</span>
+          <span>Step 3 — Spec means recipe + panel again ✅</span>
           <span class="pill">3</span>
         </div>
         <div class="card-body">

@@ -5,10 +5,14 @@ import java.util.UUID;
 import javax.swing.JInternalFrame;
 import javax.swing.border.EmptyBorder;
 
+import org.jwellman.virtualdesktop.docking.DockingSession;
+
 /**
  * JInternalFrame subclass representing a tool window in the virtual desktop.
  *
  * Each frame has a unique toolId for tracking in the Redux-style state store.
+ * When the tool is presented via docking, ownership of that session lives here
+ * (keyed by toolId), not on the launch Spec.
  *
  * @author Rick Wellman
  */
@@ -24,6 +28,9 @@ public class VirtualAppFrame extends JInternalFrame {
 
     /** The tool type (VirtualAppSpec class name) for grouping */
     private String toolType;
+
+    /** ToolId-scoped docking host; null for non-dockable / internal-frame-provider tools */
+    private DockingSession dockingSession;
 
     public VirtualAppFrame() {
         this("Document #" + (++openFrameCount), false);
@@ -90,6 +97,32 @@ public class VirtualAppFrame extends JInternalFrame {
      */
     public void setToolType(String toolType) {
         this.toolType = toolType;
+    }
+
+    /**
+     * Attach the docking session created for this tool window.
+     *
+     * @param session toolId-scoped session
+     */
+    public void setDockingSession(DockingSession session) {
+        this.dockingSession = session;
+    }
+
+    /**
+     * @return docking session for this tool, or null
+     */
+    public DockingSession getDockingSession() {
+        return dockingSession;
+    }
+
+    /**
+     * Releases docking resources owned by this frame. Idempotent.
+     */
+    public void releaseDockingSession() {
+        if (dockingSession != null) {
+            dockingSession.release();
+            dockingSession = null;
+        }
     }
 
     @Override protected void finalize() throws Throwable {

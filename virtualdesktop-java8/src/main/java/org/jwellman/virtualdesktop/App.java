@@ -154,6 +154,14 @@ public class App extends JFrame implements ActionListener {
         desktop = new VDesktopPane(); // new JDesktopPane(); //a specialized layered pane
         DesktopManager.get().setDesktop(desktop);
 
+        // COMPOSITION ROOT (tool services) — Host objects that services need already exist
+        // (this App frame, desktop pane, DesktopManager). Feature UI that consumes the catalog
+        // / ToolService has not been built yet (WindowListController, menus, shortcuts).
+        // If/when startup is refactored behind an external bootstrap / DI container, this is
+        // the phase where those dependencies should be bound — after host wiring, before
+        // consumers. ActionFactory.initDesktop() is today's stand-in for that bind step.
+        ActionFactory.initDesktop();
+
         int version = 6; // 5=GlazedLists, 6=Redux WindowListController
         switch (version) {
             // previous versions are in source control if needed
@@ -254,7 +262,6 @@ public class App extends JFrame implements ActionListener {
         desktop.setDesktopManager(new SnappingDesktopManager(20));
 
         DesktopAction.setDesktop(this);
-        ActionFactory.initDesktop();
 
         // These are for desktop layout... this is VERY inelegant...
         // this needs to be from persistence mechanism ...
@@ -264,7 +271,7 @@ public class App extends JFrame implements ActionListener {
         // Build hierarchical menu structure
         buildVAppsMenu();
 
-        // Add desktop shortcuts
+        // Add desktop shortcuts (catalog already loaded in initDesktop above)
         for (DesktopAction a : ActionFactory.getListOfActions()) {
             if (a.isDesktopOnly()) {
                 final Icon icon = (Icon) a.getValue(Action.LARGE_ICON_KEY);

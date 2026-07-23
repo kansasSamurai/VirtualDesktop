@@ -1,11 +1,18 @@
 package org.jwellman.virtualdesktop.tools;
 
+import javax.swing.Icon;
+
 /**
  * Application-level tool lifecycle operations.
  *
- * <p>Step 1 of the migration exposes {@link #open(String)}. Close / activate /
- * minimize follow in later steps. Implementations must not require callers to
- * pass Swing types.</p>
+ * <p>Callers depend on this interface — not on DesktopManager. The first
+ * implementation is DesktopManager, which may still create VirtualAppFrames and
+ * listen to them internally.</p>
+ *
+ * <p>{@link #open(String)} takes a <em>catalog definition id</em>.
+ * {@link #close(String)}, {@link #activate(String)}, {@link #minimize(String)},
+ * and {@link #restore(String)} take a <em>running tool instance id</em>
+ * ({@code ToolInstance.id} / {@code VirtualAppFrame.toolId}).</p>
  */
 public interface ToolService {
 
@@ -15,5 +22,41 @@ public interface ToolService {
      * @param definitionId id of a {@link ToolDefinition} in the catalog
      */
     void open(String definitionId);
+
+    /**
+     * Closes a running tool instance.
+     *
+     * @param toolId running instance id
+     */
+    void close(String toolId);
+
+    /**
+     * Brings a running tool to the front and selects it (de-iconifies if needed).
+     *
+     * @param toolId running instance id
+     */
+    void activate(String toolId);
+
+    /**
+     * Minimizes / iconifies a running tool.
+     *
+     * @param toolId running instance id
+     */
+    void minimize(String toolId);
+
+    /**
+     * Restores a minimized tool without necessarily selecting it as activate would.
+     *
+     * @param toolId running instance id
+     */
+    void restore(String toolId);
+
+    /**
+     * Frame icon for a running tool — transitional until ToolInstance carries icon data.
+     *
+     * @param toolId running instance id
+     * @return the icon, or null if unknown
+     */
+    Icon getToolIcon(String toolId);
 
 }

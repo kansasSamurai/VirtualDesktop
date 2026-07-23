@@ -40,8 +40,9 @@ import ca.odell.glazedlists.EventList;
  * the desktop.  Currently, its main purpose is to control the life cycle
  * and maintain the collection of active applications.
  * 
- * <p>Implements {@link ToolService} (migration step 1+): callers should prefer
- * {@code ToolService.open(definitionId)} over constructing specs in Actions.</p>
+ * <p>Implements {@link ToolService} (migration step 2): feature code should call
+ * lifecycle methods via {@code ToolEnvironment.service()} / {@link ToolService},
+ * not via this concrete class. DesktopManager remains the Swing host adapter.</p>
  * 
  * It is envisioned that this class will either help or morph into 
  * an actual Java Desktop Manager.
@@ -122,6 +123,91 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
         } catch (Exception ex) {
             LOG.error("Cannot open tool — definition id: {}", definitionId, ex);
         }
+    }
+
+    @Override
+    public void close(String toolId) {
+        VirtualAppFrame frame = findFrameByToolId(toolId);
+        if (frame == null) {
+            LOG.debug("close: no frame for toolId {}", toolId);
+            return;
+        }
+        try {
+            frame.setClosed(true);
+        } catch (PropertyVetoException ex) {
+            LOG.debug("close vetoed for toolId {}", toolId);
+        }
+    }
+
+    @Override
+    public void activate(String toolId) {
+        VirtualAppFrame frame = findFrameByToolId(toolId);
+        if (frame == null) {
+            LOG.debug("activate: no frame for toolId {}", toolId);
+            return;
+        }
+        if (!frame.isVisible()) {
+            frame.setVisible(true);
+        }
+        try {
+            frame.setIcon(false);
+            frame.moveToFront();
+            frame.setSelected(true);
+        } catch (PropertyVetoException ex) {
+            LOG.debug("activate vetoed for toolId {}", toolId);
+        }
+    }
+
+    @Override
+    public void minimize(String toolId) {
+        VirtualAppFrame frame = findFrameByToolId(toolId);
+        if (frame == null) {
+            LOG.debug("minimize: no frame for toolId {}", toolId);
+            return;
+        }
+        try {
+            frame.setIcon(true);
+        } catch (PropertyVetoException ex) {
+            LOG.debug("minimize vetoed for toolId {}", toolId);
+        }
+    }
+
+    @Override
+    public void restore(String toolId) {
+        VirtualAppFrame frame = findFrameByToolId(toolId);
+        if (frame == null) {
+            LOG.debug("restore: no frame for toolId {}", toolId);
+            return;
+        }
+        if (!frame.isVisible()) {
+            frame.setVisible(true);
+        }
+        try {
+            frame.setIcon(false);
+        } catch (PropertyVetoException ex) {
+            LOG.debug("restore vetoed for toolId {}", toolId);
+        }
+    }
+
+    @Override
+    public Icon getToolIcon(String toolId) {
+        VirtualAppFrame frame = findFrameByToolId(toolId);
+        if (frame == null) {
+            return null;
+        }
+        return frame.getFrameIcon();
+    }
+
+    private VirtualAppFrame findFrameByToolId(String toolId) {
+        if (toolId == null) {
+            return null;
+        }
+        for (VirtualAppFrame frame : frames) {
+            if (toolId.equals(frame.getToolId())) {
+                return frame;
+            }
+        }
+        return null;
     }
 
     private void applyIconFromDefinition(VirtualAppSpec spec, ToolDefinition definition) {

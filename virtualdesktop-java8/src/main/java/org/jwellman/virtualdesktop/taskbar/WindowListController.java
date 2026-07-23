@@ -3,7 +3,6 @@ package org.jwellman.virtualdesktop.taskbar;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.beans.PropertyVetoException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -15,8 +14,6 @@ import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.SwingUtilities;
 
-import org.jwellman.virtualdesktop.DesktopManager;
-import org.jwellman.virtualdesktop.VirtualAppFrame;
 import org.jwellman.virtualdesktop.state.actions.SimpleAction;
 import org.jwellman.virtualdesktop.state.model.AppState;
 import org.jwellman.virtualdesktop.state.model.DockingState;
@@ -26,6 +23,8 @@ import org.jwellman.virtualdesktop.state.model.ToolsState;
 import org.jwellman.virtualdesktop.state.store.AppStore;
 import org.jwellman.virtualdesktop.state.store.StoreSubscriber;
 import org.jwellman.virtualdesktop.state.store.Subscription;
+import org.jwellman.virtualdesktop.tools.ToolEnvironment;
+import org.jwellman.virtualdesktop.tools.ToolService;
 
 /**
  * Bridges Redux state to a WindowListView implementation.
@@ -35,15 +34,16 @@ import org.jwellman.virtualdesktop.state.store.Subscription;
  * reported by the view. The controller never references concrete view classes;
  * swapping the view (JList, SmartGrid, etc.) requires no changes here.
  *
+ * <p>Lifecycle operations go through {@link ToolService} — not DesktopManager —
+ * so this controller stays on the application interface.</p>
+ *
  * @author rwellman
  */
 public class WindowListController implements StoreSubscriber, WindowListViewListener {
 
     private final WindowListView view;
     private final Subscription subscription;
-
-    // Cache of toolId -> VirtualAppFrame for icon lookup and frame activation
-    private final Map<String, VirtualAppFrame> frameCache = new HashMap<>();
+    private final ToolService toolService;
 
     // Last item list sent to the view; retained so context menu handlers can
     // look up group children by id without re-querying Redux state.
@@ -52,6 +52,7 @@ public class WindowListController implements StoreSubscriber, WindowListViewList
     public WindowListController(WindowListView view) {
         this.view = view;
         this.view.setListener(this);
+        this.toolService = ToolEnvironment.service();
 
         this.subscription = AppStore.get().subscribe(this);
 
@@ -66,11 +67,15 @@ public class WindowListController implements StoreSubscriber, WindowListViewList
     @Override
     public void onStateChanged(AppState state) {
         if (!SwingUtilities.isEventDispatchThread()) {
-            SwingUtilities.invokeLater(() -> onStateChanged(state));
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    onStateChanged(state);
+                }
+            });
             return;
         }
 
-        updateFrameCache();
         currentItems = buildItems(state);
         view.setItems(currentItems);
         view.setSelectedId(state.getWindowList().getSelectedToolId());
@@ -83,7 +88,7 @@ public class WindowListController implements StoreSubscriber, WindowListViewList
     @Override
     public void onItemSelected(String toolId, boolean isGroup) {
         if (!isGroup) {
-            activateTool(toolId);
+            toolService.activate(toolId);
         }
     }
 
@@ -99,15 +104,7 @@ public class WindowListController implements StoreSubscriber, WindowListViewList
 
     @Override
     public void onItemCloseRequested(String toolId) {
-        VirtualAppFrame frame = frameCache.get(toolId);
-        if (frame == null) {
-            return;
-        }
-        try {
-            frame.setClosed(true);
-        } catch (PropertyVetoException ex) {
-            // Close was vetoed by the frame; leave it open.
-        }
+        toolService.close(toolId);
     }
 
     @Override
@@ -118,20 +115,13 @@ public class WindowListController implements StoreSubscriber, WindowListViewList
                 activateAllInGroup(group);
             }
         } else {
-            activateTool(id);
+            toolService.activate(id);
         }
     }
 
     // -------------------------------------------------------------------------
     // State building
     // -------------------------------------------------------------------------
-
-    private void updateFrameCache() {
-        frameCache.clear();
-        for (VirtualAppFrame frame : DesktopManager.get().getFrames()) {
-            frameCache.put(frame.getToolId(), frame);
-        }
-    }
 
     private List<WindowListItem> buildItems(AppState state) {
         ToolsState tools = state.getTools();
@@ -170,8 +160,7 @@ public class WindowListController implements StoreSubscriber, WindowListViewList
     }
 
     private WindowListItem createWindowListItem(ToolInstance tool) {
-        VirtualAppFrame frame = frameCache.get(tool.getId());
-        Icon icon = frame != null ? frame.getFrameIcon() : null;
+        Icon icon = toolService.getToolIcon(tool.getId());
 
         DockingState dockingState = tool.getDockingState();
         DockingIndicator indicator = DockingIndicator.fromState(
@@ -191,25 +180,6 @@ public class WindowListController implements StoreSubscriber, WindowListViewList
     // Action helpers
     // -------------------------------------------------------------------------
 
-    private void activateTool(String toolId) {
-        VirtualAppFrame frame = frameCache.get(toolId);
-        if (frame == null) {
-            return;
-        }
-
-        if (!frame.isVisible()) {
-            frame.setVisible(true);
-        }
-
-        try {
-            frame.setIcon(false);
-            frame.moveToFront();
-            frame.setSelected(true);
-        } catch (PropertyVetoException ex) {
-            ex.printStackTrace();
-        }
-    }
-
     private void showGroupPopupMenu(WindowListItem group, Point screenPoint) {
         JPopupMenu popup = new JPopupMenu(group.getToolType());
 
@@ -223,7 +193,7 @@ public class WindowListController implements StoreSubscriber, WindowListViewList
             menuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    activateTool(item.getId());
+                    toolService.activate(item.getId());
                 }
             });
             popup.add(menuItem);
@@ -246,31 +216,12 @@ public class WindowListController implements StoreSubscriber, WindowListViewList
     }
 
     private void activateAllInGroup(WindowListItem group) {
-        for (WindowListItem item : group.getGroupedItems()) {
-            VirtualAppFrame frame = frameCache.get(item.getId());
-            if (frame != null) {
-                if (!frame.isVisible()) {
-                    frame.setVisible(true);
-                }
-                try {
-                    frame.setIcon(false);
-                } catch (PropertyVetoException ex) {
-                    // Ignore
-                }
-            }
+        List<WindowListItem> members = group.getGroupedItems();
+        for (WindowListItem item : members) {
+            toolService.restore(item.getId());
         }
-
-        if (!group.getGroupedItems().isEmpty()) {
-            WindowListItem first = group.getGroupedItems().get(0);
-            VirtualAppFrame frame = frameCache.get(first.getId());
-            if (frame != null) {
-                try {
-                    frame.moveToFront();
-                    frame.setSelected(true);
-                } catch (PropertyVetoException ex) {
-                    // Ignore
-                }
-            }
+        if (!members.isEmpty()) {
+            toolService.activate(members.get(0).getId());
         }
     }
 

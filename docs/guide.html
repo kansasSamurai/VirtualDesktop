@@ -597,7 +597,7 @@
             </tr>
             <tr class="bg-accent-ok-bg/40">
               <td class="font-medium">Open-tool model</td>
-              <td><code class="code">ToolInstance</code>, <code class="code">ToolsState</code>, <code class="code">WindowListState</code> — keep; later add definitionId / icon key</td>
+              <td><code class="code">ToolInstance</code> (definitionId / iconKey), <code class="code">ToolsState</code>, <code class="code">WindowListState</code></td>
             </tr>
             <tr class="bg-accent-ok-bg/40">
               <td class="font-medium">Store pattern</td>
@@ -696,9 +696,9 @@
         </article>
       </div>
       <p class="text-sm text-ink-secondary">
-        The window list prefers the store for display, then reaches back into frames
-        (<code class="code">frameCache</code>) for icons and activate/close. That reach-back is the tell
-        that ToolInstance and ToolService are not yet rich enough.
+        The window list reads open tools from the store (including icon keys) and routes
+        activate/close through <code class="code">ToolService</code>. It no longer reaches into
+        DesktopManager frames for display.
       </p>
     </section>
 
@@ -769,7 +769,7 @@
 
       <article class="card">
         <div class="card-header">
-          <span>Step 4 — Open instances carry what views need</span>
+          <span>Step 4 — Open instances carry what views need ✅</span>
           <span class="pill">4</span>
         </div>
         <div class="card-body">

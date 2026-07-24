@@ -1,7 +1,5 @@
 package org.jwellman.virtualdesktop.tools;
 
-import javax.swing.Icon;
-
 /**
  * Application-level tool lifecycle operations.
  *
@@ -13,6 +11,9 @@ import javax.swing.Icon;
  * {@link #close(String)}, {@link #activate(String)}, {@link #minimize(String)},
  * and {@link #restore(String)} take a <em>running tool instance id</em>
  * ({@code ToolInstance.id} / {@code VirtualAppFrame.toolId}).</p>
+ *
+ * <p>Display data for open tools (title, icon key) lives on {@code ToolInstance}
+ * in the store — views do not ask this service for icons.</p>
  */
 public interface ToolService {
 
@@ -50,13 +51,5 @@ public interface ToolService {
      * @param toolId running instance id
      */
     void restore(String toolId);
-
-    /**
-     * Frame icon for a running tool — transitional until ToolInstance carries icon data.
-     *
-     * @param toolId running instance id
-     * @return the icon, or null if unknown
-     */
-    Icon getToolIcon(String toolId);
 
 }

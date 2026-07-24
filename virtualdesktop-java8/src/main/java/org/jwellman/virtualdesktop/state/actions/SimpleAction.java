@@ -57,9 +57,10 @@ public final class SimpleAction implements Action {
 
     // ========== Factory Methods for Tool Lifecycle ==========
 
-    public static Action toolOpened(String toolId, String toolType, String title, String workspaceId) {
+    public static Action toolOpened(String toolId, String toolType, String title,
+                                    String workspaceId, String definitionId, String iconKey) {
         return new SimpleAction(ActionTypes.TOOL_OPENED,
-            new ToolPayload(toolId, toolType, title, workspaceId));
+            new ToolPayload(toolId, toolType, title, workspaceId, definitionId, iconKey));
     }
 
     public static Action toolClosed(String toolId) {
@@ -123,17 +124,23 @@ public final class SimpleAction implements Action {
         public final String toolType;
         public final String title;
         public final String workspaceId;
+        public final String definitionId;
+        public final String iconKey;
 
-        public ToolPayload(String toolId, String toolType, String title, String workspaceId) {
+        public ToolPayload(String toolId, String toolType, String title, String workspaceId,
+                           String definitionId, String iconKey) {
             this.toolId = toolId;
             this.toolType = toolType;
             this.title = title;
             this.workspaceId = workspaceId;
+            this.definitionId = definitionId;
+            this.iconKey = iconKey;
         }
 
         @Override
         public String toString() {
-            return "ToolPayload{id=" + toolId + ", type=" + toolType + ", title=" + title + "}";
+            return "ToolPayload{id=" + toolId + ", type=" + toolType + ", title=" + title +
+                   ", def=" + definitionId + "}";
         }
     }
 

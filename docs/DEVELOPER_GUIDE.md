@@ -154,7 +154,7 @@ Today steps 1–2 and 4–6 roughly happen, but through `DesktopAction` → `Des
 | Paradigm piece | Implementation status |
 | :--- | :--- |
 | Capability interfaces | **`Configurable`**, **`LaunchAware`** — keep |
-| Open-tool model | **`ToolInstance`**, **`ToolsState`**, **`WindowListState`** — keep; later add `definitionId` / icon key |
+| Open-tool model | **`ToolInstance`** (includes `definitionId` / `iconKey`), **`ToolsState`**, **`WindowListState`** |
 | Store pattern | **`AppStore`**, reducers, subscribers — keep |
 | Substitutable open-list view | **`WindowListView`** + **`WindowListController`** — reference pattern for Desktop |
 | Docking library boundary | **`DockingService` / `DockingProvider` SPI** — keep; fix *ownership* |
@@ -186,7 +186,7 @@ Listening to frames inside a Swing adapter implementation is fine. Making that a
 - **Swing:** `DesktopManager`’s list of `VirtualAppFrame`
 - **Model:** `AppStore` → `ToolsState`
 
-The window list view path already *prefers* the store for display, then reaches back into frames (`frameCache`) for icons and activate/close. That reach-back is the tell that `ToolInstance` and `ToolService` are not yet rich enough.
+The window list view path reads open tools from the store (including icon keys) and routes activate/close through `ToolService`. It no longer reaches into DesktopManager frames for display.
 
 ---
 
@@ -212,11 +212,11 @@ Narrow **`VirtualAppSpec`** toward **`ToolSpec`**: title, icon, content, optiona
 
 *Done when* a new tool author never touches `DockingService` to “just show a panel.”
 
-### Step 4 — Open instances carry what views need
+### Step 4 — Open instances carry what views need ✅
 
 Extend **`ToolInstance`** with definition id and icon key (or icon reference). Route activate/close through **`ToolService`**. Remove **`WindowListController`’s `frameCache`** as a display dependency.
 
-*You have finished this step when* the taskbar can render and request lifecycle changes without asking `DesktopManager.getFrames()`.
+*Done when* the taskbar can render and request lifecycle changes without asking `DesktopManager.getFrames()`.
 
 ### Step 5 — Desktop surface follows the taskbar pattern
 

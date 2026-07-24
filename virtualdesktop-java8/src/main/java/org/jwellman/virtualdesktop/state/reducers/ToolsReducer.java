@@ -74,7 +74,9 @@ public class ToolsReducer {
                 tp.toolId,
                 tp.toolType,
                 tp.title,
-                tp.workspaceId
+                tp.workspaceId,
+                tp.definitionId,
+                tp.iconKey
             );
             return state.withToolAdded(tool);
         }

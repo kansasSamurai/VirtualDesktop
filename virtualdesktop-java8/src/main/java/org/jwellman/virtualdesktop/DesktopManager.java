@@ -116,7 +116,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 
             applyIconFromDefinition(spec, definition);
             // Use Object overload so internalFrameProvider specs take the void path
-            createVApp((Object) spec);
+            createVApp((Object) spec, definition);
         } catch (ClassNotFoundException ex) {
             LOG.error("Cannot open tool — class not found: {}", definition.getClassName(), ex);
         } catch (InstantiationException | IllegalAccessException ex) {
@@ -190,15 +190,6 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
         }
     }
 
-    @Override
-    public Icon getToolIcon(String toolId) {
-        VirtualAppFrame frame = findFrameByToolId(toolId);
-        if (frame == null) {
-            return null;
-        }
-        return frame.getFrameIcon();
-    }
-
     private VirtualAppFrame findFrameByToolId(String toolId) {
         if (toolId == null) {
             return null;
@@ -250,9 +241,17 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 	 * @param newInstance
 	 */
     public void createVApp(Object newInstance) {
+        this.createVApp(newInstance, null);
+    }
 
-        // Handle internal vapps as usual
-        this.createVApp_void((VirtualAppSpec)newInstance);
+    /**
+     * Create a new application from a catalog definition (carries definitionId / iconKey into state).
+     *
+     * @param newInstance VirtualAppSpec instance
+     * @param definition catalog entry used to open, or null for ad-hoc opens
+     */
+    public void createVApp(Object newInstance, ToolDefinition definition) {
+        this.createVApp_void((VirtualAppSpec) newInstance, definition);
     }
 
     /**
@@ -263,12 +262,22 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
      * @param spec
      */
     public void createVApp_void(final VirtualAppSpec spec) {
+        this.createVApp_void(spec, null);
+    }
+
+    /**
+     * Create a new application, optionally linked to a catalog definition.
+     *
+     * @param spec launch recipe
+     * @param definition catalog entry, or null
+     */
+    public void createVApp_void(final VirtualAppSpec spec, final ToolDefinition definition) {
 
         if (spec.isInternalFrameProvider()) {
             // TODO I want to move this somehow into the definitive method;
             // I do not like having logic spread throughout all these createvapp methods.
         	LOG.debug("createVApp() routing to populateInternalFrame() for: {}", spec.getTitle());
-            final VirtualAppFrame frame = this.createAppFrame(spec.getTitle(), spec);
+            final VirtualAppFrame frame = this.createAppFrame(spec.getTitle(), spec, definition);
             
             if (spec.getIcon() != null) {
                 frame.setFrameIcon(spec.getIcon());            
@@ -280,7 +289,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
             spec.populateInternalFrame(frame, desktop);
         } else {
         	LOG.debug("createVApp() routing to standard path for: {}", spec.getTitle());
-            this.createVApp(spec);
+            this.createVApp(spec, definition);
         }
 
     }
@@ -328,19 +337,28 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
      * This public method allows internal apps to create internal apps/windows.
      * i.e. via beanshell or others 
      *
-     * @param c
-     * @param title
-     * @param icon
-     * @return
+     * @param spec launch recipe
+     * @return the created frame
      */
     public VirtualAppFrame createVApp(final VirtualAppSpec spec) {
+        return this.createVApp(spec, null);
+    }
+
+    /**
+     * Host a VirtualAppSpec, optionally recording catalog linkage in ToolsState.
+     *
+     * @param spec launch recipe
+     * @param definition catalog entry used to open, or null for ad-hoc opens
+     * @return the created frame
+     */
+    public VirtualAppFrame createVApp(final VirtualAppSpec spec, final ToolDefinition definition) {
 
         Icon icon = spec.getIcon();
         String title = spec.getTitle();
         Container c = spec.getContent();
         LOG.info("Creating vapp: {} [dockable={}, hosted={}]", title, spec.isDockable(), spec.isHosted());
 
-        final VirtualAppFrame frame = this.createAppFrame(title, spec);
+        final VirtualAppFrame frame = this.createAppFrame(title, spec, definition);
         if (icon != null) {
             if (title.equals("BeanShell Class Browser - jvd")) {
                 frame.setFrameIcon(DSP.Icons.getIcon("jpad.bsh_class_browser"));
@@ -422,7 +440,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
      */
     @SuppressWarnings("unused")
     private VirtualAppFrame createAppFrame(String title) {
-        return createAppFrame(title, null);
+        return createAppFrame(title, null, null);
     }
 
     /**
@@ -434,6 +452,18 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
      * @return
      */
     private VirtualAppFrame createAppFrame(String title, VirtualAppSpec spec) {
+        return createAppFrame(title, spec, null);
+    }
+
+    /**
+     * Creates the frame and dispatches TOOL_OPENED with catalog linkage when available.
+     *
+     * @param title window title
+     * @param spec launch recipe (may be null)
+     * @param definition catalog entry (may be null)
+     * @return new frame
+     */
+    private VirtualAppFrame createAppFrame(String title, VirtualAppSpec spec, ToolDefinition definition) {
         LOG.debug("Creating app frame: {}", title);
         final VirtualAppFrame frame = new VirtualAppFrame(title);
 
@@ -465,12 +495,17 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
                 } }
         	);
 
+        String definitionId = definition != null ? definition.getId() : null;
+        String iconKey = definition != null ? definition.getIconKey() : null;
+
         // Dispatch TOOL_OPENED; workspaceId aligns with toolId when docked
         AppStore.get().dispatch(SimpleAction.toolOpened(
             frame.getToolId(),
             frame.getToolType(),
             title,
-            frame.getToolId()
+            frame.getToolId(),
+            definitionId,
+            iconKey
         ));
 
         return frame;
@@ -512,7 +547,6 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 	
 	@Override
 	public void internalFrameOpened(InternalFrameEvent e) {
-		// TODO Auto-generated method stub
 		displayMessage("IFRAME :: opened", e);
 	}
 
@@ -520,7 +554,6 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 	public void internalFrameClosed(InternalFrameEvent e) {
 		// This will not be called if the frames close action is "HIDE"; only when it is "DISPOSE"
 
-		// TODO Auto-generated method stub
 		displayMessage("IFRAME :: closed", e);
 
 		// Dispatch TOOL_CLOSED action to Redux store
@@ -543,7 +576,6 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 
 	@Override
 	public void internalFrameIconified(InternalFrameEvent e) {
-		// TODO Auto-generated method stub
 		displayMessage("IFRAME :: iconfy", e);
 		e.getInternalFrame().hide();
 
@@ -584,7 +616,6 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 	@Override
 	public void internalFrameActivated(InternalFrameEvent e) {
 		// activated = "selected"; i.e. has the focus
-		// TODO Auto-generated method stub
 		displayMessage("IFRAME :: active", e);
 
 		// Dispatch TOOL_ACTIVATED action to Redux store
@@ -679,7 +710,6 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 			
 //			try {
 //			} catch (PropertyVetoException e1) {
-//				// TODO Auto-generated catch block
 //				e1.printStackTrace();
 //			}
 			

@@ -24,6 +24,7 @@ import org.jwellman.virtualdesktop.state.store.AppStore;
 import org.jwellman.virtualdesktop.state.store.StoreSubscriber;
 import org.jwellman.virtualdesktop.state.store.Subscription;
 import org.jwellman.virtualdesktop.tools.ToolEnvironment;
+import org.jwellman.virtualdesktop.tools.ToolIcons;
 import org.jwellman.virtualdesktop.tools.ToolService;
 
 /**
@@ -34,8 +35,9 @@ import org.jwellman.virtualdesktop.tools.ToolService;
  * reported by the view. The controller never references concrete view classes;
  * swapping the view (JList, SmartGrid, etc.) requires no changes here.
  *
- * <p>Lifecycle operations go through {@link ToolService} — not DesktopManager —
- * so this controller stays on the application interface.</p>
+ * <p>Lifecycle operations go through {@link ToolService}. Display data (title, icon)
+ * comes from {@link ToolInstance} in the store via {@link ToolIcons} — not from
+ * DesktopManager frames.</p>
  *
  * @author rwellman
  */
@@ -160,7 +162,7 @@ public class WindowListController implements StoreSubscriber, WindowListViewList
     }
 
     private WindowListItem createWindowListItem(ToolInstance tool) {
-        Icon icon = toolService.getToolIcon(tool.getId());
+        Icon icon = ToolIcons.resolve(tool.getIconKey());
 
         DockingState dockingState = tool.getDockingState();
         DockingIndicator indicator = DockingIndicator.fromState(

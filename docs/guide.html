@@ -808,8 +808,9 @@
         <div class="card-body">
           <p class="text-sm prose-p">
             Make ToolsState authoritative for what is open. The frame map becomes an internal
-            realizer cache for the ToolService / Swing host implementation. Align close/hide
-            semantics (HIDE_ON_CLOSE vs TOOL_CLOSED).
+            realizer cache for the ToolService / Swing host implementation. Product “close”
+            currently <em>withdraws</em> (minimize) until a tool cleanup SPI enables real dispose
+            + TOOL_CLOSED (see DEVELOPER_GUIDE §9 backlog).
           </p>
           <p class="done-when">
             Done when: no view or controller treats EventList&lt;VirtualAppFrame&gt; as the product’s

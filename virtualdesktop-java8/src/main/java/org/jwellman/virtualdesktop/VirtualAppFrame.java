@@ -48,7 +48,7 @@ public class VirtualAppFrame extends JInternalFrame {
               true, //maximizable
               true);//iconifiable
 
-        // TODO Need a hook to close tools and change this to: DISPOSE_ON_CLOSE
+        // Transitional: HIDE_ON_CLOSE (DesktopManager may re-assert). Not DISPOSE until cleanup SPI.
         this.setDefaultCloseOperation(JInternalFrame.HIDE_ON_CLOSE);
 
         // Generate unique ID for state tracking

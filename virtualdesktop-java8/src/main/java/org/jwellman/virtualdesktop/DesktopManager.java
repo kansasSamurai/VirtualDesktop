@@ -132,18 +132,9 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 
     @Override
     public void close(String toolId) {
-        VirtualAppFrame frame = findFrameByToolId(toolId);
-        if (frame == null) {
-            LOG.debug("close: no frame for toolId {} — removing from store if present", toolId);
-            AppStore.get().dispatch(SimpleAction.toolClosed(toolId));
-            return;
-        }
-        try {
-            // DISPOSE_ON_CLOSE → internalFrameClosed → unregister + TOOL_CLOSED
-            frame.setClosed(true);
-        } catch (PropertyVetoException ex) {
-            LOG.debug("close vetoed for toolId {}", toolId);
-        }
+        // Transitional: product "close" = withdraw (minimize), not destroy.
+        // Tools lack a cleanup SPI; disposing would leak unmanaged resources.
+        minimize(toolId);
     }
 
     @Override
@@ -481,9 +472,9 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
             frame.setToolType(spec.getClass().getSimpleName());
         }
 
-        // Close means dispose — ToolsState drops the instance via TOOL_CLOSED.
-        // Minimize remains iconify (TOOL_MINIMIZED); do not use HIDE_ON_CLOSE for the X button.
-        frame.setDefaultCloseOperation(JInternalFrame.DISPOSE_ON_CLOSE);
+        // Transitional: hide on X (not dispose). CLOSING still fires so we can align ToolsState;
+        // CLOSED does not. Real DISPOSE_ON_CLOSE waits on a tool cleanup SPI (DEVELOPER_GUIDE §9).
+        frame.setDefaultCloseOperation(JInternalFrame.HIDE_ON_CLOSE);
 
         // Ensure that this desktop manager is a frame listener...
         frame.addInternalFrameListener(this);
@@ -557,6 +548,7 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 
 	@Override
 	public void internalFrameClosed(InternalFrameEvent e) {
+		// Fires only when a frame is actually disposed (future real-close path).
 		displayMessage("IFRAME :: closed", e);
 
 		JInternalFrame source = e.getInternalFrame();
@@ -571,6 +563,11 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 	@Override
 	public void internalFrameClosing(InternalFrameEvent e) {
 		displayMessage("IFRAME :: closng", e);
+		// HIDE_ON_CLOSE will hide the frame after this; align store + iconify like ToolService.close
+		JInternalFrame source = e.getInternalFrame();
+		if (source instanceof VirtualAppFrame) {
+			minimize(((VirtualAppFrame) source).getToolId());
+		}
 	}
 
 	@Override

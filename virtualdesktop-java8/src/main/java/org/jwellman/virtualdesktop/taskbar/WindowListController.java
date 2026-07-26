@@ -106,6 +106,7 @@ public class WindowListController implements StoreSubscriber, WindowListViewList
 
     @Override
     public void onItemCloseRequested(String toolId) {
+        // Affordance says "close"; ToolService.close currently withdraws (minimize)
         toolService.close(toolId);
     }
 

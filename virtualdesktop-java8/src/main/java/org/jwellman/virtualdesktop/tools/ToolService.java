@@ -27,7 +27,11 @@ public interface ToolService {
     void open(String definitionId);
 
     /**
-     * Closes a running tool instance.
+     * Withdraws a running tool from view.
+     *
+     * <p><strong>Transitional:</strong> until tools have a cleanup / close SPI,
+     * this minimizes (iconifies) rather than disposing. The instance remains in
+     * {@code ToolsState}. Real destroy + {@code TOOL_CLOSED} is backlog.</p>
      *
      * @param toolId running instance id
      */

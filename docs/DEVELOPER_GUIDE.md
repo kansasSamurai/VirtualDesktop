@@ -186,7 +186,7 @@ Listening to frames inside a Swing adapter implementation is fine. Making that a
 - **Model (authoritative):** `AppStore` → `ToolsState`
 - **Swing realizer:** `DesktopManager` toolId → `VirtualAppFrame` map (host plumbing only)
 
-Close uses `DISPOSE_ON_CLOSE` so X / `ToolService.close` both fire `TOOL_CLOSED` and unregister the frame. Minimize remains iconify (`TOOL_MINIMIZED`).
+**Close vs withdraw (transitional):** Product “close” (title-bar X, taskbar close, `ToolService.close`) **minimizes** the tool — it stays in `ToolsState` as `MINIMIZED`. Frames use `HIDE_ON_CLOSE` (X still fires `INTERNAL_FRAME_CLOSING` for verification); the closing listener calls `minimize` so store matches. Real destroy (`DISPOSE_ON_CLOSE` + `TOOL_CLOSED` + unregister) waits on a tool cleanup SPI (see §9 backlog).
 
 ---
 
@@ -262,8 +262,21 @@ See also [`GLOSSARY.md`](../GLOSSARY.md) for project-wide terminology.
 
 ## 9. Where to go next
 
-- Implementing seams: start with **Step 1 or Step 2** (catalog or `ToolService` interface) — both are low drama and unlock the rest.
-- Desktop-only work: follow **DESKTOP.md** once Step 2 exists so shortcut open goes through `ToolService`.
-- Deep docking Redux: wait until Step 3 (ownership) and stable `toolId` bridging — otherwise the model mirrors incomplete events.
+Migration steps 1–6 are in place. Near-term backlog:
 
-When in doubt, ask: *Could I replace this Swing class with another implementation without changing the story in §1?* If no, you are editing an implementation detail that has leaked into the paradigm — extract an interface first.
+### Backlog — Real tool close (cleanup SPI)
+
+Today “close” **withdraws** (minimize) because tools have no teardown hook.
+
+1. Add an optional lifecycle capability (e.g. on `ToolSpec` or a sibling interface): `boolean prepareClose()` / `void onClosed()` (names TBD).
+2. Default no-op allows dispose; tools with resources override `prepareClose` to clean up (or veto).
+3. Switch frames to `DISPOSE_ON_CLOSE`; `ToolService.close` disposes; `internalFrameClosed` unregisters the realizer entry and dispatches `TOOL_CLOSED`.
+4. Taskbar close and title-bar X then mean destroy, not minimize.
+
+Until then, keep withdraw semantics so store and host stay aligned without leaking undisposed tool state.
+
+### Other follow-ons
+
+- Desktop layout persistence (`desktop-layout.json`) — DESKTOP.md Phase 4.
+- `ShortcutInstance.linkedToolId` when a shortcut opens a tool.
+- Deep docking Redux once `toolId` bridging stays stable.

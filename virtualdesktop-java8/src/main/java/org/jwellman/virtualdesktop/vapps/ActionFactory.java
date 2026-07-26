@@ -145,7 +145,7 @@ public class ActionFactory {
             definition = catalog.register(definition);
 
             // desktopOnly in config means "do not put in Tools menu" — adapter placement only
-            DesktopAction action = new DesktopAction(definition, vappConfig.isDesktopOnly());
+            DesktopAction action = new DesktopAction(definition, vappConfig.isDesktopOnly(), iconKey);
             applyIcons(action, iconKey, "add196");
             getListOfActions().add(action);
 
@@ -174,7 +174,7 @@ public class ActionFactory {
                 definition = catalog.register(definition);
             }
 
-            DesktopAction action = new DesktopAction(definition, true);
+            DesktopAction action = new DesktopAction(definition, true, iconKey);
             // Shortcut tiles prefer the shortcut label when present
             if (shortcut.getLabel() != null && !shortcut.getLabel().isEmpty()) {
                 action.putValue(Action.NAME, shortcut.getLabel());
@@ -227,7 +227,7 @@ public class ActionFactory {
 
             definition = catalog.register(definition);
 
-            DesktopAction action = new DesktopAction(definition, appConfig.isDesktopOnly());
+            DesktopAction action = new DesktopAction(definition, appConfig.isDesktopOnly(), iconKey);
             applyIcons(action, iconKey, "winking18");
             getListOfActions().add(action);
 

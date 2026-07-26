@@ -58,4 +58,24 @@ public final class ActionTypes {
     /** Dispatched when a tool is selected in the window list */
     public static final String WINDOWLIST_TOOL_SELECTED = "WINDOWLIST_TOOL_SELECTED";
 
+    // ========== Desktop shortcuts ==========
+
+    /** Dispatched when a shortcut is added to the desktop */
+    public static final String SHORTCUT_ADDED = "SHORTCUT_ADDED";
+
+    /** Dispatched when a shortcut is removed from the desktop */
+    public static final String SHORTCUT_REMOVED = "SHORTCUT_REMOVED";
+
+    /** Dispatched when a shortcut is selected */
+    public static final String SHORTCUT_SELECTED = "SHORTCUT_SELECTED";
+
+    /** Dispatched when desktop shortcut selection is cleared */
+    public static final String SHORTCUT_DESELECTED = "SHORTCUT_DESELECTED";
+
+    /** Dispatched when a shortcut is moved */
+    public static final String SHORTCUT_MOVED = "SHORTCUT_MOVED";
+
+    /** Dispatched when a shortcut is activated (double-click); open is a side effect */
+    public static final String SHORTCUT_INVOKED = "SHORTCUT_INVOKED";
+
 }

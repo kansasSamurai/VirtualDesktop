@@ -1,0 +1,512 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        
+        {
+            "type": "java",
+            "name": "Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
+            "name": "Interpreter",
+            "request": "launch",
+            "mainClass": "bsh.Interpreter",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "BasicTerminalExample",
+            "request": "launch",
+            "mainClass": "com.jediterm.example.BasicTerminalExample",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "TabbedPaneDemo",
+            "request": "launch",
+            "mainClass": "com.oracle.swingdemo.components.TabbedPaneDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "TextSamplerDemo",
+            "request": "launch",
+            "mainClass": "com.oracle.swingdemo.components.TextSamplerDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "PtyMain",
+            "request": "launch",
+            "mainClass": "ext.com.jediterm.PtyMain",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "CodeSwitcher",
+            "request": "launch",
+            "mainClass": "ext.hsqldb.util.CodeSwitcher",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "DatabaseManager",
+            "request": "launch",
+            "mainClass": "ext.hsqldb.util.DatabaseManager",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "DatabaseManagerSwing",
+            "request": "launch",
+            "mainClass": "ext.hsqldb.util.DatabaseManagerSwing",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "DatabaseManagerSwing2",
+            "request": "launch",
+            "mainClass": "ext.hsqldb.util.DatabaseManagerSwing2",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "MainInvoker",
+            "request": "launch",
+            "mainClass": "ext.hsqldb.util.MainInvoker",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "Transfer",
+            "request": "launch",
+            "mainClass": "ext.hsqldb.util.Transfer",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "fx.Main",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "JFreeChartDemo",
+            "request": "launch",
+            "mainClass": "org.jfree.chart.demo.JFreeChartDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "PieChartDemo1",
+            "request": "launch",
+            "mainClass": "org.jfree.chart.demo2.PieChartDemo1",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "ClipboardHistory",
+            "request": "launch",
+            "mainClass": "org.jwellman.bsh.ClipboardHistory",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "FileBrowser",
+            "request": "launch",
+            "mainClass": "org.jwellman.bsh.FileBrowser",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "FilesInTheJList",
+            "request": "launch",
+            "mainClass": "org.jwellman.bsh.FilesInTheJList",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "PanelBrowser",
+            "request": "launch",
+            "mainClass": "org.jwellman.bsh.PanelBrowser",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "SCCE",
+            "request": "launch",
+            "mainClass": "org.jwellman.bsh.SCCE",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "DumpTable",
+            "request": "launch",
+            "mainClass": "org.jwellman.dbf.DumpTable",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "AdvancedLayoutDesigner",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.AdvancedLayoutDesigner",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "BasicDnD",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.BasicDnD",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "CaptureTransformedCoordinates",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.CaptureTransformedCoordinates",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "CenterTextExample",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.CenterTextExample",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "Composite",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.Composite",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "CompositionEx",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.CompositionEx",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "ContinuousLoopDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.ContinuousLoopDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "DraggableLayoutDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.DraggableLayoutDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "HexColorParser",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.HexColorParser",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "LayeredPaneDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.LayeredPaneDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "LoadingLabelDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.LoadingLabelDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "PointToPointDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.PointToPointDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "RadialGridDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.RadialGridDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "SVGApplication",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.SVGApplication",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "ShadowRendererDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.ShadowRendererDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "SharedCardLayoutDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.SharedCardLayoutDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "SmartGridDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.SmartGridDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "SmoothTurnaroundDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.SmoothTurnaroundDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "SplitPaneDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.SplitPaneDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "TweenComparisonDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.TweenComparisonDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "ChessUiEngine",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.chess.ChessUiEngine",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "ConnectablePanel",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.connectablepanel.ConnectablePanel",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "ConnectablePanelDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.connectablepanel.ConnectablePanelDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "BarChartDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.d3ish.BarChartDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "ProfileBuilderDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.d3ish.ProfileBuilderDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "ProfileBuilderPro",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.d3ish.ProfileBuilderPro",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "StylePrototypeDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.d3ish.StylePrototypeDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "EasingMatrixDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.engine.EasingMatrixDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "FileOrganizerPOC",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.files.FileOrganizerPOC",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "FileOrganizerPOCv1",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.files.FileOrganizerPOCv1",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "VRadialIndicator",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.gauge.VRadialIndicator",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "VRadialIndicator2",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.gauge.VRadialIndicator2",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "VRadialIndicator3",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.gauge.VRadialIndicator3",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "SmartTreePanel",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.smarttree.SmartTreePanel",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "TelemetryStreamDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.telemetry.TelemetryStreamDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "DragDropSnippetPanel",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.textdrag.DragDropSnippetPanel",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "CaseConverterApp",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.textutility.CaseConverterApp",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "TextUtilityApp",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.textutility.TextUtilityApp",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "CentralTimerDemo",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.timer.CentralTimerDemo",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "VisualConnectionSystem",
+            "request": "launch",
+            "mainClass": "org.jwellman.demo.visualconnection.VisualConnectionSystem",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "ProcessBuilderExample",
+            "request": "launch",
+            "mainClass": "org.jwellman.jcx.ProcessBuilderExample",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "UberHandler",
+            "request": "launch",
+            "mainClass": "org.jwellman.standalone.UberHandler",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "ColorSwatchToggleButton",
+            "request": "launch",
+            "mainClass": "org.jwellman.swing.jbutton.ColorSwatchToggleButton",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "ComponentTree",
+            "request": "launch",
+            "mainClass": "org.jwellman.swing.jtree.ComponentTree",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "App",
+            "request": "launch",
+            "mainClass": "org.jwellman.virtualdesktop.App",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "SVGViewerPanel",
+            "request": "launch",
+            "mainClass": "org.jwellman.virtualdesktop.vapps.SVGViewerPanel",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "DateChart05",
+            "request": "launch",
+            "mainClass": "org.jwellman.xchart.DateChart05",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "PipelineScenarioATest",
+            "request": "launch",
+            "mainClass": "org.katacode.pipeline.scenario.PipelineScenarioATest",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "PipelineDesignerPanel",
+            "request": "launch",
+            "mainClass": "org.katacode.pipeline.ui.PipelineDesignerPanel",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "PipelineDesignerPanel_v01",
+            "request": "launch",
+            "mainClass": "org.katacode.pipeline.ui.PipelineDesignerPanel_v01",
+            "projectName": "virtualdesktop-java8"
+        },
+        {
+            "type": "java",
+            "name": "CamelRouteDesignerPanel",
+            "request": "launch",
+            "mainClass": "org.katacode.pipeline.ui.camel.CamelRouteDesignerPanel",
+            "projectName": "virtualdesktop-java8"
+        }
+    ]
+}

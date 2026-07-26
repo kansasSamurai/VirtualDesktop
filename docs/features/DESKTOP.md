@@ -23,18 +23,12 @@ Target architecture mirrors what the taskbar already does well: immutable Redux 
 
 ### How Shortcuts Are Created Today
 
-`App.java` iterates `ActionFactory.getListOfActions()` and manually places each desktop-only action:
+`DesktopController` seeds `DesktopState` from catalog desktop-only actions and pushes
+`DesktopShortcutItem`s into a `DesktopView` (`ClassicDesktopView`). `App` no longer
+builds `VShortcut`s in a loop — swapping desktop looks means implementing `DesktopView`.
 
-```java
-for (DesktopAction a : ActionFactory.getListOfActions()) {
-    if (a.isDesktopOnly()) {
-        VShortcut vs = new VShortcut(a, label, icon, x, y += 80);
-        desktop.add(vs);
-    }
-}
-```
-
-Position is hardcoded (`x=10`, `y` incremented by 80). There is no persistence, layout manager, or grid.
+Default column layout remains `x=10`, `y` stepped by 80 (same visual as before).
+Position persistence (`desktop-layout.json`) is still deferred.
 
 ### VShortcut Visual Design
 
@@ -101,20 +95,20 @@ tying the indicator to the shortcut frame rather than to the icon content.
 
 ### Known Design Deficiencies
 
-**1. `VShortcut` conflates model, view, and controller**
-The class extends `JLabel` and contains data fields, mouse/motion listeners, drag logic, selection state, and painting — all in one 700-line class. This makes it untestable and impossible to observe from outside.
+**1. ~~`VShortcut` conflates model, view, and controller~~ (addressed in Step 5)**
+`VShortcut` is now a tile widget; state lives in `DesktopState`, intents go through `DesktopController`.
 
-**2. Global mutable static selection state**
-`static VShortcut lastItem` and `static VShortcut curItem` (lines 42, 46) track selection outside Redux. Thread-unsafe; not observable; not serializable.
+**2. ~~Global mutable static selection state~~ (addressed in Step 5)**
+Selection is `DesktopState.selectedShortcutId`.
 
-**3. No Redux presence for shortcuts**
-Shortcuts are never dispatched into the store. `invoke()` fires `action.actionPerformed()` directly. There are no `SHORTCUT_*` actions; shortcut state (position, selection, label) is invisible to the rest of the application.
+**3. ~~No Redux presence for shortcuts~~ (addressed in Step 5)**
+`SHORTCUT_*` actions and `DesktopReducer` are live. Layout persistence remains Phase 4.
 
 **4. No lifecycle link between shortcut and tool**
-When a shortcut launches a frame, the resulting `ToolInstance` in Redux has no reference back to the originating shortcut. You cannot query "which shortcut launched this tool."
+`ShortcutInstance.linkedToolId` exists on the model but is not wired yet.
 
 **5. No position persistence**
-Desktop layout is lost on restart.
+Desktop layout is lost on restart (moves update in-memory state only).
 
 ---
 

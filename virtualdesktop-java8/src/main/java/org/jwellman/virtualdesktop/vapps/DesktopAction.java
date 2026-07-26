@@ -29,15 +29,28 @@ public class DesktopAction extends AbstractAction {
 
     private final boolean external;
 
+    /** DSP icon key for this adapter (may differ from catalog definition for desktop shortcuts). */
+    private final String iconKey;
+
     /**
      * @param definition catalog entry this action opens
      * @param desktopOnly true if this adapter is for a desktop shortcut tile only
      */
     public DesktopAction(ToolDefinition definition, boolean desktopOnly) {
+        this(definition, desktopOnly, definition.getIconKey());
+    }
+
+    /**
+     * @param definition catalog entry this action opens
+     * @param desktopOnly true if this adapter is for a desktop shortcut tile only
+     * @param iconKey DSP icon key for this tile/menu entry (shortcut-specific override allowed)
+     */
+    public DesktopAction(ToolDefinition definition, boolean desktopOnly, String iconKey) {
         super(definition.getTitle());
         this.definitionId = definition.getId();
         this.desktopOnly = desktopOnly;
         this.external = definition.isExternal();
+        this.iconKey = iconKey;
         if (definition.getClassName() != null) {
             putValue(ACTION_COMMAND_KEY, definition.getClassName());
         }
@@ -53,6 +66,7 @@ public class DesktopAction extends AbstractAction {
         this.definitionId = null;
         this.desktopOnly = false;
         this.external = false;
+        this.iconKey = null;
     }
 
     /**
@@ -66,6 +80,7 @@ public class DesktopAction extends AbstractAction {
         this.definitionId = null;
         this.desktopOnly = false;
         this.external = false;
+        this.iconKey = null;
     }
 
     @Override
@@ -91,6 +106,28 @@ public class DesktopAction extends AbstractAction {
      */
     public String getDefinitionId() {
         return definitionId;
+    }
+
+    /**
+     * @return DSP icon key for this adapter, or null
+     */
+    public String getIconKey() {
+        return iconKey;
+    }
+
+    /**
+     * Stable id for a desktop tile. Desktop shortcuts that share a definition
+     * (e.g. Home and Trash both targeting SpecJCXConsole) must not collide.
+     *
+     * @return unique shortcut id for DesktopState
+     */
+    public String getShortcutId() {
+        if (!desktopOnly || definitionId == null) {
+            return definitionId;
+        }
+        Object name = getValue(NAME);
+        String label = name != null ? name.toString() : "untitled";
+        return "shortcut:" + definitionId + ":" + label;
     }
 
     /**

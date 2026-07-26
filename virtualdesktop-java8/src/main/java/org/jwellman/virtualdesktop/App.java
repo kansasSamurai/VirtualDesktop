@@ -40,11 +40,12 @@ import org.jwellman.dsp.GoogleMaterialIconProvider;
 import org.jwellman.dsp.icons.IconSpecifier;
 import org.jwellman.swing.plaf.metal.MetalThemeManager ;
 import org.jwellman.swing.thirdparty.BetterMemoryMonitor;
+import org.jwellman.virtualdesktop.desktop.ClassicDesktopView;
+import org.jwellman.virtualdesktop.desktop.DesktopController;
 import org.jwellman.virtualdesktop.desktop.DialogManager;
 import org.jwellman.virtualdesktop.desktop.IconRegistryLoader;
 import org.jwellman.virtualdesktop.desktop.VActionLNF;
 import org.jwellman.virtualdesktop.desktop.VException;
-import org.jwellman.virtualdesktop.desktop.VShortcut;
 import org.jwellman.virtualdesktop.desktopmgr.VAppListCellRenderer;
 import org.jwellman.virtualdesktop.docking.DockingBootstrap;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
@@ -58,7 +59,6 @@ import org.jwellman.virtualdesktop.vapps.DesktopAction;
 import org.jwellman.virtualdesktop.vapps.MenuGroup;
 import org.jwellman.virtualdesktop.vapps.VappConfig;
 import org.jwellman.virtualdesktop.vapps.VappsConfig;
-import org.jwellman.virtualdesktop.vswing.VDesktopPane;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,6 +103,10 @@ public class App extends JFrame implements ActionListener {
     /** Redux-backed window list controller (version 6+) */
     @SuppressWarnings("unused")
     private WindowListController windowListController;
+
+    /** Redux-backed desktop shortcuts controller */
+    @SuppressWarnings("unused")
+    private DesktopController desktopController;
 
     /** Shared skin action list — same instances used by the Skin menu and the settings dialog. */
     private VActionLNF[] skinActions;
@@ -151,7 +155,8 @@ public class App extends JFrame implements ActionListener {
 
         JPanel controls = null;
 
-        desktop = new VDesktopPane(); // new JDesktopPane(); //a specialized layered pane
+        ClassicDesktopView classicDesktop = new ClassicDesktopView();
+        desktop = classicDesktop.getDesktopPane();
         DesktopManager.get().setDesktop(desktop);
 
         // COMPOSITION ROOT (tool services) — Host objects that services need already exist
@@ -161,6 +166,9 @@ public class App extends JFrame implements ActionListener {
         // the phase where those dependencies should be bound — after host wiring, before
         // consumers. ActionFactory.initDesktop() is today's stand-in for that bind step.
         ActionFactory.initDesktop();
+
+        // Desktop shortcuts: controller seeds DesktopState and drives ClassicDesktopView
+        this.desktopController = new DesktopController(classicDesktop);
 
         int version = 6; // 5=GlazedLists, 6=Redux WindowListController
         switch (version) {
@@ -263,24 +271,9 @@ public class App extends JFrame implements ActionListener {
 
         DesktopAction.setDesktop(this);
 
-        // These are for desktop layout... this is VERY inelegant...
-        // this needs to be from persistence mechanism ...
-        // and overall, there needs to be a "layout manager" for the desktop
-        int x = 10; int y = -70;
-
         // Build hierarchical menu structure
         buildVAppsMenu();
 
-        // Add desktop shortcuts (catalog already loaded in initDesktop above)
-        for (DesktopAction a : ActionFactory.getListOfActions()) {
-            if (a.isDesktopOnly()) {
-                final Icon icon = (Icon) a.getValue(Action.LARGE_ICON_KEY);
-                final String label = (String) a.getValue(Action.NAME);
-                final VShortcut vs = new VShortcut(a, label, icon, x, y+=80);
-                desktop.add(vs);
-            }
-        }
-        
         // Initialize the docking service (composition root — not Spec)
         DockingBootstrap.initialize(this);
 

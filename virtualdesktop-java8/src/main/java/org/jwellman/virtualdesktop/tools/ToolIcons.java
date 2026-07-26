@@ -23,6 +23,30 @@ public final class ToolIcons {
     }
 
     /**
+     * Resolve an icon key to a large/desktop-tile Icon.
+     *
+     * @param iconKey catalog key (without -small/-large suffix), or null
+     * @return a non-null icon when DSP has the fallback; may be null if DSP fails entirely
+     */
+    public static Icon resolveLarge(String iconKey) {
+        if (iconKey != null && !iconKey.isEmpty()) {
+            Icon icon = tryKey(iconKey + "-large");
+            if (icon != null) {
+                return icon;
+            }
+            icon = tryKey(iconKey + "-small");
+            if (icon != null) {
+                return icon;
+            }
+            icon = tryKey(iconKey);
+            if (icon != null) {
+                return icon;
+            }
+        }
+        return tryKey(FALLBACK_KEY);
+    }
+
+    /**
      * Resolve an icon key to a small/taskbar-sized Icon.
      *
      * @param iconKey catalog key (without -small/-large suffix), or null

@@ -114,6 +114,33 @@ public final class SimpleAction implements Action {
         return new SimpleAction(ActionTypes.WINDOWLIST_TOOL_SELECTED, toolId);
     }
 
+    // ========== Factory Methods for Desktop Shortcuts ==========
+
+    public static Action shortcutAdded(org.jwellman.virtualdesktop.state.model.ShortcutInstance shortcut) {
+        return new SimpleAction(ActionTypes.SHORTCUT_ADDED, shortcut);
+    }
+
+    public static Action shortcutRemoved(String shortcutId) {
+        return new SimpleAction(ActionTypes.SHORTCUT_REMOVED, shortcutId);
+    }
+
+    public static Action shortcutSelected(String shortcutId) {
+        return new SimpleAction(ActionTypes.SHORTCUT_SELECTED, shortcutId);
+    }
+
+    public static Action shortcutDeselected() {
+        return new SimpleAction(ActionTypes.SHORTCUT_DESELECTED, null);
+    }
+
+    public static Action shortcutMoved(String shortcutId, int x, int y) {
+        return new SimpleAction(ActionTypes.SHORTCUT_MOVED,
+            new ShortcutMovedPayload(shortcutId, x, y));
+    }
+
+    public static Action shortcutInvoked(String shortcutId) {
+        return new SimpleAction(ActionTypes.SHORTCUT_INVOKED, shortcutId);
+    }
+
     // ========== Payload Classes ==========
 
     /**
@@ -164,6 +191,26 @@ public final class SimpleAction implements Action {
         @Override
         public String toString() {
             return "DockingPayload{target=" + targetToolId + ", panel=" + panelId + ", source=" + sourceToolId + "}";
+        }
+    }
+
+    /**
+     * Payload for SHORTCUT_MOVED.
+     */
+    public static final class ShortcutMovedPayload {
+        public final String shortcutId;
+        public final int x;
+        public final int y;
+
+        public ShortcutMovedPayload(String shortcutId, int x, int y) {
+            this.shortcutId = shortcutId;
+            this.x = x;
+            this.y = y;
+        }
+
+        @Override
+        public String toString() {
+            return "ShortcutMovedPayload{id=" + shortcutId + ", x=" + x + ", y=" + y + "}";
         }
     }
 

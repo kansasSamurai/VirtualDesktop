@@ -9,226 +9,171 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
-import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
-import java.net.URL;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.swing.Action;
 import javax.swing.BorderFactory;
 import javax.swing.Icon;
-import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
 import javax.swing.border.Border;
 import javax.swing.plaf.ComponentUI;
 
-import org.apache.batik.transcoder.TranscoderException;
-import org.jwellman.virtualdesktop.vapps.DesktopAction;
-
 /**
- * A desktop shortcut
+ * Desktop shortcut tile — rendering and input only.
+ *
+ * <p>Does not hold Actions or mutate application state. User gestures are
+ * reported through {@link TileListener} to the owning {@link DesktopView}.</p>
  *
  * @author Rick Wellman
  */
 public class VShortcut extends JLabel {
 
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	/** The last shortcut that was selected. */
-    private static VShortcut lastItem;
+    private static final Logger log = Logger.getLogger(VShortcut.class.getName());
 
-    /** The shortcut where the mouse is being hovered over (i.e. can also be null) */
-    @SuppressWarnings("unused")
-    private static VShortcut curItem;
-
-    /** Logger for this class */
-    private static final Logger log = Logger.getLogger(VShortcut.class.getName() );
-
-    /** Standard padding for all shortcuts */
     private static final Border PADDING = BorderFactory.createEmptyBorder(12, 12, 12, 12);
 
-    /** Label font — will become theme-configurable in the future */
     private static final Font LABEL_FONT = new Font("Segoe UI", Font.PLAIN, 11);
 
-    /** ... */
-    private Action action;
+    /** Callback for gesture reporting (set by ClassicDesktopView). */
+    public interface TileListener {
+        void onSelected(String shortcutId);
+        void onActivated(String shortcutId);
+        void onMoved(String shortcutId, int x, int y);
+        void onContextRequested(String shortcutId, Point screenPoint);
+    }
 
-    /** True when this shortcut launches an external (OS-level) application. */
+    private String shortcutId;
     private boolean external;
+    private TileListener tileListener;
+    private boolean selected;
+    private JLayeredPane pane;
+    private MyMouseMotionListener mml;
 
-    public VShortcut(String label, Icon icon, int yPos, int xPos) {
+    @SuppressWarnings("unused")
+    private ComponentUI oldUI;
+
+    protected static MyUI myui = new MyUI(new Color(24, 26, 32, 140));
+    protected static MyUI actui = new MyUI(new Color(0, 0, 255, 20));
+    protected static MyUI selui = new MyUI(new Color(0, 0, 255, 55));
+    protected static MyUI selactui = new MyUI(new Color(0, 0, 255, 90));
+    protected static boolean transparentBg = true;
+
+    /**
+     * Primary constructor for controller-driven desktops.
+     */
+    public VShortcut(String shortcutId, String label, Icon icon, boolean external, int x, int y) {
         super();
-        this.init(null, label, icon, xPos, yPos);
-    }
-
-    public VShortcut(String label, int xPos, int yPos ) {
-        super();
-        this.init(null, label, (Icon)null, xPos, yPos);
-    }
-
-    public VShortcut(String label, String iconPath, int xPos, int yPos ) {
-        super();
-        final Icon icon = this.genIcon(iconPath);
-        this.init(null, label, icon, xPos, yPos);
-    }
-
-    public VShortcut(DesktopAction a, String label, Icon icon, int x, int y) {
-        this.init(a, label, icon, x, y);
-    }
-
-    private void init(Action a, String label, Icon icon, int yPos, int xPos) {
-        this.action   = a;
-        this.external = (a instanceof DesktopAction) && ((DesktopAction) a).isExternal();
-
+        this.shortcutId = shortcutId;
+        this.external = external;
         this.setText(label);
         this.setFont(LABEL_FONT);
         this.setHorizontalAlignment(JLabel.CENTER);
-
         this.setOpaque(false);
         this.setVerticalTextPosition(JLabel.BOTTOM);
         this.setHorizontalTextPosition(JLabel.CENTER);
 
-        // TODO we need a pane parameter; this may be critical at some point in the future;
-        // or... more likely?  all shortcuts go one the same [bottom-most] layer
-        this.pane = pane;
-
         oldUI = getUI();
-        if ( transparentBg ) { setUI( myui ); }
+        if (transparentBg) {
+            setUI(myui);
+        }
 
-        this.setLocation(xPos, yPos);
-
-        this.setBorder();
+        this.setLocation(x, y);
+        this.setBorder(PADDING);
         this.setIcon(icon);
 
         this.setSize(this.getPreferredSize());
-
         final Dimension d = this.getSize();
-//        this.setSize(75, 75);
         this.setSize(IconRegistryLoader.getShortcutWidth(), d.height);
-//      this.setSize(icon.getIconWidth() + 10, icon.getIconHeight() + d.height);
-
         this.setVisible(true);
 
         initMouseListeners();
-
     }
 
     /**
-     * Creates a DeskItem that is on a JLayeredPane with the passed String identifier.
-     *
-     * @param pane The JLayeredPane that the item will be placed on.
-     * @param label The Label string to use.
+     * Apply updated view-model data without recreating the component.
      */
-    public VShortcut( JLayeredPane pane, String label, String iconPath, int xPos, int yPos ) {
-    }
-
-    private Icon genIcon(String iconPath) {
-        Icon img = null;
-
-        // This is just a randomly chosen default; subject to change
-        String path = (iconPath != null) ? iconPath : "org/jwellman/virtualdesktop/images/global_ui/add196";
-
-        int genType = 2; // 1 = png, 2 = svg
-        final String ext = (genType == 1) ? ".png" : ".svg";
-        final URL url = this.getClass().getClassLoader().getResource(path + ext);
-        switch (genType) {
-            case 1:
-                img = new ImageIcon(url);
-
-                break;
-            case 2:
-                try {
-                    final Icon i = new VIcon(url.toString(), 32, 32);
-                    img = i;
-                } catch (TranscoderException ex) {
-                    Logger.getLogger(VShortcut.class.getName()).log(Level.SEVERE, null, ex);
-                }
-                break;
+    public void applyItem(DesktopShortcutItem item) {
+        this.shortcutId = item.getId();
+        this.external = item.isExternal();
+        this.setText(item.getLabel());
+        this.setIcon(item.getIcon());
+        if (this.getX() != item.getX() || this.getY() != item.getY()) {
+            this.setLocation(item.getX(), item.getY());
         }
-
-        return img;
+        this.setSize(this.getPreferredSize());
+        final Dimension d = this.getSize();
+        this.setSize(IconRegistryLoader.getShortcutWidth(), d.height);
+        repaint();
     }
 
-    /** Activates all the mouse listening activities */
+    public void setTileListener(TileListener listener) {
+        this.tileListener = listener;
+    }
+
+    public String getShortcutId() {
+        return shortcutId;
+    }
+
+    public boolean isExternal() {
+        return external;
+    }
+
+    /**
+     * Visual selection driven by DesktopView.setSelectedId — not static globals.
+     */
+    public void setSelected(boolean selected) {
+        this.selected = selected;
+        if (transparentBg) {
+            setUI(selected ? selui : myui);
+        }
+        repaint();
+    }
+
+    public boolean isSelected() {
+        return selected;
+    }
+
+    /**
+     * Optional layered pane for drag elevation (when set by the host).
+     */
+    public void setLayeredPane(JLayeredPane pane) {
+        this.pane = pane;
+    }
+
     private void initMouseListeners() {
-        addMouseListener( new MyEnterExitAdapter() );
-        addMouseListener( new MyMouseAdapter() );
+        addMouseListener(new MyEnterExitAdapter());
+        addMouseListener(new MyMouseAdapter());
     }
 
-    /**
-     * Used to deselect the last selected DeskItem so that none are active.
-     * This can be called when the background of the desk is clicked on,
-     * or some other focus change event.
-     */
-    public static synchronized void clearSelection() {
-        if ( lastItem != null ) { lastItem.exit(); }
-        lastItem = null;
+    private void fireSelected() {
+        if (tileListener != null && shortcutId != null) {
+            tileListener.onSelected(shortcutId);
+        }
     }
 
-    /**
-     * This is called when the item is double clicked on.
-     * A subclass can provide an action here.
-     * @param e an ActionEvent
-     */
-    public void invoke(ActionEvent e) {
-        log.finer("Double-click desktop item");
-        System.out.println("Double-click desktop item");
-        this.action.actionPerformed(e);
+    private void fireActivated() {
+        if (tileListener != null && shortcutId != null) {
+            tileListener.onActivated(shortcutId);
+        }
     }
 
-    /**
-     * Called to report exception encountered during processing of events.
-     * @param ex The Exception to report.
-     */
-    protected void reportException( Exception ex ) {
-        log.log( Level.SEVERE, ex.toString(), ex );
+    private void fireMoved() {
+        if (tileListener != null && shortcutId != null) {
+            tileListener.onMoved(shortcutId, getX(), getY());
+        }
     }
 
-    /**
-     * Make the selectable object bigger to surround the text with coloring.
-     */
-    protected void setBorder() {
-        setBorder( PADDING );
-    }
-
-    /**
-     * Called when the mouse enters this DeskItem.
-     */
-    protected void enter() {
-        curItem = this;
-        selected = true;
-        if( transparentBg ) { setUI( selui ); }
-        // setOpaque( true );
-        repaint();
-    }
-
-    /**
-     * Called when the mouse exits this DeskItem.
-     */
-    protected void exit() {
-        curItem = null;
-        selected = false;
-        if( transparentBg ) { setUI( myui ); }
-        // setOpaque( false );
-        repaint();
-    }
-
-    /**
-     * Called when the user performs a context menu click using the popup trigger button/operation
-     * associated with the component.
-     *
-
-     * Subclasses can override this method to provide an operation.
-     *
-     * @param ev The associated mouse event to get the context from.
-     */
-    protected void popup( MouseEvent ev ) {
-        System.out.println("Right-click desktop item");
+    private void fireContext(MouseEvent ev) {
+        if (tileListener != null && shortcutId != null) {
+            tileListener.onContextRequested(shortcutId, ev.getLocationOnScreen());
+        }
     }
 
     private class MyEnterExitAdapter extends MouseAdapter {
@@ -237,7 +182,6 @@ public class VShortcut extends JLabel {
         public void mouseEntered(MouseEvent ev) {
             if (transparentBg) {
                 setUI(selected ? selactui : actui);
-                // setOpaque(true);
             }
             repaint();
         }
@@ -246,301 +190,156 @@ public class VShortcut extends JLabel {
         public void mouseExited(MouseEvent ev) {
             if (transparentBg) {
                 setUI(selected ? selui : myui);
-                // setOpaque(selected);
             }
             repaint();
         }
     }
 
-    /**
-     * The MouseAdapter that handles click events to establish the MouseMotionListener.
-     */
     private class MyMouseAdapter extends MouseAdapter {
-        /**
-         * The item this listener is associated with.
-         */
-        VShortcut item;
 
-        /**
-         * Creates an instance.
-         */
-        public MyMouseAdapter() {
-            this.item = VShortcut.this;
-        }
-
-        /**
-         * Called when the user double clicks on the DeskItem.
-         * @param ev The event associated with the click operation.
-         */
         @Override
-        public void mouseClicked( MouseEvent ev ) {
-            if( ev.getClickCount() == 2 && ev.getButton() == 1 ) {
-                log.log(Level.FINER, "Invoking: {0}", VShortcut.this);
-                try {
-                    // Invoke the item to process any action.
-                    item.invoke( new ActionEvent(
-                    		ev.getSource(), 
-                    		ActionEvent.ACTION_FIRST, 
-                    		(String)action.getValue(Action.NAME)) );
-                } catch( Exception ex ) {
-                    reportException(ex);
-                }
+        public void mouseClicked(MouseEvent ev) {
+            if (ev.getClickCount() == 2 && ev.getButton() == MouseEvent.BUTTON1) {
+                log.log(Level.FINER, "Activating shortcut: {0}", shortcutId);
+                fireActivated();
             }
         }
 
-        /**
-         * Called when the mouse is pressed down.
-         * @param ev The associated event.
-         */
         @Override
-        public void mousePressed( MouseEvent ev ) {
-            // Check if popup
-            if( ev.isPopupTrigger() ) {
-                // switch selected to this item
-                if( lastItem != VShortcut.this ) {
-                    lastItem.exit();
-                }
-                lastItem = VShortcut.this;
-                lastItem.enter();
-
-                // Show the menu if any
-                popup(ev);
+        public void mousePressed(MouseEvent ev) {
+            if (ev.isPopupTrigger()) {
+                fireSelected();
+                fireContext(ev);
                 return;
             }
 
-            // Not popup, so clear last selected
-            if( lastItem != null ) {
-                lastItem.exit();
+            if (ev.getButton() != MouseEvent.BUTTON1) {
+                return;
             }
 
-            // If not button 1, just ignore
-            if ( ev.getButton() != 1 ) return;
-
-            // Activate motion listener and wait for drag.
+            fireSelected();
             createMotionListener(ev);
-
-            // Add the mouse listener created, or already existing.
             VShortcut.this.addMouseMotionListener(mml);
         }
 
-        /**
-          * Called to create the MouseMotionListener when the drag operation starts.
-          * @param ev The associated mouse event.
-          */
         private void createMotionListener(MouseEvent ev) {
-            lastItem = VShortcut.this;
-            lastItem.enter();            
-            //Point p = lastItem.getLocation();
-            
             final int offx = ev.getX();
             final int offy = ev.getY();
-
-            // Create new listener as needed
-            if( mml == null ) {
+            if (mml == null) {
                 mml = new MyMouseMotionListener();
             }
-
-            // Set drag offsets into object
-            mml.setOffsets( offx, offy );
+            mml.setOffsets(offx, offy);
         }
 
-        /**
-         * Called when the mouse button is released.
-         * @param ev The associated event.
-         */
         @Override
-        public void mouseReleased( MouseEvent ev ) {
-
-            if( ev.isPopupTrigger() ) {
-                // Make sure the correct last item is identified.
-                if( lastItem != null && lastItem != VShortcut.this ) {
-                    lastItem.exit();
+        public void mouseReleased(MouseEvent ev) {
+            if (ev.isPopupTrigger()) {
+                fireSelected();
+                fireContext(ev);
+                if (mml != null) {
+                    VShortcut.this.removeMouseMotionListener(mml);
                 }
-
-                lastItem = VShortcut.this;
-                lastItem.enter();
-                popup(ev);
-
-                // Stop listening to mouse motion events.
-                if ( mml != null ) VShortcut.this.removeMouseMotionListener(mml);
-
                 return;
             }
 
-            // Not popup, remove motion listener
-            VShortcut.this.removeMouseMotionListener(mml);
+            if (mml != null) {
+                VShortcut.this.removeMouseMotionListener(mml);
+                if (mml.didDrag()) {
+                    fireMoved();
+                }
+            }
 
-            // When dropped, move back to the default layer.
-            if( pane != null ) {
-                pane.setLayer(VShortcut.this,
-                    JLayeredPane.DEFAULT_LAYER.intValue(), 0 );
+            if (pane != null) {
+                pane.setLayer(VShortcut.this, JLayeredPane.DEFAULT_LAYER.intValue(), 0);
             }
         }
     }
 
-    private static final Color SLATE_140 = new Color(24, 26, 32, 140);
-
-    /** The original UI that we revert to when not selected, hovered or otherwise active. */
-    @SuppressWarnings("unused")
-	private ComponentUI oldUI;
-
-    /** Is this DeskItem in a selected state? */
-    protected boolean selected;
-
-    /** The JLayeredPane we are on, if any. */
-    private JLayeredPane pane;
-
-    /** The MouseMotionListener created to manage our drag state. */
-    private MyMouseMotionListener mml;
-
-    /** The ComponentUI used for normal rendering. */
-    protected static MyUI myui = new MyUI( SLATE_140 );
-
-    /** The ComponentUI used for active rendering (hover). */
-    protected static MyUI actui = new MyUI( new Color( 0, 0, 255, 20) );
-
-    /** The ComponentUI used for selected state. */
-    protected static MyUI selui = new MyUI( new Color( 0, 0, 255, 55 ) );
-
-    /** The ComponentUI used for selected and active rendering (hover). */
-    protected static MyUI selactui = new MyUI( new Color( 0, 0, 255, 90 ) );
-
-    /** Should gradient rendering be done at all? */
-    protected static boolean transparentBg = true;
-
-    /**
-     * The MouseMotionAdapter used to track the drag operation.
-     */
     private class MyMouseMotionListener extends MouseMotionAdapter {
 
-        /** The x offset of the initial mouse click from the left edge of the DeskItem. */
         int offx;
-
-        /** The y offset of the mouse from the top of the DeskItem */
         int offy;
+        private boolean dragged;
 
-        /**
-          * Updates the current offsets for each successive drag operation
-          * to the click point that the mouse was out when the mouse was pressed.
-          * @param x The X location of the initial mouse down event.
-          * @param y The Y location of the initial mouse down event.
-          */
-        public void setOffsets(int x, int y ) {
+        public void setOffsets(int x, int y) {
             offx = x;
             offy = y;
+            dragged = false;
         }
 
-        /**
-          * Called when the mouse is moved without a button down.
-          * @param ev The associated event for this operation.
-          */
+        public boolean didDrag() {
+            return dragged;
+        }
+
         @Override
-        public void mouseMoved( MouseEvent ev ) {
+        public void mouseMoved(MouseEvent ev) {
             mouseDragged(ev);
         }
 
-        /**
-          * Called when the mouse is moved with button one down.
-          * @param ev The associated mouse event.
-          */
         @Override
-        public void mouseDragged( MouseEvent ev ) {
+        public void mouseDragged(MouseEvent ev) {
+            dragged = true;
             Point pt = getLocation();
-            Point p = new Point( ev.getX()+pt.x-offx, ev.getY()+pt.y-offy );
+            Point p = new Point(ev.getX() + pt.x - offx, ev.getY() + pt.y - offy);
 
-            // Positioning is every 5 pixels to make it easier to line things up.
             int xoff = p.x % 5;
             int yoff = p.y % 5;
+            p = new Point(p.x - xoff + 5, p.y - yoff + 5);
 
-            p = new Point( p.x-xoff+5, p.y-yoff+5 );
-
-            // On a JDesktopPane, change the layer so that we pass over everything on the desktop
-            if( pane != null ) {
-                pane.setLayer(VShortcut.this, JLayeredPane.DRAG_LAYER.intValue() );
+            if (pane != null) {
+                pane.setLayer(VShortcut.this, JLayeredPane.DRAG_LAYER.intValue());
             }
 
-            setLocation( p.x, p.y );
+            setLocation(p.x, p.y);
         }
     }
 
-    /**
-      * The UI used to control the drawing of the DeskItem
-      * without having to conditionalize the paint operations.
-      */
     @SuppressWarnings("restriction")
-	private static class MyUI extends com.sun.java.swing.plaf.windows.WindowsLabelUI {
+    private static class MyUI extends com.sun.java.swing.plaf.windows.WindowsLabelUI {
 
-        private static final Color MUTED_GOLD = new Color(160, 151, 124); // Color(220, 168, 66);
+        private static final Color MUTED_GOLD = new Color(160, 151, 124);
         private static final Stroke STROKE_1_0 = new BasicStroke(1.5f);
-        
-        /** The color of the background. */
+
         Color col;
 
-        /**
-         * Constructs an instance with the default coloring using the 
-         * default background color associated with the look and feel.
-         */
-        @SuppressWarnings("unused")
-		public MyUI() {
-            col = new JLabel().getBackground();
-        }
-
-        /**
-          * Constructs and instance using the passed color for the background.
-          * @param c The color to use for the background painting operations.
-          */
-        public MyUI( Color c ) {
+        public MyUI(Color c) {
             col = c;
-            
         }
 
-        /**
-          * Called to perform the paint operation on the passed component.
-          *
-          * @param g The graphics context for the paint operation.
-          * @param c The component to paint into the graphics environment.
-          */
         @Override
         public void update(Graphics g, JComponent c) {
-            if( !transparentBg ) {
-                super.update( g, c );
+            if (!transparentBg) {
+                super.update(g, c);
             } else {
-                final Graphics2D g2 = (Graphics2D)g;
+                final Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                final int w = c.getWidth()-1;
-                final int h = c.getHeight()-1;
+                final int w = c.getWidth() - 1;
+                final int h = c.getHeight() - 1;
                 final int arc = 15;
-                
+
                 final Color original = g2.getColor();
 
-                    g2.setColor(col);
-                    // g2.fillRect(0, 0, c.getWidth(),c.getHeight());
-                    g2.fillRoundRect(0, 0, w, h, arc, arc );
+                g2.setColor(col);
+                g2.fillRoundRect(0, 0, w, h, arc, arc);
 
-                    // 2. Draw the Signature Accent Border
-                    g2.setColor(MUTED_GOLD); // Kansas Samurai Muted Gold
+                g2.setColor(MUTED_GOLD);
+                g2.setStroke(STROKE_1_0);
+                g2.drawRoundRect(0, 0, w, h, arc, arc);
 
-                    // Set a nice, thin line weight (FlatLaf's border weight can be customized)
-                    g2.setStroke(STROKE_1_0); // Fine, precise 1px border
-
-                    // Draw the exact same rounded rectangle path on top of the fill
-                    g2.drawRoundRect(0, 0, w, h, arc, arc);
-
-                g2.setColor( original );
+                g2.setColor(original);
 
                 super.update(g, c);
 
                 if (c instanceof VShortcut && ((VShortcut) c).external) {
-                    final JLabel  label  = (JLabel) c;
-                    final Icon    icon   = label.getIcon();
+                    final JLabel label = (JLabel) c;
+                    final Icon icon = label.getIcon();
                     if (icon != null) {
-                        final java.awt.Insets ins  = c.getInsets();
-                        final int iy2 = ins.top + icon.getIconHeight();  // icon bottom edge
+                        final java.awt.Insets ins = c.getInsets();
+                        final int iy2 = ins.top + icon.getIconHeight();
 
-                        final int AS = 8;  // arrow span (axis-aligned units per axis)
-                        final int AH = 3;  // arrowhead arm length
+                        final int AS = 8;
+                        final int AH = 3;
 
-                        // tip: 6px inside tile's right border; 3px below icon-based position
                         final int tipX = w - 6;
                         final int tipY = iy2 - AS + 3;
 
@@ -548,9 +347,9 @@ public class VShortcut extends JLabel {
                         g2.setStroke(STROKE_1_0);
                         g2.setColor(MUTED_GOLD);
 
-                        g2.drawLine(tipX - AS, tipY + AS, tipX, tipY);  // stem
-                        g2.drawLine(tipX,      tipY,      tipX - AH, tipY);       // arrowhead left
-                        g2.drawLine(tipX,      tipY,      tipX,      tipY + AH);  // arrowhead down
+                        g2.drawLine(tipX - AS, tipY + AS, tipX, tipY);
+                        g2.drawLine(tipX, tipY, tipX - AH, tipY);
+                        g2.drawLine(tipX, tipY, tipX, tipY + AH);
 
                         g2.setColor(original);
                         g2.setStroke(savedStroke);
@@ -558,7 +357,6 @@ public class VShortcut extends JLabel {
                 }
             }
         }
-
     }
 
 }

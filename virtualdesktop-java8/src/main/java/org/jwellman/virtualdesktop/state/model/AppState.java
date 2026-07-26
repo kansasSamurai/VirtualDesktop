@@ -11,11 +11,13 @@ public final class AppState {
 
     private final ToolsState tools;
     private final WindowListState windowList;
+    private final DesktopState desktop;
     private final long timestamp;
 
-    private AppState(ToolsState tools, WindowListState windowList, long timestamp) {
+    private AppState(ToolsState tools, WindowListState windowList, DesktopState desktop, long timestamp) {
         this.tools = tools;
         this.windowList = windowList;
+        this.desktop = desktop;
         this.timestamp = timestamp;
     }
 
@@ -26,6 +28,7 @@ public final class AppState {
         return new AppState(
             ToolsState.empty(),
             WindowListState.initial(),
+            DesktopState.empty(),
             System.currentTimeMillis()
         );
     }
@@ -33,8 +36,8 @@ public final class AppState {
     /**
      * Create a new state with updated components.
      */
-    public static AppState create(ToolsState tools, WindowListState windowList) {
-        return new AppState(tools, windowList, System.currentTimeMillis());
+    public static AppState create(ToolsState tools, WindowListState windowList, DesktopState desktop) {
+        return new AppState(tools, windowList, desktop, System.currentTimeMillis());
     }
 
     // ========== Getters ==========
@@ -47,6 +50,10 @@ public final class AppState {
         return windowList;
     }
 
+    public DesktopState getDesktop() {
+        return desktop;
+    }
+
     public long getTimestamp() {
         return timestamp;
     }
@@ -54,16 +61,23 @@ public final class AppState {
     // ========== Copy-on-write modifiers ==========
 
     public AppState withTools(ToolsState newTools) {
-        return new AppState(newTools, windowList, System.currentTimeMillis());
+        return new AppState(newTools, windowList, desktop, System.currentTimeMillis());
     }
 
     public AppState withWindowList(WindowListState newWindowList) {
-        return new AppState(tools, newWindowList, System.currentTimeMillis());
+        return new AppState(tools, newWindowList, desktop, System.currentTimeMillis());
+    }
+
+    public AppState withDesktop(DesktopState newDesktop) {
+        return new AppState(tools, windowList, newDesktop, System.currentTimeMillis());
     }
 
     @Override
     public String toString() {
-        return "AppState{tools=" + tools.getToolCount() + ", windowList=" + windowList + "}";
+        return "AppState{tools=" + tools.getToolCount()
+            + ", windowList=" + windowList
+            + ", desktop=" + desktop.getShortcutCount()
+            + "}";
     }
 
 }

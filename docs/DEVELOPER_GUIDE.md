@@ -102,20 +102,20 @@ Views are **interfaces**. Concrete Swing widgets implement them. Controllers sit
 
 | View interface | Reads | User intents go to | Example implementations |
 | :--- | :--- | :--- | :--- |
-| **`DesktopView`** *(target)* | Shortcut layout (`DesktopState`) | open tool, move/select shortcut | Today: ad hoc `VDesktopPane` + `VShortcut` (not yet a view interface) |
+| **`DesktopView`** *(existing)* | Shortcut layout (`DesktopState`) | open tool, move/select shortcut | `ClassicDesktopView` (`VDesktopPane` + `VShortcut` tiles) |
 | **`WindowListView`** *(existing)* | Open tools (`ToolsState` + `WindowListState`) | activate, close, grouping UX | `SmartGridWindowListView`, `JListWindowListView` |
 | **`ToolBrowserView`** *(target, optional)* | Catalog ⊕ which tools are open | launch, or focus if already open | Today: Tools menu (approximate only) |
 
 **`WindowListViewListener`** *(existing)* is the intent channel for the window list. Desktop and browser views should get analogous listener interfaces.
 
-**Controllers** (e.g. existing `WindowListController`; planned `DesktopController`) are implementation classes that: subscribe to the store, push props into a view interface, and call `ToolService` on user intents. They should not be the place that owns docking frameworks or paints pixels.
+**Controllers** (e.g. `WindowListController`, `DesktopController`) are implementation classes that: subscribe to the store, push props into a view interface, and call `ToolService` on user intents. They should not be the place that owns docking frameworks or paints pixels.
 
 ### 3.7 Desktop layout (shortcuts as data)
 
-**`DesktopState` / `Shortcut`** *(target model; described in DESKTOP.md)*  
-Where shortcuts sit, what they point at (definition id), selection, later persistence. This is *data*, not a `JLabel`.
+**`DesktopState` / `ShortcutInstance`** *(existing model)*  
+Where shortcuts sit, what they point at (definition id), selection; position persistence still deferred. This is *data*, not a `JLabel`.
 
-**Existing stand-in:** `DesktopShortcut` config DTO (definition only, no live positions). Runtime tiles are `VShortcut` widgets created in `App` with hardcoded coordinates.
+**Runtime path:** `DesktopController` seeds from catalog desktop-only adapters, pushes `DesktopShortcutItem`s into `DesktopView`. `VShortcut` is a pure tile widget.
 
 ### 3.8 Docking (fundamental; single-host is a special case)
 
@@ -218,11 +218,11 @@ Extend **`ToolInstance`** with definition id and icon key (or icon reference). R
 
 *Done when* the taskbar can render and request lifecycle changes without asking `DesktopManager.getFrames()`.
 
-### Step 5 — Desktop surface follows the taskbar pattern
+### Step 5 — Desktop surface follows the taskbar pattern ✅
 
 Add **`DesktopState`** / shortcut model, a **`DesktopView`** interface + listener, a **`DesktopController`**, and reduce **`VShortcut`** to a pure rendering/input widget (implementation of the view, not the model).
 
-*You have finished this step when* a second desktop look can ship by implementing `DesktopView` only.
+*Done when* a second desktop look can ship by implementing `DesktopView` only.
 
 ### Step 6 — Store becomes the sole open-tool registry
 
@@ -254,7 +254,7 @@ Make **`ToolsState`** authoritative for what is open. The frame map becomes an i
 | Lifecycle API | `ToolService` | `DesktopManager` (impl) |
 | Host chrome | `ToolWindow` | `VirtualAppFrame` (impl) |
 | Open-list UI | `WindowListView` | taskbar / window list |
-| Shortcut surface | `DesktopView` | desktop pane + icons |
+| Shortcut surface | `DesktopView` | `ClassicDesktopView` + `VShortcut` tiles |
 
 See also [`GLOSSARY.md`](../GLOSSARY.md) for project-wide terminology.
 

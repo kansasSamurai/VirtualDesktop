@@ -13,7 +13,9 @@ package org.jwellman.virtualdesktop.tools;
  * ({@code ToolInstance.id} / {@code VirtualAppFrame.toolId}).</p>
  *
  * <p>Display data for open tools (title, icon key) lives on {@code ToolInstance}
- * in the store — views do not ask this service for icons.</p>
+ * in the store — views do not ask this service for icons. {@code ToolsState} is
+ * the authoritative registry of what is open; the Swing host keeps only a
+ * realizer cache of frames.</p>
  */
 public interface ToolService {
 

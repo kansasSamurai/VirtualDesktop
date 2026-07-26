@@ -18,7 +18,6 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JDesktopPane;
 import javax.swing.JFrame;
-import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -46,7 +45,6 @@ import org.jwellman.virtualdesktop.desktop.DialogManager;
 import org.jwellman.virtualdesktop.desktop.IconRegistryLoader;
 import org.jwellman.virtualdesktop.desktop.VActionLNF;
 import org.jwellman.virtualdesktop.desktop.VException;
-import org.jwellman.virtualdesktop.desktopmgr.VAppListCellRenderer;
 import org.jwellman.virtualdesktop.docking.DockingBootstrap;
 import org.jwellman.virtualdesktop.security.NoExitSecurityManager;
 import org.jwellman.virtualdesktop.state.reducers.AppReducer;
@@ -71,8 +69,6 @@ import com.formdev.flatlaf.themes.FlatMacDarkLaf;
 import com.formdev.flatlaf.themes.FlatMacLightLaf;
 import com.jtattoo.plaf.aluminium.AluminiumLookAndFeel;
 
-import ca.odell.glazedlists.swing.DefaultEventListModel;
-import ca.odell.glazedlists.swing.GlazedListsSwing;
 // import org.pushingpixels.substance.api.skin.SubstanceGraphiteLookAndFeel;
 import net.sourceforge.napkinlaf.NapkinLookAndFeel ;
 import net.sourceforge.napkinlaf.NapkinTheme ;
@@ -174,41 +170,16 @@ public class App extends JFrame implements ActionListener {
         switch (version) {
             // previous versions are in source control if needed
             case 5:
-                controls = new JPanel(new BorderLayout());
-
-                DefaultEventListModel<VirtualAppFrame> listmodel = GlazedListsSwing.eventListModel(DesktopManager.get().getFrames());
-
-                final JList<VirtualAppFrame> jlist = new JList<>(listmodel);
-                jlist.setCellRenderer(new VAppListCellRenderer());
-                jlist.addListSelectionListener(DesktopManager.get()); // (new VAppListSelectionListener(jlist));
-                controls.add(jlist, BorderLayout.CENTER); // (new JScrollPane(jlist), BorderLayout.CENTER);
-            	DesktopManager.get().setObservedJList(jlist);
-
-                dsp = new DesktopScrollPane(desktop);
-
-                //Create a split pane with the two scroll panes in it.
-                JSplitPane splitPane2 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, controls, dsp);
-                splitPane2.setOneTouchExpandable(true);
-                splitPane2.setDividerLocation(150);
-                p.add(splitPane2);
-
-                this.setContentPane(p);
-                break;
-
+                // Legacy GlazedLists window list — no longer supported (frames are not an EventList).
+                // Fall through to the Redux WindowListController path.
             case 6:
-                // Redux-backed window list using WindowListController
+                // Redux-backed window list using WindowListController (ToolsState is authoritative)
                 controls = new JPanel(new BorderLayout());
 
                 // JListWindowListView windowListView = new JListWindowListView();
                 SmartGridWindowListView windowListView = new SmartGridWindowListView();
                 this.windowListController = new WindowListController(windowListView);
                 controls.add(windowListView.getComponent(), BorderLayout.CENTER);
-
-                // Still need to set observed JList for DesktopManager compatibility
-                // Create a dummy list for now - DesktopManager will be refactored later
-                DefaultEventListModel<VirtualAppFrame> legacyModel = GlazedListsSwing.eventListModel(DesktopManager.get().getFrames());
-                JList<VirtualAppFrame> legacyList = new JList<>(legacyModel);
-                DesktopManager.get().setObservedJList(legacyList);
 
                 // Power-off button panel at the very bottom of the taskbar
                 JPanel powerPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 4));

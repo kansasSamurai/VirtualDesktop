@@ -47,6 +47,8 @@ public class VirtualAppFrame extends JInternalFrame {
               true, //closable
               true, //maximizable
               true);//iconifiable
+
+        // TODO Need a hook to close tools and change this to: DISPOSE_ON_CLOSE
         this.setDefaultCloseOperation(JInternalFrame.HIDE_ON_CLOSE);
 
         // Generate unique ID for state tracking

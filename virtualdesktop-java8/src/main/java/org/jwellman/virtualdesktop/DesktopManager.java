@@ -2,13 +2,18 @@ package org.jwellman.virtualdesktop;
 
 import java.awt.Container;
 import java.beans.PropertyVetoException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import javax.swing.Icon;
 import javax.swing.JDesktopPane;
 import javax.swing.JInternalFrame;
 import javax.swing.JList;
 import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
 import javax.swing.event.InternalFrameEvent;
 import javax.swing.event.InternalFrameListener;
 import javax.swing.event.ListSelectionEvent;
@@ -31,25 +36,16 @@ import org.jwellman.virtualdesktop.vapps.LaunchAware;
 import org.jwellman.virtualdesktop.vapps.SpecScriptedObject;
 import org.jwellman.virtualdesktop.vapps.VirtualAppSpec;
 
-import ca.odell.glazedlists.BasicEventList;
-import ca.odell.glazedlists.EventList;
-
 /**
- * This class is a SINGLETON... it must be.
- * 
- * A class to manage the lifecycle of Virtual Apps and how they appear on
- * the desktop.  Currently, its main purpose is to control the life cycle
- * and maintain the collection of active applications.
- * 
- * <p>Implements {@link ToolService} (migration step 2): feature code should call
- * lifecycle methods via {@code ToolEnvironment.service()} / {@link ToolService},
- * not via this concrete class. DesktopManager remains the Swing host adapter.</p>
- * 
- * It is envisioned that this class will either help or morph into 
- * an actual Java Desktop Manager.
- * 
- * @author rwellman
+ * Singleton Swing host adapter for open tools.
  *
+ * <p>Implements {@link ToolService}: feature code should call lifecycle methods via
+ * {@code ToolEnvironment.service()} / {@link ToolService}, not via this concrete class.</p>
+ *
+ * <p><strong>Authority:</strong> {@code AppStore}/{@code ToolsState} is the product registry
+ * of what is open. The frame map here is only a Swing realizer cache keyed by toolId.</p>
+ *
+ * @author rwellman
  */
 public class DesktopManager implements ListSelectionListener, InternalFrameListener, ToolService {
 
@@ -57,9 +53,17 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 
     private JDesktopPane desktop;
 
+    /**
+     * Optional legacy JList sync (pre–WindowListController). Null in the current App path.
+     */
     private JList<VirtualAppFrame> observedJList;
 
-    private EventList<VirtualAppFrame> frames = new BasicEventList<>();
+    /**
+     * Swing realizer cache — not the product list of open tools.
+     * Keyed by {@link VirtualAppFrame#getToolId()}.
+     */
+    private final Map<String, VirtualAppFrame> framesByToolId =
+        Collections.synchronizedMap(new LinkedHashMap<String, VirtualAppFrame>());
 
 	/**
 	 * private constructor to enforce singleton pattern
@@ -130,10 +134,12 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
     public void close(String toolId) {
         VirtualAppFrame frame = findFrameByToolId(toolId);
         if (frame == null) {
-            LOG.debug("close: no frame for toolId {}", toolId);
+            LOG.debug("close: no frame for toolId {} — removing from store if present", toolId);
+            AppStore.get().dispatch(SimpleAction.toolClosed(toolId));
             return;
         }
         try {
+            // DISPOSE_ON_CLOSE → internalFrameClosed → unregister + TOOL_CLOSED
             frame.setClosed(true);
         } catch (PropertyVetoException ex) {
             LOG.debug("close vetoed for toolId {}", toolId);
@@ -194,12 +200,15 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
         if (toolId == null) {
             return null;
         }
-        for (VirtualAppFrame frame : frames) {
-            if (toolId.equals(frame.getToolId())) {
-                return frame;
-            }
-        }
-        return null;
+        return framesByToolId.get(toolId);
+    }
+
+    private void registerFrame(VirtualAppFrame frame) {
+        framesByToolId.put(frame.getToolId(), frame);
+    }
+
+    private void unregisterFrame(VirtualAppFrame frame) {
+        framesByToolId.remove(frame.getToolId());
     }
 
     private void applyIconFromDefinition(VirtualAppSpec spec, ToolDefinition definition) {
@@ -472,33 +481,19 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
             frame.setToolType(spec.getClass().getSimpleName());
         }
 
-        // The default close operation is to HIDE (for now)...
-        // Moved from the VirtualAppFrame constructor simply for process visibility
-        frame.setDefaultCloseOperation(JInternalFrame.HIDE_ON_CLOSE);
-        // TODO decide how to handle internal frame lifecycle; hide vs. dispose etc.
-        // for later research/design:
-        // https://docs.oracle.com/javase/7/docs/api/javax/swing/JInternalFrame.html
-        // dispose() -- Makes this internal frame invisible, unselected, and closed.
-
+        // Close means dispose — ToolsState drops the instance via TOOL_CLOSED.
+        // Minimize remains iconify (TOOL_MINIMIZED); do not use HIDE_ON_CLOSE for the X button.
+        frame.setDefaultCloseOperation(JInternalFrame.DISPOSE_ON_CLOSE);
 
         // Ensure that this desktop manager is a frame listener...
         frame.addInternalFrameListener(this);
 
-        // It's probably easier/better to use GlazedLists proxies instead of
-        // SwingUtilities.invokeLater() directly, but I have tried to use them
-        // and am not doing it right apparently :(
-        SwingUtilities.invokeLater(
-                new Runnable() { @Override public void run() {
-                    // For example, this will throw an exception if not run on the EDT
-                    // which is easily done when creating a UI via beanshell scripts such as better.bsh, etc.
-                    frames.add(frame);
-                } }
-        	);
+        registerFrame(frame);
 
         String definitionId = definition != null ? definition.getId() : null;
         String iconKey = definition != null ? definition.getIconKey() : null;
 
-        // Dispatch TOOL_OPENED; workspaceId aligns with toolId when docked
+        // ToolsState is authoritative; frame map is the Swing realizer only
         AppStore.get().dispatch(SimpleAction.toolOpened(
             frame.getToolId(),
             frame.getToolType(),
@@ -533,10 +528,20 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 	}
 	
 	/**
-	 * @return the frames
+	 * Snapshot of Swing host frames (realizer cache only).
+	 *
+	 * <p>Not the product registry of open tools — use {@code AppStore.get().getState().getTools()}.
+	 * Retained for BeanShell / diagnostics that need the JInternalFrame handle.</p>
+	 *
+	 * @return unmodifiable snapshot of realized frames
+	 * @deprecated prefer ToolsState for “what is open”; this is host plumbing
 	 */
-	public EventList<VirtualAppFrame> getFrames() {
-		return frames;
+	@Deprecated
+	public Collection<VirtualAppFrame> getFrames() {
+		synchronized (framesByToolId) {
+			List<VirtualAppFrame> copy = new ArrayList<VirtualAppFrame>(framesByToolId.values());
+			return Collections.unmodifiableList(copy);
+		}
 	}
 
     private void displayMessage(String prefix, InternalFrameEvent e) {
@@ -552,25 +557,19 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 
 	@Override
 	public void internalFrameClosed(InternalFrameEvent e) {
-		// This will not be called if the frames close action is "HIDE"; only when it is "DISPOSE"
-
 		displayMessage("IFRAME :: closed", e);
 
-		// Dispatch TOOL_CLOSED action to Redux store
 		JInternalFrame source = e.getInternalFrame();
 		if (source instanceof VirtualAppFrame) {
 			VirtualAppFrame vaf = (VirtualAppFrame) source;
+			unregisterFrame(vaf);
 			vaf.releaseDockingSession();
 			AppStore.get().dispatch(SimpleAction.toolClosed(vaf.getToolId()));
 		}
-
-		// TODO Remove the object reference from the list so that it can be garbage collected
-
 	}
 
 	@Override
 	public void internalFrameClosing(InternalFrameEvent e) {
-		// TODO This is where we would add a hook to possibly veto the close/deactivate
 		displayMessage("IFRAME :: closng", e);
 	}
 
@@ -579,14 +578,16 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 		displayMessage("IFRAME :: iconfy", e);
 		e.getInternalFrame().hide();
 
-		// Dispatch TOOL_MINIMIZED action to Redux store
 		JInternalFrame source = e.getInternalFrame();
 		if (source instanceof VirtualAppFrame) {
 			String toolId = ((VirtualAppFrame) source).getToolId();
 			AppStore.get().dispatch(SimpleAction.toolMinimized(toolId));
 		}
 
-		if ( null == desktop.getSelectedFrame() ) {
+		if (observedJList == null) {
+			return;
+		}
+		if (null == desktop.getSelectedFrame()) {
 		    this.observedJList.clearSelection();
 		}
 		boolean allframesareicons = true;
@@ -597,15 +598,15 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 		        break;
 		    }
 		}
-		if (allframesareicons) this.observedJList.clearSelection();
+		if (allframesareicons) {
+			this.observedJList.clearSelection();
+		}
 	}
 
 	@Override
 	public void internalFrameDeiconified(InternalFrameEvent e) {
-		// TODO Auto-generated method stub
 		displayMessage("IFRAME :: deicon", e);
 
-		// Dispatch TOOL_RESTORED action to Redux store
 		JInternalFrame source = e.getInternalFrame();
 		if (source instanceof VirtualAppFrame) {
 			String toolId = ((VirtualAppFrame) source).getToolId();
@@ -615,25 +616,23 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 
 	@Override
 	public void internalFrameActivated(InternalFrameEvent e) {
-		// activated = "selected"; i.e. has the focus
 		displayMessage("IFRAME :: active", e);
 
-		// Dispatch TOOL_ACTIVATED action to Redux store
 		JInternalFrame source = e.getInternalFrame();
 		if (source instanceof VirtualAppFrame) {
 			String toolId = ((VirtualAppFrame) source).getToolId();
 			AppStore.get().dispatch(SimpleAction.toolActivated(toolId));
 		}
 
-		this.observedJList.setSelectedValue(e.getInternalFrame(), true);
+		if (observedJList != null) {
+			this.observedJList.setSelectedValue(e.getInternalFrame(), true);
+		}
 	}
 
 	@Override
 	public void internalFrameDeactivated(InternalFrameEvent e) {
-		// deactivated = "de-selected"; i.e. no longer has the focus
 		displayMessage("IFRAME :: deactv", e);
 
-		// Dispatch TOOL_DEACTIVATED action to Redux store
 		JInternalFrame source = e.getInternalFrame();
 		if (source instanceof VirtualAppFrame) {
 			String toolId = ((VirtualAppFrame) source).getToolId();
@@ -641,97 +640,27 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
 		}
 	}
 
-	// ============= Begin ListSelectionListener =======================
+	// ============= Begin ListSelectionListener (legacy JList path) =======================
 	
 	/**
-	 * Listen to selection events on the list of virtual apps;
-	 * the selected item should have the effect of "de-iconify" and "restore"
-	 * that virtual app.
-	 * 
-	 * Note:  I specifically use the verbiage above because it turns out that
-	 * simply using the DesktopManager methods deiconifyFrame() and minimizeFrame()
-	 * do not have the intended effect that you would expect.  See the code below
-	 * for how this has to be implemented.
-	 * 
+	 * Listen to selection events on the legacy list of virtual apps.
+	 * Current App wiring uses WindowListController + ToolService instead.
 	 */
 	@Override
 	public void valueChanged(ListSelectionEvent e) {
+		if (observedJList == null) {
+			return;
+		}
 		if (e.getValueIsAdjusting()) {
-			// do nothing... wait until the user is finished selecting
-		} else {
-			final VirtualAppFrame frame = observedJList.getSelectedValue();
-			if (null == frame) return;
-			
-			// frame.setSelected(true); // exception is on this line... 
-			// it does not make sense to do the rest if an exception is thrown
-			// so put the rest inside the try block.
-			
-			if ( ! frame.isVisible() ) {
-				frame.setVisible(true);
-			}
+			return;
+		}
+		final VirtualAppFrame frame = observedJList.getSelectedValue();
+		if (null == frame) {
+			return;
+		}
 
-			// see [Note 1]
-			final javax.swing.DesktopManager mgr = frame.getDesktopPane().getDesktopManager();
-			boolean usingYourIntuition = true;
-			if (usingYourIntuition) {
-				/* All the documentation I read says to use the desktop manager;
-				 * however, for testing and proof of concept, this is here
-				 * to test the effects of using the JInternalFrame API directly.
-				 */
-				boolean usingFrameAPI = true;
-				if (usingFrameAPI) {
-					/* 11/26/2019: As of this time, I am using this approach over
-					 * using the desktop manager.  The sole reason is that this approach
-					 * does not modify the focus of the JList when you select the item.
-					 * Honestly, this is a small detail and I reserve the right to change
-					 * my mind but I'm going with it for now. 
-					 */
-					try {
-						frame.setIcon(false); // exception is possible on this line...
-						frame.moveToFront();
-					} catch (PropertyVetoException e1) {
-						LOG.warn("PropertyVetoException restoring frame", e1);
-					}
-				} else {
-					// Verified that this does NOT work with the following LAFs:
-					// Metal, JTattoo, FlatLAF, ...
-					mgr.deiconifyFrame(frame);
-					mgr.minimizeFrame(frame);													
-				}
-			} else {
-//				mgr.activateFrame(frame); // this was tried in lieu of max/min... it did not work				
-				mgr.maximizeFrame(frame);
-				mgr.minimizeFrame(frame);				
-			}
-			
-			// see [Note 1a]
-			//frame.setSelected(true); // exception is possible on this line... 
-			//frame.moveToFront();
-			
-//			try {
-//			} catch (PropertyVetoException e1) {
-//				e1.printStackTrace();
-//			}
-			
-			/* [Note 1]
-			 * https://coderanch.com/t/336800/java/restore-jinternalframe-normal-state
-			 * 
-			 * Based on post by Ameer Tamboli on this site, this looks like the
-			 * algorithm though I must say that Oracle's documentation and the 
-			 * API itself are very unclear and/or misleading.  Further, I suspect
-			 * that this might only be necessary for LAFs based on Metal;
-			 * more research is necessary.
-			 * 
-			 * Also, FWIW, the call the maximize then minimize does not appear to result
-			 * in any visual anomalies.  However, this is only based on my very limited
-			 * number of test/development PCs so more research is necessary here as well.
-			 * 
-			 * [Note 1a]
-			 * These calls are in the original blog post but do not seem necessary;
-			 * it is quite possible this is due to a modification in the JVM over
-			 * the years.
-			 */
-
+		if (frame.getToolId() != null) {
+			activate(frame.getToolId());
 		}
 	}
 

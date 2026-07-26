@@ -668,7 +668,7 @@
         <ol class="mt-2 list-decimal space-y-1 pl-5 text-sm text-ink">
           <li><strong>Paradigm service</strong> — create/show/manage tools (→ ToolService)</li>
           <li><strong>Swing host adapter</strong> — JDesktopPane, frame listeners, JList selection sync</li>
-          <li><strong>Authoritative registry</strong> — EventList&lt;VirtualAppFrame&gt; as live “what is open”</li>
+          <li><strong>Realizer cache</strong> — toolId → VirtualAppFrame map (Swing host only; ToolsState is authoritative)</li>
         </ol>
         <p class="mt-2 text-sm leading-relaxed text-ink">
           Listening to frames <em>inside</em> a Swing adapter implementation is fine.
@@ -802,7 +802,7 @@
 
       <article class="card">
         <div class="card-header">
-          <span>Step 6 — Store becomes the sole open-tool registry</span>
+          <span>Step 6 — Store becomes the sole open-tool registry ✅</span>
           <span class="pill">6</span>
         </div>
         <div class="card-body">

@@ -177,16 +177,16 @@ The deeper problem is that `DesktopManager` conflates:
 
 1. **Paradigm service** — create/show/manage tools (what should become `ToolService`)
 2. **Swing host adapter** — talk to `JDesktopPane`, listen to internal frames, sync selection to a `JList`
-3. **Authoritative registry** — `EventList<VirtualAppFrame>` as the live list of what is open (should become a realizer cache behind the store)
+3. **Realizer cache** — toolId → `VirtualAppFrame` map inside DesktopManager (Swing host only; not the product list of open tools)
 
 Listening to frames inside a Swing adapter implementation is fine. Making that adapter the type every feature programs to — and treating its frame list as source of truth — is what we want to unwind.
 
-### Dual registry (today)
+### Dual registry (resolved — Step 6)
 
-- **Swing:** `DesktopManager`’s list of `VirtualAppFrame`
-- **Model:** `AppStore` → `ToolsState`
+- **Model (authoritative):** `AppStore` → `ToolsState`
+- **Swing realizer:** `DesktopManager` toolId → `VirtualAppFrame` map (host plumbing only)
 
-The window list view path reads open tools from the store (including icon keys) and routes activate/close through `ToolService`. It no longer reaches into DesktopManager frames for display.
+Close uses `DISPOSE_ON_CLOSE` so X / `ToolService.close` both fire `TOOL_CLOSED` and unregister the frame. Minimize remains iconify (`TOOL_MINIMIZED`).
 
 ---
 
@@ -224,11 +224,11 @@ Add **`DesktopState`** / shortcut model, a **`DesktopView`** interface + listene
 
 *Done when* a second desktop look can ship by implementing `DesktopView` only.
 
-### Step 6 — Store becomes the sole open-tool registry
+### Step 6 — Store becomes the sole open-tool registry ✅
 
 Make **`ToolsState`** authoritative for what is open. The frame map becomes an internal realizer cache for the `ToolService` / Swing host implementation. Align close/hide semantics so UI and store cannot diverge (`HIDE_ON_CLOSE` vs `TOOL_CLOSED` is today’s sharp edge).
 
-*You have finished this step when* no view or controller treats `EventList<VirtualAppFrame>` as the product’s list of open tools.
+*Done when* no view or controller treats `EventList<VirtualAppFrame>` as the product’s list of open tools.
 
 ---
 

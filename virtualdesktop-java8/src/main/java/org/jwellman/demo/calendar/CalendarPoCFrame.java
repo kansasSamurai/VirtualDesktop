@@ -19,35 +19,58 @@ public class CalendarPoCFrame extends JFrame {
         setSize(1000, 700);
         setLocationRelativeTo(null);
 
-        // 1. Create the Root Layered Pane
-        JLayeredPane layeredPane = new JLayeredPane();
+        // 1. Root Layered Pane (LEAVE LAYOUT AS NULL - Do NOT use OverlayLayout here!)
+        final JLayeredPane layeredPane = new JLayeredPane();
 
-        // 2. Base Layer: Holds background grid & event cards using SpatialStageLayout
+        // 2. Base Layer with Custom Background Grid Painting
         SpatialStageLayout spatialLayout = new SpatialStageLayout();
-        JPanel baseGridPanel = new JPanel(spatialLayout);
+        final JPanel baseGridPanel = new JPanel(spatialLayout) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setColor(new Color(230, 230, 230));
+
+                int cellW = getWidth() / DAYS;
+                int cellH = getHeight() / HOURS;
+
+                for (int i = 0; i <= DAYS; i++) {
+                    g2.drawLine(i * cellW, 0, i * cellW, getHeight());
+                }
+                for (int i = 0; i <= HOURS; i++) {
+                    g2.drawLine(0, i * cellH, getWidth(), i * cellH);
+                }
+            }
+        };
         baseGridPanel.setBackground(Color.WHITE);
 
-        // Create background grid visual (Days & Hours)
-        JPanel gridBackground = createGridBackgroundPanel();
-        baseGridPanel.add(gridBackground, new SpatialStageLayout.FullFillConstraint());
+        // 3. Highlight Overlay
+        final SnapHighlightOverlay snapOverlay = new SnapHighlightOverlay();
 
-        // 3. Highlight Layer: Transparent overlay panel for time-slot snap guide
-        SnapHighlightOverlay snapOverlay = new SnapHighlightOverlay();
-        snapOverlay.setBounds(0, 0, 1000, 700);
-
-        // Make baseGridPanel and snapOverlay track frame resizes via OverlayLayout
-        layeredPane.setLayout(new OverlayLayout(layeredPane));
+        // Add base panels to layeredPane
         layeredPane.add(baseGridPanel, JLayeredPane.DEFAULT_LAYER);
         layeredPane.add(snapOverlay, JLayeredPane.PALETTE_LAYER);
 
-        // 4. Populate sample calendar events
+        // Resize base layers whenever the frame/layeredPane resizes!
+        layeredPane.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                int w = layeredPane.getWidth();
+                int h = layeredPane.getHeight();
+                baseGridPanel.setBounds(0, 0, w, h);
+                snapOverlay.setBounds(0, 0, w, h);
+                layeredPane.revalidate();
+            }
+        });
+
+        // 4. Calendar Event Cards
         CalendarEventCard card1 = new CalendarEventCard("Team Sync", new Color(220, 235, 252), new Color(0, 120, 215));
         CalendarEventCard card2 = new CalendarEventCard("Design Review", new Color(254, 235, 226), new Color(216, 59, 1));
 
         baseGridPanel.add(card1, new SpatialStageLayout.GridCellConstraint(1, 1, HOURS, DAYS)); // Mon 9:00 AM
         baseGridPanel.add(card2, new SpatialStageLayout.GridCellConstraint(3, 3, HOURS, DAYS)); // Wed 11:00 AM
 
-        // 5. Attach the Drag Controller
+        // 5. Controller
         CalendarDragController dragController = new CalendarDragController(
                 layeredPane, baseGridPanel, snapOverlay, spatialLayout
         );
@@ -170,20 +193,30 @@ public class CalendarPoCFrame extends JFrame {
         public void mousePressed(MouseEvent e) {
             activeCard = (CalendarEventCard) e.getSource();
 
-            // Calculate mouse grab offset
-            Point mouseOnStage = SwingUtilities.convertPoint(activeCard, e.getPoint(), stage);
+            // 1. Capture card dimensions and screen coordinates BEFORE removing from parent!
+            int cardWidth = activeCard.getWidth();
+            int cardHeight = activeCard.getHeight();
             Point cardOnStage = SwingUtilities.convertPoint(baseGridPanel, activeCard.getLocation(), stage);
+            Point mouseOnStage = SwingUtilities.convertPoint(activeCard, e.getPoint(), stage);
+
+            // Calculate mouse grab offset relative to top-left corner of the card
             dragOffset = new Point(mouseOnStage.x - cardOnStage.x, mouseOnStage.y - cardOnStage.y);
 
-            // Mark transient in layout engine so it won't snap back on resize
+            // 2. Mark transient in layout engine so it won't snap back on resize
             spatialLayout.setTransient(activeCard, true);
 
-            // Lift to DRAG_LAYER
+            // 3. Remove from base grid panel
             baseGridPanel.remove(activeCard);
-            activeCard.setBounds(cardOnStage.x, cardOnStage.y, activeCard.getWidth(), activeCard.getHeight());
+
+            // 4. Set explicit bounds on the card BEFORE adding to JLayeredPane
+            activeCard.setBounds(cardOnStage.x, cardOnStage.y, cardWidth, cardHeight);
+            System.out.printf("pressed: w %d x h %d", cardWidth, cardHeight);
+
+            // 5. Promote to DRAG_LAYER
             stage.add(activeCard, JLayeredPane.DRAG_LAYER);
 
             baseGridPanel.revalidate();
+            baseGridPanel.repaint();
             stage.repaint();
         }
 
@@ -192,7 +225,11 @@ public class CalendarPoCFrame extends JFrame {
             if (activeCard == null) return;
 
             Point mouseOnStage = SwingUtilities.convertPoint((Component) e.getSource(), e.getPoint(), stage);
-            activeCard.setLocation(mouseOnStage.x - dragOffset.x, mouseOnStage.y - dragOffset.y);
+            int newX = mouseOnStage.x - dragOffset.x;
+            int newY = mouseOnStage.y - dragOffset.y;
+
+            // PRESERVE the card's existing width and height while updating location!
+            activeCard.setBounds(newX, newY, activeCard.getWidth(), activeCard.getHeight());
 
             // Calculate target grid cell on base panel
             Point mouseOnBase = SwingUtilities.convertPoint(stage, mouseOnStage, baseGridPanel);
@@ -281,6 +318,7 @@ public class CalendarPoCFrame extends JFrame {
         }
     }
 
+    @SuppressWarnings("unused")
     private JPanel createGridBackgroundPanel() {
         return new JPanel() {
             @Override

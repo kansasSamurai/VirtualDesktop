@@ -111,6 +111,13 @@
           "desktopOnly": false
         },
         {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecAppStageCalendarDemo",
+          "title": "App Stage Calendar",
+          "icon": "calendar",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
           "class": "org.jwellman.virtualdesktop.vapps.SpecJDatePicker",
           "title": "Date Picker",
           "icon": "calendar",

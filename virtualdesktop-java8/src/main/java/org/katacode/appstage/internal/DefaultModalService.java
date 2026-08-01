@@ -75,11 +75,15 @@ public class DefaultModalService implements ModalService {
 
         activeContent = content;
         modalActive = true;
+        Color bg = LafColors.textBackground();
+        Color fg = LafColors.textForeground();
         content.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(160, 160, 160)),
+                BorderFactory.createLineBorder(LafColors.border()),
                 BorderFactory.createEmptyBorder(8, 8, 8, 8)));
         content.setOpaque(true);
-        content.setBackground(Color.WHITE);
+        content.setBackground(bg);
+        content.setForeground(fg);
+        LafColors.applyTextSurface(content);
 
         Dimension pref = content.getPreferredSize();
         Point anchorOnPopup = new Point(0, 0);
@@ -145,13 +149,23 @@ public class DefaultModalService implements ModalService {
     }
 
     private JPanel wrapWithDismiss(JComponent body) {
+        Color bg = LafColors.textBackground();
+        Color fg = LafColors.textForeground();
+
         JPanel chrome = new JPanel(new BorderLayout(0, 8));
         chrome.setOpaque(true);
-        chrome.setBackground(Color.WHITE);
+        chrome.setBackground(bg);
+        chrome.setForeground(fg);
         chrome.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(120, 120, 120)),
+                BorderFactory.createLineBorder(LafColors.border()),
                 BorderFactory.createEmptyBorder(12, 12, 12, 12)));
-        chrome.add(body, BorderLayout.CENTER);
+
+        if (body != null) {
+            body.setOpaque(false);
+            body.setForeground(fg);
+            LafColors.applyTextSurface(body);
+            chrome.add(body, BorderLayout.CENTER);
+        }
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         buttons.setOpaque(false);

@@ -105,13 +105,18 @@ public class DefaultNotificationService implements NotificationService {
 
     private JPanel buildToast(String title, String message, ToastType type) {
         Color accent = accentFor(type);
+        Color bg = LafColors.textBackground();
+        Color fg = LafColors.textForeground();
+        Color border = LafColors.border();
+
         JPanel toast = new JPanel(new GridBagLayout());
         toast.setOpaque(true);
-        toast.setBackground(new Color(245, 245, 245));
+        toast.setBackground(bg);
+        toast.setForeground(fg);
         toast.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 4, 0, 0, accent),
                 BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(200, 200, 200)),
+                        BorderFactory.createLineBorder(border),
                         BorderFactory.createEmptyBorder(8, 10, 8, 10))));
 
         GridBagConstraints gbc = new GridBagConstraints();
@@ -125,6 +130,8 @@ public class DefaultNotificationService implements NotificationService {
             gbc.gridy = 0;
             JLabel titleLabel = new JLabel(title);
             titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD));
+            titleLabel.setForeground(fg);
+            titleLabel.setOpaque(false);
             toast.add(titleLabel, gbc);
             gbc.gridy = 1;
             gbc.insets = new Insets(4, 0, 0, 0);
@@ -132,14 +139,32 @@ public class DefaultNotificationService implements NotificationService {
             gbc.gridy = 0;
         }
 
-        JLabel msgLabel = new JLabel("<html>" + escape(message) + "</html>");
+        JLabel msgLabel = new JLabel("<html><font color='" + toHtmlColor(fg) + "'>"
+                + escape(message) + "</font></html>");
+        msgLabel.setForeground(fg);
+        msgLabel.setOpaque(false);
         toast.add(msgLabel, gbc);
         toast.setSize(TOAST_WIDTH, toast.getPreferredSize().height);
         return toast;
     }
 
+    private static String toHtmlColor(Color c) {
+        return String.format("#%02x%02x%02x",
+                Integer.valueOf(c.getRed()),
+                Integer.valueOf(c.getGreen()),
+                Integer.valueOf(c.getBlue()));
+    }
+
     private static Color accentFor(ToastType type) {
-        if (type == null) {
+        // Accents stay semantic; surfaces use LAF. Prefer selection / focus when available.
+        if (type == null || type == ToastType.INFO) {
+            Color sel = javax.swing.UIManager.getColor("TextField.selectionBackground");
+            if (sel == null) {
+                sel = javax.swing.UIManager.getColor("List.selectionBackground");
+            }
+            if (sel != null) {
+                return sel;
+            }
             return new Color(0, 120, 215);
         }
         switch (type) {

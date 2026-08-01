@@ -297,10 +297,12 @@ public class DayCellPanel extends JPanel {
         chip.setFocusPainted(false);
         chip.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         chip.setToolTipText(event.getName() + " (" + event.getCategory().getDisplayName() + ")");
-        chip.addActionListener(e -> onEventClicked.accept(event));
+        // Same pattern as primaryLabel: fire detail callback on press, then allow DnD.
+        // ActionListener alone never runs once exportAsDrag consumes the gesture.
         chip.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
+                onEventClicked.accept(event);
                 draggingEvent = event;
                 getTransferHandler().exportAsDrag(DayCellPanel.this, e, TransferHandler.MOVE);
             }

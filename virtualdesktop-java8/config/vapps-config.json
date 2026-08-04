@@ -118,6 +118,13 @@
           "desktopOnly": false
         },
         {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecMonthPanel",
+          "title": "Calendar",
+          "icon": "calendar",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
           "class": "org.jwellman.virtualdesktop.vapps.SpecJDatePicker",
           "title": "Date Picker",
           "icon": "calendar",

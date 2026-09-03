@@ -110,6 +110,17 @@ public class ChessGame {
         return this.getPieceAt(new Point(file, rank)) != null;
     }
 
+    public ChessPiece getKing(boolean white) {
+        return white ? whiteKing : blackKing;
+    }
+
+    public ChessPiece getRook(boolean white, boolean kingside) {
+        if (white) {
+            return kingside ? whiteKingsideRook : whiteQueensideRook;
+        }
+        return kingside ? blackKingsideRook : blackQueensideRook;
+    }
+
     public SquareControlMatrix getControlMatrix() {
         return this.currentControlMatrix;
     }
@@ -232,6 +243,49 @@ public class ChessGame {
         String logText = "logtext tbd"; // formatAlgebraicNotation(piece, to, target != null);
 
         return new MoveAnalysis(outcome, opponentInCheck, capturedPiece, logText);
+    }
+
+    /**
+     * The Definitive State Mutation Gatekeeper for castling. Skips geometry/self-check
+     * validation for now (see ChessMoveValidator.castlingExposesKingToCheck) - the caller
+     * is trusted to only invoke this for a legal castle. Still guards against a stale
+     * king/rook anchor (e.g. a rook that was actually captured earlier) corrupting the board.
+     */
+    public MoveAnalysis submitCastle(boolean white, boolean kingside) {
+        if (white != isWhiteTurn) {
+            return new MoveAnalysis(ResultType.REJECTED_OUT_OF_TURN, false, null, "");
+        }
+
+        ChessPiece king = getKing(white);
+        ChessPiece rook = getRook(white, kingside);
+        if (king == null || rook == null
+                || activePieces.get(king.getPosition()) != king
+                || activePieces.get(rook.getPosition()) != rook) {
+            return new MoveAnalysis(ResultType.REJECTED_CASTLING_UNAVAILABLE, false, null, "");
+        }
+
+        // TODO: real castling legality once ChessMoveValidator's check-detection exists
+        // (king/rook must be unmoved, path clear, king not moving through/into check).
+        if (validator.castlingExposesKingToCheck(this, white, kingside)) {
+            return new MoveAnalysis(ResultType.REJECTED_SELF_CHECK, false, null, "");
+        }
+
+        int rank = white ? 0 : 7;
+        Point kingTo = new Point(kingside ? 6 : 2, rank);
+        Point rookTo = new Point(kingside ? 5 : 3, rank);
+
+        activePieces.remove(king.getPosition());
+        activePieces.remove(rook.getPosition());
+        activePieces.put(kingTo, king);
+        activePieces.put(rookTo, rook);
+        king.setPosition(kingTo);
+        rook.setPosition(rookTo);
+
+        generateMatrix(activePieces);
+        advanceTurn();
+        dumpBoardToConsole(activePieces);
+
+        return new MoveAnalysis(ResultType.SUCCESS_STANDARD, false, null, kingside ? "O-O" : "O-O-O");
     }
 
     public void setEnPassantVulnerableSquare(Point enPassantSquareBeforeMove) {
@@ -418,6 +472,13 @@ public class ChessGame {
             else
                 blackCaptured.remove(piece);
         }
+    }
+
+    public void restoreCastleRook(MoveEvent event) {
+        ChessPiece rook = event.getRookMoved();
+        activePieces.remove(event.getRookDestination());
+        activePieces.put(event.getRookOrigin(), rook);
+        rook.setPosition(event.getRookOrigin());
     }
 
 }

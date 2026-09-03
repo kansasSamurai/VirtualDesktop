@@ -12,11 +12,23 @@ public final class MoveEvent {
     private final ChessPiece capturedPiece; // Nullable
     private final Point enPassantSquareBeforeMove; // For restoring previous EP state
     private final boolean wasInitialPawnMove;
-    
+    private final ChessPiece rookMoved; // Nullable - set only for castling
+    private final Point rookOrigin;
+    private final Point rookDestination;
+
     // Package-private constructor...
-    MoveEvent(Point origin, Point destination, 
+    MoveEvent(Point origin, Point destination,
             ChessPiece movedPiece, ChessPiece capturedPiece,
             Point enPassantSquareBeforeMove, boolean wasInitialPawnMove) {
+        this(origin, destination, movedPiece, capturedPiece, enPassantSquareBeforeMove,
+                wasInitialPawnMove, null, null, null);
+    }
+
+    // Package-private constructor for castling, carrying the rook's half of the move...
+    MoveEvent(Point origin, Point destination,
+            ChessPiece movedPiece, ChessPiece capturedPiece,
+            Point enPassantSquareBeforeMove, boolean wasInitialPawnMove,
+            ChessPiece rookMoved, Point rookOrigin, Point rookDestination) {
         super();
         this.origin = origin;
         this.destination = destination;
@@ -24,6 +36,9 @@ public final class MoveEvent {
         this.capturedPiece = capturedPiece;
         this.enPassantSquareBeforeMove = enPassantSquareBeforeMove;
         this.wasInitialPawnMove = wasInitialPawnMove;
+        this.rookMoved = rookMoved;
+        this.rookOrigin = rookOrigin;
+        this.rookDestination = rookDestination;
     }
 
     protected Point getOrigin() {
@@ -48,6 +63,18 @@ public final class MoveEvent {
 
     protected boolean wasInitialPawnMove() {
         return wasInitialPawnMove;
+    }
+
+    protected ChessPiece getRookMoved() {
+        return rookMoved;
+    }
+
+    protected Point getRookOrigin() {
+        return rookOrigin;
+    }
+
+    protected Point getRookDestination() {
+        return rookDestination;
     }
 
     public String toAlgebraicNotation() {

@@ -526,6 +526,12 @@ public class ChessUiEngine {
             this.addPieceToBoard(event.getCapturedPiece(), true);
         }
 
+        // 2b. Castling: teleport the rook's half of the move back too
+        if (event.getRookMoved() != null) {
+            game.restoreCastleRook(event);
+            this.addPieceToBoard(event.getRookMoved(), false);
+        }
+
         // 3. Restore the temporal En Passant target window
         game.setEnPassantVulnerableSquare(event.getEnPassantSquareBeforeMove());
 
@@ -601,27 +607,59 @@ public class ChessUiEngine {
     private JPanel createCastlingPanel() {
         JPanel p = new JPanel();
 
-        JButton btn = new JButton("K");
-        btn.setBackground(Color.white);
-        btn.setForeground(Color.black);
-        p.add(btn);
+        JButton whiteKingsideBtn = new JButton("K");
+        whiteKingsideBtn.setBackground(Color.white);
+        whiteKingsideBtn.setForeground(Color.black);
+        whiteKingsideBtn.addActionListener(e -> performCastle(true, true));
+        p.add(whiteKingsideBtn);
 
-        btn = new JButton("Q");
-        btn.setBackground(Color.white);
-        btn.setForeground(Color.black);
-        p.add(btn);
+        JButton whiteQueensideBtn = new JButton("Q");
+        whiteQueensideBtn.setBackground(Color.white);
+        whiteQueensideBtn.setForeground(Color.black);
+        whiteQueensideBtn.addActionListener(e -> performCastle(true, false));
+        p.add(whiteQueensideBtn);
 
-        btn = new JButton("K");
-        btn.setBackground(Color.black);
-        btn.setForeground(Color.white);
-        p.add(btn);
+        JButton blackKingsideBtn = new JButton("K");
+        blackKingsideBtn.setBackground(Color.black);
+        blackKingsideBtn.setForeground(Color.white);
+        blackKingsideBtn.addActionListener(e -> performCastle(false, true));
+        p.add(blackKingsideBtn);
 
-        btn = new JButton("Q");
-        btn.setBackground(Color.black);
-        btn.setForeground(Color.white);
-        p.add(btn);
+        JButton blackQueensideBtn = new JButton("Q");
+        blackQueensideBtn.setBackground(Color.black);
+        blackQueensideBtn.setForeground(Color.white);
+        blackQueensideBtn.addActionListener(e -> performCastle(false, false));
+        p.add(blackQueensideBtn);
 
         return p;
+    }
+
+    private void performCastle(boolean white, boolean kingside) {
+        ChessPiece king = game.getKing(white);
+        ChessPiece rook = game.getRook(white, kingside);
+        if (king == null || rook == null) {
+            return;
+        }
+
+        Point kingOrigin = king.getPosition();
+        Point rookOrigin = rook.getPosition();
+
+        MoveAnalysis result = game.submitCastle(white, kingside);
+        if (!result.isAccepted()) {
+            System.out.println("Castle rejected: " + result.getResultType());
+            return;
+        }
+
+        addPieceToBoard(king, false);
+        addPieceToBoard(rook, false);
+        chessBoard.revalidate();
+        chessBoard.repaint();
+
+        MoveEvent event = new MoveEvent(kingOrigin, king.getPosition(), king, null, null, false,
+                rook, rookOrigin, rook.getPosition());
+        recordMove(event);
+
+        scoresheetPanel.synchronizeHistory(undoStack);
     }
 
     public JPanel createUndoRedoPanel() {

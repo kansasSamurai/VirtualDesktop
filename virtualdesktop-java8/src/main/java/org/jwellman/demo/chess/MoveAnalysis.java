@@ -22,6 +22,7 @@ public final class MoveAnalysis {
         REJECTED_OUT_OF_TURN,      // White moved on Black's clock
         REJECTED_SELF_CHECK,       // Move leaves or puts own King in check
         REJECTED_DID_NOT_MOVE,     // Dropped on starting square
+        REJECTED_CASTLING_UNAVAILABLE, // King/rook missing, moved, or desynced from the board
   
         SUCCESS_STANDARD,          // Clean slide or jump into empty space
         SUCCESS_CAPTURE,           // Enemy piece permanently removed from play

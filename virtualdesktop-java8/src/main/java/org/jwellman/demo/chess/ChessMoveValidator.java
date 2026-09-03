@@ -35,6 +35,15 @@ public class ChessMoveValidator {
         return false;
     }
 
+    /**
+     * TODO: castling-specific check safety - king not currently in check, does not
+     * pass through or land on an attacked square. No check-detection engine exists
+     * yet elsewhere in this class either; wire this in once one does.
+     */
+    public boolean castlingExposesKingToCheck(ChessGame game, boolean white, boolean kingside) {
+        return false;
+    }
+
     public List<Point> getValidMoves(ChessGame game, ChessPiece piece, EvaluationContext context, RaycastObserver observer) {
 
         final List<Point> validSquares = new ArrayList<>();

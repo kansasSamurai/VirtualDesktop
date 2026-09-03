@@ -21,7 +21,6 @@ import java.util.Stack;
 
 import javax.swing.Box;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
@@ -41,7 +40,9 @@ public class ChessUiEngine {
 
     private ChessGame game; // model
     private JLayeredPane chessBoard; // board view
-    // private ChessBoardLayout layout; // TODO use this instead of all the local lookups/casting
+    private ChessBoardLayout layout;
+    private JPanel boardBackground;
+    private ChessGutterBorder gutterBorder;
     private PieceFlightController mouseController; // controller
     private MovesScoresheetPanel scoresheetPanel; // game view / interactions
     private Options options;
@@ -93,6 +94,7 @@ public class ChessUiEngine {
                 }
             }
         };
+        chessBoard.setLayout(layout = new ChessBoardLayout());
 
     }
 
@@ -113,23 +115,22 @@ public class ChessUiEngine {
             chessBoard.setPreferredSize(new Dimension(640, 640));
             chessBoard.setBackground(new Color(220, 220, 220));
 
-            // Apply the domain-specific layout manager straight to the layered pane!
-            chessBoard.setLayout(new ChessBoardLayout());
-
             Color lightSquare = new Color(235, 236, 208); // Modern tactical tones
             Color darkSquare  = new Color(119, 149, 86);
 
-            // 1. Create a structural grid for the squares
-            // files are vertical columns, ranks are rows
+            // 1. Create the squares and populate the logical-coordinate lookup matrix.
+            // Their color/rank/file are intrinsic and never change; only their visual
+            // insertion order into boardBackground (below) depends on board orientation.
             JPanel boardBackground = new JPanel(new GridLayout(8, 8));
-            for (int rank = 7; rank > -1; rank--) {
+            engine.boardBackground = boardBackground;
+            for (int rank = 0; rank < 8; rank++) {
                 for (int file = 0; file < 8; file++) {
                     Color bg = ((file + rank) % 2 == 0) ? darkSquare : lightSquare;
                     BoardSquare square = new BoardSquare(engine.game, bg, rank, file);
-                    boardBackground.add(square);
                     boardSquareMatrix[file][rank] = square;
                 }
             }
+            engine.rebuildBoardBackgroundOrder(engine.options.isFlipped());
 
             Map<Point, ChessPiece> activePieces = engine.game.getActivePieces();
             for (Point p : activePieces.keySet()) {
@@ -144,7 +145,8 @@ public class ChessUiEngine {
 
             // Force it to fill the entire board canvas via your layout manager
             boardBackground.setBounds(0, 0, 640, 640);
-            boardBackground.setBorder(new ChessGutterBorder(BOARD_BORDER_SIZE, engine.game));
+            engine.gutterBorder = new ChessGutterBorder(BOARD_BORDER_SIZE, engine.game);
+            boardBackground.setBorder(engine.gutterBorder);
 
             boardWrapper.add(chessBoard);
 
@@ -164,6 +166,15 @@ public class ChessUiEngine {
     public static class ChessBoardLayout implements LayoutManager2 {
 
         private final Map<Component, Point> coordMap = new HashMap<>();
+        private boolean flipped;
+
+        public void setFlipped(boolean flipped) {
+            this.flipped = flipped;
+        }
+
+        public boolean isFlipped() {
+            return flipped;
+        }
 
         @Override
         public void addLayoutComponent(Component comp, Object constraints) {
@@ -192,11 +203,13 @@ public class ChessUiEngine {
 
                     Point coord = coordMap.get(comp);
                     if (coord != null) {
-                        int x = coord.x * squareSize + BOARD_BORDER_SIZE;
-                        // Invert rank coordinate because Swing (0,0) is top-left, 
-                        // while chess rank 0 (1st rank) is bottom-left.
-                        int y = (7 - coord.y) * squareSize;
-                        y += BOARD_BORDER_SIZE;
+                        // Invert rank coordinate because Swing (0,0) is top-left,
+                        // while chess rank 0 (1st rank) is bottom-left. When flipped
+                        // (black's perspective), invert file instead of rank.
+                        int screenCol = flipped ? (7 - coord.x) : coord.x;
+                        int screenRow = flipped ? coord.y : (7 - coord.y);
+                        int x = screenCol * squareSize + BOARD_BORDER_SIZE;
+                        int y = screenRow * squareSize + BOARD_BORDER_SIZE;
 
                         comp.setBounds(x, y, squareSize, squareSize);
                     }
@@ -348,10 +361,11 @@ public class ChessUiEngine {
             int centerX = token.getX() + (token.getWidth() / 2) - BOARD_BORDER_SIZE;
             int centerY = token.getY() + (token.getHeight() / 2) - BOARD_BORDER_SIZE;
 
-            int targetFile = (int) (centerX / squareSize);
-            int targetRank = 7 - (int) (centerY / squareSize);
-//            int targetFile = centerX / squareSize;
-//            int targetRank = 7 - (centerY / squareSize); // Flip the layout math back to chess orientation
+            int screenCol = (int) (centerX / squareSize);
+            int screenRow = (int) (centerY / squareSize);
+            boolean flipped = layout.isFlipped();
+            int targetFile = flipped ? (7 - screenCol) : screenCol;
+            int targetRank = flipped ? screenRow : (7 - screenRow);
 
             Point droppedAt = new Point(targetFile, targetRank);
 
@@ -530,6 +544,37 @@ public class ChessUiEngine {
         chessBoard.repaint();
     }
 
+    /**
+     * Toggle board orientation. Purely a view concern - the domain model stays
+     * in logical (file, rank) space regardless of which side is drawn at the bottom.
+     */
+    public void setFlipped(boolean flipped) {
+        layout.setFlipped(flipped);
+        gutterBorder.setFlipped(flipped);
+        rebuildBoardBackgroundOrder(flipped);
+        chessBoard.revalidate();
+        chessBoard.repaint();
+    }
+
+    private void rebuildBoardBackgroundOrder(boolean flipped) {
+        boardBackground.removeAll();
+        if (flipped) {
+            for (int rank = 0; rank < 8; rank++) {
+                for (int file = 7; file > -1; file--) {
+                    boardBackground.add(boardSquareMatrix[file][rank]);
+                }
+            }
+        } else {
+            for (int rank = 7; rank > -1; rank--) {
+                for (int file = 0; file < 8; file++) {
+                    boardBackground.add(boardSquareMatrix[file][rank]);
+                }
+            }
+        }
+        boardBackground.revalidate();
+        boardBackground.repaint();
+    }
+
     public JPanel createControlPanel() {
         Border b = new CompoundBorder(
                 new EmptyBorder(0, 4, 4, 4),
@@ -610,12 +655,16 @@ public class ChessUiEngine {
 
         Box options = Box.createVerticalBox();
         options.add(this.options.Chooser.SHOW_SQUARE_STRENGTH);
-        options.add(new JCheckBox("another option"));
+        options.add(this.options.Chooser.FLIP_BOARD);
         container.add(options, BorderLayout.WEST);
 
         this.options.Chooser.SHOW_SQUARE_STRENGTH.addActionListener(e -> {
             BoardSquare.drawControlIndicators = this.options.showSquareStrength();
             chessBoard.repaint();
+        });
+
+        this.options.Chooser.FLIP_BOARD.addActionListener(e -> {
+            this.setFlipped(this.options.isFlipped());
         });
 
         return settings;

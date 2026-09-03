@@ -20,6 +20,7 @@ import javax.swing.border.EmptyBorder;
 public class ChessGutterBorder extends EmptyBorder {
 
     private final ChessGame game; // Authoritative source of truth for turn states
+    private boolean flipped;
 
     private final Color gutterBgColor = new Color(45, 45, 45);
     private final Color slotBorderColor = new Color(140, 140, 140);
@@ -33,6 +34,10 @@ public class ChessGutterBorder extends EmptyBorder {
     public ChessGutterBorder(int size, ChessGame game) {
         super(size, size, size, size);
         this.game = game;
+    }
+
+    public void setFlipped(boolean flipped) {
+        this.flipped = flipped;
     }
 
     @Override
@@ -56,8 +61,9 @@ public class ChessGutterBorder extends EmptyBorder {
             // 2. High-Craft Turn Indicator Overlay (Merged)
             // Reads the domain flag to paint an explicit status indicator right onto the gutter canvas
             boolean whiteOnClock = game.isWhiteTurn();
-//            drawPlayerIndicator(x, y, width, height, g2, whiteOnClock);
-            drawNewPlayerIndicator(x, y, width, height, g2, whiteOnClock);            
+            boolean indicatorAtBottom = flipped ? !whiteOnClock : whiteOnClock;
+//            drawPlayerIndicator(x, y, width, height, g2, indicatorAtBottom);
+            drawNewPlayerIndicator(x, y, width, height, g2, indicatorAtBottom);
             
             
             

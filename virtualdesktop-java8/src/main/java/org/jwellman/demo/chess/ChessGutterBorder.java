@@ -66,7 +66,7 @@ public class ChessGutterBorder extends EmptyBorder {
             boolean indicatorAtBottom = flipped ? !whiteOnClock : whiteOnClock;
 //            drawPlayerIndicator(x, y, width, height, g2, indicatorAtBottom);
             drawNewPlayerIndicator(x, y, width, height, g2, indicatorAtBottom);
-            drawMaterialBadge(x, y, width, height, g2, indicatorAtBottom);
+            drawMaterialBadge(x, y, width, height, g2);
             
             
             
@@ -126,13 +126,16 @@ public class ChessGutterBorder extends EmptyBorder {
         g2.drawRoundRect(indicatorX, indicatorY, indicatorSize, indicatorSize, 8, 8);
     }
 
-    private void drawMaterialBadge(int x, int y, int width, int height, Graphics2D g2, boolean indicatorAtBottom) {
+    private void drawMaterialBadge(int x, int y, int width, int height, Graphics2D g2) {
         int delta = game.getMaterialDelta();
         if (delta == 0) {
-            return; // No badge at even material
+            return; // No badge at even material - chess.com convention
         }
 
-        String text = (delta > 0 ? "+" : "") + delta;
+        // Only the side WITH the advantage gets a badge, always shown as a positive number.
+        boolean whiteAhead = delta > 0;
+        boolean badgeAtBottom = flipped ? !whiteAhead : whiteAhead;
+        String text = "+" + Math.abs(delta);
 
         g2.setFont(new Font("SansSerif", Font.BOLD, 12));
         FontMetrics fm = g2.getFontMetrics();
@@ -145,7 +148,7 @@ public class ChessGutterBorder extends EmptyBorder {
         int pillX = x + width - right - indicatorSize - 16;
         int badgeX = pillX - 8 - badgeWidth;
 
-        int badgeY = indicatorAtBottom
+        int badgeY = badgeAtBottom
                 ? y + height - bottom + (bottom - badgeHeight) / 2
                 : y + (top - badgeHeight) / 2;
 

@@ -8,6 +8,7 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
 
@@ -26,7 +27,7 @@ public class BoardSquare extends JPanel {
     private static Color darkSquare  = new Color(119, 149, 86);
 
     // Options
-    public static boolean drawControlBadges = false;
+    public static boolean drawControlBadges = true;
     public static boolean drawControlIndicators = true;
 
     private static final Color HIGHLIGHT = new Color(59, 130, 246, 60);
@@ -77,10 +78,14 @@ public class BoardSquare extends JPanel {
             g2.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 10));
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
+            final boolean pieceOnThisSquare = game.hasPieceAt(this.file, this.rank);
+            final boolean pieceIsWhite = pieceOnThisSquare && game.getPieceAt(new Point(file, rank)).isWhite();
+            final boolean pieceIsBlack = pieceOnThisSquare && !pieceIsWhite;
+
             // 2. Render web-style target overlays based on active state properties
             if (targeted) {
                 // Peek ahead to see if a piece component is currently sitting on top of us
-                boolean holdsPiece = (this.getComponentCount() > 0) || game.hasPieceAt(this.file, this.rank);
+                boolean holdsPiece = (this.getComponentCount() > 0) || pieceOnThisSquare;
 
                 if (holdsPiece) {
                     // TARGET CAPTURE: Draw a thick, gorgeous outer ring framing the square
@@ -113,7 +118,7 @@ public class BoardSquare extends JPanel {
                 final int blackAttackers = matrix.getBlackAttackerCount(this.file, this.rank);
 
                 // --- Control Indicator ---
-                int barHeight = 12;
+                int barHeight = getHeight(); // 12;
                 int yOffset = getHeight() - barHeight;
 
                 // Determine semantic color based on majority rules
@@ -156,9 +161,17 @@ public class BoardSquare extends JPanel {
                     
                     // paint the translucent color - new
                     if (whiteAttackers > blackAttackers) {
-                        g2.setColor(new Color(240, 240, 245, 128)); // Clean, luminous white-blue
+                        if (pieceOnThisSquare && pieceIsBlack) {
+                            g2.setColor(new Color(240, 0, 0, 128)); // red
+                        } else {
+                            g2.setColor(new Color(240, 240, 245, 128)); // Clean, luminous white-blue
+                        }
                     } else if (blackAttackers > whiteAttackers) {
-                        g2.setColor(new Color(30, 30, 30, 64));   // Deep, tactical dark charcoal
+                        if (pieceOnThisSquare && pieceIsWhite) {
+                            g2.setColor(new Color(240, 0, 0, 128)); // red
+                        } else {
+                            g2.setColor(new Color(30, 30, 30, 64));   // Deep, tactical dark charcoal
+                        }
                     } else {
                         g2.setColor(new Color(0, 0, 128, 128));  // Blue for contested ties
                     }

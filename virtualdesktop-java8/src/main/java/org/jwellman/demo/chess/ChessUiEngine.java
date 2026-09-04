@@ -691,19 +691,25 @@ public class ChessUiEngine {
         JPanel container = new JPanel(new BorderLayout());
         settings.add(container, BorderLayout.CENTER);
 
-        Box options = Box.createVerticalBox();
-        options.add(this.options.Chooser.SHOW_SQUARE_STRENGTH);
-        options.add(this.options.Chooser.FLIP_BOARD);
-        container.add(options, BorderLayout.WEST);
+        this.options.Chooser.FLIP_BOARD.addActionListener(e -> {
+            this.setFlipped(this.options.isFlipped());
+        });
+
+        this.options.Chooser.SHOW_CONTROL_BADGES.addActionListener(e -> {
+            BoardSquare.drawControlBadges = this.options.showControlBadges();
+            chessBoard.repaint();
+        });
 
         this.options.Chooser.SHOW_SQUARE_STRENGTH.addActionListener(e -> {
             BoardSquare.drawControlIndicators = this.options.showSquareStrength();
             chessBoard.repaint();
         });
 
-        this.options.Chooser.FLIP_BOARD.addActionListener(e -> {
-            this.setFlipped(this.options.isFlipped());
-        });
+        Box options = Box.createVerticalBox();
+        options.add(this.options.Chooser.FLIP_BOARD);
+        options.add(this.options.Chooser.SHOW_CONTROL_BADGES);
+        options.add(this.options.Chooser.SHOW_SQUARE_STRENGTH);
+        container.add(options, BorderLayout.WEST);
 
         return settings;
     }

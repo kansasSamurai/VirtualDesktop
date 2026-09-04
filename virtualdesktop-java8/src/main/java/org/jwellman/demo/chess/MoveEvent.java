@@ -78,6 +78,11 @@ public final class MoveEvent {
     }
 
     public String toAlgebraicNotation() {
+        if (rookMoved != null) {
+            // Castling has its own notation, independent of origin/destination/capture
+            return destination.x == 6 ? "O-O" : "O-O-O";
+        }
+
         // If it's a capture, use 'x' (e.g., "e4xd5"), otherwise a hyphen (e.g., "e2-e4")
         String separator = (capturedPiece != null) ? "x" : "-";
 

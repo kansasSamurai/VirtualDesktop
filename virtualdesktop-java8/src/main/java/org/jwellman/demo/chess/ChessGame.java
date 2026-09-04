@@ -110,6 +110,19 @@ public class ChessGame {
         return this.getPieceAt(new Point(file, rank)) != null;
     }
 
+    public int getMaterialDelta() {
+        int whiteValue = 0;
+        int blackValue = 0;
+        for (ChessPiece piece : activePieces.values()) {
+            if (piece.isWhite()) {
+                whiteValue += piece.getValue();
+            } else {
+                blackValue += piece.getValue();
+            }
+        }
+        return whiteValue - blackValue;
+    }
+
     public ChessPiece getKing(boolean white) {
         return white ? whiteKing : blackKing;
     }

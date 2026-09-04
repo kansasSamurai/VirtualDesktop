@@ -48,6 +48,18 @@ public class ChessPiece {
         return this.getType() == Type.PAWN;
     }
 
+    public int getValue() {
+        switch (getType()) {
+            case PAWN:   return 1;
+            case KNIGHT: return 3;
+            case BISHOP: return 3;
+            case ROOK:   return 5;
+            case QUEEN:  return 9;
+            case KING:   return 0;
+            default:     return 0;
+        }
+    }
+
     public Point getPosition() { 
         // 2. Format the starting coordinate before overwriting it
         String originNotation = toAlgebraic(this.position);

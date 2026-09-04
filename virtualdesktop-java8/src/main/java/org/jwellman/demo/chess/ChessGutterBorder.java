@@ -3,6 +3,8 @@ package org.jwellman.demo.chess;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -64,6 +66,7 @@ public class ChessGutterBorder extends EmptyBorder {
             boolean indicatorAtBottom = flipped ? !whiteOnClock : whiteOnClock;
 //            drawPlayerIndicator(x, y, width, height, g2, indicatorAtBottom);
             drawNewPlayerIndicator(x, y, width, height, g2, indicatorAtBottom);
+            drawMaterialBadge(x, y, width, height, g2, indicatorAtBottom);
             
             
             
@@ -121,6 +124,42 @@ public class ChessGutterBorder extends EmptyBorder {
         g2.setColor(slotBorderColor);
         g2.setStroke(new BasicStroke(1.5f));
         g2.drawRoundRect(indicatorX, indicatorY, indicatorSize, indicatorSize, 8, 8);
+    }
+
+    private void drawMaterialBadge(int x, int y, int width, int height, Graphics2D g2, boolean indicatorAtBottom) {
+        int delta = game.getMaterialDelta();
+        if (delta == 0) {
+            return; // No badge at even material
+        }
+
+        String text = (delta > 0 ? "+" : "") + delta;
+
+        g2.setFont(new Font("SansSerif", Font.BOLD, 12));
+        FontMetrics fm = g2.getFontMetrics();
+        int textWidth = fm.stringWidth(text);
+
+        int indicatorSize = 24; // matches drawNewPlayerIndicator's pill
+        int badgeHeight = indicatorSize;
+        int badgeWidth = textWidth + 14;
+
+        int pillX = x + width - right - indicatorSize - 16;
+        int badgeX = pillX - 8 - badgeWidth;
+
+        int badgeY = indicatorAtBottom
+                ? y + height - bottom + (bottom - badgeHeight) / 2
+                : y + (top - badgeHeight) / 2;
+
+        g2.setColor(slotFillColor);
+        g2.fillRoundRect(badgeX, badgeY, badgeWidth, badgeHeight, 8, 8);
+
+        g2.setColor(slotBorderColor);
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.drawRoundRect(badgeX, badgeY, badgeWidth, badgeHeight, 8, 8);
+
+        g2.setColor(Color.WHITE);
+        int textX = badgeX + (badgeWidth - textWidth) / 2;
+        int textY = badgeY + ((badgeHeight - fm.getHeight()) / 2) + fm.getAscent();
+        g2.drawString(text, textX, textY);
     }
 
     private void drawPlayerIndicator(int x, int y, int width, int height, Graphics2D g2, boolean whiteOnClock) {

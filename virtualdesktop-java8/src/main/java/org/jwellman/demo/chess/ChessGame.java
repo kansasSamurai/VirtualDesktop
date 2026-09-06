@@ -79,6 +79,10 @@ public class ChessGame {
     // Encapsulated square control matrix - initialize empty matrix for start of game
     private SquareControlMatrix currentControlMatrix = new SquareControlMatrix();
 
+    // Endgame analysis aids: exclude a side's king from its own control contribution
+    private boolean excludeWhiteKingFromControl;
+    private boolean excludeBlackKingFromControl;
+
     public ChessGame() {
         initializeStandardBoard();
     }
@@ -309,10 +313,27 @@ public class ChessGame {
         return enPassantVulnerableSquare;
     }
 
+    public void setExcludeKingFromControl(boolean white, boolean exclude) {
+        if (white) {
+            excludeWhiteKingFromControl = exclude;
+        } else {
+            excludeBlackKingFromControl = exclude;
+        }
+        generateMatrix(activePieces);
+    }
+
     private void generateMatrix(Map<Point, ChessPiece> activePieces2) {
         this.currentControlMatrix = new SquareControlMatrix();
 
         for (final ChessPiece cursorPiece : this.activePieces.values() ) {
+            if (cursorPiece.getType() == Type.KING) {
+                if (cursorPiece.isWhite() && excludeWhiteKingFromControl) {
+                    continue;
+                }
+                if (!cursorPiece.isWhite() && excludeBlackKingFromControl) {
+                    continue;
+                }
+            }
             getValidator().getValidMoves(this, cursorPiece, ChessMoveValidator.EvaluationContext.CONTROL,
                     (piece, coordinate, isCollisionObstacle) -> {
                 // This lambda block matches the RaycastObserver signature perfectly!

@@ -705,10 +705,22 @@ public class ChessUiEngine {
             chessBoard.repaint();
         });
 
+        this.options.Chooser.IGNORE_WHITE_KING.addActionListener(e -> {
+            game.setExcludeKingFromControl(true, this.options.ignoreWhiteKing());
+            chessBoard.repaint();
+        });
+
+        this.options.Chooser.IGNORE_BLACK_KING.addActionListener(e -> {
+            game.setExcludeKingFromControl(false, this.options.ignoreBlackKing());
+            chessBoard.repaint();
+        });
+
         Box options = Box.createVerticalBox();
         options.add(this.options.Chooser.FLIP_BOARD);
         options.add(this.options.Chooser.SHOW_CONTROL_BADGES);
         options.add(this.options.Chooser.SHOW_SQUARE_STRENGTH);
+        options.add(this.options.Chooser.IGNORE_WHITE_KING);
+        options.add(this.options.Chooser.IGNORE_BLACK_KING);
         container.add(options, BorderLayout.WEST);
 
         return settings;

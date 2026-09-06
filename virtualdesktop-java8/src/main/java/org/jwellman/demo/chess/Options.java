@@ -10,6 +10,8 @@ public class Options {
         public final JCheckBox FLIP_BOARD = new JCheckBox("Flip Board");
         public final JCheckBox SHOW_CONTROL_BADGES = new JCheckBox("Show Control Badges");
         public final JCheckBox SHOW_SQUARE_STRENGTH = new JCheckBox("Show Square Strength");
+        public final JCheckBox IGNORE_WHITE_KING = new JCheckBox("Ignore King (White)");
+        public final JCheckBox IGNORE_BLACK_KING = new JCheckBox("Ignore King (Black)");
     }
 
     // ================================================================
@@ -32,6 +34,14 @@ public class Options {
 
     public boolean showControlBadges() {
         return Chooser.SHOW_CONTROL_BADGES.isSelected();
+    }
+
+    public boolean ignoreWhiteKing() {
+        return Chooser.IGNORE_WHITE_KING.isSelected();
+    }
+
+    public boolean ignoreBlackKing() {
+        return Chooser.IGNORE_BLACK_KING.isSelected();
     }
 
 }

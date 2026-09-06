@@ -23,6 +23,7 @@ public class BoardSquare extends JPanel {
     private int file;
 
     // Modern tactical tones TODO make themeable
+    @SuppressWarnings("unused")
     private static Color lightSquare = new Color(235, 236, 208); 
     private static Color darkSquare  = new Color(119, 149, 86);
 

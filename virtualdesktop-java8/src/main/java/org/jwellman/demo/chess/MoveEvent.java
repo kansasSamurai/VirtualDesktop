@@ -15,13 +15,14 @@ public final class MoveEvent {
     private final ChessPiece rookMoved; // Nullable - set only for castling
     private final Point rookOrigin;
     private final Point rookDestination;
+    private final ChessPiece promotedPiece; // Nullable - set only for promotion
 
     // Package-private constructor...
     MoveEvent(Point origin, Point destination,
             ChessPiece movedPiece, ChessPiece capturedPiece,
             Point enPassantSquareBeforeMove, boolean wasInitialPawnMove) {
         this(origin, destination, movedPiece, capturedPiece, enPassantSquareBeforeMove,
-                wasInitialPawnMove, null, null, null);
+                wasInitialPawnMove, null, null, null, null);
     }
 
     // Package-private constructor for castling, carrying the rook's half of the move...
@@ -29,6 +30,24 @@ public final class MoveEvent {
             ChessPiece movedPiece, ChessPiece capturedPiece,
             Point enPassantSquareBeforeMove, boolean wasInitialPawnMove,
             ChessPiece rookMoved, Point rookOrigin, Point rookDestination) {
+        this(origin, destination, movedPiece, capturedPiece, enPassantSquareBeforeMove,
+                wasInitialPawnMove, rookMoved, rookOrigin, rookDestination, null);
+    }
+
+    // Package-private constructor for promotion, carrying the newly-promoted piece...
+    MoveEvent(Point origin, Point destination,
+            ChessPiece movedPiece, ChessPiece capturedPiece,
+            Point enPassantSquareBeforeMove, boolean wasInitialPawnMove,
+            ChessPiece promotedPiece) {
+        this(origin, destination, movedPiece, capturedPiece, enPassantSquareBeforeMove,
+                wasInitialPawnMove, null, null, null, promotedPiece);
+    }
+
+    private MoveEvent(Point origin, Point destination,
+            ChessPiece movedPiece, ChessPiece capturedPiece,
+            Point enPassantSquareBeforeMove, boolean wasInitialPawnMove,
+            ChessPiece rookMoved, Point rookOrigin, Point rookDestination,
+            ChessPiece promotedPiece) {
         super();
         this.origin = origin;
         this.destination = destination;
@@ -39,6 +58,7 @@ public final class MoveEvent {
         this.rookMoved = rookMoved;
         this.rookOrigin = rookOrigin;
         this.rookDestination = rookDestination;
+        this.promotedPiece = promotedPiece;
     }
 
     protected Point getOrigin() {
@@ -75,6 +95,10 @@ public final class MoveEvent {
 
     protected Point getRookDestination() {
         return rookDestination;
+    }
+
+    protected ChessPiece getPromotedPiece() {
+        return promotedPiece;
     }
 
     public String toAlgebraicNotation() {

@@ -378,11 +378,20 @@ public class ChessUiEngine {
                 new PromotionChoiceDialog(mainFrame, piece.isWhite(), (chosenType) -> {
 
                     // 2. DOMAIN MUTATION: Swap the Pawn out for the shiny new piece!
-                    ChessPiece promotedPiece = game.executePromotion(piece, droppedAt, chosenType);
+                    PromotionResult promotionResult = game.executePromotion(piece, droppedAt, chosenType);
+                    ChessPiece promotedPiece = promotionResult.getPromotedPiece();
+                    ChessPiece capturedPiece = promotionResult.getCapturedPiece();
 
                     // 3. UI RENDERING MUTATION: Clean up your view maps
-                    viewTokens.remove(piece); // Purge old pawn visual reference
+                    // NOTE: viewTokens keeps the pawn's entry (matches how captured pieces are
+                    // handled elsewhere) so undo can still look its token up and re-add it.
                     chessBoard.remove(token); // Yank the token out of the layout container
+
+                    // If the promoting pawn captured a piece, its view token would otherwise
+                    // be orphaned on the board forever - remove it same as a normal capture.
+                    if (capturedPiece != null) {
+                        chessBoard.remove(viewTokens.get(capturedPiece));
+                    }
 
                     // Generate the new visual piece token wrapper
                     ChessPieceToken newVisualToken = new ChessPieceToken(promotedPiece, engine.mouseController);
@@ -396,16 +405,17 @@ public class ChessUiEngine {
                     chessBoard.add(newVisualToken);
 
                     // 4. TIMELINE HISTORY UPDATE: Capture the event delta
-                    MoveEvent event = new MoveEvent(logicalOriginPoint, droppedAt, 
-                            piece, promotedPiece, 
-                            null, false);
+                    MoveEvent event = new MoveEvent(logicalOriginPoint, droppedAt,
+                            piece, capturedPiece,
+                            null, false,
+                            promotedPiece);
                     undoStack.push(event);
                     redoStack.clear();
 
                     game.advanceTurn();
 
-                    // Refresh scoreboard and matrices (this is part of standard "cleanup"
-                    // engine.scoresheetPanel.synchronizeHistory(engine.undoStack);
+                    // Refresh scoreboard and matrices
+                    engine.scoresheetPanel.synchronizeHistory(engine.undoStack);
 
                 }).setVisible(true);
 
@@ -516,9 +526,17 @@ public class ChessUiEngine {
 
         // 1. Teleport the primary piece straight back to its home coordinate
         game.restoreMovedPiece(event);
-        this.addPieceToBoard(event.getMovedPiece(), false);
+        // A promoted piece's token was fully removed from the board (not just repositioned),
+        // so the original piece's token needs to be re-added, not merely relocated.
+        boolean pawnTokenNeedsReAdd = event.getPromotedPiece() != null;
+        this.addPieceToBoard(event.getMovedPiece(), pawnTokenNeedsReAdd);
 //        ChessPieceToken movedToken = viewTokens.get(event.getMovedPiece());
 //        layout.updateCoordinate(movedToken, event.getOrigin());
+
+        // 1b. Promotion: banish the promoted piece's token now that the pawn is back
+        if (event.getPromotedPiece() != null) {
+            chessBoard.remove(viewTokens.get(event.getPromotedPiece()));
+        }
 
         // 2. Resurrection: If a piece was captured, pop it back into existence!
         if (event.getCapturedPiece() != null) {

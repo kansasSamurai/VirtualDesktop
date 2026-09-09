@@ -166,16 +166,26 @@ public class ChessGame {
         return destination.y == promotionRank;
     }
     
-    public ChessPiece executePromotion(ChessPiece piece, Point droppedAt, Type chosenType) {
+    public PromotionResult executePromotion(ChessPiece piece, Point droppedAt, Type chosenType) {
 
         // remove the piece/pawn
         activePieces.remove(piece.getPosition());
+
+        // capture whatever piece (if any) currently occupies the destination square
+        ChessPiece capturedPiece = activePieces.remove(droppedAt);
+        if (capturedPiece != null) {
+            if (capturedPiece.isWhite()) {
+                whiteCaptured.add(capturedPiece);
+            } else {
+                blackCaptured.add(capturedPiece);
+            }
+        }
 
         // add the promoted piece according to type
         ChessPiece promoted = new ChessPiece(chosenType, piece.isWhite(), droppedAt);
         activePieces.put(droppedAt, promoted);
 
-        return promoted;
+        return new PromotionResult(promoted, capturedPiece);
     }
 
     /**

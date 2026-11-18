@@ -39,6 +39,7 @@ import org.jwellman.dsp.GoogleMaterialIconProvider;
 import org.jwellman.dsp.icons.IconSpecifier;
 import org.jwellman.swing.plaf.metal.MetalThemeManager ;
 import org.jwellman.swing.thirdparty.BetterMemoryMonitor;
+import org.jwellman.swing.thirdparty.MemoryMonitorPanel;
 import org.jwellman.virtualdesktop.desktop.ClassicDesktopView;
 import org.jwellman.virtualdesktop.desktop.DesktopController;
 import org.jwellman.virtualdesktop.desktop.DialogManager;
@@ -212,15 +213,25 @@ public class App extends JFrame implements ActionListener {
                 });
                 powerPanel.add(powerButton);
 
-                // Memory monitor panel above the power button
-                BetterMemoryMonitor betterMemoryMonitor = new BetterMemoryMonitor();
-                JPanel memMonitorPanel = betterMemoryMonitor.getMemoryMonitor();
-                betterMemoryMonitor.start();
-
                 // Stack: memory monitor CENTER, power button SOUTH
                 JPanel taskbarBottomPanel = new JPanel(new BorderLayout());
-                taskbarBottomPanel.add(memMonitorPanel, BorderLayout.CENTER);
                 taskbarBottomPanel.add(powerPanel, BorderLayout.SOUTH);
+
+                // Memory monitor panel above the power button
+                int mmSelector = 2;
+                switch(mmSelector) {
+                case 1: // 
+                    BetterMemoryMonitor betterMemoryMonitor = new BetterMemoryMonitor();
+                    JPanel memMonitorPanel = betterMemoryMonitor.getMemoryMonitor();
+                    betterMemoryMonitor.start();
+                    taskbarBottomPanel.add(memMonitorPanel, BorderLayout.CENTER);
+                    break;
+                case 2: //
+                    MemoryMonitorPanel mmp = new MemoryMonitorPanel();
+                    taskbarBottomPanel.add(mmp, BorderLayout.CENTER);
+
+                    break;
+                }
 
                 controls.add(taskbarBottomPanel, BorderLayout.SOUTH);
 

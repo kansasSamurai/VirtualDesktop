@@ -8,26 +8,17 @@ import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.GraphicsConfiguration;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.awt.RenderingHints;
 import java.awt.Stroke;
-import java.awt.Transparency;
 import java.awt.event.ActionEvent;
-import java.awt.geom.AffineTransform;
 import java.awt.geom.GeneralPath;
 import java.awt.geom.Line2D;
 import java.awt.geom.Rectangle2D;
-import java.awt.image.VolatileImage;
-import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -36,7 +27,6 @@ import java.util.ResourceBundle;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.BorderFactory;
-import javax.swing.JComponent;
 import javax.swing.JPanel;
 
 import org.apache.batik.util.gui.ExtendedGridBagConstraints;
@@ -44,9 +34,22 @@ import org.apache.batik.util.gui.resource.ActionMap;
 import org.apache.batik.util.gui.resource.ButtonFactory;
 import org.apache.batik.util.gui.resource.MissingListenerException;
 import org.apache.batik.util.resources.ResourceManager;
+import org.jwellman.swing.AbstractVolatileImageComponent;
 
 /**
- * Refactored MemoryMonitor component: embeddable JPanel backed by VRAM VolatileImage caching.
+ * MemoryMonitor component: embeddable JPanel backed by VRAM VolatileImage
+ * caching.
+ * 
+ * ### Key Design Benefits
+ * 
+ * 1. **Circular Primitive Buffers:** Using `long[]` and `boolean[]` ring
+ * buffers avoids boxing overhead (`Long` objects) and dynamic array resizing
+ * (`ArrayList`), keeping garbage collection churn strictly at **zero**. 
+ * 2. **Instant Diagnostic Clarity:** Cyan markers at the top of the timeline
+ * highlight exact GC reclamation sweeps, while red vertical hazard lines expose
+ * sudden heap allocation surges.
+ * 
+ * 
  */
 @SuppressWarnings("serial")
 public class MemoryMonitorPanel extends JPanel implements ActionMap {
@@ -161,126 +164,6 @@ public class MemoryMonitorPanel extends JPanel implements ActionMap {
     }
 
     /**
-     * High-Performance Abstract Base Class managing VRAM VolatileImage caching, 
-     * HiDPI scaling, and multi-monitor DPI transition handling.
-     */
-    public abstract static class AbstractVolatileImageComponent extends JComponent {
-        private VolatileImage offscreenBuffer;
-        private int cachedWidth = -1;
-        private int cachedHeight = -1;
-        private double cachedScaleX = -1.0;
-        private double cachedScaleY = -1.0;
-
-        private final PropertyChangeListener configListener = evt -> {
-            if ("graphicsConfiguration".equals(evt.getPropertyName())) {
-                disposeBuffer();
-                invalidateFontMetricsCache();
-                repaint();
-            }
-        };
-
-        protected AbstractVolatileImageComponent() {
-            setOpaque(true);
-            addPropertyChangeListener("graphicsConfiguration", configListener);
-        }
-
-        @Override
-        public void removeNotify() {
-            removePropertyChangeListener("graphicsConfiguration", configListener);
-            disposeBuffer();
-            super.removeNotify();
-        }
-
-        protected synchronized void disposeBuffer() {
-            if (offscreenBuffer != null) {
-                offscreenBuffer.flush();
-                offscreenBuffer = null;
-            }
-            cachedWidth = -1;
-            cachedHeight = -1;
-            cachedScaleX = -1.0;
-            cachedScaleY = -1.0;
-        }
-
-        @Override
-        protected final void paintComponent(Graphics g) {
-            int width = getWidth();
-            int height = getHeight();
-            if (width <= 0 || height <= 0) return;
-
-            Graphics2D g2d = (Graphics2D) g;
-            GraphicsConfiguration gc = g2d.getDeviceConfiguration();
-            AffineTransform tx = gc.getDefaultTransform();
-            double scaleX = tx.getScaleX();
-            double scaleY = tx.getScaleY();
-
-            validateBuffer(width, height, scaleX, scaleY, gc);
-
-            if (offscreenBuffer != null) {
-                do {
-                    int valCode = offscreenBuffer.validate(gc);
-                    if (valCode == VolatileImage.IMAGE_INCOMPATIBLE) {
-                        disposeBuffer();
-                        validateBuffer(width, height, scaleX, scaleY, gc);
-                        if (offscreenBuffer == null) return;
-                        valCode = offscreenBuffer.validate(gc);
-                    }
-
-                    if (valCode == VolatileImage.IMAGE_RESTORED || valCode == VolatileImage.IMAGE_OK || shouldRedrawBuffer()) {
-                        Graphics2D bufG2d = offscreenBuffer.createGraphics();
-                        try {
-                            bufG2d.scale(scaleX, scaleY);
-                            bufG2d.setRenderingHints(getRenderingHints());
-                            renderToBuffer(bufG2d, width, height);
-                            resetBufferRedrawFlag();
-                        } finally {
-                            bufG2d.dispose();
-                        }
-                    }
-
-                    // Fast GPU blit to screen
-                    Graphics2D screenG2d = (Graphics2D) g2d.create();
-                    try {
-                        screenG2d.drawImage(offscreenBuffer, 0, 0, width, height, null);
-                    } finally {
-                        screenG2d.dispose();
-                    }
-
-                } while (offscreenBuffer.contentsLost());
-            }
-        }
-
-        private void validateBuffer(int w, int h, double sx, double sy, GraphicsConfiguration gc) {
-            if (offscreenBuffer == null || cachedWidth != w || cachedHeight != h || cachedScaleX != sx || cachedScaleY != sy) {
-                disposeBuffer();
-                if (gc != null) {
-                    int physW = (int) Math.ceil(w * sx);
-                    int physH = (int) Math.ceil(h * sy);
-                    offscreenBuffer = gc.createCompatibleVolatileImage(physW, physH, Transparency.OPAQUE);
-                    cachedWidth = w;
-                    cachedHeight = h;
-                    cachedScaleX = sx;
-                    cachedScaleY = sy;
-                    markBufferDirty();
-                }
-            }
-        }
-
-        protected RenderingHints getRenderingHints() {
-            RenderingHints hints = new RenderingHints(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            hints.put(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-            return hints;
-        }
-
-        protected void invalidateFontMetricsCache() {}
-        protected boolean shouldRedrawBuffer() { return false; }
-        protected void resetBufferRedrawFlag() {}
-        protected void markBufferDirty() {}
-
-        protected abstract void renderToBuffer(Graphics2D g2d, int width, int height);
-    }
-
-    /**
      * Optimized Usage LED Block Component extending AbstractVolatileImageComponent.
      */
     public static class Usage extends AbstractVolatileImageComponent implements MemoryChangeListener {
@@ -370,20 +253,38 @@ public class MemoryMonitorPanel extends JPanel implements ActionMap {
 
     /**
      * Optimized History Chart Component extending AbstractVolatileImageComponent.
+     * 
+     * Here is the enhanced `History` component. It tracks data points in 
+     * parallel primitive arrays, detects spikes and GC events on the fly 
+     * with **zero heap allocation**, and renders distinct visual markers 
+     * (cyan ticks for GC events, orange/red vertical highlights for allocation spikes) 
+     * directly into the VRAM buffer.
+     * 
      */
     public static class History extends AbstractVolatileImageComponent implements MemoryChangeListener {
+
         public static final int PREFERRED_WIDTH = 200;
         public static final int PREFERRED_HEIGHT = 100;
+        private static final int MAX_HISTORY = 190;
 
         protected static final Stroke GRID_LINES_STROKE = new BasicStroke(1);
         protected static final Stroke CURVE_STROKE = new BasicStroke(2, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
         protected static final Stroke BORDER_STROKE = new BasicStroke(2);
+        protected static final Stroke MARKER_STROKE = new BasicStroke(1.0f);
 
         protected Color gridLinesColor = new Color(0, 130, 0);
         protected Color curveColor = Color.yellow;
         protected Color borderColor = Color.green;
+        protected Color gcMarkerColor = new Color(0, 255, 200);     // Cyan tick for GC
+        protected Color spikeMarkerColor = new Color(255, 80, 80);   // Red tint for allocation spike
 
-        protected List<Long> data = new LinkedList<>();
+        // Parallel primitive arrays to eliminate object allocation / boxing churn
+        private final long[] usedMemoryBuffer = new long[MAX_HISTORY];
+        private final boolean[] gcEventBuffer = new boolean[MAX_HISTORY];
+        private final boolean[] spikeEventBuffer = new boolean[MAX_HISTORY];
+        private int head = 0;
+        private int size = 0;
+
         protected int xShift = 0;
         protected long totalMemory;
         protected long freeMemory;
@@ -397,30 +298,62 @@ public class MemoryMonitorPanel extends JPanel implements ActionMap {
 
         @Override
         public synchronized void memoryStateChanged(long total, long free) {
-            totalMemory = total;
-            freeMemory = free;
+            long used = total - free;
+            boolean isGC = false;
+            boolean isSpike = false;
 
-            data.add(totalMemory - freeMemory);
-            if (data.size() > 190) {
-                data.remove(0);
+            if (size > 0) {
+                int prevIndex = (head - 1 + MAX_HISTORY) % MAX_HISTORY;
+                long prevUsed = usedMemoryBuffer[prevIndex];
+                long delta = used - prevUsed;
+
+                // Heuristic: If free memory jumped up by > 2MB, a GC occurred
+                if (free > freeMemory + (2L * 1024 * 1024)) {
+                    isGC = true;
+                }
+                // Heuristic: If used memory surged by > 5MB between polls, mark allocation spike
+                else if (delta > (5L * 1024 * 1024)) {
+                    isSpike = true;
+                }
+            }
+
+            this.totalMemory = total;
+            this.freeMemory = free;
+
+            // Store in circular buffer
+            usedMemoryBuffer[head] = used;
+            gcEventBuffer[head] = isGC;
+            spikeEventBuffer[head] = isSpike;
+
+            head = (head + 1) % MAX_HISTORY;
+            if (size < MAX_HISTORY) {
+                size++;
+            } else {
                 xShift = (xShift + 1) % 10;
             }
 
-            Iterator<Long> it = data.iterator();
-            GeneralPath p = new GeneralPath();
-            if (it.hasNext()) {
-                long l = it.next();
-                p.moveTo(5, ((float) (totalMemory - l) / totalMemory) * 80 + 10);
-                int i = 6;
-                while (it.hasNext()) {
-                    l = it.next();
-                    p.lineTo(i, ((float) (totalMemory - l) / totalMemory) * 80 + 10);
-                    i++;
-                }
-            }
-            path = p;
+            rebuildPath();
             dataChanged = true;
             repaint();
+        }
+
+        private void rebuildPath() {
+            path.reset();
+            if (size == 0 || totalMemory == 0) return;
+
+            int startIndex = (head - size + MAX_HISTORY) % MAX_HISTORY;
+            long firstUsed = usedMemoryBuffer[startIndex];
+            
+            float startY = PREFERRED_HEIGHT - 5 - (((float) firstUsed / totalMemory) * 80.0f + 5.0f);
+            path.moveTo(5, startY);
+
+            for (int i = 1; i < size; i++) {
+                int idx = (startIndex + i) % MAX_HISTORY;
+                long used = usedMemoryBuffer[idx];
+                float x = 5 + i;
+                float y = PREFERRED_HEIGHT - 5 - (((float) used / totalMemory) * 80.0f + 5.0f);
+                path.lineTo(x, y);
+            }
         }
 
         @Override
@@ -450,6 +383,26 @@ public class MemoryMonitorPanel extends JPanel implements ActionMap {
             for (int i = 1; i < 9; i++) {
                 int ly = i * 10 + 5;
                 g2d.draw(new Line2D.Double(5, ly, PREFERRED_WIDTH - 5, ly));
+            }
+
+            // Render Event Markers (Spikes & GC Ticks)
+            if (size > 0) {
+                int startIndex = (head - size + MAX_HISTORY) % MAX_HISTORY;
+                for (int i = 0; i < size; i++) {
+                    int idx = (startIndex + i) % MAX_HISTORY;
+                    float x = 5 + i;
+
+                    if (spikeEventBuffer[idx]) {
+                        g2d.setColor(spikeMarkerColor);
+                        g2d.setStroke(MARKER_STROKE);
+                        g2d.drawLine((int) x, 5, (int) x, PREFERRED_HEIGHT - 5);
+                    } else if (gcEventBuffer[idx]) {
+                        g2d.setColor(gcMarkerColor);
+                        g2d.setStroke(MARKER_STROKE);
+                        // Draw small tick mark at the top of the chart for GC events
+                        g2d.drawLine((int) x, 5, (int) x, 12);
+                    }
+                }
             }
 
             // Curve

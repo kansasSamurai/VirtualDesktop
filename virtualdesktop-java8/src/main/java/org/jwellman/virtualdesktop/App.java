@@ -13,7 +13,6 @@ import java.util.Properties;
 
 import javax.swing.Action;
 import javax.swing.DefaultDesktopManager;
-import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JDesktopPane;
@@ -136,6 +135,7 @@ public class App extends JFrame implements ActionListener {
         return app;
     }
 
+    @SuppressWarnings("deprecation")
     private App() {
         super("Java Virtual Desktop");
         App.app = this;
@@ -422,6 +422,7 @@ public class App extends JFrame implements ActionListener {
      * @param targetMenu the menu to add items to
      * @param group the menu group containing vapps to add
      */
+    @SuppressWarnings("deprecation")
     private void addVappsToMenu(JMenu targetMenu, MenuGroup group) {
         // Add vapps at this level (non-desktopOnly)
         for (DesktopAction action : ActionFactory.getListOfActions()) {

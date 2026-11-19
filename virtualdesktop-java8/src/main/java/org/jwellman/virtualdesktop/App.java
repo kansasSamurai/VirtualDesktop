@@ -224,12 +224,15 @@ public class App extends JFrame implements ActionListener {
                     BetterMemoryMonitor betterMemoryMonitor = new BetterMemoryMonitor();
                     JPanel memMonitorPanel = betterMemoryMonitor.getMemoryMonitor();
                     betterMemoryMonitor.start();
+
                     taskbarBottomPanel.add(memMonitorPanel, BorderLayout.CENTER);
                     break;
                 case 2: //
                     MemoryMonitorPanel mmp = new MemoryMonitorPanel();
-                    taskbarBottomPanel.add(mmp, BorderLayout.CENTER);
-
+                    JPanel wrapper = new JPanel(new BorderLayout());
+                    wrapper.add(mmp, BorderLayout.WEST);
+                    
+                    taskbarBottomPanel.add(wrapper, BorderLayout.CENTER);
                     break;
                 }
 

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project & Roadmap Matrix</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      /* Target ~7-8 lanes visible on a 1920px+ wide monitor */
+      --lane-width: 245px;
+      --lane-gap: 0.65rem;
+      --project-gap: 1.25rem;
+      --bg-canvas: #121417;
+      --bg-lane: #1b1e23;
+      --bg-card-active: #232830;
+      --bg-card-pending: #181a1f;
+      --border-subtle: #2e333b;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: #e2e6ec;
+      font-size: 0.85rem;
+      overflow-x: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Control Bar */
+    .top-bar {
+      background-color: #181b20;
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0.5rem 1rem;
+      flex-shrink: 0;
+    }
+
+    /* Horizontal Board Canvas */
+    .board-viewport {
+      flex: 1;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0.85rem 1rem;
+      display: flex;
+      align-items: stretch;
+      gap: var(--project-gap);
+    }
+
+    /* Custom Scrollbar for Wide Horizontal Navigation */
+    .board-viewport::-webkit-scrollbar {
+      height: 10px;
+    }
+    .board-viewport::-webkit-scrollbar-track {
+      background: #16181c;
+    }
+    .board-viewport::-webkit-scrollbar-thumb {
+      background: #3a404a;
+      border-radius: 5px;
+    }
+    .board-viewport::-webkit-scrollbar-thumb:hover {
+      background: #525a68;
+    }
+
+    /* Tier 1: Top-Level Project Wrapper */
+    .project-cluster {
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.015);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 0.5rem;
+    }
+
+    .project-cluster.is-shelved {
+      opacity: 0.65;
+    }
+    .project-cluster.is-shelved:hover {
+      opacity: 1;
+    }
+
+    .project-super-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.35rem 0.6rem;
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+      background-color: #252a32;
+      border-left: 4px solid var(--accent-color, #0d6efd);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    /* Tier 2: Subproject Lanes Container */
+    .subproject-lanes {
+      display: flex;
+      gap: var(--lane-gap);
+      flex: 1;
+      min-height: 0; /* Enables independent vertical scrolling inside lanes */
+    }
+
+    .subproject-lane {
+      width: var(--lane-width);
+      flex-shrink: 0;
+      background-color: var(--bg-lane);
+      border: 1px solid var(--border-subtle);
+      border-radius: 5px;
+      display: flex;
+      flex-direction: column;
+      max-height: 100%;
+    }
+
+    .lane-header {
+      padding: 0.5rem 0.65rem;
+      border-bottom: 1px solid var(--border-subtle);
+      background-color: rgba(0, 0, 0, 0.15);
+      flex-shrink: 0;
+    }
+
+    .lane-title {
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: #f8f9fa;
+      margin: 0;
+    }
+
+    /* "Where I Left Off" Bookmark Box */
+    .shelf-bookmark {
+      margin: 0.5rem 0.5rem 0 0.5rem;
+      padding: 0.45rem 0.55rem;
+      background-color: rgba(255, 193, 7, 0.08);
+      border-left: 3px solid #ffc107;
+      border-radius: 3px;
+      font-size: 0.76rem;
+      color: #e9d8a6;
+      flex-shrink: 0;
+    }
+    .shelf-bookmark strong {
+      display: block;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #ffc107;
+      margin-bottom: 2px;
+    }
+
+    /* Vertical Task Flow Inside Each Lane */
+    .lane-body {
+      padding: 0.5rem;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .lane-body::-webkit-scrollbar {
+      width: 5px;
+    }
+    .lane-body::-webkit-scrollbar-thumb {
+      background: #343a44;
+      border-radius: 3px;
+    }
+
+    .section-divider {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #8b949e;
+      font-weight: 700;
+      margin-top: 0.25rem;
+      padding-bottom: 2px;
+      border-bottom: 1px dashed #30363d;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Task Cards */
+    .task-card {
+      padding: 0.45rem 0.55rem;
+      border-radius: 4px;
+      border: 1px solid var(--border-subtle);
+      line-height: 1.35;
+    }
+
+    .task-card.in-progress {
+      background-color: var(--bg-card-active);
+      border-left: 3px solid #2ea043;
+    }
+
+    .task-card.pending {
+      background-color: var(--bg-card-pending);
+      border-left: 3px solid #484f58;
+      color: #adb5bd;
+    }
+
+    .task-meta {
+      font-size: 0.7rem;
+      color: #8b949e;
+      margin-top: 0.25rem;
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Utility Header -->
+  <header class="top-bar d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <div class="d-flex align-items-center gap-3">
+      <span class="fw-bold fs-6 text-light">Project & Roadmap Matrix</span>
+      <span class="badge bg-secondary" id="stats-badge">0 Lanes</span>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <input type="search" id="search-input" class="form-control form-control-sm" placeholder="Filter tasks or projects..." style="width: 210px;">
+      
+      <div class="form-check form-switch ms-2 mb-0">
+        <input class="form-check-input" type="checkbox" id="hide-shelved-toggle">
+        <label class="form-check-label small text-secondary" for="hide-shelved-toggle">Hide Shelved</label>
+      </div>
+
+      <select id="width-selector" class="form-select form-select-sm" style="width: auto;" title="Column Width">
+        <option value="220px">Compact (8+ cols)</option>
+        <option value="245px" selected>Standard (7-8 cols)</option>
+        <option value="290px">Wide (5-6 cols)</option>
+      </select>
+    </div>
+  </header>
+
+  <!-- Main Horizontal Matrix -->
+  <main class="board-viewport" id="board-root"></main>
+
+  <!-- =====================================================================
+       DATA CONFIGURATION: Edit this section to update projects & tasks
+       ===================================================================== -->
+  <script>
+    const ROADMAP_DATA = [
+      {
+        project: "Virtual Desktop Framework",
+        status: "active", // "active" | "shelved"
+        accent: "#3b82f6",
+        lastTouched: "2026-11",
+        subprojects: [
+          {
+            name: "Core & Redux Store",
+            bookmark: "Sealed action pipeline working in Java 17 module; need to backport event bridge to Java 8 module.",
+            inProgress: [
+              { text: "Verify zero-allocation repaint cycle under heavy state updates", tag: "perf" }
+            ],
+            pending: [
+              { text: "Write serialization test for workspace layout snapshots", tag: "test" },
+              { text: "Document state subscription lifecycle in ARCHITECTURE.md", tag: "docs" }
+            ]
+          },
+          {
+            name: "SmartGrid Widget",
+            bookmark: "Column resizing math is solid; horizontal virtual scroll glitches on last column.",
+            inProgress: [
+              { text: "Fix off-by-one viewport clip on rightmost column", tag: "bug" }
+            ],
+            pending: [
+              { text: "Add keyboard navigation (Up/Down/PgUp/PgDn)", tag: "feature" },
+              { text: "Custom cell renderer hook for numeric alignment", tag: "feature" }
+            ]
+          },
+          {
+            name: "Gantt & Calendar POC",
+            bookmark: "Shelved while SmartGrid is stabilized. Drag-layer ghost rendering works.",
+            inProgress: [],
+            pending: [
+              { text: "Wire drag-drop time snapping to 15-min intervals", tag: "ui" },
+              { text: "Hook up Javalin WebSocket sidecar for live refresh", tag: "sync" }
+            ]
+          }
+        ]
+      },
+      {
+        project: "AuraCode Static Analyzer",
+        status: "active",
+        accent: "#10b981",
+        lastTouched: "2026-10",
+        subprojects: [
+          {
+            name: "JavaParser & SQLite Indexer",
+            bookmark: "MyBatis XML mapper resolution complete for select/update tags; missing <include> fragment expansion.",
+            inProgress: [
+              { text: "Resolve SQL <include refid='...'> fragments before indexing", tag: "parser" }
+            ],
+            pending: [
+              { text: "Index interface default methods in deep hierarchies", tag: "ast" },
+              { text: "Add incremental file-hash check to skip unchanged classes", tag: "perf" }
+            ]
+          },
+          {
+            name: "Mermaid Sequence Export",
+            bookmark: "Top-down call graphs look clean; bottom-up caller trees get too wide past depth 5.",
+            inProgress: [
+              { text: "Add --max-depth CLI flag with truncation node indicator", tag: "cli" }
+            ],
+            pending: [
+              { text: "Group recursive self-calls into Mermaid loop blocks", tag: "mermaid" }
+            ]
+          }
+        ]
+      },
+      {
+        project: "Horizon Calendar PWA",
+        status: "shelved",
+        accent: "#8b5cf6",
+        lastTouched: "2026-10",
+        subprojects: [
+          {
+            name: "Backend & VAPID Push",
+            bookmark: "Postgres multi-tenant schema finalized (SCHEMA-AUTH-AA001). Service worker subscribes cleanly.",
+            inProgress: [],
+            pending: [
+              { text: "Implement cron dispatcher for 24h event reminders", tag: "spring" },
+              { text: "Rate-limit public ICS feed endpoints", tag: "security" }
+            ]
+          },
+          {
+            name: "Thymeleaf & SmartAdmin UI",
+            bookmark: "Subscription toggle works; need offline fallback banner when service worker is disconnected.",
+            inProgress: [],
+            pending: [
+              { text: "Build custom element <horizon-mini-cal> for sidebar", tag: "web-comp" },
+              { text: "Test mobile viewport touch targets", tag: "css" }
+            ]
+          }
+        ]
+      },
+      {
+        project: "Swing Chess Workbench",
+        status: "active",
+        accent: "#f59e0b",
+        lastTouched: "2026-11",
+        subprojects: [
+          {
+            name: "Board & Evaluation Overlay",
+            bookmark: "JLayeredPane custom LayoutManager2 keeps piece & heatmap layers synced on resize.",
+            inProgress: [
+              { text: "Tune square-control opacity gradient for dark theme", tag: "ui" }
+            ],
+            pending: [
+              { text: "Add PGN variation tree walker", tag: "pgn" },
+              { text: "Display mobility & pawn-island delta meter", tag: "eval" }
+            ]
+          }
+        ]
+      },
+      {
+        project: "C64 Windowing Prototype",
+        status: "shelved",
+        accent: "#ec4899",
+        lastTouched: "2026-09",
+        subprojects: [
+          {
+            name: "C / BASIC Coexistence",
+            bookmark: "Zero-page pointer save/restore routine works when jumping between C window draw and BASIC SYS calls.",
+            inProgress: [],
+            pending: [
+              { text: "Pack menu strings with 5-bit table to save 400 bytes", tag: "memory" },
+              { text: "Test screen RAM backup buffer at $C000", tag: "vice" }
+            ]
+          }
+        ]
+      }
+    ];
+
+    /* =====================================================================
+       RENDERING LOGIC
+       ===================================================================== */
+    const boardRoot = document.getElementById('board-root');
+    const searchInput = document.getElementById('search-input');
+    const hideShelvedToggle = document.getElementById('hide-shelved-toggle');
+    const widthSelector = document.getElementById('width-selector');
+    const statsBadge = document.getElementById('stats-badge');
+
+    function renderBoard() {
+      const query = searchInput.value.trim().toLowerCase();
+      const hideShelved = hideShelvedToggle.checked;
+
+      boardRoot.innerHTML = '';
+      let visibleLanes = 0;
+
+      ROADMAP_DATA.forEach(proj => {
+        if (hideShelved && proj.status === 'shelved') return;
+
+        // Filter subprojects if search query is active
+        const filteredSubs = proj.subprojects.filter(sub => {
+          if (!query) return true;
+          const haystack = [
+            proj.project,
+            sub.name,
+            sub.bookmark || '',
+            ...sub.inProgress.map(t => t.text + ' ' + (t.tag || '')),
+            ...sub.pending.map(t => t.text + ' ' + (t.tag || ''))
+          ].join(' ').toLowerCase();
+          return haystack.includes(query);
+        });
+
+        if (filteredSubs.length === 0) return;
+
+        const cluster = document.createElement('section');
+        cluster.className = `project-cluster ${proj.status === 'shelved' ? 'is-shelved' : ''}`;
+        cluster.style.setProperty('--accent-color', proj.accent || '#0d6efd');
+
+        const statusBadge = proj.status === 'shelved'
+          ? `<span class="badge bg-warning text-dark">SHELVED</span>`
+          : `<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50">ACTIVE</span>`;
+
+        cluster.innerHTML = `
+          <div class="project-super-header">
+            <span class="text-truncate" title="${proj.project}">${proj.project}</span>
+            <div class="d-flex align-items-center gap-2">
+              <span class="small text-secondary fw-normal">${proj.lastTouched || ''}</span>
+              ${statusBadge}
+            </div>
+          </div>
+          <div class="subproject-lanes"></div>
+        `;
+
+        const lanesContainer = cluster.querySelector('.subproject-lanes');
+
+        filteredSubs.forEach(sub => {
+          visibleLanes++;
+          const lane = document.createElement('div');
+          lane.className = 'subproject-lane';
+
+          const inProgressHtml = sub.inProgress.length
+            ? sub.inProgress.map(t => renderTask(t, 'in-progress')).join('')
+            : `<div class="text-secondary fst-italic small px-1">Nothing active</div>`;
+
+          const pendingHtml = sub.pending.length
+            ? sub.pending.map(t => renderTask(t, 'pending')).join('')
+            : `<div class="text-secondary fst-italic small px-1">Queue empty</div>`;
+
+          const bookmarkHtml = sub.bookmark
+            ? `<div class="shelf-bookmark"><strong>Where I Left Off</strong>${sub.bookmark}</div>`
+            : '';
+
+          lane.innerHTML = `
+            <div class="lane-header d-flex justify-content-between align-items-center">
+              <h2 class="lane-title text-truncate" title="${sub.name}">${sub.name}</h2>
+              <span class="badge rounded-pill bg-dark text-secondary border border-secondary border-opacity-25">
+                ${sub.inProgress.length}/${sub.pending.length}
+              </span>
+            </div>
+            ${bookmarkHtml}
+            <div class="lane-body">
+              <div class="section-divider">
+                <span>In Progress</span>
+                <span>${sub.inProgress.length}</span>
+              </div>
+              ${inProgressHtml}
+
+              <div class="section-divider mt-2">
+                <span>Pending / Next</span>
+                <span>${sub.pending.length}</span>
+              </div>
+              ${pendingHtml}
+            </div>
+          `;
+
+          lanesContainer.appendChild(lane);
+        });
+
+        boardRoot.appendChild(cluster);
+      });
+
+      statsBadge.textContent = `${visibleLanes} Subproject Lane${visibleLanes === 1 ? '' : 's'}`;
+    }
+
+    function renderTask(task, type) {
+      const tagHtml = task.tag
+        ? `<span class="badge bg-secondary bg-opacity-25 text-light fw-normal">${task.tag}</span>`
+        : '';
+      return `
+        <div class="task-card ${type}">
+          <div>${task.text}</div>
+          ${tagHtml ? `<div class="task-meta"><span></span>${tagHtml}</div>` : ''}
+        </div>
+      `;
+    }
+
+    // Event Listeners
+    searchInput.addEventListener('input', renderBoard);
+    hideShelvedToggle.addEventListener('change', renderBoard);
+    widthSelector.addEventListener('change', (e) => {
+      document.documentElement.style.setProperty('--lane-width', e.target.value);
+    });
+
+    // Initial Render
+    renderBoard();
+  </script>
+</body>
+</html>

@@ -236,45 +236,219 @@
   <!-- =====================================================================
        DATA CONFIGURATION: Edit this section to update projects & tasks
        ===================================================================== -->
+  <!-- =====================================================================
+      original mockup for reference
+      const ROADMAP_DATA = [
+          {
+            project: "Virtual Desktop Framework",
+            status: "active", // "active" | "shelved"
+            accent: "#3b82f6",
+            lastTouched: "2026-11",
+            subprojects: [
+              {
+                name: "Core & Redux Store",
+                bookmark: "Sealed action pipeline working in Java 17 module; need to backport event bridge to Java 8 module.",
+                inProgress: [
+                  { text: "Verify zero-allocation repaint cycle under heavy state updates", tag: "perf" }
+                ],
+                pending: [
+                  { text: "Write serialization test for workspace layout snapshots", tag: "test" },
+                  { text: "Document state subscription lifecycle in ARCHITECTURE.md", tag: "docs" }
+                ]
+              },
+              {
+                name: "SmartGrid Widget",
+                bookmark: "Column resizing math is solid; horizontal virtual scroll glitches on last column.",
+                inProgress: [
+                  { text: "Fix off-by-one viewport clip on rightmost column", tag: "bug" }
+                ],
+                pending: [
+                  { text: "Add keyboard navigation (Up/Down/PgUp/PgDn)", tag: "feature" },
+                  { text: "Custom cell renderer hook for numeric alignment", tag: "feature" }
+                ]
+              },
+              {
+                name: "Gantt & Calendar POC",
+                bookmark: "Shelved while SmartGrid is stabilized. Drag-layer ghost rendering works.",
+                inProgress: [],
+                pending: [
+                  { text: "Wire drag-drop time snapping to 15-min intervals", tag: "ui" },
+                  { text: "Hook up Javalin WebSocket sidecar for live refresh", tag: "sync" }
+                ]
+              }
+            ]
+          },
+          {
+            project: "AuraCode Static Analyzer",
+            status: "active",
+            accent: "#10b981",
+            lastTouched: "2026-10",
+            subprojects: [
+              {
+                name: "JavaParser & SQLite Indexer",
+                bookmark: "MyBatis XML mapper resolution complete for select/update tags; missing <include> fragment expansion.",
+                inProgress: [
+                  { text: "Resolve SQL <include refid='...'> fragments before indexing", tag: "parser" }
+                ],
+                pending: [
+                  { text: "Index interface default methods in deep hierarchies", tag: "ast" },
+                  { text: "Add incremental file-hash check to skip unchanged classes", tag: "perf" }
+                ]
+              },
+              {
+                name: "Mermaid Sequence Export",
+                bookmark: "Top-down call graphs look clean; bottom-up caller trees get too wide past depth 5.",
+                inProgress: [
+                  { text: "Add --max-depth CLI flag with truncation node indicator", tag: "cli" }
+                ],
+                pending: [
+                  { text: "Group recursive self-calls into Mermaid loop blocks", tag: "mermaid" }
+                ]
+              }
+            ]
+          },
+          {
+            project: "Horizon Calendar PWA",
+            status: "shelved",
+            accent: "#8b5cf6",
+            lastTouched: "2026-10",
+            subprojects: [
+              {
+                name: "Backend & VAPID Push",
+                bookmark: "Postgres multi-tenant schema finalized (SCHEMA-AUTH-AA001). Service worker subscribes cleanly.",
+                inProgress: [],
+                pending: [
+                  { text: "Implement cron dispatcher for 24h event reminders", tag: "spring" },
+                  { text: "Rate-limit public ICS feed endpoints", tag: "security" }
+                ]
+              },
+              {
+                name: "Thymeleaf & SmartAdmin UI",
+                bookmark: "Subscription toggle works; need offline fallback banner when service worker is disconnected.",
+                inProgress: [],
+                pending: [
+                  { text: "Build custom element <horizon-mini-cal> for sidebar", tag: "web-comp" },
+                  { text: "Test mobile viewport touch targets", tag: "css" }
+                ]
+              }
+            ]
+          },
+          {
+            project: "Swing Chess Workbench",
+            status: "active",
+            accent: "#f59e0b",
+            lastTouched: "2026-11",
+            subprojects: [
+              {
+                name: "Board & Evaluation Overlay",
+                bookmark: "JLayeredPane custom LayoutManager2 keeps piece & heatmap layers synced on resize.",
+                inProgress: [
+                  { text: "Tune square-control opacity gradient for dark theme", tag: "ui" }
+                ],
+                pending: [
+                  { text: "Add PGN variation tree walker", tag: "pgn" },
+                  { text: "Display mobility & pawn-island delta meter", tag: "eval" }
+                ]
+              }
+            ]
+          },
+          {
+            project: "C64 Windowing Prototype",
+            status: "shelved",
+            accent: "#ec4899",
+            lastTouched: "2026-09",
+            subprojects: [
+              {
+                name: "C / BASIC Coexistence",
+                bookmark: "Zero-page pointer save/restore routine works when jumping between C window draw and BASIC SYS calls.",
+                inProgress: [],
+                pending: [
+                  { text: "Pack menu strings with 5-bit table to save 400 bytes", tag: "memory" },
+                  { text: "Test screen RAM backup buffer at $C000", tag: "vice" }
+                ]
+              }
+            ]
+          }
+        ];
+      ===================================================================== -->
   <script>
     const ROADMAP_DATA = [
+        {
+            project: "Horizon Calendar",
+            status: "active",
+            accent: "#8b5cf6",
+            lastTouched: "2026-10",
+            subprojects: [
+                {
+                    "name": "PWA",
+                    "bookmark": "Starting PWA rollout; review manifest and service worker scope before wiring push subscriptions.",
+                    "inProgress": [],
+                    "pending": [
+                      { "text": "Create manifest.json", "tag": "pwa" },
+                      { "text": "Link Manifest", "tag": "pwa" },
+                      { "text": "Create sw.js (Swing Worker)", "tag": "pwa" },
+                      { "text": "Register Service Worker", "tag": "pwa" },
+                      { "text": "Request Permission & Subscribe", "tag": "pwa" },
+                      { "text": "Backend Registration", "tag": "pwa" },
+                      { "text": "Persistent User Base", "tag": "pwa" },
+                      { "text": "Graceful Offline Mode", "tag": "pwa" }
+                    ]
+                },
+                {
+                    name: "BFF (Spring Boot)",
+                    bookmark: "tbd...",
+                    inProgress: [],
+                    pending: [
+                      { text: "Implement 'create' for domain objects", tag: "spring" },
+                    ]
+                },
+                {
+                    name: "Database",
+                    bookmark: "tbd...",
+                    inProgress: [],
+                    pending: [
+                      { text: "Create AWS Server", tag: "spring" },
+                    ]
+                },
+            ]
+          },
       {
-        project: "Virtual Desktop Framework",
+        project: "JPAD Virtual Desktop",
         status: "active", // "active" | "shelved"
         accent: "#3b82f6",
         lastTouched: "2026-11",
         subprojects: [
-          {
-            name: "Core & Redux Store",
-            bookmark: "Sealed action pipeline working in Java 17 module; need to backport event bridge to Java 8 module.",
-            inProgress: [
-              { text: "Verify zero-allocation repaint cycle under heavy state updates", tag: "perf" }
-            ],
-            pending: [
-              { text: "Write serialization test for workspace layout snapshots", tag: "test" },
-              { text: "Document state subscription lifecycle in ARCHITECTURE.md", tag: "docs" }
-            ]
-          },
-          {
-            name: "SmartGrid Widget",
-            bookmark: "Column resizing math is solid; horizontal virtual scroll glitches on last column.",
-            inProgress: [
-              { text: "Fix off-by-one viewport clip on rightmost column", tag: "bug" }
-            ],
-            pending: [
-              { text: "Add keyboard navigation (Up/Down/PgUp/PgDn)", tag: "feature" },
-              { text: "Custom cell renderer hook for numeric alignment", tag: "feature" }
-            ]
-          },
-          {
-            name: "Gantt & Calendar POC",
-            bookmark: "Shelved while SmartGrid is stabilized. Drag-layer ghost rendering works.",
-            inProgress: [],
-            pending: [
-              { text: "Wire drag-drop time snapping to 15-min intervals", tag: "ui" },
-              { text: "Hook up Javalin WebSocket sidecar for live refresh", tag: "sync" }
-            ]
-          }
+            {
+                name: "SmartGrid Widget",
+                bookmark: "Column resizing math is solid; horizontal virtual scroll glitches on last column.",
+                inProgress: [
+                  { text: "Fix off-by-one viewport clip on rightmost column", tag: "bug" }
+                ],
+                pending: [
+                  { text: "Add keyboard navigation (Up/Down/PgUp/PgDn)", tag: "feature" },
+                  { text: "Custom cell renderer hook for numeric alignment", tag: "feature" }
+                ]
+              },
+              {
+                name: "Gantt & Calendar POC",
+                bookmark: "Shelved while SmartGrid is stabilized. Drag-layer ghost rendering works.",
+                inProgress: [],
+                pending: [
+                  { text: "Wire drag-drop time snapping to 15-min intervals", tag: "ui" },
+                  { text: "Hook up Javalin WebSocket sidecar for live refresh", tag: "sync" }
+                ]
+              },
+              {
+                  name: "Core & Redux Store",
+                  bookmark: "Sealed action pipeline working in Java 17 module; need to backport event bridge to Java 8 module.",
+                  inProgress: [
+                    { text: "Verify zero-allocation repaint cycle under heavy state updates", tag: "perf" }
+                  ],
+                  pending: [
+                    { text: "Write serialization test for workspace layout snapshots", tag: "test" },
+                    { text: "Document state subscription lifecycle in ARCHITECTURE.md", tag: "docs" }
+                  ]
+              },
         ]
       },
       {
@@ -302,32 +476,6 @@
             ],
             pending: [
               { text: "Group recursive self-calls into Mermaid loop blocks", tag: "mermaid" }
-            ]
-          }
-        ]
-      },
-      {
-        project: "Horizon Calendar PWA",
-        status: "shelved",
-        accent: "#8b5cf6",
-        lastTouched: "2026-10",
-        subprojects: [
-          {
-            name: "Backend & VAPID Push",
-            bookmark: "Postgres multi-tenant schema finalized (SCHEMA-AUTH-AA001). Service worker subscribes cleanly.",
-            inProgress: [],
-            pending: [
-              { text: "Implement cron dispatcher for 24h event reminders", tag: "spring" },
-              { text: "Rate-limit public ICS feed endpoints", tag: "security" }
-            ]
-          },
-          {
-            name: "Thymeleaf & SmartAdmin UI",
-            bookmark: "Subscription toggle works; need offline fallback banner when service worker is disconnected.",
-            inProgress: [],
-            pending: [
-              { text: "Build custom element <horizon-mini-cal> for sidebar", tag: "web-comp" },
-              { text: "Test mobile viewport touch targets", tag: "css" }
             ]
           }
         ]

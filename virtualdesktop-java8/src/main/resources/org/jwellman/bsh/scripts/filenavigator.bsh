@@ -1,7 +1,12 @@
 // ================================
+// This script does work when run via BetterEditor's 'eval' button.
+// (it contains some "old code" but it is not detrimental to functionality)
+// C:\Users\rcwel\OneDrive\Graphics\jpad\files\BCKGRND
+// ---------------------------------------------------------
 // This code implements a file navigator that displays 
-// all images in a particular directory.
-//   
+// all images (as thumbnails) in a particular directory.  
+// To change the desktop background, just drag the thumbnail onto the desktop.
+//
 // The zz() method/closure is an implementation of
 // the SwingViewCreator interface and is injected into a file navigator.
 // 

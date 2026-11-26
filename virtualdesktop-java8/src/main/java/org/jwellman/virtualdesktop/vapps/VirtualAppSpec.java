@@ -27,6 +27,16 @@ import org.jwellman.virtualdesktop.tools.ToolSpec;
  * Multi-dockable tools such as {@code SpecWorkspace} may add further
  * dockables via the attached session.</p>
  *
+ * <p><b>Sizing.</b> To request a window size, call both {@link #setWidth(int)}
+ * and {@link #setHeight(int)}. When {@code DesktopManager} opens the tool in
+ * its own frame, they become the content's preferred size, so the frame is
+ * slightly larger by its title bar and borders. If either is zero, the frame is
+ * packed to whatever preferred size the content reports.
+ * {@link #createDefaultContent(Component)} is not needed for sizing here.</p>
+ *
+ * <p>The size is not applied this way to {@link #internalFrameProvider} specs,
+ * nor to content hosted by something other than {@code DesktopManager}.</p>
+ *
  * @author Rick Wellman
  */
 @SuppressWarnings("rawtypes")
@@ -149,17 +159,20 @@ abstract public class VirtualAppSpec implements ToolSpec {
      * Utility/convenience method to wrap an
      * existing content/component/JComponent with
      * a JPanel for insertion into a JInternalFrame.
+     * Use it when the component is not already a JPanel, as required by
+     * setContent(); content that is a JPanel needs no wrapper.
      *
-     * This method should not be called until setWidth/Height()
-     * have been called (otherwise the defaults are zero).
+     * If setWidth/Height() have already been called, they are also set as the
+     * wrapper's preferred size, which stays with the panel wherever it is hosted.
+     * Call them first (otherwise the defaults are zero and no size is set).
      *
      * 10/6/2022 : I keep waffling on whether this method should setContent() automatically
      * because it is always called like shown below.  For now I will not do it but
      * it is highly likely I will make this change in the future.
      * this.setContent(this.createDefaultContent(somecomponent));
      *
-     * @param o
-     * @return
+     * @param o the component to wrap
+     * @return a new panel with the component at its center
      */
     protected JPanel createDefaultContent(Component o) {
         final JPanel pnl = new JPanel(new BorderLayout());
@@ -249,6 +262,10 @@ abstract public class VirtualAppSpec implements ToolSpec {
         return height;
     }
 
+    /**
+     * @param height requested content height in pixels; takes effect only when
+     *     the width is also set (see "Sizing" in the class description)
+     */
     public void setHeight(int height) {
         this.height = height;
     }
@@ -257,6 +274,10 @@ abstract public class VirtualAppSpec implements ToolSpec {
         return width;
     }
 
+    /**
+     * @param width requested content width in pixels; takes effect only when
+     *     the height is also set (see "Sizing" in the class description)
+     */
     public void setWidth(int width) {
         this.width = width;
     }

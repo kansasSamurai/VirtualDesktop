@@ -1,6 +1,7 @@
 package org.jwellman.virtualdesktop;
 
 import java.awt.Container;
+import java.awt.Dimension;
 import java.beans.PropertyVetoException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -379,6 +380,12 @@ public class DesktopManager implements ListSelectionListener, InternalFrameListe
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             @Override public void run() {
                 try {
+                    // A size requested by the spec becomes the content's preferred
+                    // size, which pack() below then honors.
+                    if (c != null && spec.getWidth() * spec.getHeight() != 0) {
+                        c.setPreferredSize(new Dimension(spec.getWidth(), spec.getHeight()));
+                    }
+
                     if (spec.isDockable()) {
                         frame.setContentPane(spec.getDockableContent());
                         spec.addDockable(spec.getContent());

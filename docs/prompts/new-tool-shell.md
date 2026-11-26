@@ -19,8 +19,9 @@ Scope: a shell only. Real content comes in a later phase.
    application stage usage belongs in this package.
 2. In org.jwellman.virtualdesktop.vapps, create Spec<NAME> extending
    VirtualAppSpec. It only sets the title and size (1000x700) and uses
-   <NAME>Stage as its content. Always set both width and height, because
-   a stage has no useful preferred size for pack().
+   <NAME>Stage as its content. Set both width and height with setWidth()
+   and setHeight(): a stage has no useful preferred size, so without them
+   the window opens very small. createDefaultContent() is not needed.
 3. Register it in virtualdesktop-java8/config/vapps-config.json so it
    appears in the menu. Do not add a desktop shortcut.
 4. Icon: pick an appropriate key from

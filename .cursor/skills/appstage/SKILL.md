@@ -15,7 +15,7 @@ description: >-
 
 - Prefer services over layer getters; inject the stage, never discover it through the component tree
 - Do **not** re-root the App `JFrame` or migrate desktop shortcuts onto a stage unless explicitly asked
-- Wrap the stage with `createDefaultContent` only if Spec sizing requires it
+- Size the window with `setWidth` / `setHeight` on the Spec (set both); the stage has no useful preferred size of its own
 - Reference demo: `SpecAppStageCalendarDemo` + `CalendarPoCPanel` (the calendar keeps its own internal layered drag; that is OK)
 
 ## Out of scope (do not implement unless asked)

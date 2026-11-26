@@ -22,6 +22,28 @@ import org.katacode.appstage.internal.PassThroughPanel;
 /**
  * Default embeddable {@link ApplicationStage}: a {@link JPanel} wrapping a
  * private {@link JLayeredPane} with CardLayout base content and overlay layers.
+ *
+ * <p>Layers, from bottom to top:</p>
+ * <ol>
+ *   <li>base ({@code DEFAULT_LAYER}): the cards</li>
+ *   <li>palette ({@code PALETTE_LAYER}): modal backdrop</li>
+ *   <li>popup ({@code POPUP_LAYER}): toasts, modal content, popovers</li>
+ *   <li>drag ({@code DRAG_LAYER}): components being dragged</li>
+ * </ol>
+ *
+ * <p>The three overlay panels use no layout manager, so anything added to them
+ * directly must be given bounds. Mouse events outside their visible children
+ * pass through to the layers below. All layers track the size of the stage.</p>
+ *
+ * <p>Typical use:</p>
+ * <pre>
+ * PanelApplicationStage stage = new PanelApplicationStage();
+ * stage.addCard("main", mainPanel);
+ * stage.showCard("main");
+ * </pre>
+ *
+ * <p>This is a Swing component and is not thread-safe: create and use it on the
+ * Event Dispatch Thread.</p>
  */
 @SuppressWarnings("serial")
 public class PanelApplicationStage extends JPanel implements ApplicationStage {
@@ -39,6 +61,10 @@ public class PanelApplicationStage extends JPanel implements ApplicationStage {
     private final DefaultModalService modalService;
     private final DefaultDragAndDropService dragAndDropService;
 
+    /**
+     * Creates an empty stage with its layers and services ready for use.
+     * No card is registered until {@link #addCard(String, JComponent)} is called.
+     */
     public PanelApplicationStage() {
         super(new BorderLayout());
 

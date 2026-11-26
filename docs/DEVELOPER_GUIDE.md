@@ -279,13 +279,7 @@ Until then, keep withdraw semantics so store and host stay aligned without leaki
 
 v1: `PanelApplicationStage` (embeddable `JPanel`) + notification / modal / intra-stage DnD services. Demo: **App Stage Calendar** (`SpecAppStageCalendarDemo`) wraps `CalendarPoCPanel` with dummy chrome.
 
-Deferred until needed:
-
-- `JFrameStage` / `JInternalFrameStage` / rich `MockStage`
-- Rewiring calendar PoC drag onto `DragAndDropService` / stage DRAG layer
-- **Cross-tool / desktop-level DnD** — blocked until the desktop shell itself is an `ApplicationStage`
-- App content-pane re-root onto a stage “Desktop” card
-- Migrating `VShortcut` drag onto an application stage
+Full documentation, including deferred work (other stage hosts, cross-tool DnD, desktop shell as a stage): [features/appstage/README.md](features/appstage/README.md).
 
 ### Other follow-ons
 

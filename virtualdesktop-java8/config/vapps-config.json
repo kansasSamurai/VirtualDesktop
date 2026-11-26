@@ -118,6 +118,13 @@
           "desktopOnly": false
         },
         {
+          "class": "org.jwellman.virtualdesktop.vapps.SpecAgentAuditor",
+          "title": "Agent Auditor",
+          "icon": "home",
+          "enabled": true,
+          "desktopOnly": false
+        },
+        {
           "class": "org.jwellman.virtualdesktop.vapps.SpecMonthPanel",
           "title": "Calendar",
           "icon": "calendar",

@@ -13,6 +13,9 @@ small services for overlays. Tools talk to the **services**, not to `JLayeredPan
 - Content should swap via cards without tearing down the overlay layers
 - A standalone harness and an in-desktop tool should share one stage contract through constructor injection
 
+To start a new stage-backed tool with an AI assistant, use the
+[new tool shell prompt](../../prompts/new-tool-shell.md).
+
 ## Layers
 
 `PanelApplicationStage` (`extends JPanel implements ApplicationStage`) wraps a private `JLayeredPane`.

@@ -111,7 +111,8 @@ policies are tool-specific and not yet generalized.
 
 ## Deferred work
 
-Not in the tree yet; build when needed.
+Not in the tree yet; build when needed. For effort estimates on putting the desktop itself on a
+stage, see the [roadmap](ROADMAP.md).
 
 | Item | Intent |
 |---|---|

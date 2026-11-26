@@ -374,32 +374,74 @@
   <script>
     const ROADMAP_DATA = [
         {
+            project: "katacode",
+            status: "active",
+            accent: "#ec4899",
+            lastTouched: "2026-09",
+            subprojects: [
+              {
+                name: "Tasks",
+                bookmark: "tbd...",
+                inProgress: [
+                    { text: "Obtain katacode.com", tag: "domain" }
+                ],
+                pending: [
+                ]
+              }
+            ]
+        },
+        {
             project: "Horizon Calendar",
             status: "active",
             accent: "#8b5cf6",
             lastTouched: "2026-10",
             subprojects: [
                 {
-                    "name": "PWA",
-                    "bookmark": "Starting PWA rollout; review manifest and service worker scope before wiring push subscriptions.",
-                    "inProgress": [],
+                    "name": "Project",
+                    "bookmark": "Need to test 'new event' from 'manage events' and investigate the duplicate for definition; see 'duplicate markup' in obsidian history",
+                    "inProgress": [
+                        { "text": "Phase 1: author calendars and events", "tag": "pwa" },
+                        { "text": "Persistent User Base", "tag": "pwa" },
+                    ],
                     "pending": [
-                      { "text": "Create manifest.json", "tag": "pwa" },
-                      { "text": "Link Manifest", "tag": "pwa" },
-                      { "text": "Create sw.js (Swing Worker)", "tag": "pwa" },
-                      { "text": "Register Service Worker", "tag": "pwa" },
-                      { "text": "Request Permission & Subscribe", "tag": "pwa" },
-                      { "text": "Backend Registration", "tag": "pwa" },
-                      { "text": "Persistent User Base", "tag": "pwa" },
-                      { "text": "Graceful Offline Mode", "tag": "pwa" }
+                        { "text": "Phase 2: Authoring productivity", "tag": "roadmap" },
+                        { "text": "Phase 3: Sharing and discovery", "tag": "roadmap" },
+                        { "text": "Phase 4: Distribution (.ics)", "tag": "roadmap" },
+                        { "text": "Phase 5: Reach (PWA install and notifications)", "tag": "roadmap" },
+                        { "text": "Later** | 11 Attendance, attachments, season export | not scheduled | 12 Outside feeds, other clients | not scheduled | 13 Organizations and roles | not scheduled |", "tag": "roadmap" },
+                        { "text": "== deployment below here ==", "tag": "marker" },
+                        { "text": "Create manifest.json", "tag": "pwa" },
+                        { "text": "Link Manifest", "tag": "pwa" },
+                        { "text": "Create sw.js (Swing Worker)", "tag": "pwa" },
+                        { "text": "Register Service Worker", "tag": "pwa" },
+                        { "text": "Request Permission & Subscribe", "tag": "pwa" },
+                        { "text": "Backend Registration", "tag": "pwa" },
+                        { "text": "Graceful Offline Mode", "tag": "pwa" }
                     ]
                 },
                 {
-                    name: "BFF (Spring Boot)",
+                    name: "Client",
                     bookmark: "tbd...",
-                    inProgress: [],
+                    inProgress: [
+                        { text: "1.1 Event endpoints and UI wiring", tag: "events" },
+                        { text: "1.2 Calendar lifecycle: update, delete, archive", tag: "events" },
+                    ],
                     pending: [
-                      { text: "Implement 'create' for domain objects", tag: "spring" },
+                        { text: "1.3 Publish and Settings on real data", tag: "events" },
+                        { text: "1.4 Event authoring details: venues, status, color", tag: "events" },
+                        { text: "2.5 Series and rapid entry", tag: "events" },
+                        { text: "2.6 Staged publishing (batch edits)", tag: "events" },
+                        { text: "3.7 Subscribe: search, ...", tag: "events" },
+                        { text: "3.8 Tags and tag filters", tag: "events" },
+                    ]
+                },
+                {
+                    name: "Server",
+                    bookmark: "tbd...",
+                    inProgress: [
+                        { text: "1.1 Event endpoints and UI wiring", tag: "events" },
+                    ],
+                    pending: [
                     ]
                 },
                 {
@@ -407,7 +449,7 @@
                     bookmark: "tbd...",
                     inProgress: [],
                     pending: [
-                      { text: "Create AWS Server", tag: "spring" },
+                      { text: "tbd", tag: "tbd" },
                     ]
                 },
             ]

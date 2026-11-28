@@ -1,47 +1,43 @@
 package org.katacode.agents.auditor.ui;
 
 import java.awt.BorderLayout;
-import java.awt.Font;
+import java.awt.FlowLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 import javax.swing.BorderFactory;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 import org.katacode.agents.auditor.model.RegisteredProject;
 
 /**
- * Posture of the selected project. So far only the header: project name and
- * folder path.
+ * Posture overview of the selected project. So far only the header (project name
+ * and folder path) and a temporary link into the vendor detail view.
  */
 @SuppressWarnings("serial")
-public class PosturePanel extends JPanel {
+class PosturePanel extends ViewPanel {
 
     private static final String TITLE_PREFIX = "PROJECT POSTURE";
 
-    private final JLabel titleLabel = new JLabel();
-    private final JLabel folderLabel = new JLabel();
+    // TEMPORARY: remove once the vendor tiles and health panels open the detail view
+    private final LinkButton cursorLink = new LinkButton("Cursor Setup ›");
 
-    public PosturePanel() {
-        super(new BorderLayout());
+    /**
+     * @param openCursorDetail run when the user asks for the Cursor detail view
+     */
+    PosturePanel(final Runnable openCursorDetail) {
+        cursorLink.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                openCursorDetail.run();
+            }
+        });
 
-        setBackground(AuditorTheme.contentBackground());
-        setBorder(BorderFactory.createEmptyBorder(24, 28, 28, 28));
-
-        titleLabel.setFont(AuditorTheme.uiFont(Font.BOLD, 26f));
-        titleLabel.setForeground(AuditorTheme.textPrimary());
-
-        folderLabel.setFont(AuditorTheme.monoFont(14));
-        folderLabel.setForeground(AuditorTheme.textSecondary());
-
-        JPanel header = new JPanel(new BorderLayout(0, 8));
-        header.setOpaque(false);
-        header.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, AuditorTheme.lineSubtle()),
-                BorderFactory.createEmptyBorder(0, 0, 16, 0)));
-        header.add(titleLabel, BorderLayout.NORTH);
-        header.add(folderLabel, BorderLayout.SOUTH);
-
-        add(header, BorderLayout.NORTH);
+        JPanel links = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        links.setOpaque(false);
+        links.setBorder(BorderFactory.createEmptyBorder(18, 0, 0, 0));
+        links.add(cursorLink);
+        add(links, BorderLayout.CENTER);
 
         showProject(null);
     }
@@ -51,15 +47,13 @@ public class PosturePanel extends JPanel {
      *
      * @param project the selected project, or null when there is none
      */
-    public void showProject(RegisteredProject project) {
+    void showProject(RegisteredProject project) {
         if (project == null) {
-            titleLabel.setText(TITLE_PREFIX);
-            folderLabel.setText("No project selected");
-            folderLabel.setToolTipText(null);
+            showHeader(TITLE_PREFIX, "No project selected");
         } else {
-            titleLabel.setText(TITLE_PREFIX + ": " + project.getTitle());
-            folderLabel.setText(project.getFolder());
-            folderLabel.setToolTipText(project.getFolder());
+            showHeader(TITLE_PREFIX + ": " + project.getTitle(), project.getFolder());
+            setPathToolTip(project.getFolder());
         }
+        cursorLink.setVisible(project != null);
     }
 }

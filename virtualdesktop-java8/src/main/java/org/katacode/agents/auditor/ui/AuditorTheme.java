@@ -80,6 +80,26 @@ public final class AuditorTheme {
         return new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 31);
     }
 
+    public static Color textMuted() {
+        return color("Workspace.text.muted", 0x8B919A);
+    }
+
+    public static Color breadcrumbBackground() {
+        return color("Workspace.breadcrumb.background", 0x191B20);
+    }
+
+    public static Color buttonBackground() {
+        return color("Workspace.button.background", 0x2A2D34);
+    }
+
+    public static Color buttonHoverBackground() {
+        return color("Workspace.button.hoverBackground", 0x33363E);
+    }
+
+    public static Color buttonBorder() {
+        return color("Workspace.button.border", 0x3D424B);
+    }
+
     public static Color color(String key, int fallbackRgb) {
         Color color = UIManager.getColor(key);
         if (color != null) {

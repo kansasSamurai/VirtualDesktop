@@ -34,25 +34,25 @@
 1. User configures/selects registered AI project folders (and active personal standard version/filter) and triggers a scan.
 2. Scanner inspects registered folders and computes vendor detection, per-vendor setup health, and personal standard compliance/drift.
 3. User selects a project in the left-hand `SmartGrid` list to view its right-hand posture cards (Supported AI Vendors, Per-Vendor Setup Health, Personal Standards Compliance).
-4. User clicks a Vendor Setup Health card to switch the posture panel via `CardLayout` + breadcrumb navigation to that vendor's detailed view, and navigates back via the breadcrumb.
+4. User clicks a vendor tile (Supported AI Vendors) or a Vendor Setup Health card to switch the posture panel via `CardLayout` + breadcrumb navigation to that vendor's detailed view, and navigates back via the breadcrumb. Selecting a different project while in a detail view resets to that project's top level (`POSTURE`).
 5. User inspects drift/remediation actions and reviews a dry-run diff/preview before applying selected changes or recording a waiver.
 
 * **Edge Cases & Failure Modes:**
 * *Empty / Corrupt State:* TBD (exact fallback behavior for empty project lists, unreadable/malformed config or policy files, and missing paths TBD)
 * *Invalid Input / Limits:* TBD (exact thresholds for oversized context files, invalid globs/frontmatter, broken file references, and error surfacing TBD)
-* *Lifecycle (Open / Minimize / Dispose):* TBD (exact behavior on tool open, minimize, close/dispose, reload, and project-switch breadcrumb retention TBD)
+* *Lifecycle (Open / Minimize / Dispose):* TBD (exact behavior on tool open, minimize, close/dispose, and reload TBD)
 
 ## 5. Acceptance Criteria (Testable Proof)
 
 * [ ] **AC-1:** Given registered AI project folders and an active personal standard version, when a scan runs, then the `SmartGrid` project list displays status indicators and selecting a project renders the three posture cards (Supported AI Vendors, Per-Vendor Setup Health, Personal Standards Compliance).
-* [ ] **AC-2:** Given a project with a detected AI vendor on the posture screen, when the user clicks that vendor's health card, then the posture panel switches via `CardLayout` to the vendor detail view with an updated breadcrumb that navigates back to the posture overview.
+* [ ] **AC-2:** Given a project with a detected AI vendor on the posture screen, when the user clicks that vendor's tile or health card, then the posture panel switches via `CardLayout` to the vendor detail view with an updated breadcrumb that navigates back to the posture overview.
 * [ ] **AC-3:** Unit and smoke tests pass with zero regressions.
 
 ## 6. Open Questions
 
 * [ ] `[NEEDS CLARIFICATION]` What are the exact Swing tool SPI interfaces, base classes, and registration files (`manifest.json` / service descriptors / launcher hooks) in the host desktop app?
 * [ ] `[NEEDS CLARIFICATION]` What exact persistence format and file location should store the registered project list, archetype tags, waivers, and versioned personal standard rules?
-* [ ] `[NEEDS CLARIFICATION]` When selecting a different project in the left list while viewing a `VENDOR_DETAIL` card, should the view reset to `POSTURE` or stay on `VENDOR_DETAIL` for the newly selected project?
+* [x] When selecting a different project in the left list while viewing a `VENDOR_DETAIL` card, should the view reset to `POSTURE` or stay on `VENDOR_DETAIL` for the newly selected project? **Answer:** reset to the new project's top level (`POSTURE`).
 * [ ] `[NEEDS CLARIFICATION]` What are the exact expected behaviors and fallbacks for empty/corrupt state, input/size limits, and tool open/minimize/dispose lifecycle events?
 
 ## Developer Notes

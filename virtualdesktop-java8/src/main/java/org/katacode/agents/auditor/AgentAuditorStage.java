@@ -10,13 +10,13 @@ import javax.swing.JSplitPane;
 
 import org.katacode.agents.auditor.model.RegisteredProject;
 import org.katacode.agents.auditor.ui.AuditorTheme;
-import org.katacode.agents.auditor.ui.PosturePanel;
+import org.katacode.agents.auditor.ui.PostureArea;
 import org.katacode.agents.auditor.ui.ProjectSidebar;
 import org.katacode.appstage.PanelApplicationStage;
 
 /**
  * Main component of the Agent Auditor tool: an application stage holding the
- * registered project list and, to its right, the selected project's posture panel.
+ * registered project list and, to its right, the selected project's posture area.
  */
 @SuppressWarnings("serial")
 public class AgentAuditorStage extends PanelApplicationStage {
@@ -41,7 +41,7 @@ public class AgentAuditorStage extends PanelApplicationStage {
         ProjectSidebar sidebar = new ProjectSidebar(projects);
         sidebar.setMinimumSize(new Dimension(SIDEBAR_MIN_WIDTH, 0));
 
-        PosturePanel posture = new PosturePanel();
+        PostureArea posture = new PostureArea();
         // Lets the divider move freely; long titles and paths are truncated
         posture.setMinimumSize(new Dimension(0, 0));
         sidebar.setSelectionCallback(posture::showProject);

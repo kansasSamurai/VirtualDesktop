@@ -447,6 +447,27 @@ public class SmartGrid extends JPanel implements GridModelListener {
         }
     }
 
+    /**
+     * Shows or hides the column header band. Hiding it suits single-column
+     * "list mode" grids. The setting survives header rebuilds.
+     */
+    public void setColumnHeaderVisible(boolean visible) {
+        scrollPane.getColumnHeader().setVisible(visible);
+        revalidate();
+    }
+
+    /** Shows or hides the "Showing N rows" summary row at the bottom of the grid. */
+    public void setSummaryRowVisible(boolean visible) {
+        summaryRow.setVisible(visible);
+        revalidate();
+    }
+
+    /** Overrides the theme's background colour behind and below the rows. */
+    public void setCanvasBackground(Color color) {
+        canvas.setBackground(color);
+        scrollPane.getViewport().setBackground(color);
+    }
+
     /** Returns the background colour used for the column-header row. */
     public Color getHeaderBackground() {
         return headerBg;

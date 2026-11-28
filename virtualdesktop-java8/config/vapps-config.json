@@ -303,5 +303,13 @@
       "icon": "rubbish1",
       "enabled": true
     }
-  ]
+  ],
+  "agentAuditor": {
+    "projects": [
+      { "title": "Foundation", "folder": "D:\\dev\\projects\\foundation", "status": "DRIFT", "count": 2 },
+      { "title": "AuraCode", "folder": "D:\\dev\\projects\\aura-code", "status": "OK" },
+      { "title": "Horizon", "folder": "D:\\dev\\projects\\horizon", "status": "WARN", "count": 1 },
+      { "title": "chess-analyzer", "folder": "D:\\dev\\projects\\chess-analyzer", "status": "WAIVED" }
+    ]
+  }
 }

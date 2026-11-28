@@ -3,6 +3,7 @@ package org.jwellman.virtualdesktop.vapps;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 import java.util.List;
+import org.katacode.agents.auditor.model.AgentAuditorConfig;
 
 /**
  * Root configuration container for virtual applications.
@@ -23,6 +24,9 @@ public class VappsConfig {
 
     @JsonProperty("desktopShortcuts")
     private List<DesktopShortcut> desktopShortcuts = new ArrayList<DesktopShortcut>();
+
+    @JsonProperty("agentAuditor")
+    private AgentAuditorConfig agentAuditor = new AgentAuditorConfig();
 
     /**
      * Default constructor for Jackson deserialization
@@ -60,5 +64,13 @@ public class VappsConfig {
 
     public void setDesktopShortcuts(List<DesktopShortcut> desktopShortcuts) {
         this.desktopShortcuts = desktopShortcuts;
+    }
+
+    public AgentAuditorConfig getAgentAuditor() {
+        return agentAuditor;
+    }
+
+    public void setAgentAuditor(AgentAuditorConfig agentAuditor) {
+        this.agentAuditor = agentAuditor == null ? new AgentAuditorConfig() : agentAuditor;
     }
 }

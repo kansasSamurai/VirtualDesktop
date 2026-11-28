@@ -10,13 +10,15 @@ import javax.swing.JSplitPane;
 
 import org.katacode.agents.auditor.model.RegisteredProject;
 import org.katacode.agents.auditor.ui.AuditorTheme;
+import org.katacode.agents.auditor.ui.AuditorToolBar;
 import org.katacode.agents.auditor.ui.PostureArea;
 import org.katacode.agents.auditor.ui.ProjectSidebar;
 import org.katacode.appstage.PanelApplicationStage;
 
 /**
  * Main component of the Agent Auditor tool: an application stage holding the
- * registered project list and, to its right, the selected project's posture area.
+ * toolbar, the registered project list and, to its right, the selected project's
+ * posture area.
  */
 @SuppressWarnings("serial")
 public class AgentAuditorStage extends PanelApplicationStage {
@@ -53,6 +55,7 @@ public class AgentAuditorStage extends PanelApplicationStage {
         split.setBackground(AuditorTheme.contentBackground());
 
         JPanel root = new JPanel(new BorderLayout());
+        root.add(new AuditorToolBar(), BorderLayout.NORTH);
         root.add(split, BorderLayout.CENTER);
 
         return root;

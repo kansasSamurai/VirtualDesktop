@@ -100,6 +100,22 @@ public final class AuditorTheme {
         return color("Workspace.button.border", 0x3D424B);
     }
 
+    public static Color toolBarBackground() {
+        return color("Workspace.toolbar.background", 0x15171B);
+    }
+
+    public static Color lineStrong() {
+        return color("Workspace.line.strong", 0x33373F);
+    }
+
+    public static Color inputBackground() {
+        return color("Workspace.input.background", 0x1F2227);
+    }
+
+    public static Color brandLight() {
+        return color("Workspace.brand.light", 0xB9C6FF);
+    }
+
     public static Color color(String key, int fallbackRgb) {
         Color color = UIManager.getColor(key);
         if (color != null) {

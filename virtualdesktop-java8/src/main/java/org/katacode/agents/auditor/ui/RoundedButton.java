@@ -10,28 +10,30 @@ import java.awt.RenderingHints;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 
-import jiconfont.icons.GoogleMaterialDesignIcons;
-import jiconfont.swing.IconFontSwing;
-
 /**
- * The breadcrumb's rounded "Back" button with a leading chevron.
+ * The tool's standard push button: rounded fill and outline at a fixed height,
+ * independent of the installed look and feel.
  */
 @SuppressWarnings("serial")
-class BackButton extends JButton {
+class RoundedButton extends JButton {
 
-    private static final int HEIGHT = 28;
     private static final int RADIUS = 6;
 
-    BackButton(String text) {
+    private final int height;
+
+    /**
+     * @param text   the button label
+     * @param height fixed height in pixels
+     */
+    RoundedButton(String text, int height) {
         super(text);
-        setIcon(IconFontSwing.buildIcon(
-                GoogleMaterialDesignIcons.CHEVRON_LEFT, 16, AuditorTheme.textSecondary()));
-        setIconTextGap(4);
-        setFont(AuditorTheme.uiFont(Font.BOLD, 14f));
+        this.height = height;
+
+        setFont(AuditorTheme.uiFont(Font.PLAIN, 14f));
         setForeground(AuditorTheme.textPrimary());
         setBorder(BorderFactory.createCompoundBorder(
                 new RoundedLineBorder(AuditorTheme.buttonBorder(), RADIUS),
-                BorderFactory.createEmptyBorder(0, 7, 0, 10)));
+                BorderFactory.createEmptyBorder(0, 13, 0, 13)));
         setContentAreaFilled(false);
         setFocusPainted(false);
         setOpaque(false);
@@ -42,7 +44,7 @@ class BackButton extends JButton {
     @Override
     public Dimension getPreferredSize() {
         Dimension size = super.getPreferredSize();
-        size.height = HEIGHT;
+        size.height = height;
 
         return size;
     }

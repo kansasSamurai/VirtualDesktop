@@ -29,6 +29,7 @@ class BreadcrumbBar extends JPanel {
 
     private static final int HEIGHT = 41;
     private static final int GAP = 10;
+    private static final int BACK_HEIGHT = 28;
     private static final String BACK_TEXT = "Back to Posture";
 
     private final List<Crumb> crumbs = new ArrayList<>();
@@ -81,7 +82,11 @@ class BreadcrumbBar extends JPanel {
 
         int last = crumbs.size() - 1;
         if (last > 0) {
-            BackButton back = new BackButton(BACK_TEXT);
+            RoundedButton back = new RoundedButton(BACK_TEXT, BACK_HEIGHT);
+            back.setFont(AuditorTheme.uiFont(Font.BOLD, 14f));
+            back.setIcon(IconFontSwing.buildIcon(
+                    GoogleMaterialDesignIcons.CHEVRON_LEFT, 16, AuditorTheme.textSecondary()));
+            back.setIconTextGap(4);
             back.addActionListener(popAction(0));
             addCentered(back);
             add(Box.createHorizontalStrut(GAP));
